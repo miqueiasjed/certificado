@@ -199,6 +199,15 @@
 
     <!-- Conteúdo principal -->
     <div class="content">
+
+        <div class="procedures">
+            <p><strong>Procedimento Utilizado:</strong>
+                @foreach ($certificate->procedures as $procedure)
+                    {{ $procedure->name }}@if(!$loop->last) - @endif
+                @endforeach
+            </p>
+        </div>
+        
         <table>
             <thead>
                 <tr>
@@ -219,14 +228,6 @@
                 @endforeach
             </tbody>
         </table>
-
-        <div class="procedures">
-            <p><strong>Procedimento Utilizado:</strong>
-                @foreach ($certificate->procedures as $procedure)
-                    {{ $procedure->name }}@if(!$loop->last) - @endif
-                @endforeach
-            </p>
-        </div>
     </div>
 
     <!-- CEATOX em um contêiner separado -->
