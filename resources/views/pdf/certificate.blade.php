@@ -117,7 +117,7 @@
 
         .footer-ceatox {
             position: absolute;
-            bottom: 30px; /* Fixa o CEATOX no rodapé */
+            bottom: 25px; /* Fixa o CEATOX no rodapé */
             left: 0;
             width: 50%; /* O CEATOX ocupa metade da largura */
             text-align: left;
@@ -138,7 +138,7 @@
 
         .signature-1{
             position: absolute;
-            bottom: 30px; /* Fixa o CEATOX no rodapé */
+            bottom: 25px; /* Fixa o CEATOX no rodapé */
             left: 60%;
             text-align: left;
             z-index: 2;
@@ -146,7 +146,7 @@
 
         .signature-2{
             position: absolute;
-            bottom: 30px; /* Fixa o CEATOX no rodapé */
+            bottom: 25px; /* Fixa o CEATOX no rodapé */
             left: 80%;
             width: 50%; /* O CEATOX ocupa metade da largura */
             text-align: left;
