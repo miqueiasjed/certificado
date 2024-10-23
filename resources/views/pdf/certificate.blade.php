@@ -60,7 +60,7 @@
         }
 
         .service-info {
-                 font-size: 16px;
+            font-size: 16px;
             text-align: center; /* Centraliza o conteúdo */
             margin-bottom: 20px; /* Espaço entre as informações e a tabela */
             z-index: 2;
@@ -86,10 +86,12 @@
             margin-bottom: 20px;
         }
 
+        /* Tabela centralizada */
         table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 10px;
+            text-align: center; /* Centraliza o conteúdo dentro da tabela */
         }
 
         table, th, td {
@@ -98,7 +100,8 @@
 
         th, td {
             padding: 10px;
-            text-align: left;
+            text-align: center; /* Centraliza o conteúdo horizontalmente */
+            vertical-align: middle; /* Centraliza o conteúdo verticalmente */
         }
 
         .section-title {
@@ -109,7 +112,7 @@
         .procedures p {
             font-size: 14px;
             margin: 5px 0;
-            text-align: left; /* Ou centralizado, se preferir: text-align: center; */
+            text-align: center; /* Centraliza o texto dos procedimentos */
         }
 
         .footer-ceatox {
@@ -121,23 +124,23 @@
             z-index: 2;
         }
 
-       .signature-1{
+        .signature-1{
             position: absolute;
             bottom: 30px; /* Fixa o CEATOX no rodapé */
             left: 60%;
             width: 50%; /* O CEATOX ocupa metade da largura */
             text-align: left;
             z-index: 2;
-       }
+        }
 
-       .signature-2{
+        .signature-2{
             position: absolute;
             bottom: 30px; /* Fixa o CEATOX no rodapé */
             left: 80%;
             width: 50%; /* O CEATOX ocupa metade da largura */
             text-align: left;
             z-index: 2;
-       }
+        }
 
         .signature-1 img {
             width: 100px;
@@ -150,8 +153,6 @@
             height: auto;
             margin-bottom: 5px;
         }
-
-
     </style>
 </head>
 <body>
