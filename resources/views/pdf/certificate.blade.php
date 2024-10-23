@@ -51,7 +51,7 @@
         .client-info {
             display: block; /* Informações do cliente uma abaixo da outra */
             margin-bottom: 20px;
-            font-size: 16px;
+            font-size: 14px;
             z-index: 2;
         }
 
@@ -88,7 +88,7 @@
 
         /* Tabela centralizada */
         table {
-            width: 100%;
+            width: 80%;
             border-collapse: collapse;
             margin-bottom: 10px;
             text-align: center; /* Centraliza o conteúdo dentro da tabela */
@@ -194,7 +194,7 @@
     <div class="service-info">
         <p><strong>Serviço Prestado:</strong> {{ $certificate->service->description }}</p>
         <p><strong>Data do Serviço:</strong> {{ $certificate->date->format('d/m/Y') }}</p>
-        <p><strong>Garantia:</strong> {{ $certificate->assurance->format('d/m/Y') }} Dias</p>
+        <p><strong>Garantia:</strong> {{ $certificate->assurance->format('d/m/Y') }} </p>
     </div>
 
     <!-- Conteúdo principal -->
