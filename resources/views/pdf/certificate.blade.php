@@ -88,7 +88,7 @@
 
         /* Tabela centralizada */
         table {
-            width: 80%;
+            width: 100%;
             border-collapse: collapse;
             margin-bottom: 10px;
             text-align: center; /* Centraliza o conteúdo dentro da tabela */
