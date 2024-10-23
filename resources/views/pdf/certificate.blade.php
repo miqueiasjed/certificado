@@ -186,7 +186,7 @@
     <div class="client-info">
         <p><strong>Cliente:</strong> {{ $certificate->client->name }}</p>
         <p><strong>CNPJ:</strong> {{ $certificate->client->cnpj }}</p>
-        <p><strong>Endereço:</strong> {{ $certificate->client->address }}, {{ $certificate->client->number }}, {{ $certificate->client->neighborhood }}, {{ $certificate->client->city }}</p>
+        <p><strong>Endereço:</strong> {{ $certificate->client->address }},{{ $certificate->client->number }},{{ $certificate->client->neighborhood }},{{ $certificate->client->city }}</p>
     </div>
 
     <!-- Serviço Prestado, Data do Serviço, Garantia centralizados -->
