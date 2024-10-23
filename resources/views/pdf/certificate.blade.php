@@ -124,11 +124,22 @@
             z-index: 2;
         }
 
+        .footer-sanitario {
+            position: absolute;
+            top: 30%; /* Fixa o CEATOX no rodapé */
+            left: 80%;
+            text-align: left;
+            font-size: 14px;
+            z-index: 2;
+        }
+        .footer-sanitario p {
+            text-align: center;
+        }
+
         .signature-1{
             position: absolute;
             bottom: 30px; /* Fixa o CEATOX no rodapé */
             left: 60%;
-            width: 50%; /* O CEATOX ocupa metade da largura */
             text-align: left;
             z-index: 2;
         }
@@ -143,7 +154,7 @@
         }
 
         .signature-1 img {
-            width: 100px;
+            width: 80px;
             height: auto;
             margin-bottom: 5px;
         }
@@ -224,9 +235,15 @@
         <p>CONSELHO REGIONAL DE QUÍMICA - 10º REGIÃO Nº 5.253</p>
     </div>
 
+    <!-- N° Alvará Sanitário em um contêiner separado -->
+    <div class="footer-sanitario">
+        <p><strong> N° Alvará Sanitário</strong></p>
+        <p>184/2024</p>
+    </div>
+
     <!-- signature 1 em um contêiner separado -->
     <div class="signature-1">
-        <img src="{{ public_path('images/signature-quimico.png') }}" alt="Assinatura Gerente">
+        <img src="{{ public_path('images/signature-operational.png') }}" alt="Assinatura Gerente">
         <p><strong>Ass:</strong> Gerente de Operações</p>
     </div>
 
