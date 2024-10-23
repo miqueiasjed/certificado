@@ -76,6 +76,7 @@ class CertificateResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\EditAction::make(),
                 Action::make('Gerar')
                 ->label('Emitir Certificado')
                 ->icon('heroicon-o-document-minus')
