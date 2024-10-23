@@ -62,12 +62,12 @@
         .service-info {
             font-size: 16px;
             text-align: center; /* Centraliza o conteúdo */
-            margin-bottom: 20px; /* Espaço entre as informações e a tabela */
+            margin-bottom: 5px; /* Espaço entre as informações e a tabela */
             z-index: 2;
         }
         .service-info p {
             display: inline-block; /* Exibe "Serviço Prestado", "Data do Serviço" e "Garantia" na mesma linha */
-            margin: 0 15px; /* Espaço entre os itens */
+            margin: 0 5px; /* Espaço entre os itens */
         }
 
         p {
@@ -75,7 +75,7 @@
         }
 
         .content {
-            margin: 30px;
+            margin: 10px;
             position: relative;
             z-index: 2;
         }
