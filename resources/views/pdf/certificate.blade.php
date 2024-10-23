@@ -156,13 +156,13 @@
         .signature-1 img {
             width: 80px;
             height: auto;
-            margin-bottom: 5px;
+            margin-bottom: 0;
         }
 
         .signature-2 img {
             width: 100px;
             height: auto;
-            margin-bottom: 5px;
+            margin-bottom: 0;
         }
     </style>
 </head>
