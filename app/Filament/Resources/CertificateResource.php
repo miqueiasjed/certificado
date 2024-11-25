@@ -30,8 +30,7 @@ class CertificateResource extends Resource
             ->schema([
                 Forms\Components\DatePicker::make('date')
                 ->translateLabel()
-                ->required()
-                ->maxDate(now()),
+                ->required(),
                 Forms\Components\DatePicker::make('assurance')
                 ->translateLabel()
                 ->required(),
@@ -69,8 +68,9 @@ class CertificateResource extends Resource
             ->columns([
                 TextColumn::make('client.name')->label('Cliente'),
                 TextColumn::make('service.description')->label('Serviço'),
-                TextColumn::make('date')->label('Data'),
-                TextColumn::make('assurance')->label('Garantia'),
+                TextColumn::make('date')->label('Data')->formatStateUsing(fn ($state) => \Carbon\Carbon::parse($state)->format('d/m/Y')),
+
+                TextColumn::make('assurance')->label('Garantia')->formatStateUsing(fn ($state) => \Carbon\Carbon::parse($state)->format('d/m/Y')),
             ])
             ->filters([
                 //

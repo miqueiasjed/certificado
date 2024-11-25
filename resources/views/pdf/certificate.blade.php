@@ -136,6 +136,19 @@
             text-align: center;
         }
 
+        .footer-ambiental {
+            position: absolute;
+            top: 30%; /* Fixa o CEATOX no rodapé */
+            left: 65%;
+            text-align: left;
+            font-size: 14px;
+            z-index: 2;
+        }
+
+        .footer-ambiental p {
+            text-align: center;
+        }
+
         .signature-1{
             position: absolute;
             bottom: 12px; /* Fixa o CEATOX no rodapé */
@@ -233,6 +246,12 @@
     <div class="footer-ceatox">
         <p>CEATOX: (85) 3235-5050 (CENTRO DE ASSISTÊNCIA TOXICOLÓGICA)</p>
         <p>CONSELHO REGIONAL DE QUÍMICA - 10º REGIÃO Nº 5.253</p>
+    </div>
+
+    <!-- N° Alvará Sanitário em um contêiner separado -->
+    <div class="footer-ambiental">
+        <p><strong> N° Licença Ambiental |</strong></p>
+        <p>177/2024</p>
     </div>
 
     <!-- N° Alvará Sanitário em um contêiner separado -->

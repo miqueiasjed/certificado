@@ -65,7 +65,6 @@ class ClientResource extends Resource
             Forms\Components\TextInput::make('number')
                 ->translateLabel()
                 ->numeric()
-                ->required()
                 ->maxLength(255),
         ]);
     }
@@ -76,7 +75,7 @@ class ClientResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                 ->translateLabel(),
-                Tables\Columns\TextColumn::make('date_of_birth')
+                Tables\Columns\TextColumn::make('date_of_birth')->formatStateUsing(fn ($state) => \Carbon\Carbon::parse($state)->format('d/m/Y'))
                 ->translateLabel(),
                 Tables\Columns\TextColumn::make('email')
                 ->translateLabel(),
