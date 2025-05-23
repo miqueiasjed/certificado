@@ -40,7 +40,7 @@
             text-align: center;
             margin-top: 120px;
             /* Aumentado de 60px para 120px */
-            font-size: 10px;
+            font-size: 15px;
             color: #2f3091;
             line-height: 1.2;
             z-index: 2;
