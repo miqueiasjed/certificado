@@ -38,7 +38,7 @@
 
         .company-info {
             text-align: center;
-            margin-top: 120px;
+            margin-top: 100px;
             /* Aumentado de 60px para 120px */
             font-size: 15px;
             color: #2f3091;
