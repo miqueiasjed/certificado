@@ -142,7 +142,7 @@
             bottom: 15px;
             /* Fixa o CEATOX no rodapé */
             left: 0;
-            width: 60%;
+            width: 80%;
             /* O CEATOX ocupa metade da largura */
             text-align: left;
             z-index: 2;
@@ -152,7 +152,7 @@
             position: absolute;
             top: 30%;
             /* Fixa o CEATOX no rodapé */
-            left: 90%;
+            left: 80%;
             text-align: left;
             font-size: 14px;
             z-index: 2;
