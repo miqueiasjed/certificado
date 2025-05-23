@@ -38,10 +38,10 @@
 
         .company-info {
             text-align: center;
-            margin-top: 60px;
-            font-size: 16px;
+            margin-top: 120px;  /* Aumentado de 60px para 120px */
+            font-size: 10px;
             color: #2f3091;
-            line-height: 0.8;
+            line-height: 1.2;
             z-index: 2;
         }
 
