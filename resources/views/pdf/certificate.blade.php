@@ -152,7 +152,7 @@
             position: absolute;
             top: 30%;
             /* Fixa o CEATOX no rodapé */
-            left: 80%;
+            left: 90%;
             text-align: left;
             font-size: 14px;
             z-index: 2;
@@ -166,7 +166,7 @@
             position: absolute;
             top: 30%;
             /* Fixa o CEATOX no rodapé */
-            left: 65%;
+            left: 75%;
             text-align: left;
             font-size: 14px;
             z-index: 2;
