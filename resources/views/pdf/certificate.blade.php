@@ -8,256 +8,204 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            font-size: 14px;
+            font-size: 12px;
+            margin: 0;
+            padding: 30px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .full-page-image {
+            width: 29.7cm;
+            /* Largura no formato A4 */
+            height: 21cm;
+            /* Altura no formato A4 */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            /* Garante que a imagem fique atrás do conteúdo */
             margin: 0;
             padding: 0;
-            background-color: #f5f5f5;
-        }
-
-        .certificate-container {
-            width: 29.7cm;
-            height: 21cm;
-            margin: 10px auto;
-            background-color: white;
-            position: relative;
-            border: 6px solid #4CAF50;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
-            padding: 15px;
-            box-sizing: border-box;
-        }
-
-        .certificate-container::before {
-            content: '';
-            position: absolute;
-            top: 8px;
-            left: 8px;
-            right: 8px;
-            bottom: 8px;
-            border: 1px solid #4CAF50;
-            pointer-events: none;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 10px;
-            position: relative;
-        }
-
-        .logo-container {
-            margin-bottom: 8px;
-        }
-
-        .logo-image {
-            width: 120px;
-            height: auto;
-            margin: 0 auto 5px;
-            display: block;
+            background-image: url('{{ public_path('images/teste.png') }}');
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-position: center;
+            page-break-before: always;
+            /* Faz com que a imagem apareça em cada nova página */
         }
 
         .company-info {
             text-align: center;
-            margin-bottom: 10px;
-            font-size: 12px;
+            margin-top: 120px;
+            /* Aumentado de 60px para 120px */
+            font-size: 10px;
             color: #2f3091;
             line-height: 1.2;
+            z-index: 2;
         }
 
         .cert-title {
             text-align: center;
-            font-size: 20px;
+            font-size: 24px;
             font-weight: bold;
-            margin: 10px 0;
-            color: #333;
+            margin-top: 10px;
+            /* Ajuste o espaçamento superior entre o título e as informações da empresa */
+            z-index: 2;
         }
 
         .client-info {
-            margin-bottom: 8px;
-            font-size: 13px;
+            display: block;
+            /* Informações do cliente uma abaixo da outra */
+            margin-bottom: 20px;
+            font-size: 14px;
+            z-index: 2;
         }
 
-        .client-info p {
-            margin: 2px 0;
+        .client-info div {
+            width: 48%;
+            /* Cada coluna ocupa 48% da largura */
         }
 
         .service-info {
-            font-size: 14px;
+            font-size: 16px;
             text-align: center;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-around;
-            background: #f9f9f9;
-            padding: 5px;
-            border-radius: 3px;
+            /* Centraliza o conteúdo */
+            margin-bottom: 5px;
+            /* Espaço entre as informações e a tabela */
+            z-index: 2;
         }
 
         .service-info p {
-            margin: 0;
-            padding: 0 5px;
+            display: inline-block;
+            /* Exibe "Serviço Prestado", "Data do Serviço" e "Garantia" na mesma linha */
+            margin: 0 5px;
+            /* Espaço entre os itens */
         }
 
-        .procedures {
+        p {
+            margin: 5px 0;
+            /* Ajusta o espaçamento entre os parágrafos para as informações do cliente */
+        }
+
+        .content {
+            margin: 10px;
+            position: relative;
+            z-index: 2;
+        }
+
+        h1 {
             text-align: center;
-            margin-bottom: 8px;
-            font-size: 13px;
-            background: #e8f5e8;
-            padding: 5px;
-            border-radius: 3px;
+            font-size: 20px;
+            margin-bottom: 20px;
         }
 
-        .procedures p {
-            margin: 0;
-        }
-
+        /* Tabela centralizada */
         table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 10px;
             text-align: center;
+            /* Centraliza o conteúdo dentro da tabela */
         }
 
-        table, th, td {
-            border: 1px solid #4CAF50;
-        }
-
-        th {
-            background-color: #4CAF50;
-            color: white;
-            padding: 6px;
-            font-size: 10px;
-        }
-
+        table,
+        th,
         td {
-            padding: 4px;
-            text-align: center;
-            vertical-align: middle;
-            font-size: 9px;
+            border: 1px solid black;
         }
 
-        .footer-container {
-            position: relative;
-            height: 80px;
+        th,
+        td {
+            padding: 10px;
+            text-align: center;
+            /* Centraliza o conteúdo horizontalmente */
+            vertical-align: middle;
+            /* Centraliza o conteúdo verticalmente */
+        }
+
+        .section-title {
+            font-size: 14px;
             margin-top: 10px;
+        }
+
+        .procedures p {
+            font-size: 14px;
+            margin: 5px 0;
+            text-align: center;
+            /* Centraliza o texto dos procedimentos */
         }
 
         .footer-ceatox {
             position: absolute;
-            bottom: 0;
+            bottom: 15px;
+            /* Fixa o CEATOX no rodapé */
             left: 0;
-            width: 50%;
+            width: 60%;
+            /* O CEATOX ocupa metade da largura */
             text-align: left;
-            font-size: 9px;
-        }
-
-        .footer-ceatox p {
-            margin: 1px 0;
-        }
-
-        .footer-ambiental {
-            position: absolute;
-            top: 0;
-            right: 120px;
-            text-align: center;
-            font-size: 11px;
-            background: #f0f8f0;
-            border: 1px solid #4CAF50;
-            padding: 3px;
-            border-radius: 3px;
-            width: 90px;
-        }
-
-        .footer-ambiental p {
-            margin: 1px 0;
+            z-index: 2;
         }
 
         .footer-sanitario {
             position: absolute;
-            top: 0;
-            right: 20px;
-            text-align: center;
-            font-size: 11px;
-            background: #f0f8f0;
-            border: 1px solid #4CAF50;
-            padding: 3px;
-            border-radius: 3px;
-            width: 90px;
+            top: 30%;
+            /* Fixa o CEATOX no rodapé */
+            left: 90%;
+            text-align: left;
+            font-size: 14px;
+            z-index: 2;
         }
 
         .footer-sanitario p {
-            margin: 1px 0;
+            text-align: center;
+        }
+
+        .footer-ambiental {
+            position: absolute;
+            top: 30%;
+            /* Fixa o CEATOX no rodapé */
+            left: 65%;
+            text-align: left;
+            font-size: 14px;
+            z-index: 2;
+        }
+
+        .footer-ambiental p {
+            text-align: center;
         }
 
         .signature-1 {
             position: absolute;
-            bottom: 0;
-            right: 120px;
-            text-align: center;
-            width: 80px;
-        }
-
-        .signature-1 img {
-            width: 60px;
-            height: auto;
-            margin-bottom: 2px;
-        }
-
-        .signature-1 p {
-            margin: 0;
-            font-size: 8px;
-            font-weight: bold;
+            bottom: 12px;
+            /* Fixa o CEATOX no rodapé */
+            left: 60%;
+            text-align: left;
+            z-index: 2;
         }
 
         .signature-2 {
             position: absolute;
-            bottom: 0;
-            right: 20px;
-            text-align: center;
+            bottom: 12px;
+            /* Fixa o CEATOX no rodapé */
+            left: 80%;
+            width: 50%;
+            /* O CEATOX ocupa metade da largura */
+            text-align: left;
+            z-index: 2;
+        }
+
+        .signature-1 img {
             width: 80px;
+            height: auto;
+            margin-bottom: 0;
         }
 
         .signature-2 img {
-            width: 70px;
+            width: 100px;
             height: auto;
-            margin-bottom: 2px;
-        }
-
-        .signature-2 p {
-            margin: 0;
-            font-size: 8px;
-            font-weight: bold;
-        }
-
-        .green-accent {
-            background: linear-gradient(90deg, #4CAF50, rgba(76,175,80,0.3), #4CAF50);
-            height: 2px;
-            margin: 8px 0;
-        }
-
-        /* Para impressão - forçar uma página única */
-        @media print {
-            body {
-                background-color: white;
-            }
-            .certificate-container {
-                margin: 0;
-                box-shadow: none;
-                border: 6px solid #4CAF50;
-                page-break-inside: avoid;
-                page-break-after: avoid;
-                page-break-before: avoid;
-            }
-
-            table {
-                page-break-inside: avoid;
-            }
-
-            .footer-container {
-                page-break-inside: avoid;
-            }
-        }
-
-        @page {
-            size: A4 landscape;
-            margin: 0.5cm;
+            margin-bottom: 0;
         }
     </style>
 </head>
