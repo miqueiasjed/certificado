@@ -24,12 +24,20 @@ class OrganRegistrationResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+                    protected static ?string $navigationGroup = 'Cadastros';
+
+    protected static ?int $navigationSort = 5;
+
+
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Forms\Components\TextInput::make('record')
-                ->translateLabel(),
+                    ->label('Registro')
+                    ->required()
+                    ->maxLength(255),
             ]);
     }
 

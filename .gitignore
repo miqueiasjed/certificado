@@ -20,4 +20,5 @@ yarn-error.log
 /.idea
 /.vscode
 /.zed
+.DS_Store
 >>>>>>> ce53ae2 (First commit)

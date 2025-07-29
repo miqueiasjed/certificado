@@ -12,7 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Leandrocfe\FilamentPtbrFormFields\Document;
+
 
 class ClientResource extends Resource
 {
@@ -24,6 +24,12 @@ class ClientResource extends Resource
     }
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
+                    protected static ?string $navigationGroup = 'Cadastros';
+
+    protected static ?int $navigationSort = 4;
+
+
 
     public static function form(Form $form): Form
     {
@@ -46,10 +52,10 @@ class ClientResource extends Resource
                 ->translateLabel()
                 ->tel()
                 ->required(),
-            Document::make('cnpj')
+            Forms\Components\TextInput::make('cnpj')
                 ->label('CPF/CNPJ')
                 ->required()
-                ->dynamic(),
+                ->maxLength(18),
             Forms\Components\TextInput::make('address')
                 ->translateLabel()
                 ->required()
