@@ -270,7 +270,7 @@
                         <td>{{ $product->activeIngredient->name }}</td>
                         <td>{{ $product->chemicalGroup->name }}</td>
                         <td>{{ $product->antidote->name }}</td>
-                        <td>{{ $product->organRegistration->record }}</td>
+                        <td>{{ $product->organRegistration->record ?? '-' }}</td>
                     </tr>
                 @endforeach
             </tbody>

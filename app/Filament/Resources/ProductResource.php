@@ -108,8 +108,7 @@ class ProductResource extends Resource
                             ->modalHeading('Criar Reg. Min da Saude')
                             ->modalButton('Criar Reg. Min da Saude')
                             ->modalSubmitActionLabel('Criar Reg. Min da Saude')
-                    )
-                    ->required(),
+                    ),
             ]);
     }
 
