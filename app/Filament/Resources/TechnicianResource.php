@@ -28,8 +28,6 @@ class TechnicianResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
-    protected static ?string $navigationGroup = 'Operacional';
-
     protected static ?int $navigationSort = 2;
 
     public static function getEloquentQuery(): Builder
