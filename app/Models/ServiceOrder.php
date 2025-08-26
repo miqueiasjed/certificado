@@ -5,102 +5,127 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-
 
 class ServiceOrder extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'order_number',
-        'order_date',
-        'start_time',
-        'end_time',
-        'service_type',
         'client_id',
+        'service_id',
         'technician_id',
-        'description',
-        'observations',
-        'special_instructions',
         'status',
+        'priority',
+        'start_date',
+        'due_date',
+        'completion_date',
+        'notes',
     ];
 
     protected $casts = [
-        'order_date' => 'date',
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
+        'start_date' => 'date',
+        'due_date' => 'date',
+        'completion_date' => 'date',
     ];
-
-
 
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
     }
 
-    public function rooms(): HasMany
+    public function service(): BelongsTo
     {
-        return $this->hasMany(Room::class);
-    }
-
-    public function devices(): HasMany
-    {
-        return $this->hasMany(Device::class);
+        return $this->belongsTo(Service::class);
     }
 
     public function technician(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'technician_id');
+        return $this->belongsTo(Technician::class);
     }
 
-    public function products(): HasMany
+    public function scopeByStatus($query, $status)
     {
-        return $this->hasMany(ServiceOrderProduct::class);
+        return $query->where('status', $status);
     }
 
-    public function getStatusLabelAttribute(): string
+    public function scopeByPriority($query, $priority)
+    {
+        return $query->where('priority', $priority);
+    }
+
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    public function scopeInProgress($query)
+    {
+        return $query->where('status', 'in_progress');
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', 'completed');
+    }
+
+    public function scopeCancelled($query)
+    {
+        return $query->where('status', 'cancelled');
+    }
+
+    public function scopeOverdue($query)
+    {
+        return $query->where('due_date', '<', now())
+                    ->whereNotIn('status', ['completed', 'cancelled']);
+    }
+
+    public function getStatusBadgeAttribute(): string
     {
         return match($this->status) {
             'pending' => 'Pendente',
             'in_progress' => 'Em Andamento',
             'completed' => 'Concluída',
             'cancelled' => 'Cancelada',
-            default => 'Desconhecido',
+            default => 'Não definido'
         };
     }
 
-    public function getFormattedOrderDateAttribute(): string
+    public function getPriorityBadgeAttribute(): string
     {
-        return $this->order_date->format('d/m/Y');
-    }
-
-    public function getFormattedStartTimeAttribute(): string
-    {
-        return $this->start_time->format('H:i');
-    }
-
-    public function getFormattedEndTimeAttribute(): string
-    {
-        return $this->end_time->format('H:i');
-    }
-
-    public function getServiceTypeLabelAttribute(): string
-    {
-        return match($this->service_type) {
-            'dedetizacao' => 'Dedetização',
-            'desinsetizacao' => 'Desinsetização',
-            'descupinizacao' => 'Descupinização',
-            'desratizacao' => 'Desratização',
-            'sanitizacao' => 'Sanitização',
-            default => 'Desconhecido',
+        return match($this->priority) {
+            'low' => 'Baixa',
+            'medium' => 'Média',
+            'high' => 'Alta',
+            'urgent' => 'Urgente',
+            default => 'Não definida'
         };
     }
 
-    public static function generateOrderNumber(): string
+    public function getStatusColorAttribute(): string
     {
-        $lastOrder = self::orderBy('id', 'desc')->first();
-        $nextNumber = $lastOrder ? (int)$lastOrder->order_number + 1 : 1;
-        return str_pad($nextNumber, 6, '0', STR_PAD_LEFT);
+        return match($this->status) {
+            'pending' => 'yellow',
+            'in_progress' => 'blue',
+            'completed' => 'green',
+            'cancelled' => 'red',
+            default => 'gray'
+        };
+    }
+
+    public function getPriorityColorAttribute(): string
+    {
+        return match($this->priority) {
+            'low' => 'gray',
+            'medium' => 'blue',
+            'high' => 'orange',
+            'urgent' => 'red',
+            default => 'gray'
+        };
+    }
+
+    public function getIsOverdueAttribute(): bool
+    {
+        return $this->due_date && $this->due_date->isPast() &&
+               !in_array($this->status, ['completed', 'cancelled']);
     }
 }

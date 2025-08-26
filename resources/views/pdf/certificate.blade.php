@@ -228,33 +228,41 @@
 
     <!-- Informações do cliente e serviço em duas colunas -->
     <div class="client-info">
-        <p><strong>Cliente:</strong> {{ $certificate->client->name }}</p>
-        <p><strong>CNPJ:</strong> {{ $certificate->client->cnpj }}</p>
+        <p><strong>Cliente:</strong> {{ $certificate->client->name ?? 'Não informado' }}</p>
+        <p><strong>CPF/CNPJ:</strong> {{ $certificate->client->cnpj ?? 'Não informado' }}</p>
         <p><strong>Endereço:</strong>
-            {{ $certificate->client->address }},{{ $certificate->client->number }},{{ $certificate->client->neighborhood }},{{ $certificate->client->city }}
+            @if($certificate->client->address || $certificate->client->city || $certificate->client->state)
+                {{ $certificate->client->address ?? '' }}{{ $certificate->client->city ? ', ' . $certificate->client->city : '' }}{{ $certificate->client->state ? ', ' . $certificate->client->state : '' }}
+            @else
+                Não informado
+            @endif
         </p>
     </div>
 
     <!-- Serviço Prestado, Data do Serviço, Garantia centralizados -->
     <div class="service-info">
-        <p><strong>Serviço Prestado:</strong> {{ $certificate->service->description }}</p>
-        <p><strong>Data do Serviço:</strong> {{ $certificate->date->format('d/m/Y') }}</p>
-        <p><strong>Garantia:</strong> {{ $certificate->assurance->format('d/m/Y') }} </p>
+        <p><strong>Data da Execução:</strong> {{ $certificate->execution_date ? $certificate->execution_date->format('d/m/Y') : 'Não informada' }}</p>
+        <p><strong>Garantia:</strong> {{ $certificate->warranty ? $certificate->warranty->format('d/m/Y') : 'Não informada' }}</p>
     </div>
 
     <!-- Conteúdo principal -->
     <div class="content">
 
         <div class="procedures">
-            <p><strong>Procedimento Utilizado:</strong>
-                @foreach ($certificate->procedures as $procedure)
-                    {{ $procedure->name }}@if (!$loop->last)
-                        -
-                    @endif
-                @endforeach
+            <p><strong>Serviços Prestados:</strong>
+                @if($certificate->services && $certificate->services->count() > 0)
+                    @foreach ($certificate->services as $service)
+                        {{ $service->name }}@if (!$loop->last)
+                            -
+                        @endif
+                    @endforeach
+                @else
+                    Não informado
+                @endif
             </p>
         </div>
 
+        @if($certificate->products && $certificate->products->count() > 0)
         <table>
             <thead>
                 <tr>
@@ -267,14 +275,17 @@
             <tbody>
                 @foreach ($certificate->products as $product)
                     <tr>
-                        <td>{{ $product->activeIngredient->name }}</td>
-                        <td>{{ $product->chemicalGroup->name }}</td>
-                        <td>{{ $product->antidote->name }}</td>
-                        <td>{{ $product->organRegistration->record ?? '-' }}</td>
+                        <td>{{ $product->activeIngredient->name ?? 'Não informado' }}</td>
+                        <td>{{ $product->chemicalGroup->name ?? 'Não informado' }}</td>
+                        <td>{{ $product->antidote->name ?? 'Não informado' }}</td>
+                        <td>{{ $product->organRegistration->record ?? 'Não informado' }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
+        @else
+        <p><strong>Produtos:</strong> Nenhum produto informado</p>
+        @endif
     </div>
 
     <!-- CEATOX em um contêiner separado -->

@@ -9,16 +9,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Client extends Model
 {
     protected $fillable = [
-        'email',
         'name',
+        'email',
         'phone',
         'cnpj',
-        'date_of_birth',
-        'address',
-        'neighborhood',
         'city',
-        'number',
+        'state',
+        'zip_code',
+        'address',
+        'notes',
     ];
+
     public function certificates(): HasMany
     {
         return $this->hasMany(Certificate::class);

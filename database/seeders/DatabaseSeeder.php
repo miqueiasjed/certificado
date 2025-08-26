@@ -28,5 +28,11 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('12345678'),
             'email_verified_at' => now(),
         ]);
+
+        // Executar seeders específicos
+        $this->call([
+            TechnicianSeeder::class,
+            ServiceSeeder::class,
+        ]);
     }
 }

@@ -1,3 +1,26 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Estilos customizados */
+@layer components {
+    .btn-primary {
+        @apply bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-md transform hover:-translate-y-0.5;
+    }
+
+    .btn-secondary {
+        @apply bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors;
+    }
+
+    .btn-secondary-sm {
+        @apply bg-gray-500 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-xs font-medium transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-md;
+    }
+
+    .btn-danger {
+        @apply bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center shadow-sm hover:shadow-md transform hover:-translate-y-0.5;
+    }
+
+    .card {
+        @apply bg-white shadow-sm rounded-lg border border-gray-200;
+    }
+}
