@@ -7,6 +7,7 @@ use App\Services\ClientService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Log;
 
 class ClientController extends Controller
 {
@@ -37,12 +38,27 @@ class ClientController extends Controller
 
     public function store(ClientRequest $request)
     {
+        Log::info('ClientController::store - Iniciando criação de cliente');
+
         try {
-            $client = $this->clientService->createClient($request->validated());
+            $validatedData = $request->validated();
+            Log::info('ClientController::store - Dados validados:', $validatedData);
+
+            $client = $this->clientService->createClient($validatedData);
+
+            Log::info('ClientController::store - Cliente criado com sucesso:', [
+                'id' => $client->id,
+                'name' => $client->name
+            ]);
 
             return redirect()->route('clients.index')
                 ->with('success', 'Cliente criado com sucesso!');
         } catch (\Exception $e) {
+            Log::error('ClientController::store - Erro ao criar cliente:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return back()->withInput()
                 ->with('error', 'Erro ao criar cliente: ' . $e->getMessage());
         }
