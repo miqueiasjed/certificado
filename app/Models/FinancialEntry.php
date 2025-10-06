@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 
 class FinancialEntry extends Model
 {
@@ -165,5 +166,58 @@ class FinancialEntry extends Model
     public function scopeByDateRange($query, $startDate, $endDate)
     {
         return $query->whereBetween('entry_date', [$startDate, $endDate]);
+    }
+
+    /**
+     * Boot method to handle model events
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Atualizar saldo diário quando uma entrada for criada
+        static::created(function ($entry) {
+            if ($entry->status === 'confirmed') {
+                $entry->updateDailyBalance();
+            }
+        });
+
+        // Atualizar saldo diário quando uma entrada for atualizada
+        static::updated(function ($entry) {
+            if ($entry->status === 'confirmed') {
+                $entry->updateDailyBalance();
+            }
+        });
+
+        // Atualizar saldo diário quando uma entrada for excluída
+        static::deleted(function ($entry) {
+            $entry->updateDailyBalance();
+        });
+    }
+
+    /**
+     * Atualizar saldo diário relacionado a esta entrada
+     */
+    public function updateDailyBalance(): void
+    {
+        try {
+            $balance = \App\Models\DailyCashBalance::firstOrCreate(
+                ['balance_date' => $this->entry_date],
+                [
+                    'opening_balance' => \App\Models\DailyCashBalance::getYesterdayClosingBalance($this->entry_date),
+                    'total_entries' => 0,
+                    'total_withdrawals' => 0,
+                    'closing_balance' => \App\Models\DailyCashBalance::getYesterdayClosingBalance($this->entry_date),
+                    'entries_count' => 0,
+                    'withdrawals_count' => 0,
+                    'is_closed' => false,
+                ]
+            );
+
+            $balance->updateFromFinancialEntries();
+        } catch (\Exception $e) {
+            // Log do erro mas não interrompe o processo
+            Log::error('Erro ao atualizar saldo diário: ' . $e->getMessage());
+        }
     }
 }

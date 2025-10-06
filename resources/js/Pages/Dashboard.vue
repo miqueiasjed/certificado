@@ -12,42 +12,42 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
           title="Total de Clientes"
-          :value="stats.clients"
+          :value="stats.total_clients"
           icon="users"
           color="blue"
           :href="'/clients'"
         />
         <StatCard
           title="Total de Produtos"
-          :value="stats.products"
+          :value="stats.total_products || 0"
           icon="cube"
           color="green"
           :href="'/products'"
         />
         <StatCard
           title="Total de Técnicos"
-          :value="stats.technicians"
+          :value="stats.total_technicians || 0"
           icon="user-circle"
           color="indigo"
           :href="'/technicians'"
         />
         <StatCard
           title="Total de Serviços"
-          :value="stats.services"
+          :value="stats.total_services || 0"
           icon="lightning-bolt"
           color="purple"
           :href="'/services'"
         />
         <StatCard
           title="Ordens de Serviço"
-          :value="stats.serviceOrders"
+          :value="stats.total_work_orders"
           icon="document-text"
           color="orange"
           :href="'/service-orders'"
         />
         <StatCard
           title="Total de Certificados"
-          :value="stats.certificates"
+          :value="stats.total_certificates || 0"
           icon="shield-check"
           color="emerald"
           :href="'/certificates'"
@@ -196,9 +196,36 @@ import StatCard from '@/Components/StatCard.vue';
 import QuickAction from '@/Components/QuickAction.vue';
 
 const props = defineProps({
-  stats: Object,
-  recentServiceOrders: Array,
-  recentCertificates: Array,
+  stats: {
+    type: Object,
+    default: () => ({
+      total_clients: 0,
+      total_work_orders: 0,
+      pending_work_orders: 0,
+      completed_work_orders: 0,
+    })
+  },
+  financialStats: {
+    type: Object,
+    default: () => ({
+      monthly_entries: 0,
+      monthly_withdrawals: 0,
+      monthly_net: 0,
+      current_balance: 0,
+    })
+  },
+  recentEntries: {
+    type: Array,
+    default: () => []
+  },
+  recentServiceOrders: {
+    type: Array,
+    default: () => []
+  },
+  recentCertificates: {
+    type: Array,
+    default: () => []
+  },
 });
 
 const getStatusBadgeClass = (status) => {

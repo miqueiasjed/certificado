@@ -2,17 +2,17 @@
   <AuthenticatedLayout>
     <template #header>
       <PageHeader
-        title="Entradas Financeiras"
-        description="Controle de receitas e pagamentos recebidos">
+        title="Saídas Financeiras"
+        description="Gerencie todas as saídas de dinheiro do sistema">
         <template #actions>
           <button
             @click="showCreateModal = true"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
-            Nova Entrada
+            Nova Saída
           </button>
         </template>
       </PageHeader>
@@ -24,9 +24,9 @@
           <!-- Tipo -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-            <select v-model="filters.type" @change="loadEntries" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm">
+            <select v-model="filters.type" @change="loadWithdrawals" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
               <option value="">Todos os tipos</option>
-              <option value="payment">Pagamentos</option>
+              <option value="withdrawal">Saídas</option>
               <option value="manual">Manuais</option>
             </select>
           </div>
@@ -34,7 +34,7 @@
           <!-- Status -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-            <select v-model="filters.status" @change="loadEntries" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm">
+            <select v-model="filters.status" @change="loadWithdrawals" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm">
               <option value="">Todos os status</option>
               <option value="confirmed">Confirmado</option>
               <option value="pending">Pendente</option>
@@ -48,8 +48,8 @@
             <input
               v-model="filters.start_date"
               type="date"
-              @change="loadEntries"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+              @change="loadWithdrawals"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
             />
           </div>
 
@@ -59,8 +59,8 @@
             <input
               v-model="filters.end_date"
               type="date"
-              @change="loadEntries"
-              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+              @change="loadWithdrawals"
+              class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
             />
           </div>
         </div>
@@ -78,8 +78,8 @@
               </div>
               <div class="ml-5 w-0 flex-1">
                 <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">Total de Entradas</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ formatCurrency(stats.total_entries || 0) }}</dd>
+                  <dt class="text-sm font-medium text-gray-500 truncate">Total de Saídas</dt>
+                  <dd class="text-lg font-medium text-gray-900">{{ formatCurrency(stats.total_withdrawals || 0) }}</dd>
                 </dl>
               </div>
             </div>
@@ -96,8 +96,8 @@
               </div>
               <div class="ml-5 w-0 flex-1">
                 <dl>
-                  <dt class="text-sm font-medium text-gray-500 truncate">De Pagamentos</dt>
-                  <dd class="text-lg font-medium text-gray-900">{{ formatCurrency(stats.payment_amount) }}</dd>
+                  <dt class="text-sm font-medium text-gray-500 truncate">De Reaberturas</dt>
+                  <dd class="text-lg font-medium text-gray-900">{{ formatCurrency(stats.reopen_amount || 0) }}</dd>
                 </dl>
               </div>
             </div>
@@ -126,61 +126,61 @@
       <!-- Tabela -->
       <div class="bg-white shadow overflow-hidden sm:rounded-md">
         <div class="px-4 py-5 sm:px-6">
-          <h3 class="text-lg leading-6 font-medium text-gray-900">Lista de Entradas</h3>
-          <p class="mt-1 max-w-2xl text-sm text-gray-500">Todas as entradas financeiras registradas</p>
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Lista de Saídas</h3>
+          <p class="mt-1 max-w-2xl text-sm text-gray-500">Todas as saídas financeiras registradas</p>
         </div>
         <ul class="divide-y divide-gray-200">
-          <li v-for="entry in entries.data" :key="entry.id" class="px-4 py-4 sm:px-6">
+          <li v-for="withdrawal in withdrawals?.data || []" :key="withdrawal.id" class="px-4 py-4 sm:px-6">
             <div class="flex items-center justify-between">
               <div class="flex items-center">
                 <div class="flex-shrink-0">
-                  <span :class="getTypeBadgeClass(entry.type)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                    {{ entry.type_text }}
+                  <span :class="getTypeBadgeClass(withdrawal.type)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {{ withdrawal.type_text }}
                   </span>
                 </div>
                 <div class="ml-4">
                   <div class="flex items-center">
-                    <p class="text-sm font-medium text-gray-900">{{ entry.description }}</p>
-                    <span :class="getStatusBadgeClass(entry.status)" class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                      {{ entry.status_text }}
+                    <p class="text-sm font-medium text-gray-900">{{ withdrawal.description }}</p>
+                    <span :class="getStatusBadgeClass(withdrawal.status)" class="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                      {{ withdrawal.status_text }}
                     </span>
                   </div>
                   <div class="mt-1 flex items-center text-sm text-gray-500">
                     <svg class="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    {{ formatDate(entry.entry_date) }}
-                    <span v-if="entry.payment_method" class="ml-2">
-                      • {{ entry.payment_method_text }}
+                    {{ formatDate(withdrawal.withdrawal_date) }}
+                    <span v-if="withdrawal.payment_method" class="ml-2">
+                      • {{ withdrawal.payment_method_text }}
                     </span>
-                    <span v-if="entry.reference_number" class="ml-2">
-                      • Ref: {{ entry.reference_number }}
+                    <span v-if="withdrawal.reference_number" class="ml-2">
+                      • Ref: {{ withdrawal.reference_number }}
                     </span>
                   </div>
                 </div>
               </div>
               <div class="flex items-center">
                 <div class="text-right">
-                  <p class="text-lg font-semibold text-gray-900">{{ formatCurrency(entry.amount) }}</p>
-                  <p v-if="entry.work_order_id" class="text-sm text-gray-500">OS #{{ entry.work_order_id }}</p>
+                  <p class="text-lg font-semibold text-red-600">-{{ formatCurrency(withdrawal.amount) }}</p>
+                  <p v-if="withdrawal.work_order_id" class="text-sm text-gray-500">OS #{{ withdrawal.work_order_id }}</p>
                 </div>
                 <div class="ml-4 flex space-x-2">
                   <button
-                    v-if="!isFromWorkOrder(entry)"
-                    @click="editEntry(entry)"
+                    v-if="!isFromWorkOrder(withdrawal)"
+                    @click="editEntry(withdrawal)"
                     class="text-green-600 hover:text-green-900 text-sm font-medium"
                   >
                     Editar
                   </button>
                   <button
-                    v-if="!isFromWorkOrder(entry)"
-                    @click="deleteEntry(entry.id)"
+                    v-if="!isFromWorkOrder(withdrawal)"
+                    @click="deleteEntry(withdrawal.id)"
                     class="text-red-600 hover:text-red-900 text-sm font-medium"
                   >
                     Excluir
                   </button>
                   <span
-                    v-if="isFromWorkOrder(entry)"
+                    v-if="isFromWorkOrder(withdrawal)"
                     class="text-gray-400 text-sm font-medium"
                     title="Entrada gerada automaticamente por OS - não pode ser editada"
                   >
@@ -193,18 +193,18 @@
         </ul>
 
         <!-- Paginação -->
-        <div v-if="entries.last_page > 1" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+        <div v-if="withdrawals && withdrawals.last_page > 1" class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
           <div class="flex-1 flex justify-between sm:hidden">
             <Link
-              v-if="entries.prev_page_url"
-              :href="entries.prev_page_url"
+              v-if="withdrawals && withdrawals.prev_page_url"
+              :href="withdrawals.prev_page_url"
               class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
             >
               Anterior
             </Link>
             <Link
-              v-if="entries.next_page_url"
-              :href="entries.next_page_url"
+              v-if="withdrawals && withdrawals.next_page_url"
+              :href="withdrawals.next_page_url"
               class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
             >
               Próximo
@@ -214,25 +214,25 @@
             <div>
               <p class="text-sm text-gray-700">
                 Mostrando
-                <span class="font-medium">{{ entries.from }}</span>
+                <span class="font-medium">{{ withdrawals?.from || 0 }}</span>
                 até
-                <span class="font-medium">{{ entries.to }}</span>
+                <span class="font-medium">{{ withdrawals?.to || 0 }}</span>
                 de
-                <span class="font-medium">{{ entries.total }}</span>
+                <span class="font-medium">{{ withdrawals?.total || 0 }}</span>
                 resultados
               </p>
             </div>
             <div>
               <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                 <Link
-                  v-for="link in entries.links"
+                  v-for="link in withdrawals?.links || []"
                   :key="link.label"
                   :href="link.url"
                   v-html="link.label"
                   :class="[
                     'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
                     link.active
-                      ? 'z-10 bg-green-50 border-green-500 text-green-600'
+                      ? 'z-10 bg-red-50 border-red-500 text-red-600'
                       : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50',
                     link.url === null ? 'opacity-50 cursor-not-allowed' : ''
                   ]"
@@ -321,7 +321,7 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Data *</label>
                 <input
-                  v-model="form.entry_date"
+                  v-model="form.withdrawal_date"
                   type="date"
                   required
                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
@@ -412,17 +412,17 @@ import PageHeader from '@/Components/PageHeader.vue'
 
 // Props
 const props = defineProps({
-  entries: {
+  withdrawals: {
     type: Object,
     required: true
   },
   stats: {
     type: Object,
     default: () => ({
-      total_entries: 0,
-      payment_amount: 0,
+      total_withdrawals: 0,
+      reopen_amount: 0,
       manual_amount: 0,
-      total_count: 0
+      total_entries: 0
     })
   }
 })
@@ -445,7 +445,7 @@ const form = reactive({
   source: '',
   amount: '',
   description: '',
-  entry_date: '',
+  withdrawal_date: '',
   payment_method: '',
   reference_number: '',
   notes: '',
@@ -453,7 +453,7 @@ const form = reactive({
 })
 
 // Methods
-const loadEntries = () => {
+const loadWithdrawals = () => {
   const params = {}
   Object.keys(filters).forEach(key => {
     if (filters[key]) {
@@ -461,7 +461,7 @@ const loadEntries = () => {
     }
   })
 
-  router.get('/financial-entries', params, {
+  router.get('/financial-withdrawals', params, {
     preserveState: true,
     preserveScroll: true,
     replace: true
@@ -527,20 +527,20 @@ const getStatusBadgeClass = (status) => {
   }
 }
 
-const editEntry = (entry) => {
-  editingEntry.value = entry
+const editEntry = (withdrawal) => {
+  editingEntry.value = withdrawal
   Object.keys(form).forEach(key => {
     if (key === 'amount') {
-      form[key] = formatCurrency(entry[key])
+      form[key] = formatCurrency(withdrawal[key])
     } else {
-      form[key] = entry[key] || ''
+      form[key] = withdrawal[key] || ''
     }
   })
   showEditModal.value = true
 }
 
-const isFromWorkOrder = (entry) => {
-  return entry.source === 'work_order' || entry.source === 'payment_reopen'
+const isFromWorkOrder = (withdrawal) => {
+  return withdrawal.source === 'work_order' || withdrawal.source === 'payment_reopen'
 }
 
 const deleteEntry = async (id) => {
@@ -626,6 +626,6 @@ const closeModal = () => {
 onMounted(() => {
   // Set default date to today
   const today = new Date().toISOString().split('T')[0]
-  form.entry_date = today
+  form.withdrawal_date = today
 })
 </script>

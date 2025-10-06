@@ -196,6 +196,42 @@
             <span v-if="!collapsed">Entradas Financeiras</span>
           </Link>
         </li>
+        <li>
+          <Link
+            :href="'/financial-withdrawals'"
+            :class="[
+              isCurrentRoute('/financial-withdrawals')
+                ? 'bg-green-700 text-white'
+                : 'text-green-100 hover:bg-green-700 hover:text-white',
+              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+            ]">
+            <svg :class="[
+              isCurrentRoute('/financial-withdrawals') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              'h-5 w-5 shrink-0 transition-colors'
+            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4m16 0l-4-4m4 4l-4 4M4 12l4-4m-4 4l4 4"></path>
+            </svg>
+            <span v-if="!collapsed">Saídas Financeiras</span>
+          </Link>
+        </li>
+        <li>
+          <Link
+            :href="'/cash-flow'"
+            :class="[
+              isCurrentRoute('/cash-flow')
+                ? 'bg-green-700 text-white'
+                : 'text-green-100 hover:bg-green-700 hover:text-white',
+              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+            ]">
+            <svg :class="[
+              isCurrentRoute('/cash-flow') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              'h-5 w-5 shrink-0 transition-colors'
+            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            <span v-if="!collapsed">Fluxo de Caixa</span>
+          </Link>
+        </li>
 
         <!-- Spacer -->
         <li class="mt-auto">

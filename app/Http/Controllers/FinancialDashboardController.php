@@ -37,14 +37,22 @@ class FinancialDashboardController extends Controller
      */
     private function getBasicStats(string $startDate, string $endDate): array
     {
-        $query = FinancialEntry::confirmed()
+        $baseQuery = FinancialEntry::confirmed()
             ->whereBetween('entry_date', [$startDate, $endDate]);
 
+        $paymentAmount = (clone $baseQuery)->where('type', 'payment')->sum('amount');
+        $manualAmount = (clone $baseQuery)->where('type', 'manual')->sum('amount');
+        $withdrawalAmount = (clone $baseQuery)->where('type', 'withdrawal')->sum('amount');
+
+        // Valor líquido = entradas - saídas
+        $netAmount = $paymentAmount + $manualAmount - $withdrawalAmount;
+
         return [
-            'total_amount' => $query->sum('amount'),
-            'payment_amount' => $query->where('type', 'payment')->sum('amount'),
-            'manual_amount' => $query->where('type', 'manual')->sum('amount'),
-            'total_entries' => $query->count(),
+            'total_amount' => $netAmount, // Valor líquido
+            'payment_amount' => $paymentAmount,
+            'manual_amount' => $manualAmount,
+            'withdrawal_amount' => $withdrawalAmount,
+            'total_entries' => (clone $baseQuery)->whereIn('type', ['payment', 'manual'])->count(),
         ];
     }
 
@@ -53,9 +61,10 @@ class FinancialDashboardController extends Controller
      */
     private function getChartData(string $startDate, string $endDate): array
     {
-        // Gráfico por tipo (Doughnut)
+        // Gráfico por tipo (Doughnut) - apenas entradas
         $typeData = FinancialEntry::confirmed()
             ->whereBetween('entry_date', [$startDate, $endDate])
+            ->whereIn('type', ['payment', 'manual']) // Apenas entradas
             ->selectRaw('type, SUM(amount) as total')
             ->groupBy('type')
             ->get();
@@ -73,9 +82,10 @@ class FinancialDashboardController extends Controller
             ]]
         ];
 
-        // Gráfico por forma de pagamento (Bar)
+        // Gráfico por forma de pagamento (Bar) - apenas entradas
         $methodData = FinancialEntry::confirmed()
             ->whereBetween('entry_date', [$startDate, $endDate])
+            ->whereIn('type', ['payment', 'manual']) // Apenas entradas
             ->whereNotNull('payment_method')
             ->selectRaw('payment_method, SUM(amount) as total')
             ->groupBy('payment_method')
@@ -107,10 +117,12 @@ class FinancialDashboardController extends Controller
             ]]
         ];
 
-        // Gráfico de evolução mensal (Line)
+        // Gráfico de evolução mensal (Line) - valor líquido
         $monthlyData = FinancialEntry::confirmed()
             ->whereBetween('entry_date', [$startDate, $endDate])
-            ->selectRaw('DATE_FORMAT(entry_date, "%Y-%m") as month, SUM(amount) as total')
+            ->selectRaw('DATE_FORMAT(entry_date, "%Y-%m") as month,
+                        SUM(CASE WHEN type IN ("payment", "manual") THEN amount ELSE 0 END) -
+                        SUM(CASE WHEN type = "withdrawal" THEN amount ELSE 0 END) as total')
             ->groupBy('month')
             ->orderBy('month')
             ->get();

@@ -18,7 +18,10 @@ class FinancialEntryController extends Controller
      */
     public function index(Request $request)
     {
+        // Only show entries (payments and manual entries), not withdrawals
         $query = FinancialEntry::with(['workOrder', 'paymentDetail', 'createdBy'])
+            ->whereIn('type', ['payment', 'manual'])
+            ->confirmed()
             ->orderBy('entry_date', 'desc');
 
         // Filtros
@@ -30,8 +33,8 @@ class FinancialEntryController extends Controller
             $query->where('source', $request->source);
         }
 
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
         }
 
         if ($request->filled('start_date')) {
@@ -40,6 +43,15 @@ class FinancialEntryController extends Controller
 
         if ($request->filled('end_date')) {
             $query->where('entry_date', '<=', $request->end_date);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                  ->orWhere('reference_number', 'like', "%{$search}%")
+                  ->orWhere('notes', 'like', "%{$search}%");
+            });
         }
 
         $entries = $query->paginate(15);
@@ -52,7 +64,8 @@ class FinancialEntryController extends Controller
         // Senão, retorna a view Inertia
         return inertia('FinancialEntries/Index', [
             'entries' => $entries,
-            'stats' => $this->getStatsData($request)
+            'stats' => $this->getStatsData($request),
+            'filters' => $request->only(['type', 'source', 'payment_method', 'start_date', 'end_date', 'search'])
         ]);
     }
 
@@ -198,24 +211,22 @@ class FinancialEntryController extends Controller
             $startDate = $request->get('start_date', now()->startOfMonth()->toDateString());
             $endDate = $request->get('end_date', now()->endOfMonth()->toDateString());
 
+            // Only show entries (payments and manual entries), not withdrawals
             $query = FinancialEntry::confirmed()
+                ->whereIn('type', ['payment', 'manual'])
                 ->byDateRange($startDate, $endDate);
 
             // Log para debug - verificar filtros
-            Log::info('Filtros aplicados', [
+            Log::info('Filtros aplicados - Entradas Financeiras', [
                 'start_date' => $startDate,
                 'end_date' => $endDate,
-                'confirmed_only' => true
+                'confirmed_only' => true,
+                'types' => ['payment', 'manual']
             ]);
 
             $paymentAmount = FinancialEntry::confirmed()
                 ->byDateRange($startDate, $endDate)
                 ->byType('payment')
-                ->sum('amount');
-
-            $withdrawalAmount = FinancialEntry::confirmed()
-                ->byDateRange($startDate, $endDate)
-                ->byType('withdrawal')
                 ->sum('amount');
 
             $manualAmount = FinancialEntry::confirmed()
@@ -224,11 +235,13 @@ class FinancialEntryController extends Controller
                 ->sum('amount');
 
             $totalEntries = FinancialEntry::confirmed()
+                ->whereIn('type', ['payment', 'manual'])
                 ->byDateRange($startDate, $endDate)
                 ->count();
 
             // Log para debug - verificar registros
             $allEntries = FinancialEntry::confirmed()
+                ->whereIn('type', ['payment', 'manual'])
                 ->byDateRange($startDate, $endDate)
                 ->get();
 
@@ -237,15 +250,15 @@ class FinancialEntryController extends Controller
                 ->byType('payment')
                 ->get();
 
-            $withdrawalEntries = FinancialEntry::confirmed()
+            $manualEntries = FinancialEntry::confirmed()
                 ->byDateRange($startDate, $endDate)
-                ->byType('withdrawal')
+                ->byType('manual')
                 ->get();
 
-            Log::info('Registros encontrados', [
+            Log::info('Registros encontrados - Entradas Financeiras', [
                 'total_entries_count' => $allEntries->count(),
                 'payment_entries_count' => $paymentEntries->count(),
-                'withdrawal_entries_count' => $withdrawalEntries->count(),
+                'manual_entries_count' => $manualEntries->count(),
                 'all_entries' => $allEntries->map(function($entry) {
                     return [
                         'id' => $entry->id,
@@ -256,40 +269,35 @@ class FinancialEntryController extends Controller
                     ];
                 }),
                 'payment_entries' => $paymentEntries->pluck('type', 'amount'),
-                'withdrawal_entries' => $withdrawalEntries->pluck('type', 'amount'),
+                'manual_entries' => $manualEntries->pluck('type', 'amount'),
             ]);
 
-            // Calcular saldo líquido (entradas - saídas)
-            $netAmount = $paymentAmount + $manualAmount - $withdrawalAmount;
-
-            // Total recebido = saldo líquido (pagamentos + manuais - retiradas)
-            $totalReceived = $netAmount;
+            // Total de entradas (pagamentos + manuais)
+            $totalEntryAmount = $paymentAmount + $manualAmount;
 
             // Log para debug
-            Log::info('Cálculo de estatísticas financeiras', [
+            Log::info('Cálculo de estatísticas - Entradas Financeiras', [
                 'payment_amount' => $paymentAmount,
-                'withdrawal_amount' => $withdrawalAmount,
                 'manual_amount' => $manualAmount,
-                'net_amount' => $netAmount,
-                'total_received' => $totalReceived,
+                'total_entry_amount' => $totalEntryAmount,
                 'total_entries' => $totalEntries
             ]);
 
             $byMethod = FinancialEntry::confirmed()
+                ->whereIn('type', ['payment', 'manual'])
                 ->byDateRange($startDate, $endDate)
                 ->selectRaw('payment_method, SUM(amount) as total')
                 ->groupBy('payment_method')
-                ->get();
+                ->pluck('total', 'payment_method')
+                ->toArray();
 
             return response()->json([
                 'success' => true,
                 'stats' => [
-                    'total_received' => $totalReceived,
+                    'total_entries' => $totalEntryAmount,
                     'payment_amount' => $paymentAmount,
-                    'withdrawal_amount' => $withdrawalAmount,
                     'manual_amount' => $manualAmount,
-                    'net_amount' => $netAmount,
-                    'total_entries' => $totalEntries,
+                    'total_count' => $totalEntries,
                     'by_method' => $byMethod,
                     'period' => [
                         'start_date' => $startDate,
@@ -315,8 +323,10 @@ class FinancialEntryController extends Controller
         $startDate = $request->get('start_date', now()->startOfMonth()->toDateString());
         $endDate = $request->get('end_date', now()->endOfMonth()->toDateString());
 
-        // Criar query base
-        $baseQuery = FinancialEntry::confirmed()->byDateRange($startDate, $endDate);
+        // Only show entries (payments and manual entries), not withdrawals
+        $baseQuery = FinancialEntry::confirmed()
+            ->whereIn('type', ['payment', 'manual'])
+            ->byDateRange($startDate, $endDate);
 
         // Aplicar filtros se existirem
         if ($request->filled('type')) {
@@ -329,36 +339,25 @@ class FinancialEntryController extends Controller
 
         // Criar queries independentes para cada cálculo
         $paymentAmount = (clone $baseQuery)->byType('payment')->sum('amount');
-        $withdrawalAmount = (clone $baseQuery)->byType('withdrawal')->sum('amount');
         $manualAmount = (clone $baseQuery)->byType('manual')->sum('amount');
         $totalEntries = (clone $baseQuery)->count();
 
-        // Calcular pagamentos efetivamente recebidos (não compensados por retiradas)
-        $effectivePaymentAmount = $this->calculateEffectivePayments($startDate, $endDate, $request);
-
-        $netAmount = $paymentAmount + $manualAmount - $withdrawalAmount;
-
-        // Total recebido = saldo líquido (pagamentos + manuais - retiradas)
-        $totalReceived = $netAmount;
+        // Total de entradas (pagamentos + manuais)
+        $totalEntryAmount = $paymentAmount + $manualAmount;
 
         // Log para debug
-        Log::info('Cálculo de estatísticas (getStatsData)', [
+        Log::info('Cálculo de estatísticas (getStatsData) - Entradas Financeiras', [
             'payment_amount' => $paymentAmount,
-            'effective_payment_amount' => $effectivePaymentAmount,
-            'withdrawal_amount' => $withdrawalAmount,
             'manual_amount' => $manualAmount,
-            'net_amount' => $netAmount,
-            'total_received' => $totalReceived,
+            'total_entry_amount' => $totalEntryAmount,
             'total_entries' => $totalEntries
         ]);
 
         return [
-            'total_received' => $totalReceived,
-            'payment_amount' => $effectivePaymentAmount, // Usar pagamentos efetivos
-            'withdrawal_amount' => $withdrawalAmount,
+            'total_entries' => $totalEntryAmount,
+            'payment_amount' => $paymentAmount,
             'manual_amount' => $manualAmount,
-            'net_amount' => $netAmount,
-            'total_entries' => $totalEntries,
+            'total_count' => $totalEntries,
         ];
     }
 

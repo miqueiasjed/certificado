@@ -21,7 +21,10 @@ use App\Http\Controllers\PestSightingController;
 use App\Http\Controllers\PaymentDetailController;
 use App\Http\Controllers\WorkOrderFinancialController;
 use App\Http\Controllers\FinancialEntryController;
+use App\Http\Controllers\FinancialWithdrawalController;
+use App\Http\Controllers\CashFlowController;
 use App\Http\Controllers\FinancialDashboardController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthController;
 use App\Models\Client;
 use App\Models\Product;
@@ -34,28 +37,6 @@ use App\Models\Certificate;
 Route::get('/service-orders/{workOrder}/receipt', [WorkOrderController::class, 'generateReceipt'])->name('service-orders.receipt');
 
 
-// Rotas públicas
-Route::get('/', function () {
-    return inertia('Dashboard', [
-        'stats' => [
-            'clients' => Client::count(),
-            'products' => Product::count(),
-            'technicians' => Technician::count(),
-            'services' => Service::count(),
-            'serviceOrders' => ServiceOrder::count(),
-            'certificates' => Certificate::count(),
-        ],
-        'recentServiceOrders' => ServiceOrder::with('client')
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get(),
-        'recentCertificates' => Certificate::with('client')
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get(),
-    ]);
-})->name('home');
-
 Route::get('/login', function () {
     return inertia('Auth/Login');
 })->name('login');
@@ -64,6 +45,9 @@ Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
 // Rotas protegidas
 Route::middleware(['auth'])->group(function () {
+    // Dashboard principal
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
     // Rotas de Clientes
     Route::resource('clients', ClientController::class);
 
@@ -123,6 +107,15 @@ Route::put('/work-orders/{workOrder}/financial-info', [WorkOrderFinancialControl
     Route::resource('financial-entries', FinancialEntryController::class);
     Route::post('/payment-details/{paymentDetail}/create-financial-entry', [FinancialEntryController::class, 'createFromPayment'])->name('financial-entries.create-from-payment');
     Route::get('/financial-entries/stats', [FinancialEntryController::class, 'getStats'])->name('financial-entries.stats');
+
+    // Rotas de Saídas Financeiras
+    Route::resource('financial-withdrawals', FinancialWithdrawalController::class);
+    Route::get('/financial-withdrawals/stats', [FinancialWithdrawalController::class, 'getStats'])->name('financial-withdrawals.stats');
+
+    // Rotas de Fluxo de Caixa
+    Route::get('/cash-flow', [CashFlowController::class, 'index'])->name('cash-flow');
+    Route::get('/cash-flow/stats', [CashFlowController::class, 'getStats'])->name('cash-flow.stats');
+    Route::get('/cash-flow/export', [CashFlowController::class, 'export'])->name('cash-flow.export');
 
     // Dashboard Financeiro
     Route::get('/financial-dashboard', [FinancialDashboardController::class, 'index'])->name('financial-dashboard');
