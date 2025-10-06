@@ -43,7 +43,8 @@ class TechnicianController extends Controller
         $technician = $this->technicianService->createTechnician($request->validated());
 
         return redirect()->route('technicians.index')
-            ->with('success', 'Técnico criado com sucesso!');
+            ->with('success', 'Técnico criado com sucesso!')
+            ->with('technician', $technician);
     }
 
     public function show(Technician $technician)

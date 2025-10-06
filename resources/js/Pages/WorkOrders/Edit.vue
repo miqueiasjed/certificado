@@ -55,18 +55,30 @@
                 <label for="technician_id" class="block text-sm font-medium text-gray-700 mb-2">
                   Técnico *
                 </label>
-                <select
-                  id="technician_id"
-                  v-model="form.technician_id"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  :class="{ 'border-red-500': form.errors.technician_id }"
-                >
-                  <option value="">Selecione um técnico</option>
-                  <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
-                    {{ technician.name }} - {{ technician.specialty }}
-                  </option>
-                </select>
+                <div class="flex gap-2">
+                  <select
+                    id="technician_id"
+                    v-model="form.technician_id"
+                    required
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    :class="{ 'border-red-500': form.errors.technician_id }"
+                  >
+                    <option value="">Selecione um técnico</option>
+                    <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
+                      {{ technician.name }} - {{ technician.specialty }}
+                    </option>
+                  </select>
+                  <button
+                    type="button"
+                    @click="showTechnicianModal = true"
+                    class="px-3 py-2 text-green-600 border border-green-300 rounded-md hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+                    title="Adicionar novo técnico"
+                  >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                  </button>
+                </div>
                 <p v-if="form.errors.technician_id" class="mt-1 text-sm text-red-600">
                   {{ form.errors.technician_id }}
                 </p>
@@ -271,15 +283,23 @@
         </div>
       </Card>
     </div>
+
+    <!-- Modal de Criação Rápida de Técnico -->
+    <QuickTechnicianModal
+      :show="showTechnicianModal"
+      @close="showTechnicianModal = false"
+      @technician-created="onTechnicianCreated"
+    />
   </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import QuickTechnicianModal from '@/Components/QuickTechnicianModal.vue';
 
 const props = defineProps({
   workOrder: Object,
@@ -287,6 +307,9 @@ const props = defineProps({
   addresses: Array,
   technicians: Array,
 });
+
+// Estado do modal
+const showTechnicianModal = ref(false);
 
 
 // Função para formatar data para datetime-local (sem conversão de fuso horário)
@@ -384,6 +407,15 @@ const getAddressDisplayText = () => {
 
 const submit = () => {
   form.put(`/work-orders/${props.workOrder.id}`);
+};
+
+// Função para quando um técnico é criado
+const onTechnicianCreated = (technician) => {
+  // Selecionar automaticamente o técnico recém-criado
+  form.technician_id = technician.id;
+
+  // Recarregar a página para atualizar a lista de técnicos
+  router.reload({ only: ['technicians'] });
 };
 
 </script>
