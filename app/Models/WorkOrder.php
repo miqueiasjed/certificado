@@ -259,7 +259,9 @@ class WorkOrder extends Model
      */
     public function getRemainingAmountAttribute(): float
     {
-        return max(0, $this->final_amount - $this->total_paid);
+        $finalAmount = (float) ($this->final_amount ?? 0);
+        $totalPaid = (float) $this->total_paid;
+        return max(0, $finalAmount - $totalPaid);
     }
 
     /**
@@ -267,7 +269,7 @@ class WorkOrder extends Model
      */
     public function getEffectiveAmountAttribute(): float
     {
-        return $this->final_amount;
+        return (float) ($this->final_amount ?? 0);
     }
 
     /**
