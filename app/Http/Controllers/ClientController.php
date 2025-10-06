@@ -50,7 +50,7 @@ class ClientController extends Controller
 
     public function show(int $id): Response
     {
-        $client = $this->clientService->findClient($id);
+        $client = $this->clientService->findClientWithAddresses($id);
 
         if (!$client) {
             abort(404);

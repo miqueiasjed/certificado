@@ -13,10 +13,14 @@ return new class extends Migration
     {
         Schema::create('certificates', function (Blueprint $table) {
             $table->id();
-            $table->date('date');
-            $table->date('assurance');
             $table->foreignId('client_id')->constrained('clients')->cascadeOnDelete();
-            $table->foreignId('service_id')->constrained('services')->cascadeOnDelete();
+            // Será adicionada por migration posterior (work_orders depende de outras tabelas)
+            $table->unsignedBigInteger('work_order_id')->nullable();
+            $table->date('execution_date')->nullable();
+            $table->date('warranty')->nullable();
+            $table->string('certificate_number')->nullable();
+            $table->enum('status', ['draft', 'issued', 'expired', 'cancelled'])->default('draft');
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

@@ -1,0 +1,3513 @@
+<template>
+  <div class="p-6">
+    <!-- Aba: Detalhes da Ordem -->
+    <div v-if="activeTab === 'details'">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Detalhes da Ordem</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Informações Básicas -->
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Número da Ordem</label>
+            <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.order_number }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Tipo de Ordem</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.order_type_text }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Status</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.status_text }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Prioridade</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.priority_level_text }}</p>
+          </div>
+        </div>
+
+        <!-- Informações de Agendamento -->
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Data Agendada</label>
+            <p class="mt-1 text-sm text-gray-900">{{ formatDate(workOrder.scheduled_date) }}</p>
+          </div>
+          <div v-if="workOrder.start_time">
+            <label class="block text-sm font-medium text-gray-500">Horário de Início</label>
+            <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(workOrder.start_time) }}</p>
+          </div>
+          <div v-if="workOrder.end_time">
+            <label class="block text-sm font-medium text-gray-500">Horário de Término</label>
+            <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(workOrder.end_time) }}</p>
+          </div>
+          <div v-if="workOrder.duration_text">
+            <label class="block text-sm font-medium text-gray-500">Duração</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.duration_text }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Descrição e Observações -->
+      <div class="mt-6 space-y-4">
+        <div v-if="workOrder.description">
+          <label class="block text-sm font-medium text-gray-500">Descrição</label>
+          <p class="mt-1 text-sm text-gray-900">{{ workOrder.description }}</p>
+        </div>
+        <div v-if="workOrder.observations">
+          <label class="block text-sm font-medium text-gray-500">Observações</label>
+          <p class="mt-1 text-sm text-gray-900">{{ workOrder.observations }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aba: Cliente e Local -->
+    <div v-if="activeTab === 'client'">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Cliente e Local</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Informações do Cliente -->
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Cliente</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.client?.name }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500">CPF/CNPJ</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.client?.document_number }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Telefone</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.client?.phone }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Email</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.client?.email }}</p>
+          </div>
+        </div>
+
+        <!-- Informações do Endereço -->
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Endereço</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.address?.nickname }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Rua e Número</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.address?.street }}, {{ workOrder.address?.number }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500">Cidade/Estado</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.address?.city }}/{{ workOrder.address?.state }}</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-500">CEP</label>
+            <p class="mt-1 text-sm text-gray-900">{{ workOrder.address?.zip_code }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aba: Técnico -->
+    <div v-if="activeTab === 'technician'">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Técnico Responsável</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label class="block text-sm font-medium text-gray-500">Nome</label>
+          <p class="mt-1 text-sm text-gray-900">{{ workOrder.technician?.name }}</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-500">Especialidade</label>
+          <p class="mt-1 text-sm text-gray-900">{{ workOrder.technician?.specialty }}</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-500">Telefone</label>
+          <p class="mt-1 text-sm text-gray-900">{{ workOrder.technician?.phone }}</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-500">Email</label>
+          <p class="mt-1 text-sm text-gray-900">{{ workOrder.technician?.email }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aba: Eventos de Dispositivos -->
+    <div v-if="activeTab === 'device-events'">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Eventos de Dispositivos</h3>
+        <button
+          @click="showDeviceEventModal = true"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          Novo Evento
+        </button>
+      </div>
+
+      <!-- Modal para criar Evento de Dispositivo -->
+      <div v-if="showDeviceEventModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+          <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Novo Evento de Dispositivo</h3>
+              <button
+                @click="showDeviceEventModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form @submit.prevent="submitDeviceEvent" class="space-y-6">
+              <!-- Primeira linha: Tipo de Evento e Dispositivo -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Evento *</label>
+                  <select v-model="deviceEventForm.event_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione o tipo</option>
+                    <option value="bait_consumption">Consumo de Isca</option>
+                    <option value="cleaning">Limpeza</option>
+                    <option value="bait_change">Troca de Isca</option>
+                    <option value="technician_notes">Observações do Técnico</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Dispositivo *</label>
+                  <select v-model="deviceEventForm.device_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione o dispositivo</option>
+                    <option v-for="device in availableDevices" :key="device.id" :value="device.id">
+                      {{ device.label }} ({{ device.number }}) - {{ device.room?.name }}
+                    </option>
+                  </select>
+
+                  <!-- Informações sobre dispositivos disponíveis -->
+                  <div class="mt-2 text-xs text-gray-500">
+                    <div v-if="availableDevices.length > 0">
+                      <span class="text-green-600 font-medium">{{ availableDevices.length }} dispositivo(s) encontrado(s) no endereço "{{ workOrder.address?.nickname }}"</span>
+                    </div>
+                    <div v-else class="text-amber-600 font-medium">
+                      ⚠️ Nenhum dispositivo cadastrado para o endereço "{{ workOrder.address?.nickname }}"
+                      <br>
+                      <span class="text-gray-500">É necessário cadastrar dispositivos neste endereço antes de criar eventos.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Segunda linha: Data do Evento -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Data do Evento *</label>
+                <input
+                  type="datetime-local"
+                  v-model="deviceEventForm.event_date"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+              </div>
+
+              <!-- Campos específicos para Consumo de Isca -->
+              <div v-if="deviceEventForm.event_type === 'bait_consumption'" class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Status do Consumo *</label>
+                  <select v-model="deviceEventForm.bait_consumption_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione o status</option>
+                    <option value="partial">Parcial</option>
+                    <option value="total">Total</option>
+                    <option value="none">Não houve</option>
+                    <option value="spoiled">Estragada</option>
+                    <option value="replacement">Reposição</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade Consumida</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="999.99"
+                    v-model="deviceEventForm.bait_consumption_quantity"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="0.00"
+                  >
+                </div>
+              </div>
+
+              <!-- Campos específicos para Limpeza -->
+              <div v-if="deviceEventForm.event_type === 'cleaning'" class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Limpeza Realizada *</label>
+                  <select v-model="deviceEventForm.cleaning_done" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione</option>
+                    <option :value="true">Sim</option>
+                    <option :value="false">Não</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações da Limpeza</label>
+                  <textarea
+                    v-model="deviceEventForm.cleaning_notes"
+                    rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Observações sobre a limpeza realizada..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Campos específicos para Troca de Isca -->
+              <div v-if="deviceEventForm.event_type === 'bait_change'" class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo da Nova Isca</label>
+                  <input
+                    type="text"
+                    v-model="deviceEventForm.bait_change_type"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Tipo da isca"
+                  >
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Lote da Nova Isca</label>
+                  <input
+                    type="text"
+                    v-model="deviceEventForm.bait_change_lot"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Número do lote"
+                  >
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade da Nova Isca</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="999.99"
+                    v-model="deviceEventForm.bait_change_quantity"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="0.00"
+                  >
+                </div>
+              </div>
+
+              <!-- Campos específicos para Observações do Técnico -->
+              <div v-if="deviceEventForm.event_type === 'technician_notes'">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Observações do Técnico *</label>
+                <textarea
+                  v-model="deviceEventForm.technician_notes"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Observações técnicas sobre o dispositivo..."
+                ></textarea>
+              </div>
+
+              <!-- Terceira linha: Descrição e Observações -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                  <textarea
+                    v-model="deviceEventForm.description"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Descreva o evento realizado..."
+                  ></textarea>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                  <textarea
+                    v-model="deviceEventForm.observations"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Observações adicionais..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Botões -->
+              <div class="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  @click="showDeviceEventModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isSubmitting"
+                  class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isSubmitting">Salvando...</span>
+                  <span v-else>Salvar Evento</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal para Visualizar Evento de Dispositivo -->
+      <div v-if="showViewEventModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+          <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Detalhes do Evento</h3>
+              <button
+                @click="showViewEventModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div v-if="selectedEvent" class="space-y-6">
+              <!-- Informações básicas -->
+              <div class="grid grid-cols-2 gap-6">
+                <div>
+                  <label class="block text-sm font-medium text-gray-500">Tipo de Evento</label>
+                  <p class="mt-1 text-sm text-gray-900">
+                    {{ selectedEvent.event_type_text || getEventTypeText(selectedEvent.event_type) }}
+                  </p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-500">Data do Evento</label>
+                  <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(selectedEvent.event_date) }}</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-500">Dispositivo</label>
+                  <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.device?.label }} ({{ selectedEvent.device?.number }})</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-500">Cômodo</label>
+                  <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.device?.room?.name }}</p>
+                </div>
+              </div>
+
+              <!-- TODOS os campos com dados preenchidos -->
+              <div class="border-t pt-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-3">Detalhes do Evento</h4>
+                <div class="grid grid-cols-2 gap-6">
+                  <!-- Status do Consumo (se preenchido) -->
+                  <div v-if="selectedEvent.bait_consumption_status">
+                    <label class="block text-sm font-medium text-gray-500">Status do Consumo</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ getBaitConsumptionStatusText(selectedEvent.bait_consumption_status) }}</p>
+                  </div>
+
+                  <!-- Quantidade Consumida (se preenchida) -->
+                  <div v-if="selectedEvent.bait_consumption_quantity">
+                    <label class="block text-sm font-medium text-gray-500">Quantidade Consumida</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.bait_consumption_quantity }}</p>
+                  </div>
+
+                  <!-- Limpeza Realizada (se preenchida) -->
+                  <div v-if="selectedEvent.cleaning_done !== null && selectedEvent.cleaning_done !== undefined">
+                    <label class="block text-sm font-medium text-gray-500">Limpeza Realizada</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.cleaning_done ? 'Sim' : 'Não' }}</p>
+                  </div>
+
+                  <!-- Observações da Limpeza (se preenchidas) -->
+                  <div v-if="selectedEvent.cleaning_notes">
+                    <label class="block text-sm font-medium text-gray-500">Observações da Limpeza</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.cleaning_notes }}</p>
+                  </div>
+
+                  <!-- Tipo da Nova Isca (se preenchido) -->
+                  <div v-if="selectedEvent.bait_change_type">
+                    <label class="block text-sm font-medium text-gray-500">Tipo da Nova Isca</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.bait_change_type }}</p>
+                  </div>
+
+                  <!-- Lote da Nova Isca (se preenchido) -->
+                  <div v-if="selectedEvent.bait_change_lot">
+                    <label class="block text-sm font-medium text-gray-500">Lote da Nova Isca</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.bait_change_lot }}</p>
+                  </div>
+
+                  <!-- Quantidade da Nova Isca (se preenchida) -->
+                  <div v-if="selectedEvent.bait_change_quantity">
+                    <label class="block text-sm font-medium text-gray-500">Quantidade da Nova Isca</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.bait_change_quantity }}</p>
+                  </div>
+
+                  <!-- Observações do Técnico (se preenchidas) -->
+                  <div v-if="selectedEvent.technician_notes" class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-500">Observações do Técnico</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.technician_notes }}</p>
+                  </div>
+
+                  <!-- Descrição (se preenchida) -->
+                  <div v-if="selectedEvent.description" class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-500">Descrição</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.description }}</p>
+                  </div>
+
+                  <!-- Observações (se preenchidas) -->
+                  <div v-if="selectedEvent.observations" class="col-span-2">
+                    <label class="block text-sm font-medium text-gray-500">Observações</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.observations }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Informações do Sistema -->
+              <div class="border-t pt-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-3">Informações do Sistema</h4>
+                <div class="grid grid-cols-3 gap-6 text-xs">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-500">ID do Evento</label>
+                    <p class="mt-1 text-sm text-gray-900">#{{ selectedEvent.id }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-500">Status</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.active ? 'Ativo' : 'Inativo' }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-500">Criado em</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(selectedEvent.created_at) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botões -->
+            <div class="flex justify-end space-x-4 pt-6">
+              <button
+                type="button"
+                @click="showViewEventModal = false"
+                class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+              >
+                Fechar
+              </button>
+              <button
+                v-if="selectedEvent"
+                type="button"
+                @click="editEvent(selectedEvent)"
+                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+              >
+                Editar Evento
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal para Editar Evento de Dispositivo -->
+      <div v-if="showEditEventModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+          <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Editar Evento de Dispositivo</h3>
+              <button
+                @click="showEditEventModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form @submit.prevent="updateEvent" class="space-y-6">
+              <!-- Primeira linha: Tipo de Evento e Dispositivo -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Evento *</label>
+                  <select v-model="editEventForm.event_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione o tipo</option>
+                    <option value="bait_consumption">Consumo de Isca</option>
+                    <option value="cleaning">Limpeza</option>
+                    <option value="bait_change">Troca de Isca</option>
+                    <option value="technician_notes">Observações do Técnico</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Dispositivo *</label>
+                  <select v-model="editEventForm.device_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione o dispositivo</option>
+                    <option v-for="device in availableDevices" :key="device.id" :value="device.id">
+                      {{ device.label }} ({{ device.number }}) - {{ device.room?.name }}
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Segunda linha: Data do Evento -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Data do Evento *</label>
+                <input
+                  type="datetime-local"
+                  v-model="editEventForm.event_date"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+              </div>
+
+              <!-- Campos específicos para Consumo de Isca -->
+              <div v-if="editEventForm.event_type === 'bait_consumption'" class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Status do Consumo *</label>
+                  <select v-model="editEventForm.bait_consumption_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione o status</option>
+                    <option value="partial">Parcial</option>
+                    <option value="total">Total</option>
+                    <option value="none">Não houve</option>
+                    <option value="spoiled">Estragada</option>
+                    <option value="replacement">Reposição</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade Consumida</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="999.99"
+                    v-model="editEventForm.bait_consumption_quantity"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="0.00"
+                  >
+                </div>
+              </div>
+
+              <!-- Campos específicos para Limpeza -->
+              <div v-if="editEventForm.event_type === 'cleaning'" class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Limpeza Realizada *</label>
+                  <select v-model="editEventForm.cleaning_done" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione</option>
+                    <option :value="true">Sim</option>
+                    <option :value="false">Não</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações da Limpeza</label>
+                  <textarea
+                    v-model="editEventForm.cleaning_notes"
+                    rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Observações sobre a limpeza realizada..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Campos específicos para Troca de Isca -->
+              <div v-if="editEventForm.event_type === 'bait_change'" class="grid grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo da Nova Isca</label>
+                  <input
+                    type="text"
+                    v-model="editEventForm.bait_change_type"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Tipo da isca"
+                  >
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Lote da Nova Isca</label>
+                  <input
+                    type="text"
+                    v-model="editEventForm.bait_change_lot"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Número do lote"
+                  >
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade da Nova Isca</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="999.99"
+                    v-model="editEventForm.bait_change_quantity"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="0.00"
+                  >
+                </div>
+              </div>
+
+              <!-- Campos específicos para Observações do Técnico -->
+              <div v-if="editEventForm.event_type === 'technician_notes'">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Observações do Técnico *</label>
+                <textarea
+                  v-model="editEventForm.technician_notes"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Observações técnicas sobre o dispositivo..."
+                ></textarea>
+              </div>
+
+              <!-- Terceira linha: Descrição e Observações -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                  <textarea
+                    v-model="editEventForm.description"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Descreva o evento realizado..."
+                  ></textarea>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                  <textarea
+                    v-model="editEventForm.observations"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Observações adicionais..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Botões -->
+              <div class="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  @click="showEditEventModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isUpdating"
+                  class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isUpdating">Salvando...</span>
+                  <span v-else>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal para visualizar Avistamento de Praga -->
+      <div v-if="showViewPestSightingModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+          <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Visualizar Avistamento de Praga</h3>
+              <button
+                @click="showViewPestSightingModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div v-if="selectedPestSighting" class="space-y-6">
+              <!-- Informações básicas -->
+              <div class="grid grid-cols-2 gap-6">
+                <div>
+                  <label class="block text-sm font-medium text-gray-500">Tipo de Praga</label>
+                  <p class="mt-1 text-sm text-gray-900">{{ getPestTypeText(selectedPestSighting.pest_type) }}</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Nível de Severidade</label>
+                  <p class="text-sm text-gray-900">{{ getSeverityLevelText(selectedPestSighting.severity_level) }}</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Data do Avistamento</label>
+                  <p class="text-sm text-gray-900">{{ formatDateTime(selectedPestSighting.sighting_date) }}</p>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Localização</label>
+                  <p class="text-sm text-gray-900">{{ selectedPestSighting.location_description }}</p>
+                </div>
+
+                <!-- Campos opcionais -->
+                <div v-if="selectedPestSighting.description" class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                  <p class="text-sm text-gray-900">{{ selectedPestSighting.description }}</p>
+                </div>
+
+                <div v-if="selectedPestSighting.observations" class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                  <p class="text-sm text-gray-900">{{ selectedPestSighting.observations }}</p>
+                </div>
+
+                <div v-if="selectedPestSighting.environmental_conditions" class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Condições Ambientais</label>
+                  <p class="text-sm text-gray-900">{{ selectedPestSighting.environmental_conditions }}</p>
+                </div>
+
+                <div v-if="selectedPestSighting.control_measures_applied" class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Medidas de Controle Aplicadas</label>
+                  <p class="text-sm text-gray-900">{{ selectedPestSighting.control_measures_applied }}</p>
+                </div>
+
+                <div v-if="selectedPestSighting.technician_notes" class="col-span-2">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Observações do Técnico</label>
+                  <p class="text-sm text-gray-900">{{ selectedPestSighting.technician_notes }}</p>
+                </div>
+              </div>
+
+              <!-- Informações do Sistema -->
+              <div class="border-t pt-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-3">Informações do Sistema</h4>
+                <div class="grid grid-cols-3 gap-6 text-xs">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-500">ID do Evento</label>
+                    <p class="mt-1 text-sm text-gray-900">#{{ selectedPestSighting.id }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-500">Status</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ selectedPestSighting.active ? 'Ativo' : 'Inativo' }}</p>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium text-gray-500">Criado em</label>
+                    <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(selectedPestSighting.created_at) }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botões -->
+            <div class="flex justify-end space-x-4 pt-6">
+              <button
+                type="button"
+                @click="showViewPestSightingModal = false"
+                class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+              >
+                Fechar
+              </button>
+              <button
+                v-if="selectedPestSighting"
+                type="button"
+                @click="editPestSighting(selectedPestSighting)"
+                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+              >
+                Editar Avistamento
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal para editar Avistamento de Praga -->
+      <div v-if="showEditPestSightingModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+          <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Editar Avistamento de Praga</h3>
+              <button
+                @click="showEditPestSightingModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form @submit.prevent="updatePestSighting" class="space-y-6">
+              <!-- Primeira linha: Tipo de Praga e Nível de Severidade -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Praga *</label>
+                  <select v-model="editPestSightingForm.pest_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione o tipo</option>
+                    <option value="rats">Ratos</option>
+                    <option value="mice">Camundongos</option>
+                    <option value="cockroaches">Baratas</option>
+                    <option value="ants">Formigas</option>
+                    <option value="termites">Cupins</option>
+                    <option value="flies">Moscas</option>
+                    <option value="fleas">Pulgas</option>
+                    <option value="ticks">Carrapatos</option>
+                    <option value="scorpions">Escorpiões</option>
+                    <option value="spiders">Aranhas</option>
+                    <option value="bees">Abelhas</option>
+                    <option value="wasps">Vespas</option>
+                    <option value="other">Outros</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Nível de Severidade *</label>
+                  <select v-model="editPestSightingForm.severity_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione a severidade</option>
+                    <option value="low">Baixa</option>
+                    <option value="medium">Média</option>
+                    <option value="high">Alta</option>
+                    <option value="critical">Crítica</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Segunda linha: Data e Localização -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Data do Avistamento *</label>
+                  <input
+                    type="datetime-local"
+                    v-model="editPestSightingForm.sighting_date"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Localização *</label>
+                  <input
+                    type="text"
+                    v-model="editPestSightingForm.location_description"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Ex: Cozinha, Sala, Quarto, etc."
+                  >
+                </div>
+              </div>
+
+              <!-- Terceira linha: Descrição e Observações -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                  <textarea
+                    v-model="editPestSightingForm.description"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Descreva o avistamento..."
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                  <textarea
+                    v-model="editPestSightingForm.observations"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Observações adicionais..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Quarta linha: Condições e Medidas -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Condições Ambientais</label>
+                  <textarea
+                    v-model="editPestSightingForm.environmental_conditions"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Descreva as condições ambientais..."
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Medidas de Controle Aplicadas</label>
+                  <textarea
+                    v-model="editPestSightingForm.control_measures_applied"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Descreva as medidas aplicadas..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Quinta linha: Observações do Técnico -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Observações do Técnico</label>
+                <textarea
+                  v-model="editPestSightingForm.technician_notes"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Observações técnicas..."
+                ></textarea>
+              </div>
+
+              <!-- Botões -->
+              <div class="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  @click="showEditPestSightingModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isUpdatingPestSighting"
+                  class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isUpdatingPestSighting">Salvando...</span>
+                  <span v-else>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="workOrder.device_events && workOrder.device_events.length > 0" class="space-y-4">
+        <div v-for="event in workOrder.device_events" :key="event.id" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <div class="flex items-start justify-between">
+            <div class="flex items-start space-x-3">
+              <div class="flex-shrink-0">
+                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center space-x-2 mb-1">
+                  <span class="text-sm font-medium text-gray-900">
+                    {{ event.device?.label }} ({{ event.device?.number }})
+                  </span>
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    {{ getEventTypeText(event.event_type) }}
+                  </span>
+                </div>
+                <div class="text-sm text-gray-500">
+                  {{ formatDateTime(event.event_date) }}
+                </div>
+                <div v-if="event.description" class="text-sm text-gray-600 mt-1">
+                  {{ event.description }}
+                </div>
+              </div>
+            </div>
+            <div class="flex space-x-2">
+              <button
+                @click="viewEvent(event)"
+                class="text-green-600 hover:text-green-900 text-sm font-medium"
+              >
+                Ver Detalhes
+              </button>
+              <button
+                @click="editEvent(event)"
+                class="text-blue-600 hover:text-blue-900 text-sm font-medium"
+              >
+                Editar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="text-center py-8">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum evento de dispositivo</h3>
+        <p class="mt-1 text-sm text-gray-500">Comece criando um novo evento de dispositivo.</p>
+      </div>
+    </div>
+
+    <!-- Aba: Avistamentos de Pragas -->
+    <div v-if="activeTab === 'pest-sightings'">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Avistamentos de Pragas</h3>
+        <button
+          @click="showPestSightingModal = true"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          Novo Avistamento
+        </button>
+      </div>
+
+      <!-- Modal para criar Avistamento de Praga -->
+      <div v-if="showPestSightingModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+          <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Novo Avistamento de Praga</h3>
+              <button
+                @click="showPestSightingModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form @submit.prevent="submitPestSighting" class="space-y-4">
+              <!-- Primeira linha: Tipo de Praga e Nível de Severidade -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Praga *</label>
+                  <select v-model="pestSightingForm.pest_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione o tipo</option>
+                    <option value="rats">Ratos</option>
+                    <option value="mice">Camundongos</option>
+                    <option value="cockroaches">Baratas</option>
+                    <option value="ants">Formigas</option>
+                    <option value="termites">Cupins</option>
+                    <option value="flies">Moscas</option>
+                    <option value="fleas">Pulgas</option>
+                    <option value="ticks">Carrapatos</option>
+                    <option value="scorpions">Escorpiões</option>
+                    <option value="spiders">Aranhas</option>
+                    <option value="bees">Abelhas</option>
+                    <option value="wasps">Vespas</option>
+                    <option value="other">Outros</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Nível de Severidade *</label>
+                  <select v-model="pestSightingForm.severity_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <option value="">Selecione a severidade</option>
+                    <option value="low">Baixa</option>
+                    <option value="medium">Média</option>
+                    <option value="high">Alta</option>
+                    <option value="critical">Crítica</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Segunda linha: Data e Localização -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Data do Avistamento *</label>
+                  <input
+                    type="datetime-local"
+                    v-model="pestSightingForm.sighting_date"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Localização *</label>
+                  <input
+                    type="text"
+                    v-model="pestSightingForm.location_description"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Ex: Cozinha, Sala, Quarto, etc."
+                  >
+                </div>
+              </div>
+
+              <!-- Terceira linha: Descrição e Observações -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                  <textarea
+                    v-model="pestSightingForm.description"
+                    rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Descreva o avistamento..."
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                  <textarea
+                    v-model="pestSightingForm.observations"
+                    rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Observações adicionais..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Quarta linha: Condições e Medidas -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Condições Ambientais</label>
+                  <textarea
+                    v-model="pestSightingForm.environmental_conditions"
+                    rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Descreva as condições ambientais..."
+                  ></textarea>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Medidas de Controle Aplicadas</label>
+                  <textarea
+                    v-model="pestSightingForm.control_measures_applied"
+                    rows="2"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Descreva as medidas aplicadas..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Quinta linha: Observações do Técnico -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Observações do Técnico</label>
+                <textarea
+                  v-model="pestSightingForm.technician_notes"
+                  rows="2"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Observações técnicas..."
+                ></textarea>
+              </div>
+
+              <!-- Botões -->
+              <div class="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  @click="showPestSightingModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isSubmittingPestSighting"
+                  class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isSubmittingPestSighting">Salvando...</span>
+                  <span v-else>Salvar Avistamento</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="workOrder.pest_sightings && workOrder.pest_sightings.length > 0" class="space-y-4">
+        <div
+          v-for="sighting in workOrder.pest_sightings"
+          :key="sighting.id"
+          class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <div class="flex items-center space-x-3">
+                <div class="flex-shrink-0">
+                  <div class="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+                    <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <div class="flex-1">
+                  <h4 class="text-sm font-medium text-gray-900">{{ getPestTypeText(sighting.pest_type) }}</h4>
+                  <p class="text-sm text-gray-500">
+                    Severidade: {{ getSeverityLevelText(sighting.severity_level) }}
+                  </p>
+                  <p class="text-sm text-gray-500">
+                    {{ formatDateTime(sighting.sighting_date) }}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="flex space-x-2">
+              <button
+                @click="viewPestSighting(sighting)"
+                class="text-green-600 hover:text-green-900 text-sm font-medium"
+              >
+                Ver Detalhes
+              </button>
+              <button
+                @click="editPestSighting(sighting)"
+                class="text-blue-600 hover:text-blue-900 text-sm font-medium"
+              >
+                Editar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="text-center py-8">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum avistamento de praga</h3>
+        <p class="mt-1 text-sm text-gray-500">Comece criando um novo avistamento de praga.</p>
+      </div>
+    </div>
+
+    <!-- Aba: Informações Financeiras -->
+    <div v-if="activeTab === 'financial'">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-medium text-gray-900">Informações Financeiras</h3>
+        <button
+          v-if="workOrder.payment_status !== 'paid'"
+          @click="openEditFinancialModal"
+          class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+          Editar Informações
+        </button>
+      </div>
+
+      <!-- Resumo Financeiro -->
+      <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
+        <h4 class="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+          </svg>
+          Resumo Financeiro
+        </h4>
+
+        <!-- Resumo Financeiro Compacto -->
+        <div class="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-4 border border-gray-200">
+          <div class="flex flex-wrap items-center justify-between gap-4">
+            <!-- Custo Total -->
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-gray-600">Custo Total</p>
+                <p class="text-lg font-bold text-gray-900">R$ {{ formatCurrency(props.workOrder?.total_cost || 0) }}</p>
+              </div>
+            </div>
+
+            <!-- Desconto (se houver) -->
+            <div v-if="props.workOrder?.discount_amount" class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-red-200 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4m16 0a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2v-6a2 2 0 012-2m16 0V8a2 2 0 00-2-2H6a2 2 0 00-2 2v4"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-red-600">Desconto</p>
+                <p class="text-lg font-bold text-red-700">- R$ {{ formatCurrency(props.workOrder.discount_amount) }}</p>
+              </div>
+            </div>
+
+            <!-- Valor Final -->
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-green-200 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-green-600">Valor Final</p>
+                <p class="text-lg font-bold text-green-700">R$ {{ formatCurrency(props.workOrder?.final_amount || props.workOrder?.total_cost || 0) }}</p>
+              </div>
+            </div>
+
+            <!-- Valor Pago -->
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-blue-600">Valor Pago</p>
+                <p class="text-lg font-bold text-blue-700">R$ {{ formatCurrency(getTotalPaid()) }}</p>
+              </div>
+            </div>
+
+            <!-- Status de Pagamento -->
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                <svg v-if="props.workOrder?.payment_status === 'paid'" class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <svg v-else-if="props.workOrder?.payment_status === 'pending'" class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <svg v-else-if="props.workOrder?.payment_status === 'overdue'" class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                <svg v-else class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-gray-600">Status</p>
+                <span :class="getPaymentStatusBadgeClass(props.workOrder?.payment_status)" class="text-sm font-medium">
+                  {{ props.workOrder?.payment_status_text || 'Pendente' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Valor Pendente (se houver) -->
+            <div v-if="getRemainingAmount() > 0" class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-orange-200 rounded-full flex items-center justify-center">
+                <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="text-xs font-medium text-orange-600">Pendente</p>
+                <p class="text-lg font-bold text-orange-700">R$ {{ formatCurrency(getRemainingAmount()) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detalhes de Pagamento -->
+      <div class="bg-white border border-gray-200 rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <div class="flex justify-between items-center">
+            <h4 class="text-md font-medium text-gray-900">Histórico de Pagamentos</h4>
+            <button
+              v-if="workOrder.payment_status !== 'paid'"
+              @click="showAddPaymentModal = true"
+              class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
+            >
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              Adicionar Pagamento
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data de Vencimento</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data do Pagamento</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Forma de Pagamento</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Pago</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observações</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr v-if="!props.workOrder?.payment_details || props.workOrder?.payment_details.length === 0">
+                <td colspan="7" class="px-6 py-12 text-center text-sm text-gray-500">
+                  <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                  <p class="mt-2">Nenhum pagamento registrado</p>
+                </td>
+              </tr>
+              <tr v-for="payment in props.workOrder?.payment_details || []" :key="payment.id">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ getPaymentDueDate(payment) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ getPaymentDate(payment) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ getPaymentMethodText(payment.payment_method) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  R$ {{ formatCurrency(payment.amount_paid || 0) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="getPaymentStatusBadgeClass(payment.payment_status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {{ payment.payment_status_text || 'Pendente' }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                  {{ payment.payment_notes || '-' }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <button
+                    v-if="payment.payment_status === 'pending'"
+                    @click="receivePayment(payment)"
+                    class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 mr-2"
+                  >
+                    Receber Pagamento
+                  </button>
+                  <button
+                    v-if="payment.payment_status === 'paid'"
+                    @click="reopenPayment(payment)"
+                    class="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 mr-2"
+                  >
+                    Reabrir Pagamento
+                  </button>
+                  <button
+                    v-if="payment.payment_status !== 'paid'"
+                    @click="editPayment(payment)"
+                    class="text-green-600 hover:text-green-900 mr-3"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    v-if="payment.payment_status !== 'paid'"
+                    @click="deletePayment(payment.id)"
+                    class="text-red-600 hover:text-red-900"
+                  >
+                    Excluir
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Adicionar Pagamento -->
+    <div v-if="showAddPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Adicionar Pagamento</h3>
+            <button
+              @click="showAddPaymentModal = false"
+              class="text-gray-400 hover:text-gray-600"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <form @submit.prevent="submitPayment">
+            <div class="space-y-4">
+              <!-- Informações de Pagamento -->
+              <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h4 class="text-md font-semibold text-gray-900 mb-3">Informações de Pagamento</h4>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento *</label>
+                    <input
+                      v-model="paymentForm.payment_due_date"
+                      type="date"
+                      required
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento</label>
+                    <select
+                      v-model="paymentForm.payment_method"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                    >
+                      <option value="">Selecione a forma de pagamento</option>
+                      <option value="pix">PIX</option>
+                      <option value="credit_card">Cartão de Crédito</option>
+                      <option value="debit_card">Cartão de Débito</option>
+                      <option value="boleto">Boleto</option>
+                      <option value="cash">Dinheiro</option>
+                      <option value="bank_transfer">Transferência Bancária</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="mt-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Valor Devido *</label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span class="text-gray-500 sm:text-sm">R$</span>
+                    </div>
+                    <input
+                      :value="paymentForm.amount_paid"
+                      @input="formatPaymentCurrencyField($event, 'amount_paid')"
+                      type="text"
+                      required
+                      class="mt-1 block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                      placeholder="0,00"
+                    />
+                  </div>
+                </div>
+
+                <div class="mt-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                  <textarea
+                    v-model="paymentForm.payment_notes"
+                    rows="3"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                    placeholder="Observações sobre o pagamento..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <!-- Informações de Pagamento -->
+
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                @click="showAddPaymentModal = false"
+                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                :disabled="isSubmittingPayment"
+                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              >
+                {{ isSubmittingPayment ? 'Salvando...' : 'Adicionar Pagamento' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Receber Pagamento -->
+    <div v-if="showReceivePaymentModal && selectedPayment" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Receber Pagamento</h3>
+            <button
+              @click="showReceivePaymentModal = false"
+              class="text-gray-400 hover:text-gray-600"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <form @submit.prevent="confirmReceivePayment">
+            <div class="space-y-4">
+              <!-- Informações do Pagamento -->
+              <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h4 class="text-md font-semibold text-gray-900 mb-3">Dados do Pagamento</h4>
+
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento</label>
+                    <p class="text-sm text-gray-900">{{ selectedPayment.payment_due_date ? formatDateForDisplay(selectedPayment.payment_due_date) : '-' }}</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Valor Devido</label>
+                    <p class="text-sm text-gray-900 font-semibold">R$ {{ formatCurrency(selectedPayment.amount_paid) }}</p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento</label>
+                    <p class="text-sm text-gray-900">{{ selectedPayment.payment_method_text || '-' }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Data do Pagamento -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Data do Pagamento *</label>
+                <input
+                  v-model="receivePaymentForm.payment_date"
+                  type="date"
+                  required
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                />
+              </div>
+
+              <!-- Valor Recebido -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Valor Recebido *</label>
+                <input
+                  :value="receivePaymentForm.amount_received"
+                  @input="formatReceivePaymentCurrencyField"
+                  type="text"
+                  required
+                  placeholder="0,00"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                />
+                <p class="mt-1 text-xs text-gray-500">
+                  Valor restante: <span class="font-semibold text-orange-600">{{ formatCurrency(getPaymentRemainingAmount()) }}</span>
+                </p>
+                <div v-if="getPaymentRemainingAmount() > 0" class="mt-2 p-2 bg-orange-50 border border-orange-200 rounded-md">
+                  <p class="text-xs text-orange-700">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <strong>Pagamento Parcial:</strong> Será criada uma nova parcela de {{ formatCurrency(getPaymentRemainingAmount()) }} com status "Pendente"
+                  </p>
+                </div>
+              </div>
+
+              <!-- Forma de Pagamento -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento *</label>
+                <select
+                  v-model="receivePaymentForm.payment_method"
+                  required
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                >
+                  <option value="">Selecione a forma de pagamento</option>
+                  <option value="pix">PIX</option>
+                  <option value="credit_card">Cartão de Crédito</option>
+                  <option value="debit_card">Cartão de Débito</option>
+                  <option value="boleto">Boleto Bancário</option>
+                  <option value="cash">Dinheiro</option>
+                  <option value="bank_transfer">Transferência Bancária</option>
+                </select>
+              </div>
+
+              <!-- Observações -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                <textarea
+                  v-model="receivePaymentForm.payment_notes"
+                  rows="3"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                  placeholder="Observações sobre o recebimento..."
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                @click="showReceivePaymentModal = false"
+                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                :disabled="isSubmittingReceivePayment || !isValidReceivePaymentAmount"
+                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              >
+                {{ isSubmittingReceivePayment ? 'Recebendo...' : 'Confirmar Recebimento' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Editar Pagamento -->
+    <div v-if="showEditPaymentModal && selectedPayment" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Editar Pagamento</h3>
+            <button
+              @click="showEditPaymentModal = false"
+              class="text-gray-400 hover:text-gray-600"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <form @submit.prevent="updatePayment">
+            <div class="space-y-4">
+              <!-- Informações de Pagamento -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento</label>
+                  <input
+                    v-model="editPaymentForm.payment_due_date"
+                    type="date"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Data do Pagamento</label>
+                  <input
+                    v-model="editPaymentForm.payment_date"
+                    type="date"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pagamento</label>
+                  <select
+                    v-model="editPaymentForm.payment_method"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                  >
+                    <option value="">Selecione uma forma</option>
+                    <option value="pix">PIX</option>
+                    <option value="credit_card">Cartão de Crédito</option>
+                    <option value="debit_card">Cartão de Débito</option>
+                    <option value="boleto">Boleto Bancário</option>
+                    <option value="cash">Dinheiro</option>
+                    <option value="bank_transfer">Transferência Bancária</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Valor Pago *</label>
+                  <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span class="text-gray-500 sm:text-sm">R$</span>
+                    </div>
+                    <input
+                      :value="editPaymentForm.amount_paid"
+                      @input="formatEditPaymentCurrencyField($event, 'amount_paid')"
+                      type="text"
+                      required
+                      class="mt-1 block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                      placeholder="0,00"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Status do Pagamento</label>
+                  <select
+                    v-model="editPaymentForm.payment_status"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                  >
+                    <option value="pending">Pendente</option>
+                    <option value="paid">Pago</option>
+                    <option value="partial">Parcial</option>
+                    <option value="overdue">Vencido</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                <textarea
+                  v-model="editPaymentForm.payment_notes"
+                  rows="3"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                  placeholder="Observações sobre o pagamento..."
+                ></textarea>
+              </div>
+
+              <div class="flex items-center">
+                <input
+                  v-model="editPaymentForm.is_partial_payment"
+                  type="checkbox"
+                  class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                />
+                <label class="ml-2 block text-sm text-gray-900">
+                  Pagamento parcial
+                </label>
+              </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                @click="showEditPaymentModal = false"
+                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                :disabled="isSubmittingPayment"
+                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              >
+                {{ isSubmittingPayment ? 'Atualizando...' : 'Atualizar Pagamento' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Editar Informações Financeiras -->
+    <div v-if="showEditFinancialModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Editar Informações Financeiras</h3>
+            <button
+              @click="showEditFinancialModal = false"
+              class="text-gray-400 hover:text-gray-600"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <form @submit.prevent="submitFinancialInfo">
+            <div class="space-y-4">
+              <!-- Informações Financeiras Básicas -->
+              <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h4 class="text-md font-semibold text-gray-900 mb-3">Informações Financeiras</h4>
+
+                <div class="grid grid-cols-1 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Custo Total *</label>
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 sm:text-sm">R$</span>
+                      </div>
+                      <input
+                        v-model="editFinancialForm.total_cost"
+                        @input="formatCurrencyField($event, 'total_cost')"
+                        type="text"
+                        required
+                        class="mt-1 block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        placeholder="0,00"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Desconto</label>
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 sm:text-sm">R$</span>
+                      </div>
+                      <input
+                        v-model="editFinancialForm.discount_amount"
+                        @input="formatCurrencyField($event, 'discount_amount')"
+                        type="text"
+                        class="mt-1 block w-full pl-10 rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        placeholder="0,00"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Valor Final</label>
+                    <div class="relative">
+                      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500 sm:text-sm">R$</span>
+                      </div>
+                      <input
+                        v-model="editFinancialForm.final_amount"
+                        type="text"
+                        readonly
+                        class="mt-1 block w-full pl-10 rounded-md border-gray-300 shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed"
+                        placeholder="0,00"
+                      />
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">
+                      Calculado automaticamente (Custo Total - Desconto)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento</label>
+                    <input
+                      v-model="editFinancialForm.payment_due_date"
+                      type="date"
+                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                @click="showEditFinancialModal = false"
+                class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                :disabled="isSubmittingPayment"
+                class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+              >
+                {{ isSubmittingPayment ? 'Salvando...' : 'Salvar Informações' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div v-if="showToast" class="fixed top-4 right-4 z-50">
+      <div :class="{
+        'bg-green-500 text-white': toastType === 'success',
+        'bg-red-500 text-white': toastType === 'error',
+        'bg-yellow-500 text-white': toastType === 'warning'
+      }" class="px-6 py-3 rounded-lg shadow-lg max-w-sm">
+        <div class="flex items-center space-x-2">
+          <svg v-if="toastType === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+          <svg v-else-if="toastType === 'error'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          <svg v-else-if="toastType === 'warning'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+          <span class="font-medium">{{ toastMessage }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para visualizar Avistamento de Praga -->
+    <div v-if="showViewPestSightingModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+      <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+        <div class="p-6 overflow-y-auto max-h-[85vh]">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold text-gray-900">Visualizar Avistamento de Praga</h3>
+            <button
+              @click="showViewPestSightingModal = false"
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div v-if="selectedPestSighting" class="grid grid-cols-2 gap-6">
+            <!-- Linha 1 -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Praga</label>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ getPestTypeText(selectedPestSighting.pest_type) }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nível de Severidade</label>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ getSeverityLevelText(selectedPestSighting.severity_level) }}</p>
+            </div>
+
+            <!-- Linha 2 -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Data do Avistamento</label>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ formatDateTime(selectedPestSighting.sighting_date) }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Localização</label>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ selectedPestSighting.location_description }}</p>
+            </div>
+
+            <!-- Linhas seguintes (opcionais, lado a lado quando existirem) -->
+            <div v-if="selectedPestSighting.description">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ selectedPestSighting.description }}</p>
+            </div>
+            <div v-if="selectedPestSighting.observations">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ selectedPestSighting.observations }}</p>
+            </div>
+
+            <div v-if="selectedPestSighting.environmental_conditions">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Condições Ambientais</label>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ selectedPestSighting.environmental_conditions }}</p>
+            </div>
+            <div v-if="selectedPestSighting.control_measures_applied">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Medidas de Controle Aplicadas</label>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ selectedPestSighting.control_measures_applied }}</p>
+            </div>
+
+            <div v-if="selectedPestSighting.technician_notes">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Observações do Técnico</label>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ selectedPestSighting.technician_notes }}</p>
+            </div>
+          </div>
+
+          <div class="flex justify-end pt-4">
+            <button
+              @click="showViewPestSightingModal = false"
+              class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para editar Avistamento de Praga -->
+    <div v-if="showEditPestSightingModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+      <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+        <div class="p-6 overflow-y-auto max-h-[85vh]">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold text-gray-900">Editar Avistamento de Praga</h3>
+            <button
+              @click="showEditPestSightingModal = false"
+              class="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <form @submit.prevent="updatePestSighting" class="space-y-6">
+            <div class="grid grid-cols-2 gap-4">
+              <!-- Tipo de Praga -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Praga *</label>
+                <select
+                  v-model="editPestSightingForm.pest_type"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Selecione o tipo de praga</option>
+                  <option value="cockroaches">Baratas</option>
+                  <option value="ants">Formigas</option>
+                  <option value="rats">Ratos</option>
+                  <option value="mice">Camundongos</option>
+                  <option value="flies">Moscas</option>
+                  <option value="mosquitoes">Mosquitos</option>
+                  <option value="spiders">Aranhas</option>
+                  <option value="termites">Cupins</option>
+                  <option value="beetles">Besouros</option>
+                  <option value="moths">Traças</option>
+                  <option value="wasps">Vespas</option>
+                  <option value="other">Outros</option>
+                </select>
+              </div>
+
+              <!-- Nível de Severidade -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nível de Severidade *</label>
+                <select
+                  v-model="editPestSightingForm.severity_level"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Selecione a severidade</option>
+                  <option value="low">Baixa</option>
+                  <option value="medium">Média</option>
+                  <option value="high">Alta</option>
+                  <option value="critical">Crítica</option>
+                </select>
+              </div>
+
+              <!-- Data do Avistamento -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Data do Avistamento *</label>
+                <input
+                  type="datetime-local"
+                  v-model="editPestSightingForm.sighting_date"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              <!-- Localização -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Localização *</label>
+                <input
+                  type="text"
+                  v-model="editPestSightingForm.location_description"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Descrição da localização"
+                />
+              </div>
+            </div>
+
+            <!-- Descrição -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+              <textarea
+                v-model="editPestSightingForm.description"
+                rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Descrição detalhada do avistamento..."
+              ></textarea>
+            </div>
+
+            <!-- Observações -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+              <textarea
+                v-model="editPestSightingForm.observations"
+                rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Observações gerais..."
+              ></textarea>
+            </div>
+
+            <!-- Condições Ambientais -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Condições Ambientais</label>
+              <textarea
+                v-model="editPestSightingForm.environmental_conditions"
+                rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Condições do ambiente (umidade, temperatura, etc.)..."
+              ></textarea>
+            </div>
+
+            <!-- Medidas de Controle Aplicadas -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Medidas de Controle Aplicadas</label>
+              <textarea
+                v-model="editPestSightingForm.control_measures_applied"
+                rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Medidas aplicadas para controle..."
+              ></textarea>
+            </div>
+
+            <!-- Observações do Técnico -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Observações do Técnico</label>
+              <textarea
+                v-model="editPestSightingForm.technician_notes"
+                rows="3"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Observações técnicas..."
+              ></textarea>
+            </div>
+
+            <!-- Botões -->
+            <div class="flex justify-end space-x-4 pt-4">
+              <button
+                type="button"
+                @click="showEditPestSightingModal = false"
+                class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                :disabled="isUpdatingPestSighting"
+                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span v-if="isUpdatingPestSighting">Salvando...</span>
+                <span v-else>Salvar Alterações</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, nextTick, watch } from 'vue';
+import { Link, useForm } from '@inertiajs/vue3';
+
+const props = defineProps({
+  workOrder: {
+    type: Object,
+    required: true
+  },
+  activeTab: {
+    type: String,
+    required: true
+  },
+  availableDevices: {
+    type: Array,
+    default: () => []
+  },
+  availableAddresses: {
+    type: Array,
+    default: () => []
+  }
+});
+
+
+// Estado do modal
+const showDeviceEventModal = ref(false);
+const isSubmitting = ref(false);
+const showPestSightingModal = ref(false);
+const isSubmittingPestSighting = ref(false);
+
+// Estado dos modais de pagamento
+const showAddPaymentModal = ref(false);
+const showEditPaymentModal = ref(false);
+const showReceivePaymentModal = ref(false);
+const showEditFinancialModal = ref(false);
+const selectedPayment = ref(null);
+const isSubmittingPayment = ref(false);
+const isSubmittingReceivePayment = ref(false);
+
+// Computed para validar se o valor do pagamento é válido
+const isValidReceivePaymentAmount = computed(() => {
+  if (!receivePaymentForm.amount_received) {
+    return false;
+  }
+
+  const amount = parseCurrencyValue(receivePaymentForm.amount_received);
+  return amount > 0;
+});
+
+// Formulário do evento de dispositivo
+const deviceEventForm = useForm({
+  event_type: '',
+  device_id: '',
+  event_date: '',
+  description: '',
+  observations: '',
+  work_order_id: props.workOrder.id,
+  bait_consumption_status: '',
+  bait_consumption_quantity: '',
+  cleaning_done: '',
+  cleaning_notes: '',
+  bait_change_type: '',
+  bait_change_lot: '',
+  bait_change_quantity: '',
+  technician_notes: ''
+});
+
+// Formulário do avistamento de praga
+const pestSightingForm = useForm({
+  pest_type: '',
+  severity_level: '',
+  sighting_date: '',
+  location_description: '',
+  description: '',
+  observations: '',
+  environmental_conditions: '',
+  control_measures_applied: '',
+  technician_notes: '',
+  work_order_id: props.workOrder.id,
+  address_id: props.workOrder.address_id // Usar automaticamente o endereço da OS
+});
+
+// Formulários para pagamentos
+const paymentForm = useForm({
+  work_order_id: props.workOrder.id,
+  payment_due_date: '',
+  payment_method: '',
+  amount_paid: '',
+  payment_notes: ''
+});
+
+const editPaymentForm = useForm({
+  work_order_id: props.workOrder.id,
+  payment_due_date: '',
+  payment_date: '',
+  payment_method: '',
+  amount_paid: '',
+  payment_notes: '',
+  is_partial_payment: false,
+  payment_status: ''
+});
+
+    const receivePaymentForm = useForm({
+      payment_date: '',
+      amount_received: '',
+      payment_method: '',
+      payment_notes: ''
+    });
+
+// Formulário para editar informações financeiras básicas
+const editFinancialForm = useForm({
+  work_order_id: props.workOrder.id,
+  total_cost: '',
+  discount_amount: '',
+  final_amount: '',
+  payment_due_date: '',
+});
+
+// Função para converter valor formatado para número
+const parseCurrencyValue = (value) => {
+  if (!value || value === '') return 0;
+
+  // Remove tudo exceto números e vírgula
+  const cleanValue = value.toString().replace(/[^\d,]/g, '');
+  if (cleanValue === '') return 0;
+
+  // Substitui vírgula por ponto e converte para número
+  const numericValue = cleanValue.replace(',', '.');
+  return parseFloat(numericValue) || 0;
+};
+
+// Função para formatar data para exibição
+const formatDateForDisplay = (dateString) => {
+  if (!dateString) return '-';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('pt-BR');
+};
+
+// Função para formatar o campo de valor recebido
+const formatReceivePaymentCurrencyField = (event) => {
+  const input = event.target;
+  let value = input.value;
+
+  // Remove tudo que não é número
+  value = value.replace(/\D/g, '');
+
+  // Se estiver vazio, define como 0
+  if (value === '') {
+    receivePaymentForm.amount_received = '';
+    return;
+  }
+
+  // Converte para centavos e depois para formato brasileiro
+  const numericValue = parseInt(value) / 100;
+  const formattedValue = numericValue.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  receivePaymentForm.amount_received = formattedValue;
+};
+
+// Função para calcular o valor restante do pagamento específico
+const getPaymentRemainingAmount = () => {
+  if (!selectedPayment.value || !receivePaymentForm.amount_received) {
+    return selectedPayment.value?.amount_paid || 0;
+  }
+
+  const amountPaid = parseCurrencyValue(receivePaymentForm.amount_received);
+  const amountDue = selectedPayment.value.amount_paid;
+
+  return Math.max(0, amountDue - amountPaid);
+};
+
+// Função para verificar se a data é futura
+const isFutureDate = (dateString) => {
+  if (!dateString) return false;
+  const selectedDate = new Date(dateString);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Remove horas para comparar apenas a data
+  return selectedDate > today;
+};
+
+// Função para determinar se é data de vencimento ou pagamento
+const getDateLabel = (dateString, hasPayment = false) => {
+  if (!dateString) return 'Data do Pagamento';
+
+  if (hasPayment) {
+    return 'Data do Pagamento';
+  }
+
+  return isFutureDate(dateString) ? 'Data de Vencimento' : 'Data do Pagamento';
+};
+
+// Função para exibir data de vencimento na tabela
+const getPaymentDueDate = (payment) => {
+  // Se há payment_due_date específico, mostra ele
+  if (payment.payment_due_date) {
+    return formatDate(payment.payment_due_date);
+  }
+
+  // Se não há payment_date, não há vencimento
+  if (!payment.payment_date) {
+    return '-';
+  }
+
+  // Se payment_date é futura, é vencimento
+  if (isFutureDate(payment.payment_date)) {
+    return formatDate(payment.payment_date);
+  }
+
+  // Se payment_date é passada/hoje, não há vencimento
+  return '-';
+};
+
+// Função para exibir data de pagamento na tabela
+const getPaymentDate = (payment) => {
+  // Se não há payment_date, não há pagamento
+  if (!payment.payment_date) {
+    return '-';
+  }
+
+  // Se payment_date é futura, não é pagamento ainda
+  if (isFutureDate(payment.payment_date)) {
+    return '-';
+  }
+
+  // Se payment_date é passada/hoje e há valor pago, é pagamento
+  if (payment.amount_paid && payment.amount_paid > 0) {
+    return formatDate(payment.payment_date);
+  }
+
+  return '-';
+};
+
+// Função para calcular o status do pagamento
+const calculatePaymentStatus = (amountPaid, finalAmount, paymentDate) => {
+  const paid = parseCurrencyValue(amountPaid);
+  const final = parseCurrencyValue(finalAmount);
+
+  // Se não há valor pago
+  if (!paid || paid === 0) {
+    // Se data é futura, é vencimento futuro
+    if (isFutureDate(paymentDate)) {
+      return 'pending';
+    }
+    // Se data é passada/hoje e não há pagamento, está vencido
+    return 'overdue';
+  }
+
+  // Se há valor pago
+  // Se valor pago >= valor final, está pago
+  if (paid >= final) {
+    return 'paid';
+  }
+
+  // Se valor pago < valor final, é pagamento parcial
+  return 'partial';
+};
+
+
+// Função para calcular valor final
+const calculateFinalAmount = () => {
+  const totalCost = parseCurrencyValue(editFinancialForm.total_cost);
+  const discount = parseCurrencyValue(editFinancialForm.discount_amount);
+  const finalAmount = totalCost - discount;
+
+  // Formatar o valor final usando a mesma lógica da diretiva
+  if (finalAmount <= 0) {
+    editFinancialForm.final_amount = '0,00';
+  } else {
+    editFinancialForm.final_amount = finalAmount.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+};
+
+// Watchers para cálculo automático do valor final (com debounce para evitar interferência)
+let calculationTimeout = null;
+watch(() => editFinancialForm.total_cost, () => {
+  clearTimeout(calculationTimeout);
+  calculationTimeout = setTimeout(() => {
+    calculateFinalAmount();
+  }, 100);
+});
+
+watch(() => editFinancialForm.discount_amount, () => {
+  clearTimeout(calculationTimeout);
+  calculationTimeout = setTimeout(() => {
+    calculateFinalAmount();
+  }, 100);
+});
+
+// Função para formatar campos de moeda
+const formatCurrencyField = (event, fieldName) => {
+  const input = event.target;
+  let value = input.value;
+
+  // Remove tudo exceto números e vírgula
+  let cleanValue = value.replace(/[^\d,]/g, '');
+
+  if (cleanValue === '') {
+    editFinancialForm[fieldName] = '';
+    return;
+  }
+
+  let amount;
+
+  // Se já tem vírgula, trata como valor decimal
+  if (cleanValue.includes(',')) {
+    // Substitui vírgula por ponto e converte
+    amount = parseFloat(cleanValue.replace(',', '.'));
+  } else {
+    // Se não tem vírgula, trata como centavos se tiver mais de 2 dígitos
+    const numbers = cleanValue.replace(/\D/g, '');
+    if (numbers.length <= 2) {
+      // Menos de 3 dígitos: trata como reais
+      amount = parseFloat(numbers);
+    } else {
+      // 3+ dígitos: trata como centavos
+      amount = parseFloat(numbers) / 100;
+    }
+  }
+
+  // Formata o valor
+  let formatted = amount.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  // Atualiza o campo
+  editFinancialForm[fieldName] = formatted;
+
+  // Força a atualização do input
+  nextTick(() => {
+    input.value = formatted;
+  });
+};
+
+// Função para formatar campos de moeda no modal de adicionar pagamento
+const formatPaymentCurrencyField = (event, fieldName) => {
+  const input = event.target;
+  let value = input.value;
+
+  console.log('formatPaymentCurrencyField - input value:', value);
+
+  // Remove tudo exceto números
+  let numbers = value.replace(/\D/g, '');
+  console.log('formatPaymentCurrencyField - numbers only:', numbers);
+
+  if (numbers === '') {
+    paymentForm[fieldName] = '';
+    return;
+  }
+
+  // Converte para centavos e depois para reais
+  let amount = parseFloat(numbers) / 100;
+  console.log('formatPaymentCurrencyField - amount:', amount);
+
+  // Formata o valor
+  let formatted = amount.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  console.log('formatPaymentCurrencyField - formatted:', formatted);
+
+  // Atualiza o campo
+  paymentForm[fieldName] = formatted;
+
+  // Força a atualização do input
+  nextTick(() => {
+    input.value = formatted;
+  });
+};
+
+// Função para formatar campos de moeda no modal de editar pagamento
+const formatEditPaymentCurrencyField = (event, fieldName) => {
+  const input = event.target;
+  let value = input.value;
+
+  // Remove tudo exceto números
+  let numbers = value.replace(/\D/g, '');
+
+  if (numbers === '') {
+    editPaymentForm[fieldName] = '';
+    return;
+  }
+
+  // Converte para centavos e depois para reais
+  let amount = parseFloat(numbers) / 100;
+
+  // Formata o valor
+  let formatted = amount.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  // Atualiza o campo
+  editPaymentForm[fieldName] = formatted;
+
+  // Força a atualização do input
+  nextTick(() => {
+    input.value = formatted;
+  });
+};
+
+// Estado para visualizar e editar eventos
+const showViewEventModal = ref(false);
+const showEditEventModal = ref(false);
+const selectedEvent = ref(null);
+
+// Estado para visualizar e editar avistamentos de pragas
+const showViewPestSightingModal = ref(false);
+const showEditPestSightingModal = ref(false);
+const selectedPestSighting = ref(null);
+const editEventForm = useForm({
+  id: '',
+  event_type: '',
+  device_id: '',
+  event_date: '',
+  description: '',
+  observations: '',
+  bait_consumption_status: '',
+  bait_consumption_quantity: '',
+  cleaning_done: '',
+  cleaning_notes: '',
+  bait_change_type: '',
+  bait_change_lot: '',
+  bait_change_quantity: '',
+  technician_notes: ''
+});
+
+// Formulário de edição para avistamentos de pragas
+const editPestSightingForm = useForm({
+  id: '',
+  pest_type: '',
+  severity_level: '',
+  sighting_date: '',
+  location_description: '',
+  description: '',
+  observations: '',
+  environmental_conditions: '',
+  control_measures_applied: '',
+  technician_notes: '',
+  work_order_id: '',
+  address_id: ''
+});
+
+const isUpdating = ref(false);
+const isUpdatingPestSighting = ref(false);
+
+// Sistema de Toast
+const showToast = ref(false);
+const toastMessage = ref('');
+const toastType = ref('success'); // success, error, warning
+
+const displayToast = (message, type = 'success') => {
+  toastMessage.value = message;
+  toastType.value = type;
+  showToast.value = true;
+
+  // Auto-hide após 6 segundos (aumentado de 3 para 6)
+  setTimeout(() => {
+    showToast.value = false;
+  }, 6000);
+};
+
+// Função para editar um evento existente
+const editEvent = (event) => {
+  console.log('Editando evento:', event);
+  selectedEvent.value = event;
+
+  // Formatar a data para o formato datetime-local
+  const eventDate = new Date(event.event_date);
+  const formattedDate = eventDate.toISOString().slice(0, 16);
+
+  editEventForm.id = event.id;
+  editEventForm.event_type = event.event_type;
+  editEventForm.device_id = event.device_id;
+  editEventForm.event_date = formattedDate;
+  editEventForm.description = event.description || '';
+  editEventForm.observations = event.observations || '';
+  editEventForm.bait_consumption_status = event.bait_consumption_status || '';
+  editEventForm.bait_consumption_quantity = event.bait_consumption_quantity || '';
+  editEventForm.cleaning_done = event.cleaning_done;
+  editEventForm.cleaning_notes = event.cleaning_notes || '';
+  editEventForm.bait_change_type = event.bait_change_type || '';
+  editEventForm.bait_change_lot = event.bait_change_lot || '';
+  editEventForm.bait_change_quantity = event.bait_change_quantity || '';
+  editEventForm.technician_notes = event.technician_notes || '';
+
+  console.log('Formulário preenchido:', editEventForm.data());
+  console.log('Descrição:', editEventForm.description);
+  console.log('Observações:', editEventForm.observations);
+  showEditEventModal.value = true;
+};
+
+// Função para atualizar um evento existente
+const updateEvent = async () => {
+  if (!editEventForm.id) {
+    displayToast('Evento inválido para edição.', 'error');
+    return;
+  }
+
+  if (!editEventForm.event_type || !editEventForm.device_id || !editEventForm.event_date) {
+    displayToast('Por favor, preencha todos os campos obrigatórios.', 'error');
+    return;
+  }
+
+  // Validação específica para cada tipo de evento
+  if (editEventForm.event_type === 'bait_consumption' && !editEventForm.bait_consumption_status) {
+    displayToast('Por favor, selecione o status do consumo de isca.', 'error');
+    return;
+  }
+
+  if (editEventForm.event_type === 'cleaning' && editEventForm.cleaning_done === '') {
+    displayToast('Por favor, selecione se a limpeza foi realizada.', 'error');
+    return;
+  }
+
+  if (editEventForm.event_type === 'technician_notes' && !editEventForm.technician_notes) {
+    displayToast('Por favor, preencha as observações do técnico.', 'error');
+    return;
+  }
+
+  isUpdating.value = true;
+
+  try {
+    // Preparar dados para envio
+    const updateData = {
+      event_type: editEventForm.event_type,
+      device_id: editEventForm.device_id,
+      event_date: editEventForm.event_date,
+      description: editEventForm.description || '',
+      observations: editEventForm.observations || '',
+      bait_consumption_status: editEventForm.bait_consumption_status || '',
+      bait_consumption_quantity: editEventForm.bait_consumption_quantity || '',
+      cleaning_done: editEventForm.cleaning_done,
+      cleaning_notes: editEventForm.cleaning_notes || '',
+      bait_change_type: editEventForm.bait_change_type || '',
+      bait_change_lot: editEventForm.bait_change_lot || '',
+      bait_change_quantity: editEventForm.bait_change_quantity || '',
+      technician_notes: editEventForm.technician_notes || '',
+      active: true
+    };
+
+    console.log('Enviando dados para atualização:', updateData);
+
+    const response = await fetch(`/device-events/${editEventForm.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      // Sucesso: mostrar toast e fechar modal
+      displayToast(result.message, 'success');
+      showEditEventModal.value = false;
+      editEventForm.reset();
+      selectedEvent.value = null;
+
+      // Aguardar 2 segundos antes de recarregar para permitir ver os logs
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } else {
+      // Erro: mostrar toast de erro
+      displayToast('Erro ao atualizar evento: ' + result.message, 'error');
+    }
+  } catch (error) {
+    console.error('Erro na atualização:', error);
+    displayToast('Erro inesperado. Tente novamente.', 'error');
+  } finally {
+    isUpdating.value = false;
+  }
+};
+
+
+// Submissão do formulário
+const submitDeviceEvent = async () => {
+  if (!deviceEventForm.event_type || !deviceEventForm.device_id || !deviceEventForm.event_date) {
+    displayToast('Por favor, preencha todos os campos obrigatórios.', 'error');
+    return;
+  }
+
+  // Validação específica para cada tipo de evento
+  if (deviceEventForm.event_type === 'bait_consumption' && !deviceEventForm.bait_consumption_status) {
+    displayToast('Por favor, selecione o status do consumo de isca.', 'error');
+    return;
+  }
+
+  if (deviceEventForm.event_type === 'cleaning' && deviceEventForm.cleaning_done === '') {
+    displayToast('Por favor, selecione se a limpeza foi realizada.', 'error');
+    return;
+  }
+
+  if (deviceEventForm.event_type === 'technician_notes' && !deviceEventForm.technician_notes) {
+    displayToast('Por favor, preencha as observações do técnico.', 'error');
+    return;
+  }
+
+  isSubmitting.value = true;
+
+  try {
+    console.log('Enviando dados:', deviceEventForm.data());
+    const response = await fetch('/device-events', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+      body: JSON.stringify(deviceEventForm.data())
+    });
+    const result = await response.json();
+    if (result.success) {
+      displayToast(result.message, 'success');
+      showDeviceEventModal.value = false;
+      deviceEventForm.reset();
+      window.location.reload();
+    } else {
+      displayToast('Erro ao criar evento: ' + result.message, 'error');
+    }
+  } catch (error) {
+    console.error('Erro na submissão:', error);
+    displayToast('Erro inesperado. Tente novamente.', 'error');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+const submitPestSighting = async () => {
+  if (!pestSightingForm.pest_type || !pestSightingForm.severity_level || !pestSightingForm.sighting_date || !pestSightingForm.location_description) {
+    displayToast('Por favor, preencha todos os campos obrigatórios.', 'error');
+    return;
+  }
+
+  isSubmittingPestSighting.value = true;
+
+  try {
+    const response = await fetch('/pest-sightings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+      body: JSON.stringify(pestSightingForm.data())
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      displayToast(result.message, 'success');
+      showPestSightingModal.value = false;
+      pestSightingForm.reset();
+      // Recarregar a página para mostrar o novo avistamento
+      window.location.reload();
+    } else {
+      displayToast('Erro ao criar avistamento: ' + result.message, 'error');
+    }
+  } catch (error) {
+    console.error('Erro na submissão:', error);
+    displayToast('Erro inesperado. Tente novamente.', 'error');
+  } finally {
+    isSubmittingPestSighting.value = false;
+  }
+};
+
+// Função para visualizar um evento existente
+const viewEvent = (event) => {
+  console.log('Evento selecionado para visualização:', event);
+  selectedEvent.value = event;
+  showViewEventModal.value = true;
+};
+
+// Função para visualizar um avistamento de praga existente
+const viewPestSighting = async (sighting) => {
+  try {
+    const resp = await fetch(`/pest-sightings/${sighting.id}?json=1`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    const data = await resp.json();
+    selectedPestSighting.value = data?.pestSighting || sighting;
+  } catch (e) {
+    selectedPestSighting.value = sighting;
+  } finally {
+    nextTick(() => {
+      showViewPestSightingModal.value = true;
+    });
+  }
+};
+
+// Função para editar um avistamento de praga existente
+const editPestSighting = async (sighting) => {
+  let full = sighting;
+  try {
+    const resp = await fetch(`/pest-sightings/${sighting.id}?json=1`, {
+      headers: { 'Accept': 'application/json' },
+    });
+    const data = await resp.json();
+    if (data?.pestSighting) full = data.pestSighting;
+  } catch (e) {}
+
+  selectedPestSighting.value = full;
+
+  const sightingDate = new Date(full.sighting_date);
+  const formattedDate = sightingDate.toISOString().slice(0, 16);
+
+  editPestSightingForm.id = full.id;
+  editPestSightingForm.pest_type = full.pest_type;
+  editPestSightingForm.severity_level = full.severity_level;
+  editPestSightingForm.sighting_date = formattedDate;
+  editPestSightingForm.location_description = full.location_description || '';
+  editPestSightingForm.description = full.description || '';
+  editPestSightingForm.observations = full.observations || '';
+  editPestSightingForm.environmental_conditions = full.environmental_conditions || '';
+  editPestSightingForm.control_measures_applied = full.control_measures_applied || '';
+  editPestSightingForm.technician_notes = full.technician_notes || '';
+  editPestSightingForm.work_order_id = props.workOrder.id;
+  editPestSightingForm.address_id = props.workOrder.address_id;
+
+  nextTick(() => {
+    showEditPestSightingModal.value = true;
+  });
+};
+
+// Função para atualizar um avistamento de praga existente
+const updatePestSighting = async () => {
+  if (!editPestSightingForm.id) {
+    displayToast('Avistamento inválido para edição.', 'error');
+    return;
+  }
+
+  if (!editPestSightingForm.pest_type || !editPestSightingForm.severity_level || !editPestSightingForm.sighting_date || !editPestSightingForm.location_description) {
+    displayToast('Por favor, preencha todos os campos obrigatórios.', 'error');
+    return;
+  }
+
+  isUpdatingPestSighting.value = true;
+
+  try {
+    // Preparar dados para envio
+    const updateData = {
+      pest_type: editPestSightingForm.pest_type,
+      severity_level: editPestSightingForm.severity_level,
+      sighting_date: editPestSightingForm.sighting_date,
+      location_description: editPestSightingForm.location_description || '',
+      description: editPestSightingForm.description || '',
+      observations: editPestSightingForm.observations || '',
+      environmental_conditions: editPestSightingForm.environmental_conditions || '',
+      control_measures_applied: editPestSightingForm.control_measures_applied || '',
+      technician_notes: editPestSightingForm.technician_notes || '',
+      work_order_id: editPestSightingForm.work_order_id,
+      address_id: editPestSightingForm.address_id,
+      active: true
+    };
+
+    console.log('Enviando dados para atualização do avistamento:', updateData);
+
+    const response = await fetch(`/pest-sightings/${editPestSightingForm.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+      body: JSON.stringify(updateData)
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      displayToast(result.message, 'success');
+      showEditPestSightingModal.value = false;
+      editPestSightingForm.reset();
+      selectedPestSighting.value = null;
+
+      // Aguardar 2 segundos antes de recarregar para permitir ver os logs
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } else {
+      displayToast('Erro ao atualizar avistamento: ' + result.message, 'error');
+    }
+  } catch (error) {
+    console.error('Erro na atualização do avistamento:', error);
+    displayToast('Erro inesperado. Tente novamente.', 'error');
+  } finally {
+    isUpdatingPestSighting.value = false;
+  }
+};
+
+// Formatação de datas e valores
+const formatDate = (date) => {
+  if (!date) return '';
+  return new Date(date).toLocaleDateString('pt-BR');
+};
+
+const formatDateTime = (date) => {
+  if (!date) return '';
+  return new Date(date).toLocaleString('pt-BR');
+};
+
+const formatCurrency = (value) => {
+  if (!value && value !== 0) return '0,00';
+  return parseFloat(value).toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+// Funções para máscara de moeda
+const formatCurrencyInput = (value) => {
+  if (!value || value === '') return '';
+
+  // Se já é um número, formata diretamente
+  if (typeof value === 'number') {
+    return value.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  // Se já está formatado como moeda brasileira (tem vírgula), retorna como está
+  if (value.includes(',') && !value.includes('.')) {
+    return value;
+  }
+
+  // Se tem ponto (formato americano), converte para vírgula
+  if (value.includes('.')) {
+    const amount = parseFloat(value) || 0;
+    return amount.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  // Remove tudo que não é dígito
+  const numbers = value.toString().replace(/\D/g, '');
+
+  if (numbers === '') return '';
+
+  // Se tem mais de 2 dígitos, assume que os últimos 2 são centavos
+  if (numbers.length > 2) {
+    const amount = parseInt(numbers) / 100;
+    return amount.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+
+  // Se tem 2 dígitos ou menos, formata como valor inteiro com centavos
+  const amount = parseInt(numbers) / 100;
+  return amount.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+const parseCurrencyInput = (value) => {
+  if (!value || value === '') return '';
+
+  // Se já é um número, retorna como string
+  if (typeof value === 'number') {
+    return value.toString();
+  }
+
+  // Remove tudo exceto dígitos e vírgula
+  const cleanValue = value.toString().replace(/[^\d,]/g, '');
+
+  if (cleanValue === '') return '';
+
+  // Se tem vírgula, substitui por ponto para conversão
+  if (cleanValue.includes(',')) {
+    const normalizedValue = cleanValue.replace(',', '.');
+    const amount = parseFloat(normalizedValue) || 0;
+    return amount.toString();
+  }
+
+  // Se não tem vírgula, trata como centavos se necessário
+  // Se tem mais de 2 dígitos, assume que os últimos 2 são centavos
+  if (cleanValue.length > 2) {
+    const amount = parseInt(cleanValue) / 100;
+    return amount.toString();
+  }
+
+  // Se tem 2 dígitos ou menos, trata como valor inteiro
+  return cleanValue;
+};
+
+// Função para lidar com entrada de moeda
+const handleCurrencyInput = (event, field) => {
+  const value = event.target.value;
+  const parsedValue = parseCurrencyInput(value);
+
+  if (field === 'total_cost') {
+    editPaymentForm.total_cost = parsedValue;
+  } else if (field === 'discount_amount') {
+    editPaymentForm.discount_amount = parsedValue;
+  } else if (field === 'final_amount') {
+    editPaymentForm.final_amount = parsedValue;
+  } else if (field === 'amount_paid') {
+    editPaymentForm.amount_paid = parsedValue;
+  } else if (field === 'payment_total_cost') {
+    paymentForm.total_cost = parsedValue;
+  } else if (field === 'payment_discount_amount') {
+    paymentForm.discount_amount = parsedValue;
+  } else if (field === 'payment_final_amount') {
+    paymentForm.final_amount = parsedValue;
+  } else if (field === 'payment_amount_paid') {
+    paymentForm.amount_paid = parsedValue;
+  }
+};
+
+// Funções para pagamentos
+const getTotalPaid = () => {
+  if (!props.workOrder?.payment_details) return 0;
+  return props.workOrder.payment_details
+    .filter(payment => payment.payment_date)
+    .reduce((total, payment) => total + (parseFloat(payment.amount_paid) || 0), 0);
+};
+
+const getRemainingAmount = () => {
+  const finalAmount = props.workOrder?.final_amount || props.workOrder?.total_cost || 0;
+  const totalPaid = getTotalPaid();
+  return Math.max(0, finalAmount - totalPaid);
+};
+
+const getPaymentMethodText = (method) => {
+  switch (method) {
+    case 'pix': return 'PIX';
+    case 'credit_card': return 'Cartão de Crédito';
+    case 'debit_card': return 'Cartão de Débito';
+    case 'boleto': return 'Boleto Bancário';
+    case 'cash': return 'Dinheiro';
+    case 'bank_transfer': return 'Transferência Bancária';
+    default: return 'Não informado';
+  }
+};
+
+const getPaymentStatusBadgeClass = (status) => {
+  switch (status) {
+    case 'pending': return 'bg-yellow-100 text-yellow-800';
+    case 'paid': return 'bg-green-100 text-green-800';
+    case 'overdue': return 'bg-red-100 text-red-800';
+    case 'partial': return 'bg-blue-100 text-blue-800';
+    case 'cancelled': return 'bg-gray-100 text-gray-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
+
+// Funções para manipular pagamentos
+const receivePayment = (payment) => {
+  selectedPayment.value = payment;
+
+  // Definir data atual como padrão
+  const today = new Date().toISOString().split('T')[0];
+  receivePaymentForm.payment_date = today;
+  receivePaymentForm.amount_received = formatCurrency(payment.amount_paid);
+  receivePaymentForm.payment_method = payment.payment_method; // Preencher com a forma original
+  receivePaymentForm.payment_notes = '';
+
+  showReceivePaymentModal.value = true;
+};
+
+const confirmReceivePayment = async () => {
+  if (!selectedPayment.value) return;
+
+  isSubmittingReceivePayment.value = true;
+
+  try {
+    const amountReceived = parseCurrencyValue(receivePaymentForm.amount_received);
+    const amountDue = selectedPayment.value.amount_paid;
+    const remainingAmount = getPaymentRemainingAmount();
+
+    console.log('Valores:', { amountReceived, amountDue, remainingAmount });
+
+    // 1. Atualizar o pagamento atual com o valor recebido
+    const updatePaymentData = {
+      work_order_id: props.workOrder.id, // Adicionar work_order_id
+      payment_date: receivePaymentForm.payment_date,
+      amount_paid: amountReceived,
+      payment_method: receivePaymentForm.payment_method, // Incluir forma de pagamento
+      payment_notes: receivePaymentForm.payment_notes,
+      payment_status: 'paid' // Sempre marcamos como 'paid' pois o valor foi efetivamente recebido
+    };
+
+    console.log('Atualizando pagamento:', updatePaymentData);
+
+    const updateResponse = await fetch(`/payment-details/${selectedPayment.value.id}`, {
+      method: 'PUT',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(updatePaymentData)
+    });
+
+    const updateData = await updateResponse.json();
+    console.log('Resposta da atualização:', updateData);
+
+    if (!updateData.success) {
+      throw new Error(updateData.message || 'Erro ao atualizar pagamento');
+    }
+
+    // 2. O backend já cria automaticamente a parcela pendente quando necessário
+    // Não precisamos criar manualmente aqui
+    if (remainingAmount > 0) {
+      displayToast(`Pagamento parcial recebido! Parcela pendente de ${formatCurrency(remainingAmount)} será criada automaticamente.`, 'success');
+    } else {
+      displayToast('Pagamento recebido com sucesso!', 'success');
+    }
+
+    showReceivePaymentModal.value = false;
+    selectedPayment.value = null;
+    receivePaymentForm.reset();
+    // Recarregar a página para atualizar os dados
+    window.location.reload();
+
+  } catch (error) {
+    console.error('Erro ao receber pagamento:', error);
+    displayToast('Erro ao receber pagamento: ' + error.message, 'error');
+
+    // Fechar modal em caso de erro
+    showReceivePaymentModal.value = false;
+    selectedPayment.value = null;
+    receivePaymentForm.reset();
+  } finally {
+    isSubmittingReceivePayment.value = false;
+  }
+};
+
+const editPayment = (payment) => {
+  selectedPayment.value = payment;
+
+  // Função para formatar data para input
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  };
+
+  // Preencher o formulário de edição com os dados do pagamento
+  editPaymentForm.payment_due_date = formatDateForInput(payment.payment_due_date);
+  editPaymentForm.payment_date = formatDateForInput(payment.payment_date);
+  editPaymentForm.payment_method = payment.payment_method || '';
+  editPaymentForm.amount_paid = payment.amount_paid || '';
+  editPaymentForm.payment_notes = payment.payment_notes || '';
+  editPaymentForm.is_partial_payment = payment.is_partial_payment || false;
+  editPaymentForm.payment_status = payment.payment_status || 'pending';
+
+  console.log('Editing payment:', payment);
+  console.log('Form data:', editPaymentForm.data());
+
+  showEditPaymentModal.value = true;
+};
+
+const deletePayment = async (paymentId) => {
+  if (!confirm('Tem certeza que deseja excluir este pagamento?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/payment-details/${paymentId}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      displayToast('Pagamento excluído com sucesso!', 'success');
+      // Recarregar a página para atualizar os dados
+      window.location.reload();
+    } else {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erro ao excluir pagamento');
+    }
+  } catch (error) {
+    console.error('Erro ao excluir pagamento:', error);
+    displayToast(error.message || 'Erro ao excluir pagamento', 'error');
+  }
+};
+
+const reopenPayment = async (payment) => {
+  if (!confirm(`Tem certeza que deseja reabrir o pagamento de R$ ${formatCurrency(payment.amount_paid)}? O valor será debitado das entradas financeiras.`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/payment-details/${payment.id}/reopen`, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      displayToast('Pagamento reaberto com sucesso! O valor foi debitado das entradas financeiras.', 'success');
+      // Recarregar a página para atualizar os dados
+      window.location.reload();
+    } else {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Erro ao reabrir pagamento');
+    }
+  } catch (error) {
+    console.error('Erro ao reabrir pagamento:', error);
+    displayToast(error.message || 'Erro ao reabrir pagamento', 'error');
+  }
+};
+
+// Funções para manipular formulários de pagamento
+const submitPayment = async () => {
+  isSubmittingPayment.value = true;
+
+  try {
+    // Sempre criar pagamento como pendente
+    const amountPaid = parseCurrencyValue(paymentForm.amount_paid);
+
+    // Para adicionar pagamento, sempre criar como pendente
+    const formData = {
+      work_order_id: paymentForm.work_order_id,
+      payment_due_date: paymentForm.payment_due_date,
+      payment_method: paymentForm.payment_method,
+      amount_paid: amountPaid,
+      payment_notes: paymentForm.payment_notes,
+      payment_status: 'pending'
+    };
+
+    console.log('Dados do pagamento sendo enviados:', formData);
+
+    const response = await fetch('/payment-details', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(formData)
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      displayToast('Pagamento adicionado com sucesso!', 'success');
+      showAddPaymentModal.value = false;
+      paymentForm.reset();
+      // Recarregar a página para atualizar os dados
+      window.location.reload();
+    } else {
+      throw new Error(data.message || 'Erro ao adicionar pagamento');
+    }
+  } catch (error) {
+    console.error('Erro ao adicionar pagamento:', error);
+    displayToast('Erro ao adicionar pagamento: ' + error.message, 'error');
+  } finally {
+    isSubmittingPayment.value = false;
+  }
+};
+
+const updatePayment = async () => {
+  if (!selectedPayment.value) return;
+
+  isSubmittingPayment.value = true;
+
+  try {
+    const formData = editPaymentForm.data();
+
+    // Converter valor formatado para número
+    if (formData.amount_paid) {
+      formData.amount_paid = parseCurrencyValue(formData.amount_paid);
+    }
+
+    console.log('Dados sendo enviados:', formData);
+    console.log('Payment ID:', selectedPayment.value.id);
+
+    const response = await fetch(`/payment-details/${selectedPayment.value.id}`, {
+      method: 'PUT',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(formData)
+    });
+
+    const data = await response.json();
+    console.log('Resposta do servidor:', data);
+
+    if (data.success) {
+      displayToast('Pagamento atualizado com sucesso!', 'success');
+      showEditPaymentModal.value = false;
+      selectedPayment.value = null;
+      // Recarregar a página para atualizar os dados
+      window.location.reload();
+    } else {
+      throw new Error(data.message || 'Erro ao atualizar pagamento');
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar pagamento:', error);
+    displayToast('Erro ao atualizar pagamento: ' + error.message, 'error');
+  } finally {
+    isSubmittingPayment.value = false;
+  }
+};
+
+// Função para abrir modal de edição financeira
+const openEditFinancialModal = () => {
+  // Inicializar formulário com dados atuais da work order
+  editFinancialForm.total_cost = formatCurrency(props.workOrder.total_cost || 0);
+  editFinancialForm.discount_amount = formatCurrency(props.workOrder.discount_amount || 0);
+  editFinancialForm.final_amount = formatCurrency(props.workOrder.final_amount || 0);
+  editFinancialForm.payment_due_date = props.workOrder.payment_due_date || '';
+
+  showEditFinancialModal.value = true;
+};
+
+// Função para submeter informações financeiras básicas
+const submitFinancialInfo = async () => {
+  isSubmittingPayment.value = true;
+
+  try {
+    const response = await fetch(`/work-orders/${props.workOrder.id}/financial-info`, {
+      method: 'PUT',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        total_cost: parseCurrencyValue(editFinancialForm.total_cost),
+        discount_amount: parseCurrencyValue(editFinancialForm.discount_amount),
+        final_amount: parseCurrencyValue(editFinancialForm.final_amount),
+        payment_due_date: editFinancialForm.payment_due_date
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      displayToast('Informações financeiras atualizadas com sucesso!', 'success');
+      showEditFinancialModal.value = false;
+
+      // Atualizar os dados do workOrder com os novos valores
+      if (data.work_order) {
+        // Atualizar propriedades específicas
+        props.workOrder.total_cost = data.work_order.total_cost;
+        props.workOrder.discount_amount = data.work_order.discount_amount;
+        props.workOrder.final_amount = data.work_order.final_amount;
+        props.workOrder.payment_due_date = data.work_order.payment_due_date;
+      }
+    } else {
+      throw new Error(data.message || 'Erro ao atualizar informações financeiras');
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar informações financeiras:', error);
+    displayToast('Erro ao atualizar informações financeiras: ' + error.message, 'error');
+  } finally {
+    isSubmittingPayment.value = false;
+  }
+};
+
+// Função para obter o texto do tipo de evento
+const getEventTypeText = (eventType) => {
+  switch (eventType) {
+    case 'bait_consumption':
+      return 'Consumo de Isca';
+    case 'cleaning':
+      return 'Limpeza';
+    case 'bait_change':
+      return 'Troca de Isca';
+    case 'technician_notes':
+      return 'Observações do Técnico';
+    default:
+      return eventType; // Retorna o tipo original se não encontrado
+  }
+};
+
+// Função para obter o texto do status do consumo de isca
+const getBaitConsumptionStatusText = (status) => {
+  switch (status) {
+    case 'partial':
+      return 'Parcial';
+    case 'total':
+      return 'Total';
+    case 'none':
+      return 'Não houve';
+    case 'spoiled':
+      return 'Estragada';
+    case 'replacement':
+      return 'Reposição';
+    default:
+      return status; // Retorna o status original se não encontrado
+  }
+};
+
+// Função para obter o texto do tipo de praga
+const getPestTypeText = (pestType) => {
+  switch (pestType) {
+    case 'rats':
+      return 'Ratos';
+    case 'mice':
+      return 'Camundongos';
+    case 'cockroaches':
+      return 'Baratas';
+    case 'ants':
+      return 'Formigas';
+    case 'termites':
+      return 'Cupins';
+    case 'flies':
+      return 'Moscas';
+    case 'fleas':
+      return 'Pulgas';
+    case 'ticks':
+      return 'Carrapatos';
+    case 'scorpions':
+      return 'Escorpiões';
+    case 'spiders':
+      return 'Aranhas';
+    case 'bees':
+      return 'Abelhas';
+    case 'wasps':
+      return 'Vespas';
+    case 'other':
+      return 'Outros';
+    default:
+      return pestType; // Retorna o tipo original se não encontrado
+  }
+};
+
+// Função para obter o texto do nível de severidade
+const getSeverityLevelText = (severityLevel) => {
+  switch (severityLevel) {
+    case 'low':
+      return 'Baixa';
+    case 'medium':
+      return 'Média';
+    case 'high':
+      return 'Alta';
+    case 'critical':
+      return 'Crítica';
+    default:
+      return severityLevel; // Retorna o nível original se não encontrado
+  }
+};
+</script>

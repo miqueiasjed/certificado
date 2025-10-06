@@ -13,13 +13,18 @@ return new class extends Migration
     {
         Schema::create('devices', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('service_order_id')->constrained()->onDelete('cascade');
-            $table->string('name'); // Nome do dispositivo (ex: Ar condicionado, Ventilador)
-            $table->text('description')->nullable(); // Descrição do dispositivo
-            $table->integer('quantity')->default(1); // Quantidade de dispositivos
-            $table->string('brand')->nullable(); // Marca do dispositivo
-            $table->string('model')->nullable(); // Modelo do dispositivo
+            $table->foreignId('room_id')->constrained()->onDelete('cascade');
+            $table->string('label'); // Nome: "Disp. 01"
+            $table->string('number'); // Código/etiqueta
+            $table->unsignedBigInteger('bait_type_id')->nullable();
+            $table->text('default_location_note')->nullable(); // Ex: "atrás da geladeira"
+            $table->boolean('active')->default(true);
             $table->timestamps();
+
+            // Índices
+            $table->index(['room_id', 'active']);
+            $table->index('number');
+            $table->index('bait_type_id');
         });
     }
 

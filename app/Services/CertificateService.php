@@ -10,12 +10,12 @@ class CertificateService
 {
     public function getAllCertificates(): Collection
     {
-        return Certificate::with(['client', 'product', 'service', 'technician', 'products', 'services'])->orderBy('created_at', 'desc')->get();
+        return Certificate::with(['client', 'workOrder.address', 'products', 'services'])->orderBy('created_at', 'desc')->get();
     }
 
     public function getCertificatesPaginated(int $perPage = 15): LengthAwarePaginator
     {
-        $certificates = Certificate::with(['client', 'products', 'services'])
+        $certificates = Certificate::with(['client', 'workOrder.address', 'products', 'services'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -30,7 +30,7 @@ class CertificateService
 
     public function findCertificate(int $id): ?Certificate
     {
-        $certificate = Certificate::with(['client', 'products', 'services'])->find($id);
+        $certificate = Certificate::with(['client', 'workOrder.address', 'products', 'services'])->find($id);
 
         if ($certificate) {
             $certificate->append(['calculated_status', 'status_text', 'status_color']);
@@ -73,7 +73,7 @@ class CertificateService
             }
         }
 
-        $certificate = $certificate->load(['client', 'products', 'services']);
+        $certificate = $certificate->load(['client', 'workOrder.address', 'products', 'services']);
         $certificate->append(['calculated_status', 'status_text', 'status_color']);
         return $certificate;
     }
@@ -117,7 +117,7 @@ class CertificateService
 
     public function searchCertificates(string $search): LengthAwarePaginator
     {
-        $certificates = Certificate::with(['client', 'products', 'services'])
+        $certificates = Certificate::with(['client', 'workOrder.address', 'products', 'services'])
             ->where(function($query) use ($search) {
                 $query->where('id', 'like', "%{$search}%")
                       ->orWhere('certificate_number', 'like', "%{$search}%")
@@ -144,7 +144,7 @@ class CertificateService
 
     public function getCertificatesByStatus(string $status): Collection
     {
-        return Certificate::with(['client', 'products', 'services'])
+        return Certificate::with(['client', 'workOrder.address', 'products', 'services'])
             ->where('status', $status)
             ->orderBy('created_at', 'desc')
             ->get();

@@ -16,6 +16,7 @@ class CertificateRequest extends FormRequest
     {
         return [
             'client_id' => 'required|exists:clients,id',
+            'work_order_id' => 'nullable|exists:work_orders,id',
             'product_id' => 'nullable|exists:products,id',
             'service_id' => 'nullable|exists:services,id',
             'products' => 'nullable|array',
@@ -33,6 +34,7 @@ class CertificateRequest extends FormRequest
         return [
             'client_id.required' => 'O cliente é obrigatório.',
             'client_id.exists' => 'O cliente selecionado não existe.',
+            'work_order_id.exists' => 'A ordem de serviço selecionada não existe.',
             'product_id.exists' => 'O produto selecionado não existe.',
             'service_id.exists' => 'O serviço selecionado não existe.',
             'products.array' => 'Os produtos devem ser uma lista.',

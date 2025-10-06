@@ -107,95 +107,23 @@
             </div>
           </div>
 
-          <!-- Endereço -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label for="zip_code" class="block text-sm font-medium text-gray-700 mb-2">
-                CEP
-              </label>
-              <div class="flex gap-2">
-                <input
-                  id="zip_code"
-                  v-model="form.zip_code"
-                  type="text"
-                  @input="formatCep"
-                  @blur="searchCep"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  :class="{ 'border-red-500': form.errors.zip_code }"
-                  placeholder="00000-000"
-                />
-                <button
-                  type="button"
-                  @click="searchCep"
-                  :disabled="searchingCep"
-                  class="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 transition-colors">
-                  <svg v-if="searchingCep" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <svg v-else class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
-                </button>
+          <!-- Nota: Endereços agora são cadastrados separadamente no módulo de Endereços -->
+          <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
               </div>
-              <p v-if="form.errors.zip_code" class="mt-1 text-sm text-red-600">
-                {{ form.errors.zip_code }}
-              </p>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">
+                  Endereços
+                </h3>
+                <div class="mt-2 text-sm text-blue-700">
+                  <p>Os endereços deste cliente podem ser cadastrados após a criação, no módulo de Endereços.</p>
+                </div>
+              </div>
             </div>
-
-            <div>
-              <label for="city" class="block text-sm font-medium text-gray-700 mb-2">
-                Cidade *
-              </label>
-              <input
-                id="city"
-                v-model="form.city"
-                type="text"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                :class="{ 'border-red-500': form.errors.city }"
-                placeholder="Nome da cidade"
-              />
-              <p v-if="form.errors.city" class="mt-1 text-sm text-red-600">
-                {{ form.errors.city }}
-              </p>
-            </div>
-
-            <div>
-              <label for="state" class="block text-sm font-medium text-gray-700 mb-2">
-                Estado
-              </label>
-              <input
-                id="state"
-                v-model="form.state"
-                type="text"
-                maxlength="2"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                :class="{ 'border-red-500': form.errors.state }"
-                placeholder="UF"
-              />
-              <p v-if="form.errors.state" class="mt-1 text-sm text-red-600">
-                {{ form.errors.state }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Endereço completo -->
-          <div>
-            <label for="address" class="block text-sm font-medium text-gray-700 mb-2">
-              Endereço Completo
-            </label>
-            <input
-              id="address"
-              v-model="form.address"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.address }"
-              placeholder="Rua, número, bairro, complemento"
-            />
-            <p v-if="form.errors.address" class="mt-1 text-sm text-red-600">
-              {{ form.errors.address }}
-            </p>
           </div>
 
           <!-- Observações -->
@@ -248,14 +176,9 @@ const form = useForm({
   email: '',
   phone: '',
   cnpj: '',
-  city: '',
-  state: '',
-  zip_code: '',
-  address: '',
   notes: '',
 });
 
-const searchingCep = ref(false);
 const alert = ref({
   show: false,
   type: 'info',
@@ -264,7 +187,7 @@ const alert = ref({
 });
 
 // Usar o composable de máscaras
-const { phoneMask, cpfCnpjMask, cepMask } = useMasks();
+const { phoneMask, cpfCnpjMask } = useMasks();
 
 // Funções de formatação
 const formatPhone = (event) => {
@@ -275,42 +198,7 @@ const formatCnpj = (event) => {
   form.cnpj = cpfCnpjMask(event.target.value);
 };
 
-const formatCep = (event) => {
-  form.zip_code = cepMask(event.target.value);
-};
-
-// Buscar endereço pelo CEP
-const searchCep = async () => {
-  const cleanCep = form.zip_code.replace(/\D/g, '');
-
-  if (cleanCep.length !== 8) {
-    showAlert('warning', 'CEP Inválido', 'Digite um CEP com 8 dígitos');
-    return;
-  }
-
-  searchingCep.value = true;
-
-  try {
-    const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-    const data = await response.json();
-
-    if (data.erro) {
-      showAlert('error', 'CEP não encontrado', 'Verifique o CEP informado');
-      return;
-    }
-
-    if (data.cep) {
-      form.city = data.localidade;
-      form.state = data.uf;
-      form.address = `${data.logradouro}, ${data.bairro}`;
-      showAlert('success', 'Endereço encontrado', 'Endereço preenchido automaticamente');
-    }
-  } catch (error) {
-    showAlert('error', 'Erro na busca', 'Não foi possível buscar o endereço. Tente novamente.');
-  } finally {
-    searchingCep.value = false;
-  }
-};
+// Nota: Endereços agora são cadastrados separadamente no módulo de Endereços
 
 // Mostrar alerta
 const showAlert = (type, title, message) => {

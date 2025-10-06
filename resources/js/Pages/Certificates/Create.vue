@@ -21,7 +21,7 @@
             <h3 class="text-lg font-medium text-gray-900">Informações Principais</h3>
           </div>
           <div class="p-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label for="client_id" class="block text-sm font-medium text-gray-700 mb-1">
                   Cliente *
@@ -68,6 +68,21 @@
                 />
                 <p v-if="errors.warranty" class="mt-1 text-sm text-red-600">{{ errors.warranty }}</p>
               </div>
+              <div>
+                <label for="work_order_id" class="block text-sm font-medium text-gray-700 mb-1">
+                  Ordem de Serviço
+                </label>
+                <select
+                  id="work_order_id"
+                  v-model="form.work_order_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="">Selecione uma OS</option>
+                  <option v-for="wo in workOrders" :key="wo.id" :value="wo.id">
+                    {{ wo.order_number }} - {{ new Date(wo.scheduled_date).toLocaleDateString('pt-BR') }}
+                  </option>
+                </select>
+              </div>
             </div>
           </div>
         </Card>
@@ -95,7 +110,23 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
               <p class="mt-2">Nenhum produto adicionado</p>
-              <p class="text-sm">Clique em "Adicionar Produto" para começar</p>
+              <p class="text-sm">Clique em "Adicionar Produto" ou cadastre um novo produto</p>
+              <div class="mt-4 flex justify-center space-x-2">
+                <button
+                  type="button"
+                  @click="addProduct"
+                  class="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+                >
+                  Adicionar Produto
+                </button>
+                <button
+                  type="button"
+                  @click="showProductModal = true"
+                  class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+                >
+                  Novo Produto
+                </button>
+              </div>
             </div>
 
             <div v-else class="space-y-4">
@@ -388,11 +419,103 @@
         </button>
       </template>
     </Modal>
+
+    <!-- Modal para Cadastro Rápido de Produto -->
+    <Modal :show="showProductModal" @close="showProductModal = false">
+      <template #icon>
+        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+      </template>
+
+      <template #title>
+        Cadastrar Novo Produto
+      </template>
+
+      <template #content>
+        <p class="text-sm text-gray-500 mb-4">Preencha os dados do novo produto</p>
+
+        <form @submit.prevent="submitProduct" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+              <label for="product_name" class="block text-sm font-medium text-gray-700 mb-1">
+                Nome do Produto *
+              </label>
+              <input
+                type="text"
+                id="product_name"
+                v-model="productForm.name"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                :class="{ 'border-red-500': productErrors.name }"
+                placeholder="Digite o nome do produto"
+                required
+              />
+              <p v-if="productErrors.name" class="mt-1 text-sm text-red-600">{{ productErrors.name }}</p>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Princípio Ativo *</label>
+              <select v-model="productForm.active_ingredient_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" :class="{ 'border-red-500': productErrors.active_ingredient_id }">
+                <option value="">Selecione</option>
+                <option v-for="ai in props.activeIngredients" :key="ai.id" :value="ai.id">{{ ai.name }}</option>
+              </select>
+              <p v-if="productErrors.active_ingredient_id" class="mt-1 text-sm text-red-600">{{ productErrors.active_ingredient_id }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Grupo Químico *</label>
+              <select v-model="productForm.chemical_group_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" :class="{ 'border-red-500': productErrors.chemical_group_id }">
+                <option value="">Selecione</option>
+                <option v-for="cg in props.chemicalGroups" :key="cg.id" :value="cg.id">{{ cg.name }}</option>
+              </select>
+              <p v-if="productErrors.chemical_group_id" class="mt-1 text-sm text-red-600">{{ productErrors.chemical_group_id }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Antídoto *</label>
+              <select v-model="productForm.antidote_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" :class="{ 'border-red-500': productErrors.antidote_id }">
+                <option value="">Selecione</option>
+                <option v-for="an in props.antidotes" :key="an.id" :value="an.id">{{ an.name }}</option>
+              </select>
+              <p v-if="productErrors.antidote_id" class="mt-1 text-sm text-red-600">{{ productErrors.antidote_id }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Registro (MS)</label>
+              <select v-model="productForm.organ_registration_id" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" :class="{ 'border-red-500': productErrors.organ_registration_id }">
+                <option value="">Selecione</option>
+                <option v-for="or in props.organRegistrations" :key="or.id" :value="or.id">{{ or.record }}</option>
+              </select>
+              <p v-if="productErrors.organ_registration_id" class="mt-1 text-sm text-red-600">{{ productErrors.organ_registration_id }}</p>
+            </div>
+          </div>
+        </form>
+      </template>
+
+      <template #actions>
+        <button
+          type="button"
+          @click="showProductModal = false"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          @click="submitProduct"
+          :disabled="productForm.processing"
+          class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors"
+        >
+          <svg v-if="productForm.processing" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {{ productForm.processing ? 'Criando...' : 'Criar Produto' }}
+        </button>
+      </template>
+    </Modal>
   </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
@@ -404,13 +527,20 @@ const props = defineProps({
   clients: Array,
   products: Array,
   services: Array,
+  activeIngredients: Array,
+  chemicalGroups: Array,
+  antidotes: Array,
+  organRegistrations: Array,
   errors: Object,
 });
 
 const showServiceModal = ref(false);
+const showProductModal = ref(false);
+const workOrders = ref([]);
 
 const form = useForm({
   client_id: '',
+  work_order_id: '',
   products: [],
   services: [],
   execution_date: '',
@@ -429,8 +559,34 @@ const serviceForm = useForm({
 });
 
 const serviceErrors = ref({});
+const productForm = useForm({
+  name: '',
+  active_ingredient_id: '',
+  chemical_group_id: '',
+  antidote_id: '',
+  organ_registration_id: '',
+});
+const productErrors = ref({});
 
 
+
+const loadWorkOrders = async (clientId) => {
+  workOrders.value = [];
+  if (!clientId) return;
+  try {
+    const resp = await fetch(`/work-orders/client/${clientId}`);
+    workOrders.value = await resp.json();
+  } catch (e) {}
+};
+
+onMounted(() => {
+  if (form.client_id) loadWorkOrders(form.client_id);
+});
+
+watch(() => form.client_id, (val) => {
+  form.work_order_id = '';
+  loadWorkOrders(val);
+});
 
 const addProduct = () => {
   form.products.push({
@@ -477,6 +633,21 @@ const submitService = () => {
     },
     onError: (errors) => {
       serviceErrors.value = errors;
+    },
+  });
+};
+
+const submitProduct = () => {
+  productForm.post('/products', {
+    onSuccess: () => {
+      showProductModal.value = false;
+      productForm.reset();
+      productErrors.value = {};
+      // Atualizar lista de produtos
+      router.reload();
+    },
+    onError: (errors) => {
+      productErrors.value = errors;
     },
   });
 };

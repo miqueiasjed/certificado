@@ -23,6 +23,11 @@ class ClientService
         return Client::find($id);
     }
 
+    public function findClientWithAddresses(int $id): ?Client
+    {
+        return Client::with('addresses')->find($id);
+    }
+
     public function createClient(array $data): Client
     {
         return Client::create($data);
@@ -43,9 +48,7 @@ class ClientService
         return Client::where(function($query) use ($search) {
             $query->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('cnpj', 'like', "%{$search}%")
-                  ->orWhere('city', 'like', "%{$search}%")
-                  ->orWhere('state', 'like', "%{$search}%");
+                  ->orWhere('cnpj', 'like', "%{$search}%");
         })->paginate(15);
     }
 }

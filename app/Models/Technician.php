@@ -29,9 +29,9 @@ class Technician extends Model
         return $this->hasMany(Certificate::class);
     }
 
-    public function serviceOrders(): HasMany
+    public function workOrders(): HasMany
     {
-        return $this->hasMany(ServiceOrder::class);
+        return $this->hasMany(WorkOrder::class);
     }
 
     public function scopeActive($query)

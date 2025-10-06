@@ -66,9 +66,6 @@
                   Documento
                 </th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Localização
-                </th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
@@ -105,17 +102,6 @@
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                       {{ client.cnpj }}
                     </span>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="space-y-1">
-                    <div class="text-sm text-gray-900">{{ client.city }}</div>
-                    <div class="text-sm text-gray-500">
-                      <span v-if="client.state" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                        {{ client.state }}
-                      </span>
-                      <span v-else class="text-gray-400">-</span>
-                    </div>
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">

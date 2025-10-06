@@ -231,8 +231,9 @@
         <p><strong>Cliente:</strong> {{ $certificate->client->name ?? 'Não informado' }}</p>
         <p><strong>CPF/CNPJ:</strong> {{ $certificate->client->cnpj ?? 'Não informado' }}</p>
         <p><strong>Endereço:</strong>
-            @if($certificate->client->address || $certificate->client->city || $certificate->client->state)
-                {{ $certificate->client->address ?? '' }}{{ $certificate->client->city ? ', ' . $certificate->client->city : '' }}{{ $certificate->client->state ? ', ' . $certificate->client->state : '' }}
+            @php($address = $certificate->workOrder->address ?? null)
+            @if($address)
+                {{ $address->street }}, {{ $address->number }} - {{ $address->district }}, {{ $address->city }}/{{ $address->state }} - CEP: {{ $address->zip }}
             @else
                 Não informado
             @endif
@@ -241,7 +242,7 @@
 
     <!-- Serviço Prestado, Data do Serviço, Garantia centralizados -->
     <div class="service-info">
-        <p><strong>Data da Execução:</strong> {{ $certificate->execution_date ? $certificate->execution_date->format('d/m/Y') : 'Não informada' }}</p>
+        <p><strong>Data da Execução:</strong> {{ $certificate->execution_date ? $certificate->execution_date->format('d/m/Y') : ($certificate->workOrder->scheduled_date?->format('d/m/Y') ?? 'Não informada') }}</p>
         <p><strong>Garantia:</strong> {{ $certificate->warranty ? $certificate->warranty->format('d/m/Y') : 'Não informada' }}</p>
     </div>
 
