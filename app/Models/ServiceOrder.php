@@ -12,20 +12,22 @@ class ServiceOrder extends Model
 
     protected $fillable = [
         'client_id',
-        'service_id',
         'technician_id',
+        'order_number',
+        'order_date',
+        'service_type',
+        'start_time',
+        'end_time',
+        'description',
+        'observations',
+        'special_instructions',
         'status',
-        'priority',
-        'start_date',
-        'due_date',
-        'completion_date',
-        'notes',
     ];
 
     protected $casts = [
-        'start_date' => 'date',
-        'due_date' => 'date',
-        'completion_date' => 'date',
+        'order_date' => 'date',
+        'start_time' => 'datetime',
+        'end_time' => 'datetime',
     ];
 
     public function client(): BelongsTo
@@ -33,14 +35,9 @@ class ServiceOrder extends Model
         return $this->belongsTo(Client::class);
     }
 
-    public function service(): BelongsTo
-    {
-        return $this->belongsTo(Service::class);
-    }
-
     public function technician(): BelongsTo
     {
-        return $this->belongsTo(Technician::class);
+        return $this->belongsTo(User::class, 'technician_id');
     }
 
     public function scopeByStatus($query, $status)
@@ -48,9 +45,9 @@ class ServiceOrder extends Model
         return $query->where('status', $status);
     }
 
-    public function scopeByPriority($query, $priority)
+    public function scopeByServiceType($query, $serviceType)
     {
-        return $query->where('priority', $priority);
+        return $query->where('service_type', $serviceType);
     }
 
     public function scopePending($query)
@@ -75,7 +72,7 @@ class ServiceOrder extends Model
 
     public function scopeOverdue($query)
     {
-        return $query->where('due_date', '<', now())
+        return $query->where('order_date', '<', now())
                     ->whereNotIn('status', ['completed', 'cancelled']);
     }
 
@@ -90,14 +87,15 @@ class ServiceOrder extends Model
         };
     }
 
-    public function getPriorityBadgeAttribute(): string
+    public function getServiceTypeBadgeAttribute(): string
     {
-        return match($this->priority) {
-            'low' => 'Baixa',
-            'medium' => 'Média',
-            'high' => 'Alta',
-            'urgent' => 'Urgente',
-            default => 'Não definida'
+        return match($this->service_type) {
+            'dedetizacao' => 'Dedetização',
+            'desinsetizacao' => 'Desinsetização',
+            'descupinizacao' => 'Descupinização',
+            'desratizacao' => 'Desratização',
+            'sanitizacao' => 'Sanitização',
+            default => 'Não definido'
         };
     }
 
@@ -112,20 +110,21 @@ class ServiceOrder extends Model
         };
     }
 
-    public function getPriorityColorAttribute(): string
+    public function getServiceTypeColorAttribute(): string
     {
-        return match($this->priority) {
-            'low' => 'gray',
-            'medium' => 'blue',
-            'high' => 'orange',
-            'urgent' => 'red',
+        return match($this->service_type) {
+            'dedetizacao' => 'red',
+            'desinsetizacao' => 'blue',
+            'descupinizacao' => 'orange',
+            'desratizacao' => 'purple',
+            'sanitizacao' => 'green',
             default => 'gray'
         };
     }
 
     public function getIsOverdueAttribute(): bool
     {
-        return $this->due_date && $this->due_date->isPast() &&
+        return $this->order_date && $this->order_date->isPast() &&
                !in_array($this->status, ['completed', 'cancelled']);
     }
 }

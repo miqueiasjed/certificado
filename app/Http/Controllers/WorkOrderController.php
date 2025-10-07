@@ -87,7 +87,14 @@ class WorkOrderController extends Controller
 
     public function store(WorkOrderRequest $request)
     {
-        $workOrder = $this->workOrderService->createWorkOrder($request->validated());
+        $data = $request->validated();
+
+        // Generate order number if not provided
+        if (empty($data['order_number'])) {
+            $data['order_number'] = $this->workOrderService->generateOrderNumber();
+        }
+
+        $workOrder = $this->workOrderService->createWorkOrder($data);
 
         return redirect()->route('work-orders.show', $workOrder)
             ->with('success', 'Ordem de serviço criada com sucesso!');

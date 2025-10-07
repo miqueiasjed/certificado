@@ -156,10 +156,21 @@ class WorkOrderService
      */
     public function generateOrderNumber(): string
     {
-        $lastOrder = WorkOrder::orderBy('id', 'desc')->first();
-        $nextId = $lastOrder ? $lastOrder->id + 1 : 1;
+        do {
+            $lastOrder = WorkOrder::orderBy('id', 'desc')->first();
+            $nextId = $lastOrder ? $lastOrder->id + 1 : 1;
+            $orderNumber = 'OS' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
 
-        return 'OS' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+            // Check if this order number already exists
+            $exists = WorkOrder::where('order_number', $orderNumber)->exists();
+
+            if (!$exists) {
+                return $orderNumber;
+            }
+
+            // If exists, increment and try again
+            $nextId++;
+        } while (true);
     }
 
     /**

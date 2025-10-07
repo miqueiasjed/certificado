@@ -10,19 +10,19 @@ class ServiceOrderService
 {
     public function getAllServiceOrders(): Collection
     {
-        return ServiceOrder::with(['client', 'service'])->orderBy('created_at', 'desc')->get();
+        return ServiceOrder::with(['client', 'technician'])->orderBy('created_at', 'desc')->get();
     }
 
     public function getServiceOrdersPaginated(int $perPage = 15): LengthAwarePaginator
     {
-        return ServiceOrder::with(['client', 'service'])
+        return ServiceOrder::with(['client', 'technician'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
 
     public function findServiceOrder(int $id): ?ServiceOrder
     {
-        return ServiceOrder::with(['client', 'service'])->find($id);
+        return ServiceOrder::with(['client', 'technician'])->find($id);
     }
 
     public function createServiceOrder(array $data): ServiceOrder
@@ -42,17 +42,19 @@ class ServiceOrderService
 
     public function searchServiceOrders(string $search): LengthAwarePaginator
     {
-        return ServiceOrder::with(['client', 'service'])
+        return ServiceOrder::with(['client', 'technician'])
             ->where(function($query) use ($search) {
                 $query->where('id', 'like', "%{$search}%")
+                      ->orWhere('order_number', 'like', "%{$search}%")
                       ->orWhere('status', 'like', "%{$search}%")
-                      ->orWhere('priority', 'like', "%{$search}%")
-                      ->orWhere('notes', 'like', "%{$search}%")
+                      ->orWhere('service_type', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('observations', 'like', "%{$search}%")
                       ->orWhereHas('client', function($q) use ($search) {
                           $q->where('name', 'like', "%{$search}%")
                             ->orWhere('cnpj', 'like', "%{$search}%");
                       })
-                      ->orWhereHas('service', function($q) use ($search) {
+                      ->orWhereHas('technician', function($q) use ($search) {
                           $q->where('name', 'like', "%{$search}%");
                       });
             })
@@ -62,16 +64,16 @@ class ServiceOrderService
 
     public function getServiceOrdersByStatus(string $status): Collection
     {
-        return ServiceOrder::with(['client', 'service'])
+        return ServiceOrder::with(['client', 'technician'])
             ->where('status', $status)
             ->orderBy('created_at', 'desc')
             ->get();
     }
 
-    public function getServiceOrdersByPriority(string $priority): Collection
+    public function getServiceOrdersByServiceType(string $serviceType): Collection
     {
-        return ServiceOrder::with(['client', 'service'])
-            ->where('priority', $priority)
+        return ServiceOrder::with(['client', 'technician'])
+            ->where('service_type', $serviceType)
             ->orderBy('created_at', 'desc')
             ->get();
     }
