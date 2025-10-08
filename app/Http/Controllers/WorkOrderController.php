@@ -87,6 +87,15 @@ class WorkOrderController extends Controller
         Log::info('Total de usuários na tabela: ' . User::count());
         Log::info('Usuários com is_technician = true: ' . User::where('is_technician', true)->count());
 
+        // Debug adicional
+        Log::info('Testando DB facade no controller:');
+        Log::info('DB facade - Total usuários: ' . \Illuminate\Support\Facades\DB::table('users')->count());
+        Log::info('DB facade - Técnicos: ' . \Illuminate\Support\Facades\DB::table('users')->where('is_technician', true)->count());
+
+        // Testar query raw
+        $rawTechnicians = \Illuminate\Support\Facades\DB::select('SELECT id, name, specialty FROM users WHERE is_technician = ? ORDER BY name ASC LIMIT 100', [true]);
+        Log::info('Query raw - Técnicos encontrados: ' . count($rawTechnicians));
+
         return Inertia::render('WorkOrders/Create', [
             'clients' => $clients,
             'addresses' => $addresses,
@@ -207,6 +216,15 @@ class WorkOrderController extends Controller
         Log::info('Query SQL executada: ' . User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->toSql());
         Log::info('Total de usuários na tabela: ' . User::count());
         Log::info('Usuários com is_technician = true: ' . User::where('is_technician', true)->count());
+
+        // Debug adicional
+        Log::info('Testando DB facade no controller:');
+        Log::info('DB facade - Total usuários: ' . \Illuminate\Support\Facades\DB::table('users')->count());
+        Log::info('DB facade - Técnicos: ' . \Illuminate\Support\Facades\DB::table('users')->where('is_technician', true)->count());
+
+        // Testar query raw
+        $rawTechnicians = \Illuminate\Support\Facades\DB::select('SELECT id, name, specialty FROM users WHERE is_technician = ? ORDER BY name ASC LIMIT 100', [true]);
+        Log::info('Query raw - Técnicos encontrados: ' . count($rawTechnicians));
 
         return Inertia::render('WorkOrders/Edit', [
             'workOrder' => $workOrder,
