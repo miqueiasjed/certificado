@@ -95,6 +95,11 @@ class WorkOrderController extends Controller
         // Testar query raw
         $rawTechnicians = \Illuminate\Support\Facades\DB::select('SELECT id, name, specialty FROM users WHERE is_technician = ? ORDER BY name ASC LIMIT 100', [true]);
         Log::info('Query raw - Técnicos encontrados: ' . count($rawTechnicians));
+        
+        // Debug de ambiente
+        Log::info('APP_ENV: ' . env('APP_ENV'));
+        Log::info('DB_DATABASE: ' . env('DB_DATABASE'));
+        Log::info('Conexão atual: ' . \Illuminate\Support\Facades\DB::connection()->getDatabaseName());
 
         return Inertia::render('WorkOrders/Create', [
             'clients' => $clients,
@@ -225,6 +230,11 @@ class WorkOrderController extends Controller
         // Testar query raw
         $rawTechnicians = \Illuminate\Support\Facades\DB::select('SELECT id, name, specialty FROM users WHERE is_technician = ? ORDER BY name ASC LIMIT 100', [true]);
         Log::info('Query raw - Técnicos encontrados: ' . count($rawTechnicians));
+        
+        // Debug de ambiente
+        Log::info('APP_ENV: ' . env('APP_ENV'));
+        Log::info('DB_DATABASE: ' . env('DB_DATABASE'));
+        Log::info('Conexão atual: ' . \Illuminate\Support\Facades\DB::connection()->getDatabaseName());
 
         return Inertia::render('WorkOrders/Edit', [
             'workOrder' => $workOrder,
