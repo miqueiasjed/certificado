@@ -13,6 +13,7 @@ class Certificate extends Model
 
     protected $fillable = [
         'client_id',
+        'address_id',
         'work_order_id',
         'execution_date',
         'warranty',
@@ -29,6 +30,11 @@ class Certificate extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function address(): BelongsTo
+    {
+        return $this->belongsTo(Address::class);
     }
 
     public function workOrder(): BelongsTo

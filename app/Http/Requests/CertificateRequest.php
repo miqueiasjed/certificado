@@ -16,16 +16,7 @@ class CertificateRequest extends FormRequest
     {
         return [
             'client_id' => 'required|exists:clients,id',
-            'work_order_id' => [
-                'required',
-                'exists:work_orders,id',
-                function ($attribute, $value, $fail) {
-                    $workOrder = \App\Models\WorkOrder::find($value);
-                    if ($workOrder && !$workOrder->address_id) {
-                        $fail('A ordem de serviço selecionada não possui um endereço vinculado. Por favor, adicione um endereço à ordem de serviço antes de criar o certificado.');
-                    }
-                },
-            ],
+            'address_id' => 'required|exists:addresses,id',
             'product_id' => 'nullable|exists:products,id',
             'service_id' => 'nullable|exists:services,id',
             'products' => 'nullable|array',

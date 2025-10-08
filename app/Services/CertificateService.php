@@ -10,12 +10,12 @@ class CertificateService
 {
     public function getAllCertificates(): Collection
     {
-        return Certificate::with(['client', 'workOrder.address', 'products', 'services'])->orderBy('created_at', 'desc')->get();
+        return Certificate::with(['client', 'address', 'products', 'services'])->orderBy('created_at', 'desc')->get();
     }
 
     public function getCertificatesPaginated(int $perPage = 15): LengthAwarePaginator
     {
-        $certificates = Certificate::with(['client', 'workOrder.address', 'products', 'services'])
+        $certificates = Certificate::with(['client', 'address', 'products', 'services'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -30,7 +30,7 @@ class CertificateService
 
     public function findCertificate(int $id): ?Certificate
     {
-        $certificate = Certificate::with(['client', 'workOrder.address', 'products', 'services'])->find($id);
+        $certificate = Certificate::with(['client', 'address', 'products', 'services'])->find($id);
 
         if ($certificate) {
             $certificate->append(['calculated_status', 'status_text', 'status_color']);
@@ -44,6 +44,27 @@ class CertificateService
         // Extrair produtos e serviços dos dados para relacionamentos many-to-many
         $products = $data['products'] ?? [];
         $services = $data['services'] ?? [];
+
+        // Se há work_order_id, puxar produtos e serviços automaticamente da OS
+        if (!empty($data['work_order_id']) && (empty($products) || empty($services))) {
+            $workOrder = \App\Models\WorkOrder::with(['products', 'services'])->find($data['work_order_id']);
+
+            if ($workOrder) {
+                // Se não há produtos selecionados, usar os da OS
+                if (empty($products) && $workOrder->products->isNotEmpty()) {
+                    $products = $workOrder->products->map(function($product) {
+                        return ['product_id' => $product->id];
+                    })->toArray();
+                }
+
+                // Se não há serviços selecionados, usar os da OS
+                if (empty($services) && $workOrder->services->isNotEmpty()) {
+                    $services = $workOrder->services->map(function($service) {
+                        return ['service_id' => $service->id];
+                    })->toArray();
+                }
+            }
+        }
 
         // Remover produtos e serviços dos dados para criar o certificado
         unset($data['products'], $data['services']);
@@ -73,7 +94,7 @@ class CertificateService
             }
         }
 
-        $certificate = $certificate->load(['client', 'workOrder.address', 'products', 'services']);
+        $certificate = $certificate->load(['client', 'address', 'products', 'services']);
         $certificate->append(['calculated_status', 'status_text', 'status_color']);
         return $certificate;
     }

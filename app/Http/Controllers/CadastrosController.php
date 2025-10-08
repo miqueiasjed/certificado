@@ -26,7 +26,7 @@ class CadastrosController extends Controller
                 'route' => '/technicians',
                 'icon' => 'user-group',
                 'color' => 'green',
-                'count' => \App\Models\User::where('is_technician', true)->count(),
+                'count' => \App\Models\Technician::count(),
             ],
             [
                 'id' => 'services',

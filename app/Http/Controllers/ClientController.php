@@ -111,4 +111,23 @@ class ClientController extends Controller
             return back()->with('error', 'Erro ao excluir cliente: ' . $e->getMessage());
         }
     }
+
+    public function getAddresses($clientId)
+    {
+        try {
+            $client = $this->clientService->findClient($clientId);
+
+            if (!$client) {
+                return response()->json(['error' => 'Cliente não encontrado'], 404);
+            }
+
+            $addresses = $client->addresses;
+
+            return response()->json([
+                'addresses' => $addresses
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Erro ao buscar endereços: ' . $e->getMessage()], 500);
+        }
+    }
 }

@@ -12,12 +12,15 @@ class WorkOrderService
     public function createWorkOrder(array $data): WorkOrder
     {
         $technicians = $data['technicians'] ?? [];
-        unset($data['technicians']);
+        $products = $data['products'] ?? [];
+        $services = $data['services'] ?? [];
+
+        unset($data['technicians'], $data['products'], $data['services']);
 
         $workOrder = WorkOrder::create($data);
 
+        // Sincronizar técnicos
         if (!empty($technicians)) {
-            // Filtrar técnicos vazios
             $technicians = array_filter($technicians, function($id) {
                 return !empty($id);
             });
@@ -31,6 +34,33 @@ class WorkOrderService
             }
         }
 
+        // Sincronizar produtos
+        if (!empty($products)) {
+            $syncData = [];
+            foreach ($products as $product) {
+                if (!empty($product['id'])) {
+                    $syncData[$product['id']] = [
+                        'quantity' => $product['quantity'] ?? 1,
+                        'observations' => $product['observations'] ?? null
+                    ];
+                }
+            }
+            $workOrder->products()->sync($syncData);
+        }
+
+        // Sincronizar serviços
+        if (!empty($services)) {
+            $syncData = [];
+            foreach ($services as $service) {
+                if (!empty($service['id'])) {
+                    $syncData[$service['id']] = [
+                        'observations' => $service['observations'] ?? null
+                    ];
+                }
+            }
+            $workOrder->services()->sync($syncData);
+        }
+
         return $workOrder;
     }
 
@@ -40,12 +70,15 @@ class WorkOrderService
     public function updateWorkOrder(WorkOrder $workOrder, array $data): bool
     {
         $technicians = $data['technicians'] ?? [];
-        unset($data['technicians']);
+        $products = $data['products'] ?? [];
+        $services = $data['services'] ?? [];
+
+        unset($data['technicians'], $data['products'], $data['services']);
 
         $result = $workOrder->update($data);
 
+        // Sincronizar técnicos
         if (!empty($technicians)) {
-            // Filtrar técnicos vazios
             $technicians = array_filter($technicians, function($id) {
                 return !empty($id);
             });
@@ -57,6 +90,33 @@ class WorkOrderService
                 }
                 $workOrder->technicians()->sync($syncData);
             }
+        }
+
+        // Sincronizar produtos
+        if (!empty($products)) {
+            $syncData = [];
+            foreach ($products as $product) {
+                if (!empty($product['id'])) {
+                    $syncData[$product['id']] = [
+                        'quantity' => $product['quantity'] ?? 1,
+                        'observations' => $product['observations'] ?? null
+                    ];
+                }
+            }
+            $workOrder->products()->sync($syncData);
+        }
+
+        // Sincronizar serviços
+        if (!empty($services)) {
+            $syncData = [];
+            foreach ($services as $service) {
+                if (!empty($service['id'])) {
+                    $syncData[$service['id']] = [
+                        'observations' => $service['observations'] ?? null
+                    ];
+                }
+            }
+            $workOrder->services()->sync($syncData);
         }
 
         return $result;

@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Models\Technician;
 use App\Models\Device;
 use App\Models\ServiceType;
+use App\Models\Product;
+use App\Models\Service;
 use App\Services\WorkOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -80,12 +82,16 @@ class WorkOrderController extends Controller
             ->get();
         $technicians = Technician::select('id', 'name', 'specialty')->where('is_active', true)->orderBy('name')->limit(100)->get();
         $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
+        $products = Product::select('id', 'name')->orderBy('name')->limit(100)->get();
+        $services = Service::select('id', 'name', 'description')->where('is_active', true)->orderBy('name')->limit(100)->get();
 
         return Inertia::render('WorkOrders/Create', [
             'clients' => $clients,
             'addresses' => $addresses,
             'technicians' => $technicians,
             'serviceTypes' => $serviceTypes,
+            'products' => $products,
+            'services' => $services,
             'preselectedClient' => $request->client_id,
             'preselectedAddress' => $request->address_id,
             'preselectedTechnician' => $request->technician_id,
@@ -114,6 +120,8 @@ class WorkOrderController extends Controller
             'address.client',
             'technician',
             'technicians',
+            'products',
+            'services',
             'deviceEvents' => function ($query) {
                 $query->with([
                     'device.room.address.client',
@@ -145,8 +153,6 @@ class WorkOrderController extends Controller
                 ->orderBy('label')
                 ->get();
 
-            // Log simples para debug
-            Log::info('Dispositivos disponíveis: ' . $availableDevices->count());
         }
 
         // Carregar endereços disponíveis do cliente para avistamentos
@@ -155,14 +161,18 @@ class WorkOrderController extends Controller
             $availableAddresses = Address::where('client_id', $workOrder->client_id)
                 ->orderBy('nickname')
                 ->get();
-
-            Log::info('Available Addresses Count: ' . $availableAddresses->count());
         }
+
+        // Carregar produtos e serviços disponíveis
+        $availableProducts = Product::select('id', 'name')->orderBy('name')->get();
+        $availableServices = Service::select('id', 'name', 'description')->where('is_active', true)->orderBy('name')->get();
 
         return Inertia::render('WorkOrders/Show', [
             'workOrder' => $workOrder,
             'availableDevices' => $availableDevices,
             'availableAddresses' => $availableAddresses,
+            'availableProducts' => $availableProducts,
+            'availableServices' => $availableServices,
         ]);
     }
 
@@ -173,6 +183,8 @@ class WorkOrderController extends Controller
             'address.client',
             'technician',
             'technicians',
+            'products',
+            'services',
             'serviceType',
             'deviceEvents.device.room.address.client',
             'paymentDetails' => function ($query) {
@@ -195,6 +207,8 @@ class WorkOrderController extends Controller
             ->get();
         $technicians = Technician::select('id', 'name', 'specialty')->where('is_active', true)->orderBy('name')->limit(100)->get();
         $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
+        $products = Product::select('id', 'name')->orderBy('name')->limit(100)->get();
+        $services = Service::select('id', 'name', 'description')->where('is_active', true)->orderBy('name')->limit(100)->get();
 
         return Inertia::render('WorkOrders/Edit', [
             'workOrder' => $workOrder,
@@ -202,16 +216,14 @@ class WorkOrderController extends Controller
             'addresses' => $addresses,
             'technicians' => $technicians,
             'serviceTypes' => $serviceTypes,
+            'products' => $products,
+            'services' => $services,
         ]);
     }
 
     public function update(WorkOrderRequest $request, WorkOrder $workOrder)
     {
         try {
-            Log::info('Updating work order', [
-                'work_order_id' => $workOrder->id,
-                'data' => $request->validated()
-            ]);
 
             $this->workOrderService->updateWorkOrder($workOrder, $request->validated());
 
@@ -386,6 +398,206 @@ class WorkOrderController extends Controller
             ]);
 
             return redirect()->back()->with('error', 'Erro ao gerar recibo: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Gerar PDF da Ordem de Serviço
+     */
+    public function generatePDF(WorkOrder $workOrder)
+    {
+        try {
+            // Carregar todos os dados necessários
+            $workOrder->load([
+                'client',
+                'address.client',
+                'technician',
+                'technicians',
+                'serviceType',
+                'products',
+                'services',
+                'deviceEvents.device.room',
+                'pestSightings' => function ($query) {
+                    $query->with(['address.client'])->orderBy('sighting_date', 'desc');
+                }
+            ]);
+
+            // Preparar dados para o PDF
+            $data = [
+                'workOrder' => $workOrder,
+                'currentDate' => now()->format('d/m/Y'),
+                'currentTime' => now()->format('H:i'),
+            ];
+
+            // Gerar PDF
+            $pdf = FacadePdf::loadView('pdf.work-order', $data);
+            $pdf->setPaper('A4', 'portrait');
+
+            $filename = 'OS-' . $workOrder->order_number . '-' . now()->format('Y-m-d') . '.pdf';
+
+            return $pdf->stream($filename);
+        } catch (\Exception $e) {
+            Log::error('Error generating work order PDF', [
+                'work_order_id' => $workOrder->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->back()->with('error', 'Erro ao gerar PDF da OS: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Atualizar produto vinculado à OS
+     */
+    public function addProduct(Request $request, WorkOrder $workOrder, Product $product)
+    {
+        try {
+            $request->validate([
+                'quantity' => 'required|integer|min:1',
+                'observations' => 'nullable|string|max:500'
+            ]);
+
+            // Verificar se o produto já está vinculado à OS
+            if ($workOrder->products()->where('product_id', $product->id)->exists()) {
+                return response()->json(['message' => 'Produto já está vinculado a esta ordem de serviço'], 400);
+            }
+
+            // Adicionar produto à OS
+            $workOrder->products()->attach($product->id, [
+                'quantity' => $request->quantity,
+                'observations' => $request->observations,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            return response()->json(['message' => 'Produto adicionado à OS com sucesso']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao adicionar produto: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function updateProduct(Request $request, WorkOrder $workOrder, Product $product)
+    {
+        try {
+            $request->validate([
+                'quantity' => 'required|integer|min:1',
+                'observations' => 'nullable|string|max:500'
+            ]);
+
+            // Verificar se o produto está vinculado à OS
+            if (!$workOrder->products()->where('product_id', $product->id)->exists()) {
+                return response()->json(['message' => 'Produto não encontrado nesta ordem de serviço'], 404);
+            }
+
+            // Atualizar dados do pivot
+            $workOrder->products()->updateExistingPivot($product->id, [
+                'quantity' => $request->quantity,
+                'observations' => $request->observations,
+                'updated_at' => now()
+            ]);
+
+            return response()->json(['message' => 'Produto atualizado com sucesso']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao atualizar produto: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Remover produto da OS
+     */
+    public function removeProduct(Request $request, WorkOrder $workOrder, Product $product)
+    {
+        try {
+            // Verificar se o produto está vinculado à OS
+            if (!$workOrder->products()->where('product_id', $product->id)->exists()) {
+                return response()->json(['message' => 'Produto não encontrado nesta ordem de serviço'], 404);
+            }
+
+            // Remover o produto da OS
+            $workOrder->products()->detach($product->id);
+
+            return response()->json(['message' => 'Produto removido com sucesso']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao remover produto: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Atualizar serviço vinculado à OS
+     */
+    public function addService(Request $request, WorkOrder $workOrder, Service $service)
+    {
+        try {
+            $request->validate([
+                'observations' => 'nullable|string|max:500'
+            ]);
+
+            // Verificar se o serviço já está vinculado à OS
+            if ($workOrder->services()->where('service_id', $service->id)->exists()) {
+                return response()->json(['message' => 'Serviço já está vinculado a esta ordem de serviço'], 400);
+            }
+
+            // Adicionar serviço à OS
+            $workOrder->services()->attach($service->id, [
+                'observations' => $request->observations,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            return response()->json(['message' => 'Serviço adicionado à OS com sucesso']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao adicionar serviço: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function updateService(Request $request, WorkOrder $workOrder, Service $service)
+    {
+        try {
+            $request->validate([
+                'observations' => 'nullable|string|max:500'
+            ]);
+
+            // Verificar se o serviço está vinculado à OS
+            if (!$workOrder->services()->where('service_id', $service->id)->exists()) {
+                return response()->json(['message' => 'Serviço não encontrado nesta ordem de serviço'], 404);
+            }
+
+            // Atualizar dados do pivot
+            $workOrder->services()->updateExistingPivot($service->id, [
+                'observations' => $request->observations,
+                'updated_at' => now()
+            ]);
+
+            return response()->json(['message' => 'Serviço atualizado com sucesso']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao atualizar serviço: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Remover serviço da OS
+     */
+    public function removeService(Request $request, WorkOrder $workOrder, Service $service)
+    {
+        try {
+            // Verificar se o serviço está vinculado à OS
+            if (!$workOrder->services()->where('service_id', $service->id)->exists()) {
+                return response()->json(['message' => 'Serviço não encontrado nesta ordem de serviço'], 404);
+            }
+
+            // Remover o serviço da OS
+            $workOrder->services()->detach($service->id);
+
+            return response()->json(['message' => 'Serviço removido com sucesso']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao remover serviço: ' . $e->getMessage()], 500);
         }
     }
 }

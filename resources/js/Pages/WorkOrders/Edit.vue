@@ -271,6 +271,107 @@
               </div>
 
 
+              <!-- Produtos -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Produtos Utilizados
+                </label>
+                <div class="space-y-4">
+                  <div v-for="(product, index) in form.products" :key="index" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    <div class="md:col-span-4">
+                      <select
+                        v-model="product.id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      >
+                        <option value="">Selecione um produto</option>
+                        <option v-for="prod in availableProducts(index)" :key="prod.id" :value="prod.id">
+                          {{ prod.name }}
+                        </option>
+                      </select>
+                    </div>
+                    <div class="md:col-span-2">
+                      <input
+                        v-model.number="product.quantity"
+                        type="number"
+                        min="1"
+                        placeholder="Qtd"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      />
+                    </div>
+                    <div class="md:col-span-5">
+                      <input
+                        v-model="product.observations"
+                        type="text"
+                        placeholder="Observações (opcional)"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      />
+                    </div>
+                    <div class="md:col-span-1">
+                      <button
+                        type="button"
+                        @click="removeProduct(index)"
+                        class="w-full px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    @click="addProduct"
+                    class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-green-500 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    + Adicionar Produto
+                  </button>
+                </div>
+              </div>
+
+              <!-- Serviços -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Serviços Realizados
+                </label>
+                <div class="space-y-4">
+                  <div v-for="(service, index) in form.services" :key="index" class="grid grid-cols-1 md:grid-cols-11 gap-4 items-end">
+                    <div class="md:col-span-5">
+                      <select
+                        v-model="service.id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      >
+                        <option value="">Selecione um serviço</option>
+                        <option v-for="serv in availableServices(index)" :key="serv.id" :value="serv.id">
+                          {{ serv.name }}
+                        </option>
+                      </select>
+                    </div>
+                    <div class="md:col-span-5">
+                      <input
+                        v-model="service.observations"
+                        type="text"
+                        placeholder="Observações (opcional)"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      />
+                    </div>
+                    <div class="md:col-span-1">
+                      <button
+                        type="button"
+                        @click="removeService(index)"
+                        class="w-full px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    @click="addService"
+                    class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-green-500 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    + Adicionar Serviço
+                  </button>
+                </div>
+              </div>
+
               <!-- Status Ativo -->
               <div class="flex items-center">
                 <input
@@ -330,11 +431,10 @@ const props = defineProps({
   addresses: Array,
   technicians: Array,
   serviceTypes: Array,
+  products: Array,
+  services: Array,
 });
 
-// Debug: verificar se os técnicos estão chegando
-console.log('Técnicos recebidos:', props.technicians);
-console.log('Quantidade de técnicos:', props.technicians?.length);
 
 // Estado do modal
 const showServiceTypeModal = ref(false);
@@ -363,7 +463,6 @@ const formatDateForInput = (dateString) => {
 
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   } catch (error) {
-    console.warn('Erro ao formatar data:', error);
     return '';
   }
 };
@@ -388,7 +487,6 @@ const formatDateForDateInput = (dateString) => {
 
     return `${year}-${month}-${day}`;
   } catch (error) {
-    console.warn('Erro ao formatar data:', error);
     return '';
   }
 };
@@ -401,6 +499,19 @@ const form = useForm({
     ? props.workOrder.technicians.map(t => t.id)
     : (props.workOrder.technician_id ? [props.workOrder.technician_id] : ['']),
   service_type_id: String(props.workOrder.service_type_id || ''),
+  products: props.workOrder.products && props.workOrder.products.length > 0
+    ? props.workOrder.products.map(p => ({
+        id: p.id,
+        quantity: p.pivot.quantity || 1,
+        observations: p.pivot.observations || ''
+      }))
+    : [{ id: '', quantity: 1, observations: '' }],
+  services: props.workOrder.services && props.workOrder.services.length > 0
+    ? props.workOrder.services.map(s => ({
+        id: s.id,
+        observations: s.pivot.observations || ''
+      }))
+    : [{ id: '', observations: '' }],
   priority_level: props.workOrder.priority_level || '',
   scheduled_date: formatDateForDateInput(props.workOrder.scheduled_date),
   start_time: formatDateForInput(props.workOrder.start_time),
@@ -437,23 +548,26 @@ const getAddressDisplayText = () => {
 };
 
 const submit = () => {
-  // Filtrar técnicos vazios antes de enviar
-  const cleanedTechnicians = form.technicians.filter(id => id !== '' && id !== null);
+  // Filtrar técnicos vazios ANTES de criar os dados do form
+  const cleanedTechnicians = form.technicians.filter(id => id !== '' && id !== null && id !== undefined);
 
-  console.log('Submitting form with data:', form.data());
-  console.log('Cleaned technicians:', cleanedTechnicians);
-  console.log('Form errors before submit:', form.errors);
+  // Filtrar produtos vazios ANTES de criar os dados do form
+  const cleanedProducts = form.products.filter(product => product.id && product.id !== '');
 
-  // Atualizar o form com técnicos limpos
-  form.technicians = cleanedTechnicians.length > 0 ? cleanedTechnicians : [];
+  // Filtrar serviços vazios ANTES de criar os dados do form
+  const cleanedServices = form.services.filter(service => service.id && service.id !== '');
+
+  // Atualizar o form com dados limpos
+  form.technicians = cleanedTechnicians;
+  form.products = cleanedProducts;
+  form.services = cleanedServices;
+
 
   form.put(`/work-orders/${props.workOrder.id}`, {
     onSuccess: () => {
-      console.log('Work order updated successfully');
+      // Ordem de serviço atualizada com sucesso
     },
     onError: (errors) => {
-      console.error('Error updating work order - Full errors:', errors);
-      console.error('Form errors:', form.errors);
       console.error('Error details:', JSON.stringify(errors, null, 2));
     }
   });
@@ -461,15 +575,8 @@ const submit = () => {
 
 // Filtrar técnicos disponíveis para cada select (evitar duplicatas)
 const getAvailableTechnicians = (currentIndex) => {
-  console.log('getAvailableTechnicians chamado para index:', currentIndex);
-  console.log('Técnicos disponíveis:', props.technicians);
-  console.log('Form.technicians:', form.technicians);
-
   const selectedIds = form.technicians.filter((id, index) => index !== currentIndex && id !== '');
-  const available = props.technicians.filter(technician => !selectedIds.includes(technician.id));
-
-  console.log('Técnicos filtrados:', available);
-  return available;
+  return props.technicians.filter(technician => !selectedIds.includes(technician.id));
 };
 
 // Funções para gerenciar técnicos
@@ -480,6 +587,44 @@ const addTechnician = () => {
 const removeTechnician = (index) => {
   form.technicians.splice(index, 1);
 };
+
+// Funções para gerenciar produtos
+const addProduct = () => {
+  form.products.push({ id: '', quantity: 1, observations: '' });
+};
+
+const removeProduct = (index) => {
+  form.products.splice(index, 1);
+};
+
+// Funções para gerenciar serviços
+const addService = () => {
+  form.services.push({ id: '', observations: '' });
+};
+
+const removeService = (index) => {
+  form.services.splice(index, 1);
+};
+
+// Computed para produtos disponíveis (filtrar já selecionados, exceto o atual)
+const availableProducts = computed(() => {
+  return (currentProductIndex) => {
+    const selectedIds = form.products
+      .map((p, index) => index !== currentProductIndex ? p.id : null)
+      .filter(id => id);
+    return props.products.filter(prod => !selectedIds.includes(prod.id));
+  };
+});
+
+// Computed para serviços disponíveis (filtrar já selecionados, exceto o atual)
+const availableServices = computed(() => {
+  return (currentServiceIndex) => {
+    const selectedIds = form.services
+      .map((s, index) => index !== currentServiceIndex ? s.id : null)
+      .filter(id => id);
+    return props.services.filter(serv => !selectedIds.includes(serv.id));
+  };
+});
 
 // Função para lidar com criação de novo tipo de serviço
 const onServiceTypeCreated = (serviceType) => {

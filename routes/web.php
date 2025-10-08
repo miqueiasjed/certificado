@@ -53,6 +53,9 @@ Route::middleware(['auth'])->group(function () {
     // Rotas de Clientes
     Route::resource('clients', ClientController::class);
 
+    // API route to get client addresses
+    Route::get('/api/clients/{client}/addresses', [ClientController::class, 'getAddresses']);
+
     // Rotas de Cadastros
     Route::get('/cadastros', [CadastrosController::class, 'index'])->name('cadastros.index');
 
@@ -110,6 +113,15 @@ Route::middleware(['auth'])->group(function () {
     // Rotas de Ordens de Serviço
     Route::resource('work-orders', WorkOrderController::class);
     Route::get('/work-orders/client/{clientId}', [WorkOrderController::class, 'getByClient'])->name('work-orders.by-client');
+    Route::get('/work-orders/{workOrder}/pdf', [WorkOrderController::class, 'generatePDF'])->name('work-orders.pdf');
+
+// Rotas para gerenciar produtos e serviços das work orders
+Route::post('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'addProduct'])->name('work-orders.products.add');
+Route::put('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'updateProduct'])->name('work-orders.products.update');
+Route::delete('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'removeProduct'])->name('work-orders.products.remove');
+Route::post('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'addService'])->name('work-orders.services.add');
+Route::put('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'updateService'])->name('work-orders.services.update');
+Route::delete('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'removeService'])->name('work-orders.services.remove');
 
     // Rotas de Eventos de Dispositivos
     Route::resource('device-events', DeviceEventController::class);

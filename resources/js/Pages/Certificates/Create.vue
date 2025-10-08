@@ -29,8 +29,10 @@
                 <select
                   id="client_id"
                   v-model="form.client_id"
+                  @change="loadClientAddresses"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-500': errors.client_id }"
+                  required
                 >
                   <option value="">Selecione um cliente</option>
                   <option v-for="client in clients" :key="client.id" :value="client.id">
@@ -38,6 +40,26 @@
                   </option>
                 </select>
                 <p v-if="errors.client_id" class="mt-1 text-sm text-red-600">{{ errors.client_id }}</p>
+              </div>
+
+              <div>
+                <label for="address_id" class="block text-sm font-medium text-gray-700 mb-1">
+                  Endereço do Cliente *
+                </label>
+                <select
+                  id="address_id"
+                  v-model="form.address_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-500': errors.address_id }"
+                  :disabled="!form.client_id"
+                  required
+                >
+                  <option value="">Selecione um endereço</option>
+                  <option v-for="address in clientAddresses" :key="address.id" :value="address.id">
+                    {{ address.nickname }} - {{ address.street }}, {{ address.number }}
+                  </option>
+                </select>
+                <p v-if="errors.address_id" class="mt-1 text-sm text-red-600">{{ errors.address_id }}</p>
               </div>
 
               <div>
@@ -67,21 +89,6 @@
                   :class="{ 'border-red-500': errors.warranty }"
                 />
                 <p v-if="errors.warranty" class="mt-1 text-sm text-red-600">{{ errors.warranty }}</p>
-              </div>
-              <div>
-                <label for="work_order_id" class="block text-sm font-medium text-gray-700 mb-1">
-                  Ordem de Serviço
-                </label>
-                <select
-                  id="work_order_id"
-                  v-model="form.work_order_id"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="">Selecione uma OS</option>
-                  <option v-for="wo in workOrders" :key="wo.id" :value="wo.id">
-                    {{ wo.order_number }} - {{ new Date(wo.scheduled_date).toLocaleDateString('pt-BR') }}
-                  </option>
-                </select>
               </div>
             </div>
           </div>
@@ -302,11 +309,11 @@ const props = defineProps({
   errors: Object,
 });
 
-const workOrders = ref([]);
+const clientAddresses = ref([]);
 
 const form = useForm({
   client_id: '',
-  work_order_id: '',
+  address_id: '',
   products: [],
   services: [],
   execution_date: '',
@@ -358,6 +365,24 @@ const removeService = (index) => {
 };
 
 
+
+const loadClientAddresses = async () => {
+  if (!form.client_id) {
+    clientAddresses.value = [];
+    form.address_id = '';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/clients/${form.client_id}/addresses`);
+    const data = await response.json();
+    clientAddresses.value = data.addresses || [];
+    form.address_id = '';
+  } catch (error) {
+    console.error('Erro ao carregar endereços:', error);
+    clientAddresses.value = [];
+  }
+};
 
 const submitForm = () => {
   form.post('/certificates', {

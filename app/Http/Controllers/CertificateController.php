@@ -63,13 +63,6 @@ class CertificateController extends Controller
     public function store(CertificateRequest $request)
     {
         $data = $request->validated();
-        // Se work_order_id vier, garantir consistência do cliente
-        if (!empty($data['work_order_id'])) {
-            $wo = WorkOrder::find($data['work_order_id']);
-            if ($wo) {
-                $data['client_id'] = $wo->client_id;
-            }
-        }
 
         $certificate = $this->certificateService->createCertificate($data);
 
@@ -81,15 +74,16 @@ class CertificateController extends Controller
     public function storeFromWorkOrder(Request $request, WorkOrder $workOrder)
     {
         $data = $request->validate([
-            'execution_date' => 'nullable|date',
+            'execution_date' => 'required|date',
             'warranty' => 'nullable|date',
             'notes' => 'nullable|string|max:2000',
         ]);
 
         $payload = array_merge($data, [
             'client_id' => $workOrder->client_id,
+            'address_id' => $workOrder->address_id,
             'work_order_id' => $workOrder->id,
-            'status' => 'issued',
+            'status' => 'active',
         ]);
 
         $certificate = $this->certificateService->createCertificate($payload);

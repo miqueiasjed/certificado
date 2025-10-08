@@ -79,13 +79,33 @@ class WorkOrder extends Model
      */
     public function technician(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'technician_id');
+        return $this->belongsTo(Technician::class, 'technician_id');
     }
 
     public function technicians(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'work_order_technicians', 'work_order_id', 'technician_id')
+        return $this->belongsToMany(Technician::class, 'work_order_technicians', 'work_order_id', 'technician_id')
             ->withPivot('is_primary')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the products used in this work order.
+     */
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'work_order_products', 'work_order_id', 'product_id')
+            ->withPivot('quantity', 'observations')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the services performed in this work order.
+     */
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class, 'work_order_services', 'work_order_id', 'service_id')
+            ->withPivot('observations')
             ->withTimestamps();
     }
 

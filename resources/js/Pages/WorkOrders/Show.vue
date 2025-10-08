@@ -128,6 +128,8 @@
               :active-tab="activeTab"
               :available-devices="availableDevices"
               :available-addresses="availableAddresses"
+              :available-products="availableProducts"
+              :available-services="availableServices"
               @show-device-event-modal="showDeviceEventModal = true"
               @show-pest-sighting-modal="showPestSightingModal = true"
             />
@@ -163,17 +165,26 @@
                   </svg>
                   Editar Ordem
                 </Link>
-                <Link
-                  :href="route('work-orders.certificates.store', workOrder.id)"
-                  method="post"
-                  as="button"
+                <button
+                  @click="showCertificateModal = true"
                   class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-sm transition-all duration-200"
                 >
                   <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M4 11h16M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                   Emitir Certificado
-                </Link>
+                </button>
+
+                <!-- Botão Emitir OS PDF -->
+                <button
+                  @click="generateWorkOrderPDF"
+                  class="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-sm transition-all duration-200"
+                >
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Emitir OS PDF
+                </button>
 
                 <!-- Botão Emitir Recibo - só aparece quando status = 'paid' -->
                 <button
@@ -229,6 +240,153 @@
           </div>
         </div>
       </Teleport>
+
+      <!-- Modal para Emitir Certificado -->
+      <div v-if="showCertificateModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-4xl w-full mx-4 transform transition-all max-h-[90vh] overflow-hidden flex flex-col">
+          <div class="flex-shrink-0 p-6 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xl font-semibold text-gray-900">Emitir Certificado</h3>
+              <button @click="showCertificateModal = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <!-- Coluna Esquerda - Dados da OS -->
+              <div class="space-y-4">
+                <!-- Informações da OS -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                  <h4 class="text-sm font-medium text-gray-900 mb-3">Dados da Ordem de Serviço</h4>
+                  <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Número:</span>
+                      <span class="font-medium">{{ workOrder.order_number }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Cliente:</span>
+                      <span class="font-medium">{{ workOrder.client?.name }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Endereço:</span>
+                      <span class="font-medium text-right">{{ workOrder.address?.nickname }} - {{ workOrder.address?.street }}, {{ workOrder.address?.number }}</span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                      <span class="text-gray-500">Data Agendada:</span>
+                      <span class="font-medium">{{ new Date(workOrder.scheduled_date).toLocaleDateString('pt-BR') }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Produtos e Serviços da OS -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                  <h4 class="text-sm font-medium text-gray-900 mb-3">Produtos e Serviços</h4>
+
+                  <!-- Produtos -->
+                  <div v-if="workOrder.products && workOrder.products.length > 0" class="mb-3">
+                    <h5 class="text-xs font-medium text-gray-600 mb-2">Produtos ({{ workOrder.products.length }})</h5>
+                    <div class="space-y-1">
+                      <div v-for="product in workOrder.products" :key="product.id" class="bg-blue-50 rounded p-2">
+                        <div class="flex justify-between items-center">
+                          <span class="text-xs font-medium text-blue-900">{{ product.name }}</span>
+                          <span class="text-xs text-blue-600">Qty: {{ product.pivot.quantity || 1 }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Serviços -->
+                  <div v-if="workOrder.services && workOrder.services.length > 0">
+                    <h5 class="text-xs font-medium text-gray-600 mb-2">Serviços ({{ workOrder.services.length }})</h5>
+                    <div class="space-y-1">
+                      <div v-for="service in workOrder.services" :key="service.id" class="bg-green-50 rounded p-2">
+                        <div>
+                          <span class="text-xs font-medium text-green-900">{{ service.name }}</span>
+                          <p v-if="service.description" class="text-xs text-green-600 mt-1 line-clamp-2">{{ service.description }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Mensagem quando não há produtos/serviços -->
+                  <div v-if="(!workOrder.products || workOrder.products.length === 0) && (!workOrder.services || workOrder.services.length === 0)" class="text-center py-2 text-gray-500">
+                    <p class="text-xs">Esta OS não possui produtos ou serviços registrados.</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Coluna Direita - Formulário -->
+              <div>
+                <form @submit.prevent="emitCertificateFromOS" class="space-y-4">
+                  <div>
+                    <label for="execution_date" class="block text-sm font-medium text-gray-700 mb-2">
+                      Data da Execução *
+                    </label>
+                    <input
+                      type="date"
+                      id="execution_date"
+                      v-model="certificateForm.execution_date"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label for="warranty" class="block text-sm font-medium text-gray-700 mb-2">
+                      Data da Garantia
+                    </label>
+                    <input
+                      type="date"
+                      id="warranty"
+                      v-model="certificateForm.warranty"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
+                      Observações
+                    </label>
+                    <textarea
+                      id="notes"
+                      v-model="certificateForm.notes"
+                      rows="3"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Observações adicionais para o certificado..."
+                    ></textarea>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer com botões -->
+          <div class="flex-shrink-0 p-6 border-t border-gray-200 bg-gray-50">
+            <div class="flex justify-end space-x-4">
+              <button
+                type="button"
+                @click="showCertificateModal = false"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                @click="emitCertificateFromOS"
+                :disabled="isSubmittingCertificate"
+                class="px-6 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+              >
+                <span v-if="isSubmittingCertificate">Emitindo...</span>
+                <span v-else>Emitir Certificado</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </AuthenticatedLayout>
   </template>
 
@@ -244,16 +402,26 @@ import Alert from '@/Components/Alert.vue';
     workOrder: Object,
     availableDevices: Array,
     availableAddresses: Array,
+    availableProducts: Array,
+    availableServices: Array,
   });
 
   const activeTab = ref('financial');
   const showDeviceEventModal = ref(false);
   const showPestSightingModal = ref(false);
+  const showCertificateModal = ref(false);
+  const isSubmittingCertificate = ref(false);
+
+  const certificateForm = ref({
+    execution_date: '',
+    warranty: '',
+    notes: ''
+  });
 
   const allTabs = [
     { name: 'financial', label: 'Informações Financeiras' },
     { name: 'details', label: 'Detalhes da Ordem' },
-    { name: 'client', label: 'Cliente e Local' },
+    { name: 'products-services', label: 'Produtos e Serviços' },
     { name: 'technician', label: 'Técnico' },
     { name: 'device-events', label: 'Eventos de Dispositivos', count: props.workOrder?.device_events?.length || 0 },
     { name: 'pest-sightings', label: 'Avistamentos de Pragas', count: props.workOrder?.pest_sightings?.length || 0 },
@@ -269,12 +437,66 @@ import Alert from '@/Components/Alert.vue';
     const url = route('service-orders.receipt', props.workOrder.id);
     window.open(url, '_blank');
   };
+
+  // Função para gerar PDF da OS
+  const generateWorkOrderPDF = () => {
+    const url = route('work-orders.pdf', props.workOrder.id);
+    window.open(url, '_blank');
+  };
+
+  // Função para emitir certificado a partir da OS
+  const emitCertificateFromOS = async () => {
+    isSubmittingCertificate.value = true;
+
+    try {
+      const formData = {
+        client_id: props.workOrder.client_id,
+        address_id: props.workOrder.address_id,
+        work_order_id: props.workOrder.id,
+        execution_date: certificateForm.value.execution_date,
+        warranty: certificateForm.value.warranty || null,
+        notes: certificateForm.value.notes || '',
+        status: 'active'
+      };
+
+      const response = await fetch(route('work-orders.certificates.store', props.workOrder.id), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        // Sucesso - redirecionar para a página de certificados
+        window.location.href = route('certificates.index');
+      } else {
+        // Erro - mostrar mensagem
+        const errorData = await response.json();
+        alert('Erro ao emitir certificado: ' + (errorData.message || 'Erro desconhecido'));
+      }
+    } catch (error) {
+      console.error('Erro ao emitir certificado:', error);
+      alert('Erro ao emitir certificado. Tente novamente.');
+    } finally {
+      isSubmittingCertificate.value = false;
+    }
+  };
 </script>
 
 <style scoped>
 /* Estilos para navegação suave das tabs */
 .transition-transform {
   transition: transform 0.3s ease-in-out;
+}
+
+/* Estilo para truncar texto em múltiplas linhas */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>
 

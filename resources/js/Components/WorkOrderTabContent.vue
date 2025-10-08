@@ -2,103 +2,507 @@
   <div class="p-6">
     <!-- Aba: Detalhes da Ordem -->
     <div v-if="activeTab === 'details'">
-      <h3 class="text-lg font-medium text-gray-900 mb-4">Detalhes da Ordem</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Informações Básicas -->
-        <div class="space-y-4">
+      <h3 class="text-lg font-medium text-gray-900 mb-6">Detalhes da Ordem</h3>
+
+      <!-- Primeira linha: Informações básicas -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div>
             <label class="block text-sm font-medium text-gray-500">Número da Ordem</label>
             <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.order_number }}</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-500">Tipo de Ordem</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.order_type_text }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.order_type_text }}</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-500">Status</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.status_text }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.status_text }}</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-500">Prioridade</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.priority_level_text }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.priority_level_text }}</p>
           </div>
         </div>
 
-        <!-- Informações de Agendamento -->
-        <div class="space-y-4">
+      <!-- Segunda linha: Informações de agendamento -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div>
             <label class="block text-sm font-medium text-gray-500">Data Agendada</label>
-            <p class="mt-1 text-sm text-gray-900">{{ formatDate(workOrder.scheduled_date) }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ formatDate(props.workOrder.scheduled_date) }}</p>
           </div>
-          <div v-if="workOrder.start_time">
+        <div v-if="props.workOrder.start_time">
             <label class="block text-sm font-medium text-gray-500">Horário de Início</label>
-            <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(workOrder.start_time) }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(props.workOrder.start_time) }}</p>
           </div>
-          <div v-if="workOrder.end_time">
+        <div v-if="props.workOrder.end_time">
             <label class="block text-sm font-medium text-gray-500">Horário de Término</label>
-            <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(workOrder.end_time) }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(props.workOrder.end_time) }}</p>
           </div>
-          <div v-if="workOrder.duration_text">
+        <div v-if="props.workOrder.duration_text">
             <label class="block text-sm font-medium text-gray-500">Duração</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.duration_text }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.duration_text }}</p>
           </div>
         </div>
-      </div>
 
-      <!-- Descrição e Observações -->
-      <div class="mt-6 space-y-4">
-        <div v-if="workOrder.description">
+      <!-- Terceira linha: Descrição e Observações lado a lado -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div v-if="props.workOrder.description">
           <label class="block text-sm font-medium text-gray-500">Descrição</label>
-          <p class="mt-1 text-sm text-gray-900">{{ workOrder.description }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.description }}</p>
         </div>
-        <div v-if="workOrder.observations">
+        <div v-if="props.workOrder.observations">
           <label class="block text-sm font-medium text-gray-500">Observações</label>
-          <p class="mt-1 text-sm text-gray-900">{{ workOrder.observations }}</p>
-        </div>
+          <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.observations }}</p>
       </div>
     </div>
 
-    <!-- Aba: Cliente e Local -->
-    <div v-if="activeTab === 'client'">
-      <h3 class="text-lg font-medium text-gray-900 mb-4">Cliente e Local</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Informações do Cliente -->
-        <div class="space-y-4">
+      <!-- Informações do Cliente e Local -->
+      <div class="mt-8">
+        <h4 class="text-md font-medium text-gray-900 mb-6">Cliente e Local</h4>
+
+        <!-- Informações do Cliente - 4 colunas -->
+        <div class="mb-6">
+          <h5 class="text-sm font-medium text-gray-700 mb-3">Cliente</h5>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-500">Cliente</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.client?.name }}</p>
+              <label class="block text-xs font-medium text-gray-500">Nome</label>
+              <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.client?.name }}</p>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-500">CPF/CNPJ</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.client?.document_number }}</p>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-500">Telefone</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.client?.phone }}</p>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-500">Email</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.client?.email }}</p>
+            <div v-if="props.workOrder.client?.document_number">
+              <label class="block text-xs font-medium text-gray-500">CPF/CNPJ</label>
+              <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.client?.document_number }}</p>
+            </div>
+            <div v-if="props.workOrder.client?.phone">
+              <label class="block text-xs font-medium text-gray-500">Telefone</label>
+              <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.client?.phone }}</p>
+            </div>
+            <div v-if="props.workOrder.client?.email">
+              <label class="block text-xs font-medium text-gray-500">Email</label>
+              <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.client?.email }}</p>
+            </div>
           </div>
         </div>
 
-        <!-- Informações do Endereço -->
-        <div class="space-y-4">
+        <!-- Informações do Endereço - 4 colunas -->
           <div>
-            <label class="block text-sm font-medium text-gray-500">Endereço</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.address?.nickname }}</p>
+          <h5 class="text-sm font-medium text-gray-700 mb-3">Local</h5>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-gray-500">Apelido</label>
+              <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.address?.nickname }}</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-500">Rua e Número</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.address?.street }}, {{ workOrder.address?.number }}</p>
+              <label class="block text-xs font-medium text-gray-500">Rua e Número</label>
+              <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.address?.street }}, {{ props.workOrder.address?.number }}</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-500">Cidade/Estado</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.address?.city }}/{{ workOrder.address?.state }}</p>
+              <label class="block text-xs font-medium text-gray-500">Cidade/Estado</label>
+              <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.address?.city }}/{{ props.workOrder.address?.state }}</p>
+            </div>
+            <div v-if="props.workOrder.address?.zip_code">
+              <label class="block text-xs font-medium text-gray-500">CEP</label>
+              <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.address?.zip_code }}</p>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-500">CEP</label>
-            <p class="mt-1 text-sm text-gray-900">{{ workOrder.address?.zip_code }}</p>
+        </div>
+          </div>
+        </div>
+
+    <!-- Aba: Produtos e Serviços -->
+    <div v-if="activeTab === 'products-services'">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Produtos e Serviços</h3>
+        <div class="flex space-x-2">
+          <button
+            @click="showProductModal = true; console.log('Produto modal:', showProductModal)"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Adicionar Produto
+          </button>
+          <button
+            @click="showServiceModal = true; console.log('Serviço modal:', showServiceModal)"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Adicionar Serviço
+          </button>
+        </div>
+      </div>
+
+      <!-- Produtos Utilizados -->
+      <div class="mb-8">
+        <h4 class="text-md font-medium text-gray-900 mb-4">Produtos Utilizados</h4>
+        <div v-if="props.workOrder.products && props.workOrder.products.length > 0" class="space-y-4">
+          <div v-for="product in props.workOrder.products" :key="product.id" class="bg-gray-50 rounded-lg p-4">
+            <div class="flex justify-between items-start mb-3">
+              <div class="flex-1">
+                <h5 class="font-medium text-gray-900">{{ product.name }}</h5>
+                <p v-if="product.manufacturer" class="text-sm text-gray-500">{{ product.manufacturer }}</p>
+              </div>
+              <div class="flex space-x-2">
+                <button
+                  @click="editProductInOS(product)"
+                  class="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                  Editar
+                </button>
+                <button
+                  @click="removeProductFromOS(product)"
+                  class="inline-flex items-center px-3 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                  Remover
+                </button>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-500">Quantidade</label>
+                <p class="mt-1 text-sm text-gray-900">{{ product.pivot.quantity || 1 }}</p>
+              </div>
+              <div v-if="product.pivot.observations">
+                <label class="block text-sm font-medium text-gray-500">Observações</label>
+                <p class="mt-1 text-sm text-gray-900">{{ product.pivot.observations }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-center py-8 text-gray-500">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+          </svg>
+          <p class="mt-2 text-sm">Nenhum produto foi registrado para esta ordem de serviço.</p>
+          <p class="mt-1 text-xs text-gray-400">Comece criando um novo produto.</p>
+        </div>
+      </div>
+
+      <!-- Serviços Realizados -->
+      <div>
+        <h4 class="text-md font-medium text-gray-900 mb-4">Serviços Realizados</h4>
+        <div v-if="props.workOrder.services && props.workOrder.services.length > 0" class="space-y-4">
+          <div v-for="service in props.workOrder.services" :key="service.id" class="bg-gray-50 rounded-lg p-4">
+            <div class="flex justify-between items-start mb-3">
+              <div class="flex-1">
+                <h5 class="font-medium text-gray-900">{{ service.name }}</h5>
+                <p v-if="service.description" class="text-sm text-gray-600">{{ service.description }}</p>
+              </div>
+              <div class="flex space-x-2">
+                <button
+                  @click="editServiceInOS(service)"
+                  class="inline-flex items-center px-3 py-1 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                >
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                  Editar
+                </button>
+                <button
+                  @click="removeServiceFromOS(service)"
+                  class="inline-flex items-center px-3 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                  Remover
+                </button>
+              </div>
+            </div>
+            <div v-if="service.pivot.observations">
+              <label class="block text-sm font-medium text-gray-500">Observações</label>
+              <p class="mt-1 text-sm text-gray-900">{{ service.pivot.observations }}</p>
+            </div>
+          </div>
+        </div>
+        <div v-else class="text-center py-8 text-gray-500">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p class="mt-2 text-sm">Nenhum serviço foi registrado para esta ordem de serviço.</p>
+          <p class="mt-1 text-xs text-gray-400">Comece criando um novo serviço.</p>
+        </div>
+      </div>
+
+      <!-- Modal para adicionar Produto à OS -->
+      <div v-if="showProductModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4" @click="console.log('Modal produto renderizado')">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+          <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Adicionar Produto à OS</h3>
+              <button
+                @click="showProductModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form @submit.prevent="addProductToOS">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Produto *</label>
+                  <select
+                    v-model="productForm.product_id"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Selecione um produto...</option>
+                    <option v-for="product in availableProductsForOS" :key="product.id" :value="product.id">
+                      {{ product.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade *</label>
+                  <input
+                    type="number"
+                    v-model="productForm.quantity"
+                    required
+                    min="1"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="1"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                  <textarea
+                    v-model="productForm.observations"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Observações sobre o uso do produto..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="flex justify-end space-x-4 pt-6">
+                <button
+                  type="button"
+                  @click="showProductModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isSubmittingProduct"
+                  class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isSubmittingProduct">Adicionando...</span>
+                  <span v-else>Adicionar à OS</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal para adicionar Serviço à OS -->
+      <div v-if="showServiceModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4" @click="console.log('Modal serviço renderizado')">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+          <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Adicionar Serviço à OS</h3>
+              <button
+                @click="showServiceModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form @submit.prevent="addServiceToOS">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Serviço *</label>
+                  <select
+                    v-model="serviceForm.service_id"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="">Selecione um serviço...</option>
+                    <option v-for="service in availableServicesForOS" :key="service.id" :value="service.id">
+                      {{ service.name }} - {{ service.description || 'Sem descrição' }}
+                    </option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                  <textarea
+                    v-model="serviceForm.observations"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Observações sobre a realização do serviço..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="flex justify-end space-x-4 pt-6">
+                <button
+                  type="button"
+                  @click="showServiceModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isSubmittingService"
+                  class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isSubmittingService">Adicionando...</span>
+                  <span v-else>Adicionar à OS</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal para editar Produto na OS -->
+      <div v-if="showEditProductModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 transform transition-all">
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Editar Produto</h3>
+              <button
+                @click="showEditProductModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form @submit.prevent="updateProductInOS">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Produto</label>
+                  <input
+                    type="text"
+                    :value="selectedProduct?.name"
+                    disabled
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade *</label>
+                  <input
+                    type="number"
+                    v-model="editProductForm.quantity"
+                    required
+                    min="1"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                  <textarea
+                    v-model="editProductForm.observations"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Observações sobre o uso do produto..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="flex justify-end space-x-4 pt-6">
+                <button
+                  type="button"
+                  @click="showEditProductModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isUpdatingProduct"
+                  class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isUpdatingProduct">Salvando...</span>
+                  <span v-else>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal para editar Serviço na OS -->
+      <div v-if="showEditServiceModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 transform transition-all">
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Editar Serviço</h3>
+              <button
+                @click="showEditServiceModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form @submit.prevent="updateServiceInOS">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Serviço</label>
+                  <input
+                    type="text"
+                    :value="selectedService?.name"
+                    disabled
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                  <textarea
+                    v-model="editServiceForm.observations"
+                    rows="3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    placeholder="Observações sobre a realização do serviço..."
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="flex justify-end space-x-4 pt-6">
+                <button
+                  type="button"
+                  @click="showEditServiceModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isUpdatingService"
+                  class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isUpdatingService">Salvando...</span>
+                  <span v-else>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       </div>
@@ -108,9 +512,9 @@
     <div v-if="activeTab === 'technician'">
       <h3 class="text-lg font-medium text-gray-900 mb-4">Técnicos Responsáveis</h3>
 
-      <div v-if="workOrder.technicians && workOrder.technicians.length > 0" class="space-y-4">
+      <div v-if="props.workOrder.technicians && props.workOrder.technicians.length > 0" class="space-y-4">
         <div
-          v-for="(technician, index) in workOrder.technicians"
+          v-for="(technician, index) in props.workOrder.technicians"
           :key="technician.id"
           class="border border-gray-200 rounded-lg p-4"
         >
@@ -134,10 +538,10 @@
               <p class="mt-1 text-sm text-gray-900">{{ technician.phone }}</p>
             </div>
             <div v-if="technician.email">
-              <label class="block text-sm font-medium text-gray-500">Email</label>
+          <label class="block text-sm font-medium text-gray-500">Email</label>
               <p class="mt-1 text-sm text-gray-900">{{ technician.email }}</p>
             </div>
-          </div>
+        </div>
         </div>
       </div>
 
@@ -207,10 +611,10 @@
                   <!-- Informações sobre dispositivos disponíveis -->
                   <div class="mt-2 text-xs text-gray-500">
                     <div v-if="availableDevices.length > 0">
-                      <span class="text-green-600 font-medium">{{ availableDevices.length }} dispositivo(s) encontrado(s) no endereço "{{ workOrder.address?.nickname }}"</span>
+                      <span class="text-green-600 font-medium">{{ availableDevices.length }} dispositivo(s) encontrado(s) no endereço "{{ props.workOrder.address?.nickname }}"</span>
                     </div>
                     <div v-else class="text-amber-600 font-medium">
-                      ⚠️ Nenhum dispositivo cadastrado para o endereço "{{ workOrder.address?.nickname }}"
+                      ⚠️ Nenhum dispositivo cadastrado para o endereço "{{ props.workOrder.address?.nickname }}"
                       <br>
                       <span class="text-gray-500">É necessário cadastrar dispositivos neste endereço antes de criar eventos.</span>
                     </div>
@@ -702,6 +1106,281 @@
         </div>
       </div>
 
+      <!-- Modal para criar Produto -->
+      <div v-if="showProductModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4" @click="console.log('Modal produto renderizado')">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+          <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Novo Produto</h3>
+              <button
+                @click="showProductModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form @submit.prevent="submitProduct" class="space-y-6">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Produto *</label>
+                  <input
+                    v-model="productForm.name"
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Digite o nome do produto"
+                    required
+                  >
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Fabricante</label>
+                  <input
+                    v-model="productForm.manufacturer"
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Nome do fabricante"
+                  >
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                <textarea
+                  v-model="productForm.description"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Descreva o produto..."
+                ></textarea>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Concentração</label>
+                  <input
+                    v-model="productForm.concentration"
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ex: 2,5%"
+                  >
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Formulação</label>
+                  <input
+                    v-model="productForm.formulation"
+                    type="text"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ex: Pó molhável"
+                  >
+                </div>
+              </div>
+
+              <!-- Botões -->
+              <div class="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  @click="showProductModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isSubmittingProduct"
+                  class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isSubmittingProduct">Criando...</span>
+                  <span v-else>Criar Produto</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal para criar Serviço -->
+      <div v-if="showServiceModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4" @click="console.log('Modal serviço renderizado')">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+          <div class="p-6 overflow-y-auto max-h-[85vh]">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Novo Serviço</h3>
+              <button
+                @click="showServiceModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <form @submit.prevent="submitService" class="space-y-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Serviço *</label>
+                <input
+                  v-model="serviceForm.name"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Digite o nome do serviço"
+                  required
+                >
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                <textarea
+                  v-model="serviceForm.description"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Descreva o serviço..."
+                ></textarea>
+              </div>
+
+              <!-- Botões -->
+              <div class="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  @click="showServiceModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isSubmittingService"
+                  class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isSubmittingService">Criando...</span>
+                  <span v-else>Criar Serviço</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal para editar Produto na OS -->
+      <div v-if="showEditProductModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 transform transition-all">
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Editar Produto</h3>
+              <button
+                @click="showEditProductModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div v-if="selectedProduct" class="mb-4 p-3 bg-blue-50 rounded-lg">
+              <h4 class="font-medium text-blue-900">{{ selectedProduct.name }}</h4>
+              <p v-if="selectedProduct.manufacturer" class="text-sm text-blue-700">{{ selectedProduct.manufacturer }}</p>
+            </div>
+
+            <form @submit.prevent="updateProductInOS" class="space-y-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade *</label>
+                <input
+                  v-model="editProductForm.quantity"
+                  type="number"
+                  min="1"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                <textarea
+                  v-model="editProductForm.observations"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Observações sobre o uso do produto..."
+                ></textarea>
+              </div>
+
+              <!-- Botões -->
+              <div class="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  @click="showEditProductModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isUpdatingProduct"
+                  class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isUpdatingProduct">Salvando...</span>
+                  <span v-else>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal para editar Serviço na OS -->
+      <div v-if="showEditServiceModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 transform transition-all">
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">Editar Serviço</h3>
+              <button
+                @click="showEditServiceModal = false"
+                class="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+
+            <div v-if="selectedService" class="mb-4 p-3 bg-green-50 rounded-lg">
+              <h4 class="font-medium text-green-900">{{ selectedService.name }}</h4>
+              <p v-if="selectedService.description" class="text-sm text-green-700">{{ selectedService.description }}</p>
+            </div>
+
+            <form @submit.prevent="updateServiceInOS" class="space-y-6">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                <textarea
+                  v-model="editServiceForm.observations"
+                  rows="4"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="Observações sobre a realização do serviço..."
+                ></textarea>
+              </div>
+
+              <!-- Botões -->
+              <div class="flex justify-end space-x-4 pt-4">
+                <button
+                  type="button"
+                  @click="showEditServiceModal = false"
+                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  :disabled="isUpdatingService"
+                  class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span v-if="isUpdatingService">Salvando...</span>
+                  <span v-else>Salvar Alterações</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
       <!-- Modal para visualizar Avistamento de Praga -->
       <div v-if="showViewPestSightingModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
         <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
@@ -963,8 +1642,8 @@
         </div>
       </div>
 
-      <div v-if="workOrder.device_events && workOrder.device_events.length > 0" class="space-y-4">
-        <div v-for="event in workOrder.device_events" :key="event.id" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+      <div v-if="props.workOrder.device_events && props.workOrder.device_events.length > 0" class="space-y-4">
+        <div v-for="event in props.workOrder.device_events" :key="event.id" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
           <div class="flex items-start justify-between">
             <div class="flex items-start space-x-3">
               <div class="flex-shrink-0">
@@ -1186,9 +1865,9 @@
         </div>
       </div>
 
-      <div v-if="workOrder.pest_sightings && workOrder.pest_sightings.length > 0" class="space-y-4">
+      <div v-if="props.workOrder.pest_sightings && props.workOrder.pest_sightings.length > 0" class="space-y-4">
         <div
-          v-for="sighting in workOrder.pest_sightings"
+          v-for="sighting in props.workOrder.pest_sightings"
           :key="sighting.id"
           class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
         >
@@ -1245,7 +1924,7 @@
       <div class="flex items-center justify-between mb-6">
         <h3 class="text-lg font-medium text-gray-900">Informações Financeiras</h3>
         <button
-          v-if="workOrder.payment_status !== 'paid'"
+          v-if="props.workOrder.payment_status !== 'paid'"
           @click="openEditFinancialModal"
           class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
         >
@@ -1366,7 +2045,7 @@
           <div class="flex justify-between items-center">
             <h4 class="text-md font-medium text-gray-900">Histórico de Pagamentos</h4>
             <button
-              v-if="workOrder.payment_status !== 'paid'"
+              v-if="props.workOrder.payment_status !== 'paid'"
               @click="showAddPaymentModal = true"
               class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
             >
@@ -2198,6 +2877,14 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  availableProducts: {
+    type: Array,
+    default: () => []
+  },
+  availableServices: {
+    type: Array,
+    default: () => []
+  },
   availableAddresses: {
     type: Array,
     default: () => []
@@ -2210,6 +2897,20 @@ const showDeviceEventModal = ref(false);
 const isSubmitting = ref(false);
 const showPestSightingModal = ref(false);
 const isSubmittingPestSighting = ref(false);
+
+// Estado dos modais de produtos e serviços
+const showProductModal = ref(false);
+const showServiceModal = ref(false);
+const isSubmittingProduct = ref(false);
+const isSubmittingService = ref(false);
+
+// Estado dos modais para editar produtos/serviços na OS
+const showEditProductModal = ref(false);
+const showEditServiceModal = ref(false);
+const isUpdatingProduct = ref(false);
+const isUpdatingService = ref(false);
+const selectedProduct = ref(null);
+const selectedService = ref(null);
 
 // Estado dos modais de pagamento
 const showAddPaymentModal = ref(false);
@@ -2261,6 +2962,28 @@ const pestSightingForm = useForm({
   technician_notes: '',
   work_order_id: props.workOrder.id,
   address_id: props.workOrder.address_id // Usar automaticamente o endereço da OS
+});
+
+// Formulários para produtos e serviços
+const productForm = useForm({
+  product_id: '',
+  quantity: 1,
+  observations: ''
+});
+
+const serviceForm = useForm({
+  service_id: '',
+  observations: ''
+});
+
+// Formulários para editar produtos/serviços na OS
+const editProductForm = useForm({
+  quantity: 1,
+  observations: ''
+});
+
+const editServiceForm = useForm({
+  observations: ''
 });
 
 // Formulários para pagamentos
@@ -2851,6 +3574,228 @@ const submitPestSighting = async () => {
     displayToast('Erro inesperado. Tente novamente.', 'error');
   } finally {
     isSubmittingPestSighting.value = false;
+  }
+};
+
+// Métodos para submeter produtos e serviços
+const addProductToOS = async () => {
+  if (!productForm.product_id) {
+    displayToast('Por favor, selecione um produto.', 'error');
+    return;
+  }
+
+  isSubmittingProduct.value = true;
+
+  try {
+    const response = await fetch(`/work-orders/${props.workOrder.id}/products/${productForm.product_id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        quantity: productForm.quantity,
+        observations: productForm.observations
+      })
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast('Produto adicionado à OS com sucesso!', 'success');
+      showProductModal.value = false;
+      productForm.reset();
+      window.location.reload();
+    } else {
+      displayToast('Erro ao criar produto: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro na submissão:', error);
+    displayToast('Erro inesperado. Tente novamente.', 'error');
+  } finally {
+    isSubmittingProduct.value = false;
+  }
+};
+
+const addServiceToOS = async () => {
+  if (!serviceForm.service_id) {
+    displayToast('Por favor, selecione um serviço.', 'error');
+    return;
+  }
+
+  isSubmittingService.value = true;
+
+  try {
+    const response = await fetch(`/work-orders/${props.workOrder.id}/services/${serviceForm.service_id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        observations: serviceForm.observations
+      })
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast('Serviço adicionado à OS com sucesso!', 'success');
+      showServiceModal.value = false;
+      serviceForm.reset();
+      window.location.reload();
+    } else {
+      displayToast('Erro ao criar serviço: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro na submissão:', error);
+    displayToast('Erro inesperado. Tente novamente.', 'error');
+  } finally {
+    isSubmittingService.value = false;
+  }
+};
+
+// Métodos para gerenciar produtos e serviços na OS
+const editProductInOS = (product) => {
+  console.log('🔍 editProductInOS chamado:', product);
+  selectedProduct.value = product;
+  editProductForm.quantity = product.pivot.quantity || 1;
+  editProductForm.observations = product.pivot.observations || '';
+  showEditProductModal.value = true;
+  console.log('🔍 showEditProductModal.value:', showEditProductModal.value);
+};
+
+const editServiceInOS = (service) => {
+  console.log('🔍 editServiceInOS chamado:', service);
+  selectedService.value = service;
+  editServiceForm.observations = service.pivot.observations || '';
+  showEditServiceModal.value = true;
+  console.log('🔍 showEditServiceModal.value:', showEditServiceModal.value);
+};
+
+const updateProductInOS = async () => {
+  if (!selectedProduct.value) return;
+
+  isUpdatingProduct.value = true;
+
+  try {
+    const response = await fetch(`/work-orders/${props.workOrder.id}/products/${selectedProduct.value.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(editProductForm.data())
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast('Produto atualizado com sucesso!', 'success');
+      showEditProductModal.value = false;
+      selectedProduct.value = null;
+      window.location.reload();
+    } else {
+      displayToast('Erro ao atualizar produto: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro na atualização:', error);
+    displayToast('Erro inesperado. Tente novamente.', 'error');
+  } finally {
+    isUpdatingProduct.value = false;
+  }
+};
+
+const updateServiceInOS = async () => {
+  if (!selectedService.value) return;
+
+  isUpdatingService.value = true;
+
+  try {
+    const response = await fetch(`/work-orders/${props.workOrder.id}/services/${selectedService.value.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(editServiceForm.data())
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast('Serviço atualizado com sucesso!', 'success');
+      showEditServiceModal.value = false;
+      selectedService.value = null;
+      window.location.reload();
+    } else {
+      displayToast('Erro ao atualizar serviço: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro na atualização:', error);
+    displayToast('Erro inesperado. Tente novamente.', 'error');
+  } finally {
+    isUpdatingService.value = false;
+  }
+};
+
+const removeProductFromOS = async (product) => {
+  if (!confirm(`Tem certeza que deseja remover o produto "${product.name}" desta ordem de serviço?`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/work-orders/${props.workOrder.id}/products/${product.id}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Accept': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast('Produto removido com sucesso!', 'success');
+      window.location.reload();
+    } else {
+      displayToast('Erro ao remover produto: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro na remoção:', error);
+    displayToast('Erro inesperado. Tente novamente.', 'error');
+  }
+};
+
+const removeServiceFromOS = async (service) => {
+  if (!confirm(`Tem certeza que deseja remover o serviço "${service.name}" desta ordem de serviço?`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/work-orders/${props.workOrder.id}/services/${service.id}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Accept': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast('Serviço removido com sucesso!', 'success');
+      window.location.reload();
+    } else {
+      displayToast('Erro ao remover serviço: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro na remoção:', error);
+    displayToast('Erro inesperado. Tente novamente.', 'error');
   }
 };
 
@@ -3533,4 +4478,42 @@ const getSeverityLevelText = (severityLevel) => {
       return severityLevel; // Retorna o nível original se não encontrado
   }
 };
+
+// Computed properties para produtos e serviços disponíveis
+const availableProductsForOS = computed(() => {
+  console.log('🔍 Debug availableProductsForOS:');
+  console.log('  - props.availableProducts:', props.availableProducts);
+  console.log('  - props.workOrder.products:', props.workOrder.products);
+
+  if (!props.availableProducts || !props.workOrder.products) {
+    console.log('  - Retornando todos os produtos (sem filtro)');
+    return props.availableProducts || [];
+  }
+
+  // Filtrar produtos que ainda não estão vinculados à OS
+  const linkedProductIds = props.workOrder.products.map(p => p.id);
+  const filtered = props.availableProducts.filter(product => !linkedProductIds.includes(product.id));
+  console.log('  - Produtos filtrados:', filtered);
+  return filtered;
+});
+
+const availableServicesForOS = computed(() => {
+  console.log('🔍 Debug availableServicesForOS:');
+  console.log('  - props.availableServices:', props.availableServices);
+  console.log('  - props.workOrder.services:', props.workOrder.services);
+
+  if (!props.availableServices || !props.workOrder.services) {
+    console.log('  - Retornando todos os serviços (sem filtro)');
+    return props.availableServices || [];
+  }
+
+  // Filtrar serviços que ainda não estão vinculados à OS
+  const linkedServiceIds = props.workOrder.services.map(s => s.id);
+  const filtered = props.availableServices.filter(service => !linkedServiceIds.includes(service.id));
+  console.log('  - Serviços filtrados:', filtered);
+  return filtered;
+});
+
+// Em <script setup>, todas as variáveis e funções são automaticamente exportadas
+// Não é necessário export explícito
 </script>
