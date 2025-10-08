@@ -332,6 +332,10 @@ const props = defineProps({
   serviceTypes: Array,
 });
 
+// Debug: verificar se os técnicos estão chegando
+console.log('Técnicos recebidos:', props.technicians);
+console.log('Quantidade de técnicos:', props.technicians?.length);
+
 // Estado do modal
 const showServiceTypeModal = ref(false);
 
@@ -457,8 +461,15 @@ const submit = () => {
 
 // Filtrar técnicos disponíveis para cada select (evitar duplicatas)
 const getAvailableTechnicians = (currentIndex) => {
+  console.log('getAvailableTechnicians chamado para index:', currentIndex);
+  console.log('Técnicos disponíveis:', props.technicians);
+  console.log('Form.technicians:', form.technicians);
+
   const selectedIds = form.technicians.filter((id, index) => index !== currentIndex && id !== '');
-  return props.technicians.filter(technician => !selectedIds.includes(technician.id));
+  const available = props.technicians.filter(technician => !selectedIds.includes(technician.id));
+
+  console.log('Técnicos filtrados:', available);
+  return available;
 };
 
 // Funções para gerenciar técnicos
