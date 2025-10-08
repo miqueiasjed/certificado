@@ -9,7 +9,9 @@ use App\Http\Controllers\AntidoteController;
 use App\Http\Controllers\OrganRegistrationController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ServiceOrderController;
+use App\Http\Controllers\CadastrosController;
 use App\Http\Controllers\TechnicianController;
+use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\RoomController;
@@ -51,11 +53,29 @@ Route::middleware(['auth'])->group(function () {
     // Rotas de Clientes
     Route::resource('clients', ClientController::class);
 
+    // Rotas de Cadastros
+    Route::get('/cadastros', [CadastrosController::class, 'index'])->name('cadastros.index');
+
     // Rotas de Produtos
     Route::resource('products', ProductController::class);
 
     // Rotas de Técnicos
     Route::resource('technicians', TechnicianController::class);
+
+    // Rotas de Tipos de Serviço
+    Route::resource('service-types', ServiceTypeController::class);
+
+    // Rotas de Princípio Ativo
+    Route::resource('active-ingredients', ActiveIngredientController::class);
+
+    // Rotas de Grupo Químico
+    Route::resource('chemical-groups', ChemicalGroupController::class);
+
+    // Rotas de Antídoto
+    Route::resource('antidotes', AntidoteController::class);
+
+    // Rotas de Registro Ministério da Saúde
+    Route::resource('organ-registrations', OrganRegistrationController::class);
 
     // Rotas de Serviços
     Route::resource('services', ServiceController::class);

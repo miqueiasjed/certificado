@@ -7,8 +7,8 @@ use App\Models\WorkOrder;
 use App\Models\Client;
 use App\Models\Address;
 use App\Models\Technician;
-use App\Models\Device; // Added this import
-use App\Models\Room; // Added this import
+use App\Models\Device;
+use App\Models\ServiceType;
 use App\Services\WorkOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -74,11 +74,13 @@ class WorkOrderController extends Controller
         $clients = Client::orderBy('name')->get();
         $addresses = Address::with('client')->orderBy('nickname')->get();
         $technicians = Technician::where('is_active', true)->orderBy('name')->get();
+        $serviceTypes = ServiceType::getActiveTypes();
 
         return Inertia::render('WorkOrders/Create', [
             'clients' => $clients,
             'addresses' => $addresses,
             'technicians' => $technicians,
+            'serviceTypes' => $serviceTypes,
             'preselectedClient' => $request->client_id,
             'preselectedAddress' => $request->address_id,
             'preselectedTechnician' => $request->technician_id,
@@ -164,6 +166,7 @@ class WorkOrderController extends Controller
             'client',
             'address.client',
             'technician',
+            'serviceType',
             'deviceEvents.device.room.address.client',
             'paymentDetails' => function ($query) {
                 $query->orderBy('payment_date', 'desc')->orderBy('created_at', 'desc');
@@ -180,27 +183,21 @@ class WorkOrderController extends Controller
         $clients = Client::orderBy('name')->get();
         $addresses = Address::with('client')->orderBy('nickname')->get();
         $technicians = Technician::where('is_active', true)->orderBy('name')->get();
+        $serviceTypes = ServiceType::getActiveTypes();
 
         return Inertia::render('WorkOrders/Edit', [
             'workOrder' => $workOrder,
             'clients' => $clients,
             'addresses' => $addresses,
             'technicians' => $technicians,
+            'serviceTypes' => $serviceTypes,
         ]);
     }
 
     public function update(WorkOrderRequest $request, WorkOrder $workOrder)
     {
         try {
-            \Log::info('Work Order Update Request:', [
-                'work_order_id' => $workOrder->id,
-                'request_data' => $request->all(),
-                'validated_data' => $request->validated()
-            ]);
-
             $this->workOrderService->updateWorkOrder($workOrder, $request->validated());
-
-            \Log::info('Work Order updated successfully', ['work_order_id' => $workOrder->id]);
 
             return redirect()->route('work-orders.show', $workOrder)
                 ->with('success', 'Ordem de serviço atualizada com sucesso!');

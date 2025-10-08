@@ -11,6 +11,7 @@ class AddressService
     public function getAddressesPaginated(int $perPage = 15): LengthAwarePaginator
     {
         return Address::with(['client'])
+            ->withCount('rooms')
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
     }
@@ -19,6 +20,7 @@ class AddressService
     {
         return Address::where('client_id', $clientId)
             ->where('active', true)
+            ->withCount('rooms')
             ->orderBy('nickname')
             ->get();
     }
@@ -26,6 +28,7 @@ class AddressService
     public function searchAddresses(string $search, int $perPage = 15): LengthAwarePaginator
     {
         return Address::with(['client'])
+            ->withCount('rooms')
             ->where(function ($query) use ($search) {
                 $query->where('nickname', 'like', "%{$search}%")
                     ->orWhere('street', 'like', "%{$search}%")
@@ -65,6 +68,7 @@ class AddressService
         return Address::where('city', 'like', "%{$city}%")
             ->where('active', true)
             ->with(['client'])
+            ->withCount('rooms')
             ->get();
     }
 
@@ -73,6 +77,7 @@ class AddressService
         return Address::where('state', $state)
             ->where('active', true)
             ->with(['client'])
+            ->withCount('rooms')
             ->get();
     }
 }

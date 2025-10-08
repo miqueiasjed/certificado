@@ -84,28 +84,37 @@
                 </p>
               </div>
 
-              <!-- Tipo de Ordem -->
+              <!-- Tipo de Serviço -->
               <div>
-                <label for="order_type" class="block text-sm font-medium text-gray-700 mb-2">
-                  Tipo de Ordem *
+                <label for="service_type_id" class="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de Serviço *
                 </label>
-                <select
-                  id="order_type"
-                  v-model="form.order_type"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  :class="{ 'border-red-500': form.errors.order_type }"
-                >
-                  <option value="">Selecione o tipo de ordem</option>
-                  <option value="preventive">Preventiva</option>
-                  <option value="corrective">Corretiva</option>
-                  <option value="emergency">Emergência</option>
-                  <option value="inspection">Inspeção</option>
-                  <option value="maintenance">Manutenção</option>
-                  <option value="other">Outros</option>
-                </select>
-                <p v-if="form.errors.order_type" class="mt-1 text-sm text-red-600">
-                  {{ form.errors.order_type }}
+                <div class="flex gap-2">
+                  <select
+                    id="service_type_id"
+                    v-model="form.service_type_id"
+                    required
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 h-10"
+                    :class="{ 'border-red-500': form.errors.service_type_id }"
+                  >
+                    <option value="">Selecione o tipo de serviço</option>
+                    <option v-for="serviceType in serviceTypes" :key="serviceType.id" :value="serviceType.id">
+                      {{ serviceType.name }}
+                    </option>
+                  </select>
+                  <button
+                    type="button"
+                    @click="showServiceTypeModal = true"
+                    class="h-10 w-10 text-green-600 border border-green-300 rounded-md hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors flex items-center justify-center"
+                    title="Adicionar novo tipo de serviço"
+                  >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                  </button>
+                </div>
+                <p v-if="form.errors.service_type_id" class="mt-1 text-sm text-red-600">
+                  {{ form.errors.service_type_id }}
                 </p>
               </div>
 
@@ -290,6 +299,13 @@
       @close="showTechnicianModal = false"
       @technician-created="onTechnicianCreated"
     />
+
+    <!-- Modal para criação rápida de tipo de serviço -->
+    <QuickServiceTypeModal
+      :show="showServiceTypeModal"
+      @close="showServiceTypeModal = false"
+      @service-type-created="onServiceTypeCreated"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -300,16 +316,19 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import QuickTechnicianModal from '@/Components/QuickTechnicianModal.vue';
+import QuickServiceTypeModal from '@/Components/QuickServiceTypeModal.vue';
 
 const props = defineProps({
   workOrder: Object,
   clients: Array,
   addresses: Array,
   technicians: Array,
+  serviceTypes: Array,
 });
 
 // Estado do modal
 const showTechnicianModal = ref(false);
+const showServiceTypeModal = ref(false);
 
 
 // Função para formatar data para datetime-local (sem conversão de fuso horário)
@@ -369,7 +388,7 @@ const formatDateForDateInput = (dateString) => {
 const form = useForm({
   client_id: String(props.workOrder.client_id || ''),
   technician_id: String(props.workOrder.technician_id || ''),
-  order_type: props.workOrder.order_type || '',
+  service_type_id: String(props.workOrder.service_type_id || ''),
   priority_level: props.workOrder.priority_level || '',
   scheduled_date: formatDateForDateInput(props.workOrder.scheduled_date),
   start_time: formatDateForInput(props.workOrder.start_time),
@@ -416,6 +435,15 @@ const onTechnicianCreated = (technician) => {
 
   // Recarregar a página para atualizar a lista de técnicos
   router.reload({ only: ['technicians'] });
+};
+
+// Função para lidar com criação de novo tipo de serviço
+const onServiceTypeCreated = (serviceType) => {
+  // Selecionar o tipo de serviço recém-criado
+  form.service_type_id = serviceType.id;
+
+  // Recarregar a lista de tipos de serviço
+  router.reload({ only: ['serviceTypes'] });
 };
 
 </script>

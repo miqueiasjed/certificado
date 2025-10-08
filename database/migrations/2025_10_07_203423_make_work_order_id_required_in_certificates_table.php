@@ -12,16 +12,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('certificates', function (Blueprint $table) {
+            // Primeiro, remover a foreign key existente
+            $table->dropForeign(['work_order_id']);
+
             // Tornar work_order_id obrigatório
             $table->unsignedBigInteger('work_order_id')->nullable(false)->change();
 
-            // Adicionar foreign key se não existir
-            if (!Schema::hasColumn('certificates', 'work_order_id')) {
-                $table->foreign('work_order_id')
-                    ->references('id')
-                    ->on('work_orders')
-                    ->onDelete('cascade');
-            }
+            // Recriar a foreign key com CASCADE
+            $table->foreign('work_order_id')
+                ->references('id')
+                ->on('work_orders')
+                ->onDelete('cascade');
         });
     }
 

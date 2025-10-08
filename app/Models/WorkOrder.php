@@ -15,8 +15,8 @@ class WorkOrder extends Model
         'client_id',
         'address_id',
         'technician_id',
+        'service_type_id',
         'order_number',
-        'order_type',
         'priority_level',
         'scheduled_date',
         'start_time',
@@ -78,7 +78,15 @@ class WorkOrder extends Model
      */
     public function technician(): BelongsTo
     {
-        return $this->belongsTo(Technician::class);
+        return $this->belongsTo(User::class, 'technician_id');
+    }
+
+    /**
+     * Get the service type for this work order.
+     */
+    public function serviceType(): BelongsTo
+    {
+        return $this->belongsTo(ServiceType::class);
     }
 
     /**
@@ -251,6 +259,12 @@ class WorkOrder extends Model
      */
     public function getTotalPaidAttribute(): float
     {
+        // Se os paymentDetails já foram carregados, usar eles
+        if ($this->relationLoaded('paymentDetails')) {
+            return $this->paymentDetails->whereNotNull('payment_date')->sum('amount_paid');
+        }
+
+        // Caso contrário, fazer query otimizada
         return $this->paymentDetails()->whereNotNull('payment_date')->sum('amount_paid');
     }
 

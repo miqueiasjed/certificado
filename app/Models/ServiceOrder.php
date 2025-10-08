@@ -13,9 +13,9 @@ class ServiceOrder extends Model
     protected $fillable = [
         'client_id',
         'technician_id',
+        'service_type_id',
         'order_number',
         'order_date',
-        'service_type',
         'start_time',
         'end_time',
         'description',
@@ -40,14 +40,19 @@ class ServiceOrder extends Model
         return $this->belongsTo(User::class, 'technician_id');
     }
 
+    public function serviceType(): BelongsTo
+    {
+        return $this->belongsTo(ServiceType::class);
+    }
+
     public function scopeByStatus($query, $status)
     {
         return $query->where('status', $status);
     }
 
-    public function scopeByServiceType($query, $serviceType)
+    public function scopeByServiceType($query, $serviceTypeId)
     {
-        return $query->where('service_type', $serviceType);
+        return $query->where('service_type_id', $serviceTypeId);
     }
 
     public function scopePending($query)
@@ -89,14 +94,7 @@ class ServiceOrder extends Model
 
     public function getServiceTypeBadgeAttribute(): string
     {
-        return match($this->service_type) {
-            'dedetizacao' => 'Dedetização',
-            'desinsetizacao' => 'Desinsetização',
-            'descupinizacao' => 'Descupinização',
-            'desratizacao' => 'Desratização',
-            'sanitizacao' => 'Sanitização',
-            default => 'Não definido'
-        };
+        return $this->serviceType ? $this->serviceType->name : 'Não definido';
     }
 
     public function getStatusColorAttribute(): string
@@ -112,14 +110,16 @@ class ServiceOrder extends Model
 
     public function getServiceTypeColorAttribute(): string
     {
-        return match($this->service_type) {
-            'dedetizacao' => 'red',
-            'desinsetizacao' => 'blue',
-            'descupinizacao' => 'orange',
-            'desratizacao' => 'purple',
-            'sanitizacao' => 'green',
-            default => 'gray'
-        };
+        // Cores baseadas no ID do tipo de serviço para manter consistência
+        $colors = [
+            1 => 'red',    // Dedetização
+            2 => 'blue',   // Desinsetização
+            3 => 'orange', // Descupinização
+            4 => 'purple', // Desratização
+            5 => 'green',  // Sanitização
+        ];
+
+        return $colors[$this->service_type_id] ?? 'gray';
     }
 
     public function getIsOverdueAttribute(): bool

@@ -23,8 +23,8 @@ class WorkOrderRequest extends FormRequest
             'client_id' => 'required|exists:clients,id',
             'address_id' => 'nullable|exists:addresses,id',
             'technician_id' => 'required|exists:technicians,id',
+            'service_type_id' => 'required|exists:service_types,id',
             'order_number' => 'nullable|string|max:255',
-            'order_type' => 'required|in:preventive,corrective,emergency,inspection,maintenance,other',
             'priority_level' => 'required|in:low,medium,high,urgent,emergency',
             'scheduled_date' => 'required|date',
             'start_time' => 'nullable|date_format:Y-m-d\TH:i',
@@ -57,10 +57,10 @@ class WorkOrderRequest extends FormRequest
             'address_id.exists' => 'O endereço selecionado não existe.',
             'technician_id.required' => 'O técnico é obrigatório.',
             'technician_id.exists' => 'O técnico selecionado não existe.',
+            'service_type_id.required' => 'O tipo de serviço é obrigatório.',
+            'service_type_id.exists' => 'O tipo de serviço selecionado não existe.',
             'order_number.unique' => 'Este número de ordem já está em uso.',
             'order_number.max' => 'O número da ordem não pode ter mais de 255 caracteres.',
-            'order_type.required' => 'O tipo de ordem é obrigatório.',
-            'order_type.in' => 'O tipo de ordem selecionado é inválido.',
             'priority_level.required' => 'O nível de prioridade é obrigatório.',
             'priority_level.in' => 'O nível de prioridade selecionado é inválido.',
             'scheduled_date.required' => 'A data agendada é obrigatória.',
@@ -90,8 +90,8 @@ class WorkOrderRequest extends FormRequest
             'status' => $this->status ?? 'pending',
         ]);
 
-        // Gerar número da ordem se não fornecido
-        if (!$this->order_number) {
+        // Gerar número da ordem apenas para criação (POST), não para atualização (PUT/PATCH)
+        if ($this->isMethod('POST') && !$this->order_number) {
             $this->merge([
                 'order_number' => app(\App\Services\WorkOrderService::class)->generateOrderNumber(),
             ]);
