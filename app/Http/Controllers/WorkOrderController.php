@@ -81,25 +81,8 @@ class WorkOrderController extends Controller
         $technicians = User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->get();
         $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
 
-        Log::info('Técnicos carregados para create: ' . $technicians->count());
-        Log::info('Técnicos: ' . $technicians->toJson());
-        Log::info('Query SQL executada: ' . User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->toSql());
-        Log::info('Total de usuários na tabela: ' . User::count());
-        Log::info('Usuários com is_technician = true: ' . User::where('is_technician', true)->count());
-
-        // Debug adicional
-        Log::info('Testando DB facade no controller:');
-        Log::info('DB facade - Total usuários: ' . \Illuminate\Support\Facades\DB::table('users')->count());
-        Log::info('DB facade - Técnicos: ' . \Illuminate\Support\Facades\DB::table('users')->where('is_technician', true)->count());
-
-        // Testar query raw
-        $rawTechnicians = \Illuminate\Support\Facades\DB::select('SELECT id, name, specialty FROM users WHERE is_technician = ? ORDER BY name ASC LIMIT 100', [true]);
-        Log::info('Query raw - Técnicos encontrados: ' . count($rawTechnicians));
-
-        // Debug de ambiente
-        Log::info('APP_ENV: ' . env('APP_ENV'));
-        Log::info('DB_DATABASE: ' . env('DB_DATABASE'));
-        Log::info('Conexão atual: ' . \Illuminate\Support\Facades\DB::connection()->getDatabaseName());
+        // Log simples para confirmar
+        Log::info('Enviando ' . $technicians->count() . ' técnicos para o frontend');
 
         return Inertia::render('WorkOrders/Create', [
             'clients' => $clients,
@@ -216,25 +199,8 @@ class WorkOrderController extends Controller
         $technicians = User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->get();
         $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
 
-        Log::info('Técnicos carregados para edit: ' . $technicians->count());
-        Log::info('Técnicos: ' . $technicians->toJson());
-        Log::info('Query SQL executada: ' . User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->toSql());
-        Log::info('Total de usuários na tabela: ' . User::count());
-        Log::info('Usuários com is_technician = true: ' . User::where('is_technician', true)->count());
-
-        // Debug adicional
-        Log::info('Testando DB facade no controller:');
-        Log::info('DB facade - Total usuários: ' . \Illuminate\Support\Facades\DB::table('users')->count());
-        Log::info('DB facade - Técnicos: ' . \Illuminate\Support\Facades\DB::table('users')->where('is_technician', true)->count());
-
-        // Testar query raw
-        $rawTechnicians = \Illuminate\Support\Facades\DB::select('SELECT id, name, specialty FROM users WHERE is_technician = ? ORDER BY name ASC LIMIT 100', [true]);
-        Log::info('Query raw - Técnicos encontrados: ' . count($rawTechnicians));
-
-        // Debug de ambiente
-        Log::info('APP_ENV: ' . env('APP_ENV'));
-        Log::info('DB_DATABASE: ' . env('DB_DATABASE'));
-        Log::info('Conexão atual: ' . \Illuminate\Support\Facades\DB::connection()->getDatabaseName());
+        // Log simples para confirmar
+        Log::info('Enviando ' . $technicians->count() . ' técnicos para o frontend');
 
         return Inertia::render('WorkOrders/Edit', [
             'workOrder' => $workOrder,
