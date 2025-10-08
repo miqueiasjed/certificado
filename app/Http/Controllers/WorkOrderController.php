@@ -83,6 +83,9 @@ class WorkOrderController extends Controller
 
         Log::info('Técnicos carregados para create: ' . $technicians->count());
         Log::info('Técnicos: ' . $technicians->toJson());
+        Log::info('Query SQL executada: ' . User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->toSql());
+        Log::info('Total de usuários na tabela: ' . User::count());
+        Log::info('Usuários com is_technician = true: ' . User::where('is_technician', true)->count());
 
         return Inertia::render('WorkOrders/Create', [
             'clients' => $clients,
@@ -201,6 +204,9 @@ class WorkOrderController extends Controller
 
         Log::info('Técnicos carregados para edit: ' . $technicians->count());
         Log::info('Técnicos: ' . $technicians->toJson());
+        Log::info('Query SQL executada: ' . User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->toSql());
+        Log::info('Total de usuários na tabela: ' . User::count());
+        Log::info('Usuários com is_technician = true: ' . User::where('is_technician', true)->count());
 
         return Inertia::render('WorkOrders/Edit', [
             'workOrder' => $workOrder,
