@@ -33,55 +33,68 @@
                 </p>
               </div>
 
-              <!-- Endereço (Readonly) -->
-              <div>
-                <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
-                  Endereço
-                </label>
-                <input
-                  id="address_id"
-                  type="text"
-                  readonly
-                  :value="getAddressDisplayText()"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed"
-                />
-                <p class="mt-1 text-xs text-gray-500">
-                  O endereço não pode ser alterado após a criação da ordem de serviço
-                </p>
-              </div>
-
-              <!-- Técnico -->
-              <div>
-                <label for="technician_id" class="block text-sm font-medium text-gray-700 mb-2">
-                  Técnico *
-                </label>
-                <div class="flex gap-2">
-                  <select
-                    id="technician_id"
-                    v-model="form.technician_id"
-                    required
-                    class="flex-1 h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    :class="{ 'border-red-500': form.errors.technician_id }"
-                  >
-                    <option value="">Selecione um técnico</option>
-                    <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
-                      {{ technician.name }} - {{ technician.specialty }}
-                    </option>
-                  </select>
-                  <button
-                    type="button"
-                    @click="showTechnicianModal = true"
-                    class="h-10 w-10 text-green-600 border border-green-300 rounded-md hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors flex items-center justify-center"
-                    title="Adicionar novo técnico"
-                  >
-                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                    </svg>
-                  </button>
+              <!-- Segunda linha: Endereço e Técnicos -->
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Endereço (Readonly) -->
+                <div>
+                  <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
+                    Endereço
+                  </label>
+                  <input
+                    id="address_id"
+                    type="text"
+                    readonly
+                    :value="getAddressDisplayText()"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed"
+                  />
+                  <p class="mt-1 text-xs text-gray-500">
+                    O endereço não pode ser alterado após a criação da ordem de serviço
+                  </p>
                 </div>
-                <p v-if="form.errors.technician_id" class="mt-1 text-sm text-red-600">
-                  {{ form.errors.technician_id }}
-                </p>
+
+                <!-- Técnicos -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Técnicos *
+                  </label>
+                  <div class="space-y-2">
+                    <div v-for="(technicianId, index) in form.technicians" :key="index" class="flex gap-2 items-center">
+                      <select
+                        v-model="form.technicians[index]"
+                        class="flex-1 h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        :class="{ 'border-red-500': form.errors.technicians }"
+                        required
+                      >
+                        <option value="">Selecione um técnico</option>
+                        <option v-for="technician in getAvailableTechnicians(index)" :key="technician.id" :value="technician.id">
+                          {{ technician.name }} - {{ technician.specialty }}
+                        </option>
+                      </select>
+                      <button
+                        type="button"
+                        @click="removeTechnician(index)"
+                        class="h-10 w-10 text-red-600 border border-red-300 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors flex items-center justify-center"
+                        title="Remover técnico"
+                      >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    <div class="flex gap-2">
+                      <button
+                        type="button"
+                        @click="addTechnician"
+                        class="px-3 py-2 text-green-600 border border-green-300 rounded-md hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors text-sm"
+                      >
+                        + Adicionar Técnico
+                      </button>
+                    </div>
+                  </div>
+                  <p v-if="form.errors.technicians" class="mt-1 text-sm text-red-600">
+                    {{ form.errors.technicians }}
+                  </p>
+                </div>
               </div>
 
               <!-- Tipo de Serviço -->
@@ -293,12 +306,6 @@
       </Card>
     </div>
 
-    <!-- Modal de Criação Rápida de Técnico -->
-    <QuickTechnicianModal
-      :show="showTechnicianModal"
-      @close="showTechnicianModal = false"
-      @technician-created="onTechnicianCreated"
-    />
 
     <!-- Modal para criação rápida de tipo de serviço -->
     <QuickServiceTypeModal
@@ -315,7 +322,6 @@ import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
-import QuickTechnicianModal from '@/Components/QuickTechnicianModal.vue';
 import QuickServiceTypeModal from '@/Components/QuickServiceTypeModal.vue';
 
 const props = defineProps({
@@ -327,7 +333,6 @@ const props = defineProps({
 });
 
 // Estado do modal
-const showTechnicianModal = ref(false);
 const showServiceTypeModal = ref(false);
 
 
@@ -388,6 +393,9 @@ const formatDateForDateInput = (dateString) => {
 const form = useForm({
   client_id: String(props.workOrder.client_id || ''),
   technician_id: String(props.workOrder.technician_id || ''),
+  technicians: props.workOrder.technicians && props.workOrder.technicians.length > 0
+    ? props.workOrder.technicians.map(t => t.id)
+    : (props.workOrder.technician_id ? [props.workOrder.technician_id] : ['']),
   service_type_id: String(props.workOrder.service_type_id || ''),
   priority_level: props.workOrder.priority_level || '',
   scheduled_date: formatDateForDateInput(props.workOrder.scheduled_date),
@@ -425,16 +433,41 @@ const getAddressDisplayText = () => {
 };
 
 const submit = () => {
-  form.put(`/work-orders/${props.workOrder.id}`);
+  // Filtrar técnicos vazios antes de enviar
+  const cleanedTechnicians = form.technicians.filter(id => id !== '' && id !== null);
+
+  console.log('Submitting form with data:', form.data());
+  console.log('Cleaned technicians:', cleanedTechnicians);
+  console.log('Form errors before submit:', form.errors);
+
+  // Atualizar o form com técnicos limpos
+  form.technicians = cleanedTechnicians.length > 0 ? cleanedTechnicians : [];
+
+  form.put(`/work-orders/${props.workOrder.id}`, {
+    onSuccess: () => {
+      console.log('Work order updated successfully');
+    },
+    onError: (errors) => {
+      console.error('Error updating work order - Full errors:', errors);
+      console.error('Form errors:', form.errors);
+      console.error('Error details:', JSON.stringify(errors, null, 2));
+    }
+  });
 };
 
-// Função para quando um técnico é criado
-const onTechnicianCreated = (technician) => {
-  // Selecionar automaticamente o técnico recém-criado
-  form.technician_id = technician.id;
+// Filtrar técnicos disponíveis para cada select (evitar duplicatas)
+const getAvailableTechnicians = (currentIndex) => {
+  const selectedIds = form.technicians.filter((id, index) => index !== currentIndex && id !== '');
+  return props.technicians.filter(technician => !selectedIds.includes(technician.id));
+};
 
-  // Recarregar a página para atualizar a lista de técnicos
-  router.reload({ only: ['technicians'] });
+// Funções para gerenciar técnicos
+const addTechnician = () => {
+  form.technicians.push('');
+};
+
+const removeTechnician = (index) => {
+  form.technicians.splice(index, 1);
 };
 
 // Função para lidar com criação de novo tipo de serviço

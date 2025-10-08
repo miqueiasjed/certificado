@@ -104,26 +104,49 @@
       </div>
     </div>
 
-    <!-- Aba: Técnico -->
+    <!-- Aba: Técnicos -->
     <div v-if="activeTab === 'technician'">
-      <h3 class="text-lg font-medium text-gray-900 mb-4">Técnico Responsável</h3>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label class="block text-sm font-medium text-gray-500">Nome</label>
-          <p class="mt-1 text-sm text-gray-900">{{ workOrder.technician?.name }}</p>
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Técnicos Responsáveis</h3>
+
+      <div v-if="workOrder.technicians && workOrder.technicians.length > 0" class="space-y-4">
+        <div
+          v-for="(technician, index) in workOrder.technicians"
+          :key="technician.id"
+          class="border border-gray-200 rounded-lg p-4"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <h4 class="font-medium text-gray-900">{{ technician.name }}</h4>
+              <span v-if="technician.pivot?.is_primary" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                Principal
+              </span>
+            </div>
+            <span class="text-sm text-gray-500">Técnico {{ index + 1 }}</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div v-if="technician.specialty">
+              <label class="block text-sm font-medium text-gray-500">Especialidade</label>
+              <p class="mt-1 text-sm text-gray-900">{{ technician.specialty }}</p>
+            </div>
+            <div v-if="technician.phone">
+              <label class="block text-sm font-medium text-gray-500">Telefone</label>
+              <p class="mt-1 text-sm text-gray-900">{{ technician.phone }}</p>
+            </div>
+            <div v-if="technician.email">
+              <label class="block text-sm font-medium text-gray-500">Email</label>
+              <p class="mt-1 text-sm text-gray-900">{{ technician.email }}</p>
+            </div>
+          </div>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-500">Especialidade</label>
-          <p class="mt-1 text-sm text-gray-900">{{ workOrder.technician?.specialty }}</p>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-500">Telefone</label>
-          <p class="mt-1 text-sm text-gray-900">{{ workOrder.technician?.phone }}</p>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-500">Email</label>
-          <p class="mt-1 text-sm text-gray-900">{{ workOrder.technician?.email }}</p>
-        </div>
+      </div>
+
+      <div v-else class="text-center py-8 text-gray-500">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum técnico atribuído</h3>
+        <p class="mt-1 text-sm text-gray-500">Esta ordem de serviço não possui técnicos atribuídos.</p>
       </div>
     </div>
 

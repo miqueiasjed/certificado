@@ -22,7 +22,9 @@ class WorkOrderRequest extends FormRequest
         $rules = [
             'client_id' => 'required|exists:clients,id',
             'address_id' => 'nullable|exists:addresses,id',
-            'technician_id' => 'required|exists:technicians,id',
+            'technician_id' => 'nullable|exists:users,id',
+            'technicians' => 'nullable|array',
+            'technicians.*' => 'nullable|exists:users,id',
             'service_type_id' => 'required|exists:service_types,id',
             'order_number' => 'nullable|string|max:255',
             'priority_level' => 'required|in:low,medium,high,urgent,emergency',

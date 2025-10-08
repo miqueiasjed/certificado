@@ -6,6 +6,7 @@ use App\Http\Requests\WorkOrderRequest;
 use App\Models\WorkOrder;
 use App\Models\Client;
 use App\Models\Address;
+use App\Models\User;
 use App\Models\Technician;
 use App\Models\Device;
 use App\Models\ServiceType;
@@ -77,7 +78,7 @@ class WorkOrderController extends Controller
             ->orderBy('nickname')
             ->limit(200)
             ->get();
-        $technicians = Technician::select('id', 'name')->where('is_active', true)->orderBy('name')->limit(100)->get();
+        $technicians = User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->get();
         $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
 
         return Inertia::render('WorkOrders/Create', [
@@ -112,6 +113,7 @@ class WorkOrderController extends Controller
             'client',
             'address.client',
             'technician',
+            'technicians',
             'deviceEvents' => function ($query) {
                 $query->with([
                     'device.room.address.client',
@@ -170,6 +172,7 @@ class WorkOrderController extends Controller
             'client',
             'address.client',
             'technician',
+            'technicians',
             'serviceType',
             'deviceEvents.device.room.address.client',
             'paymentDetails' => function ($query) {
@@ -190,7 +193,7 @@ class WorkOrderController extends Controller
             ->orderBy('nickname')
             ->limit(200)
             ->get();
-        $technicians = Technician::select('id', 'name')->where('is_active', true)->orderBy('name')->limit(100)->get();
+        $technicians = User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->get();
         $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
 
         return Inertia::render('WorkOrders/Edit', [
@@ -205,13 +208,19 @@ class WorkOrderController extends Controller
     public function update(WorkOrderRequest $request, WorkOrder $workOrder)
     {
         try {
+            Log::info('Updating work order', [
+                'work_order_id' => $workOrder->id,
+                'data' => $request->validated()
+            ]);
+
             $this->workOrderService->updateWorkOrder($workOrder, $request->validated());
 
             return redirect()->route('work-orders.show', $workOrder)
                 ->with('success', 'Ordem de serviço atualizada com sucesso!');
         } catch (\Exception $e) {
-            \Log::error('Error updating work order: ' . $e->getMessage(), [
+            Log::error('Error updating work order: ' . $e->getMessage(), [
                 'work_order_id' => $workOrder->id,
+                'data' => $request->all(),
                 'error' => $e->getTraceAsString()
             ]);
             return back()->withErrors(['error' => 'Erro ao atualizar ordem de serviço: ' . $e->getMessage()]);

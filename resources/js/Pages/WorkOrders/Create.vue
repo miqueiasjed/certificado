@@ -8,8 +8,8 @@
     <div class="max-w-6xl mx-auto">
       <Card>
         <form @submit.prevent="submit" class="p-6 space-y-6">
-          <!-- Primeira linha: Cliente, Endereço, Técnico -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Primeira linha: Cliente -->
+          <div class="grid grid-cols-1 gap-6">
             <!-- Cliente -->
             <div>
               <label for="client_id" class="block text-sm font-medium text-gray-700 mb-2">
@@ -33,6 +33,10 @@
               </p>
             </div>
 
+          </div>
+
+          <!-- Segunda linha: Endereço e Técnicos -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Endereço -->
             <div>
               <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
@@ -56,37 +60,47 @@
               </p>
             </div>
 
-            <!-- Técnico -->
+            <!-- Técnicos -->
             <div>
-              <label for="technician_id" class="block text-sm font-medium text-gray-700 mb-2">
-                Técnico *
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                Técnicos *
               </label>
-              <div class="flex gap-2">
-                <select
-                  id="technician_id"
-                  v-model="form.technician_id"
-                  required
-                  class="flex-1 h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  :class="{ 'border-red-500': form.errors.technician_id }"
-                >
-                  <option value="">Selecione um técnico</option>
-                  <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
-                    {{ technician.name }} - {{ technician.specialty }}
-                  </option>
-                </select>
-                <button
-                  type="button"
-                  @click="showTechnicianModal = true"
-                  class="h-10 w-10 text-green-600 border border-green-300 rounded-md hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors flex items-center justify-center"
-                  title="Adicionar novo técnico"
-                >
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                  </svg>
-                </button>
+              <div class="space-y-2">
+                <div v-for="(technicianId, index) in form.technicians" :key="index" class="flex gap-2 items-center">
+                  <select
+                    v-model="form.technicians[index]"
+                    class="flex-1 h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    :class="{ 'border-red-500': form.errors.technicians }"
+                    required
+                  >
+                    <option value="">Selecione um técnico</option>
+                    <option v-for="technician in getAvailableTechnicians(index)" :key="technician.id" :value="technician.id">
+                      {{ technician.name }} - {{ technician.specialty }}
+                    </option>
+                  </select>
+                  <button
+                    type="button"
+                    @click="removeTechnician(index)"
+                    class="h-10 w-10 text-red-600 border border-red-300 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors flex items-center justify-center"
+                    title="Remover técnico"
+                  >
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    type="button"
+                    @click="addTechnician"
+                    class="px-3 py-2 text-green-600 border border-green-300 rounded-md hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors text-sm"
+                  >
+                    + Adicionar Técnico
+                  </button>
+                </div>
               </div>
-              <p v-if="form.errors.technician_id" class="mt-1 text-sm text-red-600">
-                {{ form.errors.technician_id }}
+              <p v-if="form.errors.technicians" class="mt-1 text-sm text-red-600">
+                {{ form.errors.technicians }}
               </p>
             </div>
           </div>
@@ -288,12 +302,6 @@
       </Card>
     </div>
 
-    <!-- Modal de Criação Rápida de Técnico -->
-    <QuickTechnicianModal
-      :show="showTechnicianModal"
-      @close="showTechnicianModal = false"
-      @technician-created="onTechnicianCreated"
-    />
 
     <!-- Modal de Criação Rápida de Tipo de Serviço -->
     <QuickServiceTypeModal
@@ -310,7 +318,6 @@ import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
-import QuickTechnicianModal from '@/Components/QuickTechnicianModal.vue';
 import QuickServiceTypeModal from '@/Components/QuickServiceTypeModal.vue';
 
 const { proxy } = getCurrentInstance();
@@ -327,13 +334,13 @@ const props = defineProps({
 });
 
 // Estado do modal
-const showTechnicianModal = ref(false);
 const showServiceTypeModal = ref(false);
 
 const form = useForm({
   client_id: props.preselectedClient || '',
   address_id: props.preselectedAddress || '',
   technician_id: props.preselectedTechnician || '',
+  technicians: props.preselectedTechnician ? [props.preselectedTechnician] : [''],
   service_type_id: '',
   priority_level: '',
   scheduled_date: new Date().toISOString().slice(0, 10),
@@ -350,6 +357,12 @@ const filteredAddresses = computed(() => {
   return props.addresses.filter(address => address.client_id == form.client_id);
 });
 
+// Filtrar técnicos disponíveis para cada select (evitar duplicatas)
+const getAvailableTechnicians = (currentIndex) => {
+  const selectedIds = form.technicians.filter((id, index) => index !== currentIndex && id !== '');
+  return props.technicians.filter(technician => !selectedIds.includes(technician.id));
+};
+
 // Limpar endereço quando cliente muda
 const onClientChange = () => {
   form.address_id = '';
@@ -363,17 +376,37 @@ watch(() => form.client_id, (newValue) => {
 });
 
 const submit = () => {
-  form.post('/work-orders');
+  // Filtrar técnicos vazios antes de enviar
+  const cleanedTechnicians = form.technicians.filter(id => id !== '' && id !== null);
+
+  console.log('Submitting form with data:', form.data());
+  console.log('Cleaned technicians:', cleanedTechnicians);
+  console.log('Form errors before submit:', form.errors);
+
+  // Atualizar o form com técnicos limpos
+  form.technicians = cleanedTechnicians.length > 0 ? cleanedTechnicians : [];
+
+  form.post('/work-orders', {
+    onSuccess: () => {
+      console.log('Work order created successfully');
+    },
+    onError: (errors) => {
+      console.error('Error creating work order - Full errors:', errors);
+      console.error('Form errors:', form.errors);
+      console.error('Error details:', JSON.stringify(errors, null, 2));
+    }
+  });
 };
 
-// Função para quando um técnico é criado
-const onTechnicianCreated = (technician) => {
-  // Selecionar automaticamente o técnico recém-criado
-  form.technician_id = technician.id;
-
-  // Recarregar a página para atualizar a lista de técnicos
-  router.reload({ only: ['technicians'] });
+// Funções para gerenciar técnicos
+const addTechnician = () => {
+  form.technicians.push('');
 };
+
+const removeTechnician = (index) => {
+  form.technicians.splice(index, 1);
+};
+
 
 // Função para quando um tipo de serviço é criado
 const onServiceTypeCreated = (serviceType) => {

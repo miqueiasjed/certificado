@@ -11,7 +11,27 @@ class WorkOrderService
      */
     public function createWorkOrder(array $data): WorkOrder
     {
-        return WorkOrder::create($data);
+        $technicians = $data['technicians'] ?? [];
+        unset($data['technicians']);
+
+        $workOrder = WorkOrder::create($data);
+
+        if (!empty($technicians)) {
+            // Filtrar técnicos vazios
+            $technicians = array_filter($technicians, function($id) {
+                return !empty($id);
+            });
+
+            if (!empty($technicians)) {
+                $syncData = [];
+                foreach ($technicians as $index => $technicianId) {
+                    $syncData[$technicianId] = ['is_primary' => $index === 0];
+                }
+                $workOrder->technicians()->sync($syncData);
+            }
+        }
+
+        return $workOrder;
     }
 
     /**
@@ -19,7 +39,27 @@ class WorkOrderService
      */
     public function updateWorkOrder(WorkOrder $workOrder, array $data): bool
     {
-        return $workOrder->update($data);
+        $technicians = $data['technicians'] ?? [];
+        unset($data['technicians']);
+
+        $result = $workOrder->update($data);
+
+        if (!empty($technicians)) {
+            // Filtrar técnicos vazios
+            $technicians = array_filter($technicians, function($id) {
+                return !empty($id);
+            });
+
+            if (!empty($technicians)) {
+                $syncData = [];
+                foreach ($technicians as $index => $technicianId) {
+                    $syncData[$technicianId] = ['is_primary' => $index === 0];
+                }
+                $workOrder->technicians()->sync($syncData);
+            }
+        }
+
+        return $result;
     }
 
     /**
