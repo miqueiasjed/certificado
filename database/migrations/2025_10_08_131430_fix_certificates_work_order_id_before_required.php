@@ -29,8 +29,20 @@ return new class extends Migration
 
         // Agora podemos tornar a coluna obrigatória
         Schema::table('certificates', function (Blueprint $table) {
-            // Remover a foreign key existente
-            $table->dropForeign(['work_order_id']);
+            // Verificar se a foreign key existe antes de tentar removê-la
+            $foreignKeys = DB::select("
+                SELECT CONSTRAINT_NAME
+                FROM information_schema.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'certificates'
+                AND COLUMN_NAME = 'work_order_id'
+                AND CONSTRAINT_NAME != 'PRIMARY'
+            ");
+
+            // Remover a foreign key existente se ela existir
+            foreach ($foreignKeys as $foreignKey) {
+                $table->dropForeign([$foreignKey->CONSTRAINT_NAME]);
+            }
 
             // Tornar work_order_id obrigatório
             $table->unsignedBigInteger('work_order_id')->nullable(false)->change();
