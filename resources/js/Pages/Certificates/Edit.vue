@@ -75,6 +75,25 @@
                 />
                 <p v-if="errors.warranty" class="mt-1 text-sm text-red-600">{{ errors.warranty }}</p>
               </div>
+
+              <div>
+                <label for="work_order_id" class="block text-sm font-medium text-gray-700 mb-1">
+                  Ordem de Serviço *
+                </label>
+                <select
+                  id="work_order_id"
+                  v-model="form.work_order_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-500': errors.work_order_id }"
+                  required
+                >
+                  <option value="">Selecione uma OS</option>
+                  <option v-for="wo in workOrders" :key="wo.id" :value="wo.id">
+                    {{ wo.order_number }} - {{ wo.client.name }} - {{ new Date(wo.scheduled_date).toLocaleDateString('pt-BR') }}
+                  </option>
+                </select>
+                <p v-if="errors.work_order_id" class="mt-1 text-sm text-red-600">{{ errors.work_order_id }}</p>
+              </div>
             </div>
           </div>
         </Card>
@@ -275,6 +294,7 @@ const props = defineProps({
   products: Array,
   services: Array,
   technicians: Array,
+  workOrders: Array,
   errors: Object,
 });
 
@@ -288,6 +308,7 @@ const formatDateForInput = (dateString) => {
 
 const form = useForm({
   client_id: props.certificate.client_id || '',
+  work_order_id: props.certificate.work_order_id || '',
   products: props.certificate.products ? props.certificate.products.map(p => ({ product_id: p.id })) : [],
   services: props.certificate.services ? props.certificate.services.map(s => ({ service_id: s.id })) : [],
   execution_date: props.certificate.execution_date ? formatDateForInput(props.certificate.execution_date) : '',
@@ -319,7 +340,11 @@ const removeService = (index) => {
 const submitForm = () => {
   form.put(`/certificates/${props.certificate.id}`, {
     onSuccess: () => {
-      // Sucesso
+      // Deixar o controller fazer o redirecionamento
+      // O controller já redireciona para certificates.show
+    },
+    onError: (errors) => {
+      console.error('Erro ao atualizar certificado:', errors);
     },
   });
 };

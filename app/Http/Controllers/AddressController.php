@@ -35,7 +35,7 @@ class AddressController extends Controller
 
     public function create()
     {
-        $clients = \App\Models\Client::orderBy('name')->get();
+        $clients = \App\Models\Client::orderBy('name')->limit(500)->get();
 
         return Inertia::render('Addresses/Create', [
             'clients' => $clients,
@@ -67,7 +67,7 @@ class AddressController extends Controller
 
     public function edit(Address $address)
     {
-        $clients = \App\Models\Client::orderBy('name')->get();
+        $clients = \App\Models\Client::orderBy('name')->limit(500)->get();
 
         return Inertia::render('Addresses/Edit', [
             'address' => $address,

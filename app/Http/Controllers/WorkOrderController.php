@@ -71,9 +71,9 @@ class WorkOrderController extends Controller
 
     public function create(Request $request)
     {
-        $clients = Client::orderBy('name')->get();
-        $addresses = Address::with('client')->orderBy('nickname')->get();
-        $technicians = Technician::where('is_active', true)->orderBy('name')->get();
+        $clients = Client::orderBy('name')->limit(500)->get();
+        $addresses = Address::with('client')->orderBy('nickname')->limit(500)->get();
+        $technicians = Technician::where('is_active', true)->orderBy('name')->limit(200)->get();
         $serviceTypes = ServiceType::getActiveTypes();
 
         return Inertia::render('WorkOrders/Create', [
@@ -180,9 +180,9 @@ class WorkOrderController extends Controller
 
         // Accessors já estão incluídos automaticamente via $appends no modelo
 
-        $clients = Client::orderBy('name')->get();
-        $addresses = Address::with('client')->orderBy('nickname')->get();
-        $technicians = Technician::where('is_active', true)->orderBy('name')->get();
+        $clients = Client::orderBy('name')->limit(500)->get();
+        $addresses = Address::with('client')->orderBy('nickname')->limit(500)->get();
+        $technicians = Technician::where('is_active', true)->orderBy('name')->limit(200)->get();
         $serviceTypes = ServiceType::getActiveTypes();
 
         return Inertia::render('WorkOrders/Edit', [
@@ -317,7 +317,7 @@ class WorkOrderController extends Controller
         Log::info('GenerateReceipt called', [
             'work_order_id' => $workOrder->id,
             'payment_status' => $workOrder->payment_status,
-            'user_id' => auth()->id() ?? 'guest'
+            'user_id' => 'user_' . (auth()->id() ?? 'guest')
         ]);
 
         // Verificar se o status é "paid"

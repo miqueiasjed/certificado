@@ -41,13 +41,13 @@ class CertificateController extends Controller
 
     public function create()
     {
-        $clients = Client::orderBy('name')->get();
-        $products = Product::orderBy('name')->get();
-        $services = Service::where('is_active', true)->orderBy('name')->get();
-        $activeIngredients = \App\Models\ActiveIngredient::orderBy('name')->get();
-        $chemicalGroups = \App\Models\ChemicalGroup::orderBy('name')->get();
-        $antidotes = \App\Models\Antidote::orderBy('name')->get();
-        $organRegistrations = \App\Models\OrganRegistration::orderBy('record')->get();
+        $clients = Client::orderBy('name')->limit(500)->get();
+        $products = Product::orderBy('name')->limit(500)->get();
+        $services = Service::where('is_active', true)->orderBy('name')->limit(500)->get();
+        $activeIngredients = \App\Models\ActiveIngredient::orderBy('name')->limit(200)->get();
+        $chemicalGroups = \App\Models\ChemicalGroup::orderBy('name')->limit(200)->get();
+        $antidotes = \App\Models\Antidote::orderBy('name')->limit(200)->get();
+        $organRegistrations = \App\Models\OrganRegistration::orderBy('record')->limit(200)->get();
 
         return Inertia::render('Certificates/Create', [
             'clients' => $clients,
@@ -120,15 +120,23 @@ class CertificateController extends Controller
         // Carregar relacionamentos do certificado
         $certificate->load(['client', 'products', 'services']);
 
-        $clients = Client::orderBy('name')->get();
-        $products = Product::orderBy('name')->get();
-        $services = Service::where('is_active', true)->orderBy('name')->get();
+        $clients = Client::orderBy('name')->limit(500)->get();
+        $products = Product::orderBy('name')->limit(500)->get();
+        $services = Service::where('is_active', true)->orderBy('name')->limit(500)->get();
+
+        // Otimizar: carregar apenas work orders do cliente do certificado ou limitar a quantidade
+        $workOrders = WorkOrder::with('client')
+            ->where('client_id', $certificate->client_id)
+            ->orderBy('order_number')
+            ->limit(100)
+            ->get();
 
         return Inertia::render('Certificates/Edit', [
             'certificate' => $certificate,
             'clients' => $clients,
             'products' => $products,
             'services' => $services,
+            'workOrders' => $workOrders,
         ]);
     }
 

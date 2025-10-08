@@ -42,13 +42,13 @@ class DeviceController extends Controller
             $query->where('bait_type_id', $request->bait_type_id);
         }
 
-        $devices = $query->paginate(15)->withQueryString();
+        $devices = $query->paginate(15);
 
         // Carregar dados para filtros
-        $clients = \App\Models\Client::orderBy('name')->get();
-        $addresses = \App\Models\Address::with('client')->orderBy('nickname')->get();
-        $rooms = \App\Models\Room::with('address.client')->orderBy('name')->get();
-        $baitTypes = \App\Models\BaitType::orderBy('name')->get();
+        $clients = \App\Models\Client::orderBy('name')->limit(500)->get();
+        $addresses = \App\Models\Address::with('client')->orderBy('nickname')->limit(500)->get();
+        $rooms = \App\Models\Room::with('address.client')->orderBy('name')->limit(500)->get();
+        $baitTypes = \App\Models\BaitType::orderBy('name')->limit(200)->get();
 
         return Inertia::render('Devices/Index', [
             'devices' => $devices,
@@ -62,8 +62,8 @@ class DeviceController extends Controller
 
     public function create()
     {
-        $rooms = \App\Models\Room::with('address.client')->orderBy('name')->get();
-        $baitTypes = \App\Models\BaitType::orderBy('name')->get();
+        $rooms = \App\Models\Room::with('address.client')->orderBy('name')->limit(500)->get();
+        $baitTypes = \App\Models\BaitType::orderBy('name')->limit(200)->get();
 
         return Inertia::render('Devices/Create', [
             'rooms' => $rooms,
@@ -93,10 +93,10 @@ class DeviceController extends Controller
         // Carregar o dispositivo com todos os relacionamentos necessários
         $device->load(['room.address.client', 'baitType']);
 
-        $rooms = \App\Models\Room::with('address.client')->orderBy('name')->get();
+        $rooms = \App\Models\Room::with('address.client')->orderBy('name')->limit(500)->get();
 
         // Carregar tipos de isca para o formulário de edição
-        $baitTypes = \App\Models\BaitType::orderBy('name')->get();
+        $baitTypes = \App\Models\BaitType::orderBy('name')->limit(200)->get();
 
         return Inertia::render('Devices/Edit', [
             'device' => $device,
