@@ -100,7 +100,7 @@ class WorkOrderRequest extends FormRequest
                 $mergeData['order_number'] = 'OS' . date('YmdHis');
             }
         }
-        
+
         $this->merge($mergeData);
     }
 }

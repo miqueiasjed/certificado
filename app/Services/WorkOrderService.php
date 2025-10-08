@@ -160,7 +160,7 @@ class WorkOrderService
         $maxId = WorkOrder::max('id') ?? 0;
         $attempts = 0;
         $maxAttempts = 10; // Limitar tentativas para evitar loop infinito
-        
+
         do {
             $nextId = $maxId + 1 + $attempts;
             $orderNumber = 'OS' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
@@ -173,13 +173,13 @@ class WorkOrderService
             }
 
             $attempts++;
-            
+
             // Se atingir o limite de tentativas, usar timestamp para garantir unicidade
             if ($attempts >= $maxAttempts) {
                 return 'OS' . str_pad($nextId, 6, '0', STR_PAD_LEFT) . '-' . time();
             }
         } while ($attempts < $maxAttempts);
-        
+
         // Fallback: usar timestamp
         return 'OS' . date('YmdHis');
     }
