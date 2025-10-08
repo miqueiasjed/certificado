@@ -71,10 +71,14 @@ class WorkOrderController extends Controller
 
     public function create(Request $request)
     {
-        $clients = Client::orderBy('name')->limit(500)->get();
-        $addresses = Address::with('client')->orderBy('nickname')->limit(500)->get();
-        $technicians = Technician::where('is_active', true)->orderBy('name')->limit(200)->get();
-        $serviceTypes = ServiceType::getActiveTypes();
+        // Otimizar carregamento para evitar timeout
+        $clients = Client::select('id', 'name')->orderBy('name')->limit(200)->get();
+        $addresses = Address::select('id', 'client_id', 'nickname', 'street', 'number', 'city', 'state')
+            ->orderBy('nickname')
+            ->limit(200)
+            ->get();
+        $technicians = Technician::select('id', 'name')->where('is_active', true)->orderBy('name')->limit(100)->get();
+        $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
 
         return Inertia::render('WorkOrders/Create', [
             'clients' => $clients,
@@ -180,10 +184,14 @@ class WorkOrderController extends Controller
 
         // Accessors já estão incluídos automaticamente via $appends no modelo
 
-        $clients = Client::orderBy('name')->limit(500)->get();
-        $addresses = Address::with('client')->orderBy('nickname')->limit(500)->get();
-        $technicians = Technician::where('is_active', true)->orderBy('name')->limit(200)->get();
-        $serviceTypes = ServiceType::getActiveTypes();
+        // Otimizar carregamento para evitar timeout
+        $clients = Client::select('id', 'name')->orderBy('name')->limit(200)->get();
+        $addresses = Address::select('id', 'client_id', 'nickname', 'street', 'number', 'city', 'state')
+            ->orderBy('nickname')
+            ->limit(200)
+            ->get();
+        $technicians = Technician::select('id', 'name')->where('is_active', true)->orderBy('name')->limit(100)->get();
+        $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
 
         return Inertia::render('WorkOrders/Edit', [
             'workOrder' => $workOrder,

@@ -156,9 +156,13 @@ class WorkOrderService
      */
     public function generateOrderNumber(): string
     {
+        // Otimização: usar max('id') ao invés de orderBy().first()
+        $maxId = WorkOrder::max('id') ?? 0;
+        $attempts = 0;
+        $maxAttempts = 10; // Limitar tentativas para evitar loop infinito
+        
         do {
-            $lastOrder = WorkOrder::orderBy('id', 'desc')->first();
-            $nextId = $lastOrder ? $lastOrder->id + 1 : 1;
+            $nextId = $maxId + 1 + $attempts;
             $orderNumber = 'OS' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
 
             // Check if this order number already exists
@@ -168,9 +172,16 @@ class WorkOrderService
                 return $orderNumber;
             }
 
-            // If exists, increment and try again
-            $nextId++;
-        } while (true);
+            $attempts++;
+            
+            // Se atingir o limite de tentativas, usar timestamp para garantir unicidade
+            if ($attempts >= $maxAttempts) {
+                return 'OS' . str_pad($nextId, 6, '0', STR_PAD_LEFT) . '-' . time();
+            }
+        } while ($attempts < $maxAttempts);
+        
+        // Fallback: usar timestamp
+        return 'OS' . date('YmdHis');
     }
 
     /**

@@ -85,16 +85,22 @@ class WorkOrderRequest extends FormRequest
     protected function prepareForValidation()
     {
         // Definir valores padrão para campos opcionais
-        $this->merge([
+        $mergeData = [
             'active' => $this->boolean('active', true),
             'status' => $this->status ?? 'pending',
-        ]);
+        ];
 
         // Gerar número da ordem apenas para criação (POST), não para atualização (PUT/PATCH)
-        if ($this->isMethod('POST') && !$this->order_number) {
-            $this->merge([
-                'order_number' => app(\App\Services\WorkOrderService::class)->generateOrderNumber(),
-            ]);
+        // E apenas se não foi fornecido
+        if ($this->isMethod('POST') && !$this->filled('order_number')) {
+            try {
+                $mergeData['order_number'] = app(\App\Services\WorkOrderService::class)->generateOrderNumber();
+            } catch (\Exception $e) {
+                // Em caso de erro, usar fallback com timestamp
+                $mergeData['order_number'] = 'OS' . date('YmdHis');
+            }
         }
+        
+        $this->merge($mergeData);
     }
 }
