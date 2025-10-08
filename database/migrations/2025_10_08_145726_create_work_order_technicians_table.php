@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('technician_id')->constrained('users')->onDelete('cascade');
             $table->boolean('is_primary')->default(false); // Para marcar o técnico principal
             $table->timestamps();
-            
+
             // Evitar duplicatas
             $table->unique(['work_order_id', 'technician_id']);
         });
