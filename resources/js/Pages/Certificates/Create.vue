@@ -326,22 +326,12 @@ const form = useForm({
 
 
 
-const loadWorkOrders = async (clientId) => {
-  workOrders.value = [];
-  if (!clientId) return;
-  try {
-    const resp = await fetch(`/work-orders/client/${clientId}`);
-    workOrders.value = await resp.json();
-  } catch (e) {}
-};
-
 onMounted(() => {
-  if (form.client_id) loadWorkOrders(form.client_id);
+  // Inicialização do componente
 });
 
 watch(() => form.client_id, (val) => {
-  form.work_order_id = '';
-  loadWorkOrders(val);
+  loadClientAddresses();
 });
 
 const addProduct = () => {

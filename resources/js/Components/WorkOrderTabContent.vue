@@ -3587,17 +3587,18 @@ const addProductToOS = async () => {
   isSubmittingProduct.value = true;
 
   try {
+    const formData = new FormData();
+    formData.append('quantity', productForm.quantity);
+    formData.append('observations', productForm.observations || '');
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
     const response = await fetch(`/work-orders/${props.workOrder.id}/products/${productForm.product_id}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
       },
-      body: JSON.stringify({
-        quantity: productForm.quantity,
-        observations: productForm.observations
-      })
+      body: formData
     });
 
     const result = await response.json();
@@ -3627,16 +3628,17 @@ const addServiceToOS = async () => {
   isSubmittingService.value = true;
 
   try {
+    const formData = new FormData();
+    formData.append('observations', serviceForm.observations || '');
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
     const response = await fetch(`/work-orders/${props.workOrder.id}/services/${serviceForm.service_id}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
       },
-      body: JSON.stringify({
-        observations: serviceForm.observations
-      })
+      body: formData
     });
 
     const result = await response.json();
@@ -3681,14 +3683,19 @@ const updateProductInOS = async () => {
   isUpdatingProduct.value = true;
 
   try {
+    const formData = new FormData();
+    formData.append('quantity', editProductForm.quantity);
+    formData.append('observations', editProductForm.observations || '');
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    formData.append('_method', 'PUT');
+
     const response = await fetch(`/work-orders/${props.workOrder.id}/products/${selectedProduct.value.id}`, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
       },
-      body: JSON.stringify(editProductForm.data())
+      body: formData
     });
 
     const result = await response.json();
@@ -3715,14 +3722,18 @@ const updateServiceInOS = async () => {
   isUpdatingService.value = true;
 
   try {
+    const formData = new FormData();
+    formData.append('observations', editServiceForm.observations || '');
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    formData.append('_method', 'PUT');
+
     const response = await fetch(`/work-orders/${props.workOrder.id}/services/${selectedService.value.id}`, {
-      method: 'PUT',
+      method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
       },
-      body: JSON.stringify(editServiceForm.data())
+      body: formData
     });
 
     const result = await response.json();
@@ -3749,12 +3760,17 @@ const removeProductFromOS = async (product) => {
   }
 
   try {
+    const formData = new FormData();
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    formData.append('_method', 'DELETE');
+
     const response = await fetch(`/work-orders/${props.workOrder.id}/products/${product.id}`, {
-      method: 'DELETE',
+      method: 'POST',
       headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Accept': 'application/json'
-      }
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
     });
 
     const result = await response.json();
@@ -3777,12 +3793,17 @@ const removeServiceFromOS = async (service) => {
   }
 
   try {
+    const formData = new FormData();
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    formData.append('_method', 'DELETE');
+
     const response = await fetch(`/work-orders/${props.workOrder.id}/services/${service.id}`, {
-      method: 'DELETE',
+      method: 'POST',
       headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Accept': 'application/json'
-      }
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
     });
 
     const result = await response.json();
