@@ -29,6 +29,15 @@ class CadastrosController extends Controller
                 'count' => \App\Models\User::where('is_technician', true)->count(),
             ],
             [
+                'id' => 'services',
+                'name' => 'Serviços',
+                'description' => 'Gerenciar serviços disponíveis',
+                'route' => '/services',
+                'icon' => 'cog',
+                'color' => 'purple',
+                'count' => \App\Models\Service::count(),
+            ],
+            [
                 'id' => 'service-types',
                 'name' => 'Tipos de Serviço',
                 'description' => 'Gerenciar tipos de ordem de serviço',

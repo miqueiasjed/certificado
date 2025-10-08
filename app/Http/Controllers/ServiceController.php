@@ -42,6 +42,16 @@ class ServiceController extends Controller
     {
         $service = $this->serviceService->createService($request->validated());
 
+        // Se for uma requisição do modal (identificada por um parâmetro especial), retorna JSON
+        if ($request->has('_from_modal') || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Serviço criado com sucesso!',
+                'service' => $service
+            ]);
+        }
+
+        // Caso contrário, redireciona normalmente
         return redirect()->route('services.index')
             ->with('success', 'Serviço criado com sucesso!');
     }
