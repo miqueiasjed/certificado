@@ -81,6 +81,9 @@ class WorkOrderController extends Controller
         $technicians = User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->get();
         $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
 
+        Log::info('Técnicos carregados para create: ' . $technicians->count());
+        Log::info('Técnicos: ' . $technicians->toJson());
+
         return Inertia::render('WorkOrders/Create', [
             'clients' => $clients,
             'addresses' => $addresses,
@@ -195,6 +198,9 @@ class WorkOrderController extends Controller
             ->get();
         $technicians = User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->get();
         $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
+
+        Log::info('Técnicos carregados para edit: ' . $technicians->count());
+        Log::info('Técnicos: ' . $technicians->toJson());
 
         return Inertia::render('WorkOrders/Edit', [
             'workOrder' => $workOrder,
