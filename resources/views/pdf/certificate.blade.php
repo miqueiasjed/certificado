@@ -233,7 +233,7 @@
         <p><strong>Endereço:</strong>
             @php($address = $certificate->workOrder->address ?? null)
             @if($address)
-                {{ $address->street }}, {{ $address->number }} - {{ $address->district }}, {{ $address->city }}/{{ $address->state }} - CEP: {{ $address->zip }}
+                {{ $address->street }}, {{ $address->number }}@if($address->neighborhood) - {{ $address->neighborhood }}@endif, {{ $address->city }}/{{ $address->state }}@if($address->zip_code) - CEP: {{ $address->zip_code }}@endif
             @else
                 Não informado
             @endif
