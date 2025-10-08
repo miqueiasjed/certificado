@@ -78,11 +78,8 @@ class WorkOrderController extends Controller
             ->orderBy('nickname')
             ->limit(200)
             ->get();
-        $technicians = User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->get();
+        $technicians = Technician::select('id', 'name', 'specialty')->where('is_active', true)->orderBy('name')->limit(100)->get();
         $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
-
-        // Log simples para confirmar
-        Log::info('Enviando ' . $technicians->count() . ' técnicos para o frontend');
 
         return Inertia::render('WorkOrders/Create', [
             'clients' => $clients,
@@ -196,15 +193,8 @@ class WorkOrderController extends Controller
             ->orderBy('nickname')
             ->limit(200)
             ->get();
-        $technicians = User::select('id', 'name', 'specialty')->where('is_technician', true)->orderBy('name')->limit(100)->get();
+        $technicians = Technician::select('id', 'name', 'specialty')->where('is_active', true)->orderBy('name')->limit(100)->get();
         $serviceTypes = ServiceType::select('id', 'name', 'slug')->where('active', true)->orderBy('sort_order')->orderBy('name')->limit(50)->get();
-
-        // Debug específico
-        Log::info('Debug técnicos no controller edit:');
-        Log::info('Total usuários: ' . User::count());
-        Log::info('Usuários com is_technician = true: ' . User::where('is_technician', true)->count());
-        Log::info('Query SQL: ' . User::select('id', 'name', 'specialty')->where('is_technician', true)->toSql());
-        Log::info('Enviando ' . $technicians->count() . ' técnicos para o frontend');
 
         return Inertia::render('WorkOrders/Edit', [
             'workOrder' => $workOrder,
