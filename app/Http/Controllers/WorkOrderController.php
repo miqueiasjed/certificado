@@ -166,7 +166,7 @@ class WorkOrderController extends Controller
         // Carregar produtos e serviços disponíveis
         $availableProducts = Product::select('id', 'name')->orderBy('name')->get();
         $availableServices = Service::select('id', 'name', 'description')->where('is_active', true)->orderBy('name')->get();
-        
+
         // Carregar técnicos disponíveis
         $availableTechnicians = Technician::select('id', 'name', 'specialty', 'phone', 'email')->orderBy('name')->get();
 
@@ -350,7 +350,7 @@ class WorkOrderController extends Controller
         Log::info('GenerateReceipt called', [
             'work_order_id' => $workOrder->id,
             'payment_status' => $workOrder->payment_status,
-            'user_id' => 'user_' . (auth()->check() ? auth()->id() : 'guest')
+            'user_id' => 'user_authenticated'
         ]);
 
         // Verificar se o status é "paid"

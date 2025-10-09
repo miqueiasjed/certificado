@@ -122,7 +122,7 @@ Route::delete('/work-orders/{workOrder}/products/{product}', [WorkOrderControlle
        Route::post('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'addService'])->name('work-orders.services.add');
        Route::put('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'updateService'])->name('work-orders.services.update');
        Route::delete('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'removeService'])->name('work-orders.services.remove');
-       
+
        // Rotas para gerenciar técnicos das work orders
        Route::post('/work-orders/{workOrder}/technicians/{technician}', [WorkOrderController::class, 'addTechnician'])->name('work-orders.technicians.add');
        Route::delete('/work-orders/{workOrder}/technicians/{technician}', [WorkOrderController::class, 'removeTechnician'])->name('work-orders.technicians.remove');
