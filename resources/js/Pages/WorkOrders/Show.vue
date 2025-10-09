@@ -130,6 +130,7 @@
               :available-addresses="availableAddresses"
               :available-products="availableProducts"
               :available-services="availableServices"
+              :available-technicians="availableTechnicians"
               @show-device-event-modal="showDeviceEventModal = true"
               @show-pest-sighting-modal="showPestSightingModal = true"
             />
@@ -404,6 +405,7 @@ import Alert from '@/Components/Alert.vue';
     availableAddresses: Array,
     availableProducts: Array,
     availableServices: Array,
+    availableTechnicians: Array,
   });
 
   const activeTab = ref('financial');
@@ -422,7 +424,7 @@ import Alert from '@/Components/Alert.vue';
     { name: 'financial', label: 'Informações Financeiras' },
     { name: 'details', label: 'Detalhes da Ordem' },
     { name: 'products-services', label: 'Produtos e Serviços' },
-    { name: 'technician', label: 'Técnico' },
+    { name: 'technician', label: 'Técnicos' },
     { name: 'device-events', label: 'Eventos de Dispositivos', count: props.workOrder?.device_events?.length || 0 },
     { name: 'pest-sightings', label: 'Avistamentos de Pragas', count: props.workOrder?.pest_sightings?.length || 0 },
   ];

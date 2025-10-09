@@ -166,6 +166,9 @@ class WorkOrderController extends Controller
         // Carregar produtos e serviços disponíveis
         $availableProducts = Product::select('id', 'name')->orderBy('name')->get();
         $availableServices = Service::select('id', 'name', 'description')->where('is_active', true)->orderBy('name')->get();
+        
+        // Carregar técnicos disponíveis
+        $availableTechnicians = Technician::select('id', 'name', 'specialty', 'phone', 'email')->orderBy('name')->get();
 
         return Inertia::render('WorkOrders/Show', [
             'workOrder' => $workOrder,
@@ -173,6 +176,7 @@ class WorkOrderController extends Controller
             'availableAddresses' => $availableAddresses,
             'availableProducts' => $availableProducts,
             'availableServices' => $availableServices,
+            'availableTechnicians' => $availableTechnicians,
         ]);
     }
 
@@ -346,7 +350,7 @@ class WorkOrderController extends Controller
         Log::info('GenerateReceipt called', [
             'work_order_id' => $workOrder->id,
             'payment_status' => $workOrder->payment_status,
-            'user_id' => 'user_' . (auth()->id() ?? 'guest')
+            'user_id' => 'user_' . (auth()->check() ? auth()->id() : 'guest')
         ]);
 
         // Verificar se o status é "paid"
@@ -598,6 +602,57 @@ class WorkOrderController extends Controller
 
         } catch (\Exception $e) {
             return response()->json(['message' => 'Erro ao remover serviço: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Adicionar técnico à OS
+     */
+    public function addTechnician(Request $request, WorkOrder $workOrder, Technician $technician)
+    {
+        try {
+            $request->validate([
+                'is_primary' => 'nullable|boolean'
+            ]);
+
+            if ($workOrder->technicians()->where('technician_id', $technician->id)->exists()) {
+                return response()->json(['message' => 'Técnico já está vinculado a esta ordem de serviço'], 400);
+            }
+
+            // Se está marcando como principal, remover principal de outros técnicos
+            if ($request->boolean('is_primary')) {
+                $workOrder->technicians()->updateExistingPivot($workOrder->technicians->pluck('id')->toArray(), ['is_primary' => false]);
+            }
+
+            $workOrder->technicians()->attach($technician->id, [
+                'is_primary' => $request->boolean('is_primary', false),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            return response()->json(['message' => 'Técnico adicionado à OS com sucesso']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao adicionar técnico: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Remover técnico da OS
+     */
+    public function removeTechnician(Request $request, WorkOrder $workOrder, Technician $technician)
+    {
+        try {
+            if (!$workOrder->technicians()->where('technician_id', $technician->id)->exists()) {
+                return response()->json(['message' => 'Técnico não encontrado nesta ordem de serviço'], 404);
+            }
+
+            $workOrder->technicians()->detach($technician->id);
+
+            return response()->json(['message' => 'Técnico removido com sucesso']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao remover técnico: ' . $e->getMessage()], 500);
         }
     }
 }

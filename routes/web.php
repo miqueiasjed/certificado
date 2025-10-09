@@ -119,9 +119,13 @@ Route::middleware(['auth'])->group(function () {
 Route::post('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'addProduct'])->name('work-orders.products.add');
 Route::put('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'updateProduct'])->name('work-orders.products.update');
 Route::delete('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'removeProduct'])->name('work-orders.products.remove');
-Route::post('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'addService'])->name('work-orders.services.add');
-Route::put('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'updateService'])->name('work-orders.services.update');
-Route::delete('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'removeService'])->name('work-orders.services.remove');
+       Route::post('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'addService'])->name('work-orders.services.add');
+       Route::put('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'updateService'])->name('work-orders.services.update');
+       Route::delete('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'removeService'])->name('work-orders.services.remove');
+       
+       // Rotas para gerenciar técnicos das work orders
+       Route::post('/work-orders/{workOrder}/technicians/{technician}', [WorkOrderController::class, 'addTechnician'])->name('work-orders.technicians.add');
+       Route::delete('/work-orders/{workOrder}/technicians/{technician}', [WorkOrderController::class, 'removeTechnician'])->name('work-orders.technicians.remove');
 
     // Rotas de Eventos de Dispositivos
     Route::resource('device-events', DeviceEventController::class);
