@@ -27,12 +27,52 @@ class ServiceOrderService
 
     public function createServiceOrder(array $data): ServiceOrder
     {
-        return ServiceOrder::create($data);
+        $rooms = $data['rooms'] ?? [];
+        unset($data['rooms']);
+
+        $serviceOrder = ServiceOrder::create($data);
+
+        if (!empty($rooms)) {
+            $this->syncRooms($serviceOrder, $rooms);
+        }
+
+        return $serviceOrder;
     }
 
     public function updateServiceOrder(ServiceOrder $serviceOrder, array $data): bool
     {
-        return $serviceOrder->update($data);
+        $rooms = $data['rooms'] ?? [];
+        unset($data['rooms']);
+
+        $updated = $serviceOrder->update($data);
+
+        if (isset($rooms)) {
+            $this->syncRooms($serviceOrder, $rooms);
+        }
+
+        return $updated;
+    }
+
+    /**
+     * Sincroniza os cômodos atendidos na ordem de serviço
+     *
+     * @param ServiceOrder $serviceOrder
+     * @param array $rooms Array de cômodos com formato: [['id' => 1, 'observation' => 'obs'], ...]
+     * @return void
+     */
+    protected function syncRooms(ServiceOrder $serviceOrder, array $rooms): void
+    {
+        $syncData = [];
+
+        foreach ($rooms as $room) {
+            if (isset($room['id'])) {
+                $syncData[$room['id']] = [
+                    'observation' => $room['observation'] ?? null
+                ];
+            }
+        }
+
+        $serviceOrder->rooms()->sync($syncData);
     }
 
     public function deleteServiceOrder(ServiceOrder $serviceOrder): bool

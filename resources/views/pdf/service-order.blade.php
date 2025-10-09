@@ -160,15 +160,14 @@
 
     @if($serviceOrder->rooms->count() > 0)
     <div class="section">
-        <div class="section-title">CÔMODOS DO AMBIENTE</div>
+        <div class="section-title">CÔMODOS ATENDIDOS</div>
         <div class="rooms-section">
             @foreach($serviceOrder->rooms as $room)
             <div class="item">
                 <div class="item-title">{{ $room->name }}</div>
-                @if($room->description)
-                <div>Descrição: {{ $room->description }}</div>
+                @if($room->pivot->observation)
+                <div><strong>Observação do atendimento:</strong> {{ $room->pivot->observation }}</div>
                 @endif
-                <div>Quantidade: {{ $room->quantity }}</div>
             </div>
             @endforeach
         </div>

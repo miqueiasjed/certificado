@@ -477,19 +477,21 @@
     <!-- Cômodos Atendidos -->
     <div class="section">
         <h3>Cômodos Atendidos</h3>
-        @if($workOrder->address && $workOrder->address->rooms && $workOrder->address->rooms->count() > 0)
+        @if($workOrder->rooms && $workOrder->rooms->count() > 0)
             <div class="room-list">
-                @foreach($workOrder->address->rooms as $room)
+                @foreach($workOrder->rooms as $room)
                     <div class="room-item">
-                        {{ $room->name }}
-                        @if($room->description)
-                            <br><small>{{ $room->description }}</small>
+                        <strong>{{ $room->name }}</strong>
+                        @if($room->pivot->observation)
+                            <br><small style="font-style: italic; color: #666;">
+                                <strong>Observação:</strong> {{ $room->pivot->observation }}
+                            </small>
                         @endif
                     </div>
                 @endforeach
             </div>
         @else
-            <div class="no-data">Nenhum cômodo cadastrado para este endereço</div>
+            <div class="no-data">Nenhum cômodo atendido registrado para esta ordem de serviço</div>
         @endif
     </div>
 

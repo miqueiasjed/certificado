@@ -372,6 +372,52 @@
                 </div>
               </div>
 
+              <!-- Cômodos Atendidos -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  Cômodos Atendidos
+                </label>
+                <div class="space-y-4">
+                  <div v-for="(room, index) in form.rooms" :key="index" class="grid grid-cols-1 md:grid-cols-11 gap-4 items-end">
+                    <div class="md:col-span-5">
+                      <select
+                        v-model="room.id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      >
+                        <option value="">Selecione um cômodo</option>
+                        <option v-for="rm in availableRooms(index)" :key="rm.id" :value="rm.id">
+                          {{ rm.full_name || rm.name }}
+                        </option>
+                      </select>
+                    </div>
+                    <div class="md:col-span-5">
+                      <input
+                        v-model="room.observation"
+                        type="text"
+                        placeholder="Observações (opcional)"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      />
+                    </div>
+                    <div class="md:col-span-1">
+                      <button
+                        type="button"
+                        @click="removeRoom(index)"
+                        class="w-full px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    @click="addRoom"
+                    class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-green-500 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    + Adicionar Cômodo
+                  </button>
+                </div>
+              </div>
+
               <!-- Status Ativo -->
               <div class="flex items-center">
                 <input
@@ -418,7 +464,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
@@ -433,6 +479,7 @@ const props = defineProps({
   serviceTypes: Array,
   products: Array,
   services: Array,
+  rooms: Array,
 });
 
 
@@ -492,6 +539,7 @@ const formatDateForDateInput = (dateString) => {
 };
 
 
+
 const form = useForm({
   client_id: String(props.workOrder.client_id || ''),
   technician_id: String(props.workOrder.technician_id || ''),
@@ -512,6 +560,13 @@ const form = useForm({
         observations: s.pivot.observations || ''
       }))
     : [{ id: '', observations: '' }],
+  rooms: props.workOrder.rooms && props.workOrder.rooms.length > 0
+    ? props.workOrder.rooms.map(r => ({
+        id: r.id,
+        name: r.name,
+        observation: r.pivot.observation || ''
+      }))
+    : [{ id: '', name: '', observation: '' }],
   priority_level: props.workOrder.priority_level || '',
   scheduled_date: formatDateForDateInput(props.workOrder.scheduled_date),
   start_time: formatDateForInput(props.workOrder.start_time),
@@ -521,6 +576,8 @@ const form = useForm({
   observations: props.workOrder.observations || '',
   active: props.workOrder.active !== undefined ? props.workOrder.active : true,
 });
+
+
 
 
 // Função para atualizar status automaticamente quando end_time for preenchido
@@ -557,10 +614,14 @@ const submit = () => {
   // Filtrar serviços vazios ANTES de criar os dados do form
   const cleanedServices = form.services.filter(service => service.id && service.id !== '');
 
+  // Filtrar cômodos vazios ANTES de criar os dados do form
+  const cleanedRooms = form.rooms.filter(room => room.id && room.id !== '');
+
   // Atualizar o form com dados limpos
   form.technicians = cleanedTechnicians;
   form.products = cleanedProducts;
   form.services = cleanedServices;
+  form.rooms = cleanedRooms;
 
 
   form.put(`/work-orders/${props.workOrder.id}`, {
@@ -606,6 +667,15 @@ const removeService = (index) => {
   form.services.splice(index, 1);
 };
 
+// Funções para gerenciar cômodos
+const addRoom = () => {
+  form.rooms.push({ id: '', observation: '' });
+};
+
+const removeRoom = (index) => {
+  form.rooms.splice(index, 1);
+};
+
 // Computed para produtos disponíveis (filtrar já selecionados, exceto o atual)
 const availableProducts = computed(() => {
   return (currentProductIndex) => {
@@ -623,6 +693,16 @@ const availableServices = computed(() => {
       .map((s, index) => index !== currentServiceIndex ? s.id : null)
       .filter(id => id);
     return props.services.filter(serv => !selectedIds.includes(serv.id));
+  };
+});
+
+// Computed para cômodos disponíveis (filtrar já selecionados, exceto o atual) - IGUAL AOS PRODUTOS/SERVIÇOS
+const availableRooms = computed(() => {
+  return (currentRoomIndex) => {
+    const selectedIds = form.rooms
+      .map((r, index) => index !== currentRoomIndex ? r.id : null)
+      .filter(id => id);
+    return props.rooms.filter(room => !selectedIds.includes(room.id));
   };
 });
 

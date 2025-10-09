@@ -14,8 +14,9 @@ class WorkOrderService
         $technicians = $data['technicians'] ?? [];
         $products = $data['products'] ?? [];
         $services = $data['services'] ?? [];
+        $rooms = $data['rooms'] ?? [];
 
-        unset($data['technicians'], $data['products'], $data['services']);
+        unset($data['technicians'], $data['products'], $data['services'], $data['rooms']);
 
         $workOrder = WorkOrder::create($data);
 
@@ -61,6 +62,19 @@ class WorkOrderService
             $workOrder->services()->sync($syncData);
         }
 
+        // Sincronizar cômodos
+        if (!empty($rooms)) {
+            $syncData = [];
+            foreach ($rooms as $room) {
+                if (!empty($room['id'])) {
+                    $syncData[$room['id']] = [
+                        'observation' => $room['observation'] ?? null
+                    ];
+                }
+            }
+            $workOrder->rooms()->sync($syncData);
+        }
+
         return $workOrder;
     }
 
@@ -72,8 +86,9 @@ class WorkOrderService
         $technicians = $data['technicians'] ?? [];
         $products = $data['products'] ?? [];
         $services = $data['services'] ?? [];
+        $rooms = $data['rooms'] ?? [];
 
-        unset($data['technicians'], $data['products'], $data['services']);
+        unset($data['technicians'], $data['products'], $data['services'], $data['rooms']);
 
         $result = $workOrder->update($data);
 
@@ -117,6 +132,19 @@ class WorkOrderService
                 }
             }
             $workOrder->services()->sync($syncData);
+        }
+
+        // Sincronizar cômodos
+        if (!empty($rooms)) {
+            $syncData = [];
+            foreach ($rooms as $room) {
+                if (!empty($room['id'])) {
+                    $syncData[$room['id']] = [
+                        'observation' => $room['observation'] ?? null
+                    ];
+                }
+            }
+            $workOrder->rooms()->sync($syncData);
         }
 
         return $result;

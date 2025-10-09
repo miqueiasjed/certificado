@@ -85,8 +85,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Rotas de Ordens de Serviço
     Route::resource('service-orders', ServiceOrderController::class);
-
-
+    Route::get('/service-orders/{serviceOrder}/pdf', [ServiceOrderController::class, 'generatePdf'])->name('service-orders.pdf');
+    Route::get('/service-orders/rooms/by-client', [ServiceOrderController::class, 'getRoomsByClient'])->name('service-orders.rooms.by-client');
 
     // Rotas de Certificados
     Route::resource('certificates', CertificateController::class);
@@ -126,6 +126,12 @@ Route::delete('/work-orders/{workOrder}/products/{product}', [WorkOrderControlle
        // Rotas para gerenciar técnicos das work orders
        Route::post('/work-orders/{workOrder}/technicians/{technician}', [WorkOrderController::class, 'addTechnician'])->name('work-orders.technicians.add');
        Route::delete('/work-orders/{workOrder}/technicians/{technician}', [WorkOrderController::class, 'removeTechnician'])->name('work-orders.technicians.remove');
+
+       // Rotas para gerenciar cômodos das work orders
+       Route::post('/work-orders/{workOrder}/rooms', [WorkOrderController::class, 'addRoom'])->name('work-orders.rooms.add');
+       Route::put('/work-orders/{workOrder}/rooms/{roomId}/observation', [WorkOrderController::class, 'updateRoomObservation'])->name('work-orders.rooms.update-observation');
+       Route::delete('/work-orders/{workOrder}/rooms/{roomId}', [WorkOrderController::class, 'removeRoom'])->name('work-orders.rooms.remove');
+       Route::get('/work-orders/{workOrder}/rooms/available', [WorkOrderController::class, 'getAvailableRooms'])->name('work-orders.rooms.available');
 
     // Rotas de Eventos de Dispositivos
     Route::resource('device-events', DeviceEventController::class);

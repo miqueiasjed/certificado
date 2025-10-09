@@ -622,6 +622,157 @@
       </div>
     </div>
 
+    <!-- Aba: Cômodos Atendidos -->
+    <div v-if="activeTab === 'rooms'">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-medium text-gray-900">Cômodos Atendidos</h3>
+        <button
+          @click="showAddRoomModal = true"
+          class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Adicionar Cômodo
+        </button>
+      </div>
+
+      <div v-if="props.workOrder.rooms && props.workOrder.rooms.length > 0" class="space-y-4">
+        <div
+          v-for="(room, index) in props.workOrder.rooms"
+          :key="room.id"
+          class="bg-gray-50 rounded-lg p-4"
+        >
+          <div class="flex justify-between items-start mb-3">
+            <div class="flex items-center">
+              <div class="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                </svg>
+              </div>
+              <div class="ml-4">
+                <h4 class="text-sm font-medium text-gray-900">{{ room.name }}</h4>
+                <p class="text-sm text-gray-500">Cômodo #{{ index + 1 }}</p>
+              </div>
+            </div>
+            <button
+              @click="removeRoom(room.id)"
+              class="text-red-600 hover:text-red-800 transition-colors duration-200"
+              :disabled="isRemovingRoom"
+            >
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-500 mb-2">Observação do Atendimento</label>
+              <div class="space-y-2">
+                <textarea
+                  v-model="roomObservations[room.id]"
+                  :placeholder="room.pivot?.observation || 'Digite a observação do atendimento neste cômodo...'"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
+                  rows="3"
+                ></textarea>
+                <div class="flex justify-end">
+                  <button
+                    @click="updateRoomObservation(room.id)"
+                    :disabled="editingRoomId === room.id || roomObservations[room.id] === (room.pivot?.observation || '')"
+                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    <svg v-if="editingRoomId === room.id" class="animate-spin -ml-1 mr-1 h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <svg v-else class="-ml-1 mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span v-if="editingRoomId === room.id">Atualizando...</span>
+                    <span v-else>Atualizar</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="text-center py-8 text-gray-500">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum cômodo atendido</h3>
+        <p class="mt-1 text-sm text-gray-500">Esta ordem de serviço não possui cômodos registrados.</p>
+        <button
+          @click="showAddRoomModal = true"
+          class="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Adicionar Primeiro Cômodo
+        </button>
+      </div>
+
+      <!-- Modal para adicionar cômodo -->
+      <div v-if="showAddRoomModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Adicionar Cômodo</h3>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Cômodo</label>
+              <select
+                v-model="newRoomForm.room_id"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                :disabled="isLoadingAvailableRooms"
+              >
+                <option value="">Selecione um cômodo...</option>
+                <option
+                  v-for="room in availableRooms"
+                  :key="room.id"
+                  :value="room.id"
+                >
+                  {{ room.full_name }}
+                </option>
+              </select>
+              <p v-if="isLoadingAvailableRooms" class="text-sm text-gray-500 mt-1">Carregando cômodos disponíveis...</p>
+            </div>
+
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Observação (opcional)</label>
+              <textarea
+                v-model="newRoomForm.observation"
+                placeholder="Digite uma observação para este cômodo..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+              <button
+                @click="showAddRoomModal = false"
+                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                :disabled="isAddingRoom"
+              >
+                Cancelar
+              </button>
+              <button
+                @click="addRoom"
+                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :disabled="!newRoomForm.room_id || isAddingRoom"
+              >
+                <span v-if="isAddingRoom">Adicionando...</span>
+                <span v-else>Adicionar Cômodo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Aba: Eventos de Dispositivos -->
     <div v-if="activeTab === 'device-events'">
       <div class="flex items-center justify-between mb-4">
@@ -3435,6 +3586,21 @@ const editPestSightingForm = useForm({
 const isUpdating = ref(false);
 const isUpdatingPestSighting = ref(false);
 
+// Estado para gerenciar cômodos
+const showAddRoomModal = ref(false);
+const availableRooms = ref([]);
+const isLoadingAvailableRooms = ref(false);
+const isAddingRoom = ref(false);
+const isRemovingRoom = ref(false);
+const editingRoomId = ref(null);
+const roomObservations = ref({});
+
+// Formulário para adicionar cômodo
+const newRoomForm = useForm({
+  room_id: '',
+  observation: ''
+});
+
 // Sistema de Toast
 const showToast = ref(false);
 const toastMessage = ref('');
@@ -4697,6 +4863,177 @@ const removeTechnicianFromOS = async (technician) => {
     displayToast('Erro ao remover técnico. Tente novamente.', 'error');
   }
 };
+
+// Métodos para gerenciar cômodos
+const loadAvailableRooms = async () => {
+  isLoadingAvailableRooms.value = true;
+
+  try {
+    const response = await fetch(`/work-orders/${props.workOrder.id}/rooms/available`, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      availableRooms.value = result.rooms;
+    } else {
+      displayToast('Erro ao carregar cômodos disponíveis: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro ao carregar cômodos disponíveis:', error);
+    displayToast('Erro ao carregar cômodos disponíveis: ' + error.message, 'error');
+  } finally {
+    isLoadingAvailableRooms.value = false;
+  }
+};
+
+const addRoom = async () => {
+  if (!newRoomForm.room_id) {
+    displayToast('Por favor, selecione um cômodo.', 'error');
+    return;
+  }
+
+  isAddingRoom.value = true;
+
+  try {
+    const formData = new FormData();
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    formData.append('room_id', newRoomForm.room_id);
+    formData.append('observation', newRoomForm.observation || '');
+
+    const response = await fetch(`/work-orders/${props.workOrder.id}/rooms`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast('Cômodo adicionado com sucesso!', 'success');
+      showAddRoomModal.value = false;
+      newRoomForm.reset();
+      availableRooms.value = availableRooms.value.filter(room => room.id !== newRoomForm.room_id);
+      window.location.reload();
+    } else {
+      displayToast('Erro ao adicionar cômodo: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro ao adicionar cômodo:', error);
+    displayToast('Erro ao adicionar cômodo: ' + error.message, 'error');
+  } finally {
+    isAddingRoom.value = false;
+  }
+};
+
+const removeRoom = async (roomId) => {
+  if (!confirm('Tem certeza que deseja remover este cômodo da ordem de serviço?')) {
+    return;
+  }
+
+  isRemovingRoom.value = true;
+
+  try {
+    const formData = new FormData();
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    formData.append('_method', 'DELETE');
+
+    const response = await fetch(`/work-orders/${props.workOrder.id}/rooms/${roomId}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast('Cômodo removido com sucesso!', 'success');
+      window.location.reload();
+    } else {
+      displayToast('Erro ao remover cômodo: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro ao remover cômodo:', error);
+    displayToast('Erro ao remover cômodo: ' + error.message, 'error');
+  } finally {
+    isRemovingRoom.value = false;
+  }
+};
+
+const updateRoomObservation = async (roomId) => {
+  const observation = roomObservations.value[roomId];
+  editingRoomId.value = roomId;
+
+  try {
+    const formData = new FormData();
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    formData.append('_method', 'PUT');
+    formData.append('observation', observation || '');
+
+    const response = await fetch(`/work-orders/${props.workOrder.id}/rooms/${roomId}/observation`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: formData
+    });
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast('Observação atualizada com sucesso!', 'success');
+      // Atualizar o valor original para sincronizar o botão
+      const room = props.workOrder.rooms.find(r => r.id === roomId);
+      if (room && room.pivot) {
+        room.pivot.observation = observation;
+      }
+    } else {
+      displayToast('Erro ao atualizar observação: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar observação:', error);
+    displayToast('Erro ao atualizar observação: ' + error.message, 'error');
+  } finally {
+    editingRoomId.value = null;
+  }
+};
+
+// Watch para carregar cômodos disponíveis quando o modal abrir
+watch(showAddRoomModal, (newValue) => {
+  if (newValue) {
+    loadAvailableRooms();
+  }
+});
+
+// Watch para inicializar observações quando a tab de cômodos for ativada
+watch(() => props.activeTab, (newTab) => {
+  if (newTab === 'rooms' && props.workOrder.rooms) {
+    // Inicializar as observações dos cômodos
+    roomObservations.value = {};
+    props.workOrder.rooms.forEach(room => {
+      roomObservations.value[room.id] = room.pivot?.observation || '';
+    });
+  }
+});
+
+// Inicializar observações se a tab de cômodos já estiver ativa
+if (props.activeTab === 'rooms' && props.workOrder.rooms) {
+  roomObservations.value = {};
+  props.workOrder.rooms.forEach(room => {
+    roomObservations.value[room.id] = room.pivot?.observation || '';
+  });
+}
 
 // Em <script setup>, todas as variáveis e funções são automaticamente exportadas
 // Não é necessário export explícito

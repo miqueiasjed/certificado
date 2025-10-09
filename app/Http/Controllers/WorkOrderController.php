@@ -122,6 +122,9 @@ class WorkOrderController extends Controller
             'technicians',
             'products',
             'services',
+            'rooms' => function($query) {
+                $query->withPivot('observation');
+            },
             'deviceEvents' => function ($query) {
                 $query->with([
                     'device.room.address.client',
@@ -189,6 +192,9 @@ class WorkOrderController extends Controller
             'technicians',
             'products',
             'services',
+            'rooms' => function($query) {
+                $query->withPivot('observation');
+            },
             'serviceType',
             'deviceEvents.device.room.address.client',
             'paymentDetails' => function ($query) {
@@ -214,6 +220,25 @@ class WorkOrderController extends Controller
         $products = Product::select('id', 'name')->orderBy('name')->limit(100)->get();
         $services = Service::select('id', 'name', 'description')->where('is_active', true)->orderBy('name')->limit(100)->get();
 
+        // Buscar todos os cômodos do cliente da work order
+        $rooms = collect();
+        if ($workOrder->client) {
+            $workOrder->client->load(['addresses.rooms' => function($query) {
+                $query->where('active', true);
+            }]);
+
+            foreach ($workOrder->client->addresses as $address) {
+                foreach ($address->rooms as $room) {
+                    $rooms->push([
+                        'id' => $room->id,
+                        'name' => $room->name,
+                        'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
+                        'address' => $address->nickname ?? $address->short_address,
+                    ]);
+                }
+            }
+        }
+
         return Inertia::render('WorkOrders/Edit', [
             'workOrder' => $workOrder,
             'clients' => $clients,
@@ -222,6 +247,7 @@ class WorkOrderController extends Controller
             'serviceTypes' => $serviceTypes,
             'products' => $products,
             'services' => $services,
+            'rooms' => $rooms,
         ]);
     }
 
@@ -420,6 +446,9 @@ class WorkOrderController extends Controller
                 'serviceType',
                 'products',
                 'services',
+                'rooms' => function($query) {
+                    $query->withPivot('observation');
+                },
                 'deviceEvents.device.room',
                 'pestSightings' => function ($query) {
                     $query->with(['address.client'])->orderBy('sighting_date', 'desc');
@@ -653,6 +682,124 @@ class WorkOrderController extends Controller
 
         } catch (\Exception $e) {
             return response()->json(['message' => 'Erro ao remover técnico: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Atualizar observação de um cômodo
+     */
+    public function updateRoomObservation(Request $request, WorkOrder $workOrder, $roomId)
+    {
+        try {
+            $request->validate([
+                'observation' => 'nullable|string|max:500'
+            ]);
+
+            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+                return response()->json(['message' => 'Cômodo não encontrado nesta ordem de serviço'], 404);
+            }
+
+            $workOrder->rooms()->updateExistingPivot($roomId, [
+                'observation' => $request->observation,
+                'updated_at' => now()
+            ]);
+
+            return response()->json(['message' => 'Observação atualizada com sucesso']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao atualizar observação: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Adicionar cômodo à OS
+     */
+    public function addRoom(Request $request, WorkOrder $workOrder)
+    {
+        try {
+            $request->validate([
+                'room_id' => 'required|exists:rooms,id',
+                'observation' => 'nullable|string|max:500'
+            ]);
+
+            if ($workOrder->rooms()->where('room_id', $request->room_id)->exists()) {
+                return response()->json(['message' => 'Cômodo já está vinculado a esta ordem de serviço'], 400);
+            }
+
+            $workOrder->rooms()->attach($request->room_id, [
+                'observation' => $request->observation,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            // Recarregar o cômodo com dados completos
+            $room = $workOrder->rooms()->where('room_id', $request->room_id)->first();
+
+            return response()->json([
+                'message' => 'Cômodo adicionado com sucesso',
+                'room' => $room
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao adicionar cômodo: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Remover cômodo da OS
+     */
+    public function removeRoom(Request $request, WorkOrder $workOrder, $roomId)
+    {
+        try {
+            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+                return response()->json(['message' => 'Cômodo não encontrado nesta ordem de serviço'], 404);
+            }
+
+            $workOrder->rooms()->detach($roomId);
+
+            return response()->json(['message' => 'Cômodo removido com sucesso']);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao remover cômodo: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Buscar cômodos disponíveis para o cliente da OS
+     */
+    public function getAvailableRooms(WorkOrder $workOrder)
+    {
+        try {
+            $client = $workOrder->client;
+
+            if (!$client) {
+                return response()->json(['rooms' => []]);
+            }
+
+            $client->load(['addresses.rooms' => function($query) {
+                $query->where('active', true);
+            }]);
+
+            $rooms = [];
+            $selectedRoomIds = $workOrder->rooms->pluck('id')->toArray();
+
+            foreach ($client->addresses as $address) {
+                foreach ($address->rooms as $room) {
+                    if (!in_array($room->id, $selectedRoomIds)) {
+                        $rooms[] = [
+                            'id' => $room->id,
+                            'name' => $room->name,
+                            'address' => $address->nickname ?? $address->short_address,
+                            'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
+                        ];
+                    }
+                }
+            }
+
+            return response()->json(['rooms' => $rooms]);
+
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Erro ao buscar cômodos: ' . $e->getMessage()], 500);
         }
     }
 }

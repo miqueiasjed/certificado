@@ -142,6 +142,17 @@ class WorkOrder extends Model
     }
 
     /**
+     * Get the rooms attended in this work order.
+     */
+    public function rooms(): BelongsToMany
+    {
+        return $this->belongsToMany(Room::class, 'work_order_room')
+                    ->withPivot('observation')
+                    ->withTimestamps();
+    }
+
+
+    /**
      * Get the order type as a readable string.
      */
     public function getOrderTypeTextAttribute(): string

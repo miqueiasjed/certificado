@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('room_service_order', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('room_id')->constrained()->onDelete('cascade');
+            $table->foreignId('service_order_id')->constrained()->onDelete('cascade');
+            $table->text('observation')->nullable();
+            $table->timestamps();
+
+            // Impedir duplicatas
+            $table->unique(['room_id', 'service_order_id']);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('room_service_order');
+    }
+};

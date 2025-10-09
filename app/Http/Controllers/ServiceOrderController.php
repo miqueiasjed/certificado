@@ -9,6 +9,7 @@ use App\Models\Service;
 use App\Services\ServiceOrderService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ServiceOrderController extends Controller
 {
@@ -63,7 +64,7 @@ class ServiceOrderController extends Controller
 
     public function show(ServiceOrder $serviceOrder)
     {
-        $serviceOrder->load(['client', 'technician']);
+        $serviceOrder->load(['client', 'technician', 'rooms']);
 
         return Inertia::render('ServiceOrders/Show', [
             'serviceOrder' => $serviceOrder,
@@ -74,6 +75,11 @@ class ServiceOrderController extends Controller
     {
         $clients = Client::orderBy('name')->get();
         $services = Service::where('is_active', true)->orderBy('name')->get();
+
+        // Carregar rooms com pivot data
+        $serviceOrder->load(['rooms' => function($query) {
+            $query->withPivot('observation');
+        }]);
 
         return Inertia::render('ServiceOrders/Edit', [
             'serviceOrder' => $serviceOrder,
@@ -96,6 +102,61 @@ class ServiceOrderController extends Controller
 
         return redirect()->route('service-orders.index')
             ->with('success', 'Ordem de serviço excluída com sucesso!');
+    }
+
+    /**
+     * Generate PDF for service order
+     */
+    public function generatePdf(ServiceOrder $serviceOrder)
+    {
+        $serviceOrder->load([
+            'client',
+            'technician',
+            'serviceType',
+            'rooms' => function($query) {
+                $query->withPivot('observation');
+            }
+        ]);
+
+        $pdf = Pdf::loadView('pdf.service-order', [
+            'serviceOrder' => $serviceOrder
+        ]);
+
+        return $pdf->download('OS-' . $serviceOrder->order_number . '.pdf');
+    }
+
+    /**
+     * Get rooms by client
+     */
+    public function getRoomsByClient(Request $request)
+    {
+        $clientId = $request->get('client_id');
+
+        if (!$clientId) {
+            return response()->json(['rooms' => []]);
+        }
+
+        $client = Client::with(['addresses.rooms' => function($query) {
+            $query->where('active', true);
+        }])->find($clientId);
+
+        if (!$client) {
+            return response()->json(['rooms' => []]);
+        }
+
+        $rooms = [];
+        foreach ($client->addresses as $address) {
+            foreach ($address->rooms as $room) {
+                $rooms[] = [
+                    'id' => $room->id,
+                    'name' => $room->name,
+                    'address' => $address->nickname ?? $address->short_address,
+                    'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
+                ];
+            }
+        }
+
+        return response()->json(['rooms' => $rooms]);
     }
 
     /**

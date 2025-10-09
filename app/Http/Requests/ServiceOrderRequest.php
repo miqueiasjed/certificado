@@ -21,6 +21,9 @@ class ServiceOrderRequest extends FormRequest
             'start_date' => 'nullable|date',
             'due_date' => 'nullable|date|after_or_equal:start_date',
             'notes' => 'nullable|string|max:1000',
+            'rooms' => 'nullable|array',
+            'rooms.*.id' => 'required|exists:rooms,id',
+            'rooms.*.observation' => 'nullable|string|max:500',
         ];
     }
 
@@ -38,6 +41,10 @@ class ServiceOrderRequest extends FormRequest
             'due_date.date' => 'A data de conclusão deve ser uma data válida.',
             'due_date.after_or_equal' => 'A data de conclusão deve ser igual ou posterior à data de início.',
             'notes.max' => 'As observações não podem ter mais de 1000 caracteres.',
+            'rooms.array' => 'Os cômodos devem ser um array.',
+            'rooms.*.id.required' => 'O ID do cômodo é obrigatório.',
+            'rooms.*.id.exists' => 'O cômodo selecionado não existe.',
+            'rooms.*.observation.max' => 'A observação do cômodo não pode ter mais de 500 caracteres.',
         ];
     }
 }

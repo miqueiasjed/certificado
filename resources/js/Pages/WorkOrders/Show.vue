@@ -99,26 +99,55 @@
         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
 
           <div class="border-b border-gray-200">
-            <nav class="overflow-x-auto px-6" aria-label="Tabs">
-              <div class="flex space-x-8">
-                <button
-                  v-for="tab in allTabs"
-                  :key="tab.name"
-                  @click="activeTab = tab.name"
-                  :class="[
-                    activeTab === tab.name
-                      ? 'border-green-500 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-                    'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 flex items-center flex-shrink-0'
-                  ]"
-                >
-                  {{ tab.label }}
-                  <span v-if="tab.count !== undefined" class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">
-                    {{ tab.count }}
-                  </span>
-                </button>
-              </div>
-            </nav>
+            <div class="relative">
+              <!-- Botão de scroll para esquerda -->
+              <button
+                v-if="showLeftArrow"
+                @click="scrollTabs('left')"
+                class="absolute left-0 top-0 bottom-0 z-10 bg-white hover:bg-gray-50 px-2 flex items-center border-r border-gray-200 transition-colors"
+              >
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+              </button>
+
+              <!-- Botão de scroll para direita -->
+              <button
+                v-if="showRightArrow"
+                @click="scrollTabs('right')"
+                class="absolute right-0 top-0 bottom-0 z-10 bg-white hover:bg-gray-50 px-2 flex items-center border-l border-gray-200 transition-colors"
+              >
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+
+              <nav
+                ref="tabsContainer"
+                class="overflow-x-auto px-6 scrollbar-hide"
+                aria-label="Tabs"
+                :style="{ paddingLeft: showLeftArrow ? '40px' : '24px', paddingRight: showRightArrow ? '40px' : '24px' }"
+              >
+                <div class="flex space-x-8" ref="tabsWrapper">
+                  <button
+                    v-for="tab in allTabs"
+                    :key="tab.name"
+                    @click="activeTab = tab.name"
+                    :class="[
+                      activeTab === tab.name
+                        ? 'border-green-500 text-green-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+                      'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 flex items-center flex-shrink-0'
+                    ]"
+                  >
+                    {{ tab.label }}
+                    <span v-if="tab.count !== undefined" class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">
+                      {{ tab.count }}
+                    </span>
+                  </button>
+                </div>
+              </nav>
+            </div>
           </div>
 
           <!-- Conteúdo das Abas -->
@@ -392,7 +421,7 @@
   </template>
 
   <script setup>
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
@@ -414,6 +443,12 @@ import Alert from '@/Components/Alert.vue';
   const showCertificateModal = ref(false);
   const isSubmittingCertificate = ref(false);
 
+  // Variáveis para controle de scroll das tabs
+  const tabsContainer = ref(null);
+  const tabsWrapper = ref(null);
+  const showLeftArrow = ref(false);
+  const showRightArrow = ref(false);
+
   const certificateForm = ref({
     execution_date: '',
     warranty: '',
@@ -425,6 +460,7 @@ import Alert from '@/Components/Alert.vue';
     { name: 'details', label: 'Detalhes da Ordem' },
     { name: 'products-services', label: 'Produtos e Serviços' },
     { name: 'technician', label: 'Técnicos' },
+    { name: 'rooms', label: 'Cômodos Atendidos', count: props.workOrder?.rooms?.length || 0 },
     { name: 'device-events', label: 'Eventos de Dispositivos', count: props.workOrder?.device_events?.length || 0 },
     { name: 'pest-sightings', label: 'Avistamentos de Pragas', count: props.workOrder?.pest_sightings?.length || 0 },
   ];
@@ -445,6 +481,48 @@ import Alert from '@/Components/Alert.vue';
     const url = route('work-orders.pdf', props.workOrder.id);
     window.open(url, '_blank');
   };
+
+  // Funções para controle de scroll das tabs
+  const checkScrollButtons = () => {
+    if (!tabsContainer.value) return;
+
+    const container = tabsContainer.value;
+    const wrapper = tabsWrapper.value;
+
+    if (!wrapper) return;
+
+    showLeftArrow.value = container.scrollLeft > 0;
+    showRightArrow.value = container.scrollLeft < (wrapper.scrollWidth - container.clientWidth);
+  };
+
+  const scrollTabs = (direction) => {
+    if (!tabsContainer.value) return;
+
+    const container = tabsContainer.value;
+    const scrollAmount = 200;
+
+    if (direction === 'left') {
+      container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    } else {
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+
+    // Verificar botões após o scroll
+    setTimeout(checkScrollButtons, 300);
+  };
+
+  // Verificar scroll ao montar e redimensionar
+  onMounted(() => {
+    nextTick(() => {
+      checkScrollButtons();
+    });
+
+    window.addEventListener('resize', checkScrollButtons);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener('resize', checkScrollButtons);
+  });
 
   // Função para emitir certificado a partir da OS
   const emitCertificateFromOS = async () => {
@@ -499,6 +577,15 @@ import Alert from '@/Components/Alert.vue';
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Esconder scrollbar das tabs */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
 }
 </style>
 

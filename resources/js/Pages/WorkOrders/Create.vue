@@ -369,6 +369,52 @@
             </div>
           </div>
 
+          <!-- Cômodos Atendidos -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Cômodos Atendidos
+            </label>
+            <div class="space-y-4">
+              <div v-for="(room, index) in form.rooms" :key="index" class="grid grid-cols-1 md:grid-cols-11 gap-4 items-end">
+                <div class="md:col-span-5">
+                  <select
+                    v-model="room.id"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="">Selecione um cômodo</option>
+                    <option v-for="rm in availableRooms(index)" :key="rm.id" :value="rm.id">
+                      {{ rm.full_name }}
+                    </option>
+                  </select>
+                </div>
+                <div class="md:col-span-5">
+                  <input
+                    v-model="room.observation"
+                    type="text"
+                    placeholder="Observações (opcional)"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+                <div class="md:col-span-1">
+                  <button
+                    type="button"
+                    @click="removeRoom(index)"
+                    class="w-full px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                @click="addRoom"
+                class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-green-500 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                + Adicionar Cômodo
+              </button>
+            </div>
+          </div>
+
           <!-- Status Ativo -->
           <div class="flex items-center">
             <input
@@ -448,6 +494,7 @@ const form = useForm({
   service_type_id: '',
   products: [{ id: '', quantity: 1, observations: '' }],
   services: [{ id: '', observations: '' }],
+  rooms: [{ id: '', observation: '' }],
   priority_level: '',
   scheduled_date: new Date().toISOString().slice(0, 10),
   start_time: '',
@@ -463,6 +510,36 @@ const filteredAddresses = computed(() => {
   return props.addresses.filter(address => address.client_id == form.client_id);
 });
 
+// Buscar cômodos disponíveis para o cliente selecionado
+const availableRoomsList = ref([]);
+
+// Função para buscar cômodos por cliente
+const fetchRoomsByClient = async (clientId) => {
+  if (!clientId) {
+    availableRoomsList.value = [];
+    return;
+  }
+
+  try {
+    const response = await fetch(`/service-orders/rooms/by-client?client_id=${clientId}`);
+    const data = await response.json();
+    availableRoomsList.value = data.rooms || [];
+  } catch (error) {
+    console.error('Erro ao buscar cômodos:', error);
+    availableRoomsList.value = [];
+  }
+};
+
+// Computed para cômodos disponíveis (filtrar já selecionados, exceto o atual)
+const availableRooms = computed(() => {
+  return (currentRoomIndex) => {
+    const selectedIds = form.rooms
+      .map((r, index) => index !== currentRoomIndex ? r.id : null)
+      .filter(id => id);
+    return availableRoomsList.value.filter(room => !selectedIds.includes(room.id));
+  };
+});
+
 // Filtrar técnicos disponíveis para cada select (evitar duplicatas)
 const getAvailableTechnicians = (currentIndex) => {
   const selectedIds = form.technicians.filter((id, index) => index !== currentIndex && id !== '');
@@ -472,12 +549,18 @@ const getAvailableTechnicians = (currentIndex) => {
 // Limpar endereço quando cliente muda
 const onClientChange = () => {
   form.address_id = '';
+  // Buscar cômodos do novo cliente
+  fetchRoomsByClient(form.client_id);
 };
 
 // Limpar endereço quando cliente é limpo
 watch(() => form.client_id, (newValue) => {
   if (!newValue) {
     form.address_id = '';
+    availableRoomsList.value = [];
+  } else {
+    // Buscar cômodos quando cliente é selecionado
+    fetchRoomsByClient(newValue);
   }
 });
 
@@ -491,10 +574,14 @@ const submit = () => {
   // Filtrar serviços vazios ANTES de criar os dados do form
   const cleanedServices = form.services.filter(service => service.id && service.id !== '');
 
+  // Filtrar cômodos vazios ANTES de criar os dados do form
+  const cleanedRooms = form.rooms.filter(room => room.id && room.id !== '');
+
   // Atualizar o form com dados limpos
   form.technicians = cleanedTechnicians;
   form.products = cleanedProducts;
   form.services = cleanedServices;
+  form.rooms = cleanedRooms;
 
 
   form.post('/work-orders', {
@@ -532,6 +619,15 @@ const addService = () => {
 
 const removeService = (index) => {
   form.services.splice(index, 1);
+};
+
+// Funções para gerenciar cômodos
+const addRoom = () => {
+  form.rooms.push({ id: '', observation: '' });
+};
+
+const removeRoom = (index) => {
+  form.rooms.splice(index, 1);
 };
 
 // Computed para produtos disponíveis (filtrar já selecionados, exceto o atual)

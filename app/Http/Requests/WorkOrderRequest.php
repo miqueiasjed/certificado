@@ -32,6 +32,9 @@ class WorkOrderRequest extends FormRequest
             'services' => 'nullable|array',
             'services.*.id' => 'required_with:services|exists:services,id',
             'services.*.observations' => 'nullable|string|max:500',
+            'rooms' => 'nullable|array',
+            'rooms.*.id' => 'required_with:rooms|exists:rooms,id',
+            'rooms.*.observation' => 'nullable|string|max:500',
             'service_type_id' => 'required|exists:service_types,id',
             'order_number' => 'nullable|string|max:255',
             'priority_level' => 'required|in:low,medium,high,urgent,emergency',
@@ -84,6 +87,10 @@ class WorkOrderRequest extends FormRequest
             'observations.max' => 'As observações não podem ter mais de 1000 caracteres.',
             'materials_used.array' => 'Os materiais utilizados devem ser uma lista.',
             'materials_used.*.max' => 'Cada material não pode ter mais de 255 caracteres.',
+            'rooms.array' => 'Os cômodos devem ser um array.',
+            'rooms.*.id.required_with' => 'O ID do cômodo é obrigatório.',
+            'rooms.*.id.exists' => 'O cômodo selecionado não existe.',
+            'rooms.*.observation.max' => 'A observação do cômodo não pode ter mais de 500 caracteres.',
             'completion_notes.max' => 'As observações de conclusão não podem ter mais de 1000 caracteres.',
         ];
     }

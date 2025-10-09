@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ServiceOrder extends Model
 {
@@ -43,6 +44,13 @@ class ServiceOrder extends Model
     public function serviceType(): BelongsTo
     {
         return $this->belongsTo(ServiceType::class);
+    }
+
+    public function rooms(): BelongsToMany
+    {
+        return $this->belongsToMany(Room::class, 'room_service_order')
+                    ->withPivot('observation')
+                    ->withTimestamps();
     }
 
     public function scopeByStatus($query, $status)
