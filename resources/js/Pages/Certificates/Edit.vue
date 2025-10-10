@@ -341,6 +341,10 @@ const form = useForm({
   procedure_used: props.certificate.procedure_used || '',
 });
 
+// Debug: Log dos dados iniciais do formulário
+console.log('Dados iniciais do certificado:', props.certificate);
+console.log('Dados iniciais do formulário:', form.data());
+
 
 const addProduct = () => {
   form.products.push({
@@ -363,13 +367,38 @@ const removeService = (index) => {
 };
 
 const submitForm = () => {
+  console.log('Enviando formulário:', form.data());
+  
+  // Validação básica antes de enviar
+  if (!form.execution_date) {
+    alert('O campo Data da Execução é obrigatório.');
+    return;
+  }
+  
   form.put(`/certificates/${props.certificate.id}`, {
-    onSuccess: () => {
+    onSuccess: (page) => {
+      console.log('Sucesso ao atualizar certificado');
       // Deixar o controller fazer o redirecionamento
       // O controller já redireciona para certificates.show
     },
     onError: (errors) => {
       console.error('Erro ao atualizar certificado:', errors);
+      console.error('Dados do formulário:', form.data());
+      
+      // Mostrar erros específicos
+      if (errors.procedure_used) {
+        alert('Erro no Procedimento Utilizado: ' + errors.procedure_used[0]);
+      } else if (errors.execution_date) {
+        alert('Erro na Data da Execução: ' + errors.execution_date[0]);
+      } else {
+        alert('Erro ao salvar: ' + JSON.stringify(errors));
+      }
+    },
+    onStart: () => {
+      console.log('Iniciando envio do formulário...');
+    },
+    onFinish: () => {
+      console.log('Finalizando envio do formulário...');
     },
   });
 };

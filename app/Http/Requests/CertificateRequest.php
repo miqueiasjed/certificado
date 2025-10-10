@@ -26,7 +26,7 @@ class CertificateRequest extends FormRequest
             'execution_date' => 'required|date',
             'warranty' => 'nullable|date',
             'notes' => 'nullable|string|max:1000',
-            'procedure_used' => 'required|string|max:2000',
+            'procedure_used' => 'nullable|string|max:2000',
         ];
     }
 

@@ -11,6 +11,7 @@ use App\Models\Service;
 use App\Models\Technician;
 use App\Services\CertificateService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf as FacadePdf;
 
@@ -137,10 +138,27 @@ class CertificateController extends Controller
 
     public function update(CertificateRequest $request, Certificate $certificate)
     {
-        $this->certificateService->updateCertificate($certificate, $request->validated());
+        try {
+            Log::info('Atualizando certificado', [
+                'certificate_id' => $certificate->id,
+                'data' => $request->validated()
+            ]);
 
-        return redirect()->route('certificates.show', $certificate)
-            ->with('success', 'Certificado atualizado com sucesso!');
+            $this->certificateService->updateCertificate($certificate, $request->validated());
+
+            Log::info('Certificado atualizado com sucesso', ['certificate_id' => $certificate->id]);
+
+            return redirect()->route('certificates.show', $certificate)
+                ->with('success', 'Certificado atualizado com sucesso!');
+        } catch (\Exception $e) {
+            Log::error('Erro ao atualizar certificado', [
+                'certificate_id' => $certificate->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withErrors(['error' => 'Erro ao atualizar certificado: ' . $e->getMessage()]);
+        }
     }
 
     public function destroy(Certificate $certificate)
