@@ -214,7 +214,7 @@
 <body>
 
     <!-- Imagem de fundo ocupando toda a página -->
-    <img src="{{ public_path('images/teste.png') }}" class="full-page-image" alt="Overlay">
+    <img src="{{ public_path('images/logo.png') }}" class="full-page-image" alt="Logo">
 
     <!-- Informações da empresa -->
     <div class="company-info">
