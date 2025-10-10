@@ -32,8 +32,6 @@
             background-repeat: no-repeat;
             background-size: cover;
             background-position: center;
-            page-break-before: always;
-            /* Faz com que a imagem apareça em cada nova página */
         }
 
         .company-info {
@@ -214,7 +212,7 @@
 <body>
 
     <!-- Imagem de fundo ocupando toda a página -->
-    <img src="{{ public_path('images/logo.png') }}" class="full-page-image" alt="Logo">
+    <div class="full-page-image"></div>
 
     <!-- Informações da empresa -->
     <div class="company-info">
