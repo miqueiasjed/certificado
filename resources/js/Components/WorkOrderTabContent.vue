@@ -234,7 +234,7 @@
 
       <!-- Modal para adicionar Produto à OS -->
       <div v-if="showProductModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4" @click="console.log('Modal produto renderizado')">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+        <div class="relative bg-white rounded-xl shadow-xl min-w-[400px] max-w-4xl w-fit mx-4 transform transition-all max-h-[85vh] overflow-hidden">
           <div class="p-6 overflow-y-auto max-h-[85vh]">
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-xl font-semibold text-gray-900">Adicionar Produto à OS</h3>
@@ -311,7 +311,7 @@
 
       <!-- Modal para adicionar Serviço à OS -->
       <div v-if="showServiceModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4" @click="console.log('Modal serviço renderizado')">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
+        <div class="relative bg-white rounded-xl shadow-xl min-w-[400px] max-w-4xl w-fit mx-4 transform transition-all max-h-[85vh] overflow-hidden">
           <div class="p-6 overflow-y-auto max-h-[85vh]">
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-xl font-semibold text-gray-900">Adicionar Serviço à OS</h3>
@@ -637,121 +637,344 @@
         </button>
       </div>
 
-      <div v-if="props.workOrder.rooms && props.workOrder.rooms.length > 0" class="space-y-4">
+      <div v-if="props.workOrder.rooms && props.workOrder.rooms.length > 0" class="space-y-6">
         <div
           v-for="(room, index) in props.workOrder.rooms"
           :key="room.id"
-          class="bg-gray-50 rounded-lg p-4"
+          class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm"
         >
-          <div class="flex justify-between items-start mb-3">
+          <!-- Cabeçalho do Cômodo -->
+          <div class="flex justify-between items-start mb-6">
             <div class="flex items-center">
-              <div class="flex-shrink-0 h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <svg class="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="flex-shrink-0 h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                <svg class="h-6 w-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
                 </svg>
-              </div>
-              <div class="ml-4">
-                <h4 class="text-sm font-medium text-gray-900">{{ room.name }}</h4>
-                <p class="text-sm text-gray-500">Cômodo #{{ index + 1 }}</p>
-              </div>
             </div>
-            <button
+              <div class="ml-4">
+                <h4 class="text-lg font-medium text-gray-900">{{ room.name }}</h4>
+                <p class="text-sm text-gray-500">Cômodo #{{ index + 1 }}</p>
+                </div>
+                    </div>
+                <button
               @click="removeRoom(room.id)"
               class="text-red-600 hover:text-red-800 transition-colors duration-200"
               :disabled="isRemovingRoom"
             >
               <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-              </svg>
-            </button>
-          </div>
+                </svg>
+              </button>
+            </div>
 
-          <div class="grid grid-cols-1 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-500 mb-2">Observação do Atendimento</label>
-              <div class="space-y-2">
-                <textarea
-                  v-model="roomObservations[room.id]"
-                  :placeholder="room.pivot?.observation || 'Digite a observação do atendimento neste cômodo...'"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
-                  rows="3"
-                ></textarea>
-                <div class="flex justify-end">
-                  <button
-                    @click="updateRoomObservation(room.id)"
-                    :disabled="editingRoomId === room.id || roomObservations[room.id] === (room.pivot?.observation || '')"
-                    class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    <svg v-if="editingRoomId === room.id" class="animate-spin -ml-1 mr-1 h-3 w-3 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <svg v-else class="-ml-1 mr-1 h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                    <span v-if="editingRoomId === room.id">Atualizando...</span>
-                    <span v-else>Atualizar</span>
-                  </button>
+
+          <!-- Seção de Evento -->
+          <div class="border-t pt-6 mb-6">
+            <h5 class="text-sm font-medium text-gray-900 mb-4 flex items-center justify-between">
+              <div class="flex items-center">
+                <svg class="h-4 w-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                Evento Realizado
+              </div>
+              <button
+                @click="openRoomEventModal(room.id)"
+                class="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-green-600 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-1 focus:ring-green-500 transition-colors"
+              >
+                <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                {{ room.pivot?.event_type ? 'Editar' : 'Adicionar' }}
+              </button>
+            </h5>
+            <div v-if="room.pivot?.event_type" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Tipo de Evento</label>
+                <p class="text-sm text-gray-900">{{ getEventTypeText(room.pivot.event_type) }}</p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Data do Evento</label>
+                <p class="text-sm text-gray-900">{{ formatDate(room.pivot.event_date) }}</p>
+              </div>
+              <div v-if="room.pivot?.device_id && getDeviceInfo(room.pivot.device_id)">
+                <label class="block text-sm font-medium text-gray-500 mb-1">Dispositivo</label>
+                <p class="text-sm text-gray-900">{{ getDeviceInfo(room.pivot.device_id) }}</p>
+              </div>
+              </div>
+            <div v-if="room.pivot?.event_description" class="mt-4">
+              <label class="block text-sm font-medium text-gray-500 mb-1">Descrição do Evento</label>
+              <p class="text-sm text-gray-900">{{ room.pivot.event_description }}</p>
+          </div>
+            <div v-if="room.pivot?.event_observations" class="mt-4">
+              <label class="block text-sm font-medium text-gray-500 mb-1">Observações do Evento</label>
+              <p class="text-sm text-gray-900">{{ room.pivot.event_observations }}</p>
+        </div>
+            <div v-if="!room.pivot?.event_type" class="text-sm text-gray-500 italic">
+              Nenhum evento registrado para este cômodo.
+      </div>
+            </div>
+
+          <!-- Seção de Avistamento de Praga -->
+          <div class="border-t pt-6">
+            <h5 class="text-sm font-medium text-gray-900 mb-4 flex items-center justify-between">
+              <div class="flex items-center">
+                <svg class="h-4 w-4 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                Avistamento de Praga
+              </div>
+              <button
+                @click="openRoomPestSightingModal(room.id)"
+                class="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-orange-600 bg-orange-50 hover:bg-orange-100 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-colors"
+              >
+                <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                {{ room.pivot?.pest_type ? 'Editar' : 'Adicionar' }}
+              </button>
+            </h5>
+            <div v-if="room.pivot?.pest_type" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Tipo de Praga</label>
+                <p class="text-sm text-gray-900">{{ getPestTypeText(room.pivot.pest_type) }}</p>
+                </div>
+                <div>
+                <label class="block text-sm font-medium text-gray-500 mb-1">Data do Avistamento</label>
+                <p class="text-sm text-gray-900">{{ formatDate(room.pivot.pest_sighting_date) }}</p>
+                </div>
+                </div>
+            <div v-if="room.pivot?.pest_location || room.pivot?.pest_quantity" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div v-if="room.pivot?.pest_location">
+                <label class="block text-sm font-medium text-gray-500 mb-1">Localização no Cômodo</label>
+                <p class="text-sm text-gray-900">{{ room.pivot.pest_location }}</p>
+                </div>
+              <div v-if="room.pivot?.pest_quantity">
+                <label class="block text-sm font-medium text-gray-500 mb-1">Quantidade Observada</label>
+                <p class="text-sm text-gray-900">{{ room.pivot.pest_quantity }}</p>
+                </div>
+                </div>
+            <div v-if="room.pivot?.pest_observation" class="mt-4">
+              <label class="block text-sm font-medium text-gray-500 mb-1">Observação</label>
+              <p class="text-sm text-gray-900">{{ room.pivot.pest_observation }}</p>
+                </div>
+            <div v-if="!room.pivot?.pest_type" class="text-sm text-gray-500 italic">
+              Nenhum avistamento de praga registrado para este cômodo.
                 </div>
               </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
 
       <div v-else class="text-center py-8 text-gray-500">
         <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-        </svg>
+                </svg>
         <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum cômodo atendido</h3>
         <p class="mt-1 text-sm text-gray-500">Esta ordem de serviço não possui cômodos registrados.</p>
-        <button
+                <button
           @click="showAddRoomModal = true"
           class="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
+                  </svg>
           Adicionar Primeiro Cômodo
-        </button>
+              </button>
       </div>
 
       <!-- Modal para adicionar cômodo -->
       <div v-if="showAddRoomModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="relative top-10 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
           <div class="mt-3">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Adicionar Cômodo</h3>
+            <h3 class="text-lg font-medium text-gray-900 mb-6">Adicionar Cômodo</h3>
 
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Cômodo</label>
-              <select
-                v-model="newRoomForm.room_id"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                :disabled="isLoadingAvailableRooms"
-              >
-                <option value="">Selecione um cômodo...</option>
-                <option
-                  v-for="room in availableRooms"
-                  :key="room.id"
-                  :value="room.id"
+            <div class="space-y-6">
+              <!-- Seção de Seleção do Cômodo -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Cômodo *</label>
+                <select
+                  v-model="newRoomForm.room_id"
+                  class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  :class="roomFormErrors.room_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500'"
+                  :disabled="isLoadingAvailableRooms"
                 >
-                  {{ room.full_name }}
-                </option>
-              </select>
-              <p v-if="isLoadingAvailableRooms" class="text-sm text-gray-500 mt-1">Carregando cômodos disponíveis...</p>
+                  <option value="">Selecione um cômodo...</option>
+                  <option
+                    v-for="room in availableRooms"
+                    :key="room.id"
+                    :value="room.id"
+                  >
+                    {{ room.full_name }}
+                  </option>
+                </select>
+                <p v-if="isLoadingAvailableRooms" class="text-sm text-gray-500 mt-1">Carregando cômodos disponíveis...</p>
+                <p v-if="roomFormErrors.room_id" class="text-sm text-red-600 mt-1">{{ roomFormErrors.room_id }}</p>
+              </div>
+                <!-- Seção de Evento -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <h4 class="text-md font-medium text-gray-900 mb-3 flex items-center">
+                    Evento Realizado
+                  </h4>
+
+                  <div class="space-y-3">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Evento *</label>
+                      <select
+                        v-model="newRoomForm.event_type"
+                        required
+                        class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 text-sm"
+                        :class="roomFormErrors.event_type ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'"
+                      >
+                        <option value="">Selecione o tipo...</option>
+                        <option value="Inspeção">Inspeção</option>
+                        <option value="Aplicação">Aplicação</option>
+                        <option value="Manutenção">Manutenção</option>
+                        <option value="Monitoramento">Monitoramento</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                      <p v-if="roomFormErrors.event_type" class="text-sm text-red-600 mt-1">{{ roomFormErrors.event_type }}</p>
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Data do Evento *</label>
+                      <input
+                        v-model="newRoomForm.event_date"
+                        type="date"
+                        required
+                        :max="new Date().toISOString().split('T')[0]"
+                        class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 text-sm"
+                        :class="roomFormErrors.event_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'"
+                      >
+                      <p v-if="roomFormErrors.event_date" class="text-sm text-red-600 mt-1">{{ roomFormErrors.event_date }}</p>
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Dispositivo (opcional)</label>
+                      <select
+                        v-model="newRoomForm.device_id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        :disabled="!newRoomForm.room_id"
+                      >
+                        <option value="">
+                          {{ !newRoomForm.room_id ? 'Selecione um cômodo primeiro' : (availableDevices.length === 0 ? 'Nenhum dispositivo disponível' : 'Nenhum dispositivo') }}
+                        </option>
+                        <option
+                          v-for="device in availableDevices"
+                          :key="device.id"
+                          :value="device.id"
+                        >
+                          {{ device.label }} ({{ device.number }})
+                        </option>
+                      </select>
+                      <p v-if="newRoomForm.room_id && availableDevices.length === 0" class="text-xs text-gray-500 mt-1">
+                        Este cômodo não possui dispositivos cadastrados
+                      </p>
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Descrição do Evento</label>
+                      <textarea
+                        v-model="newRoomForm.event_description"
+                        placeholder="Descreva o evento realizado..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
+                        rows="2"
+                      ></textarea>
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
+                      <textarea
+                        v-model="newRoomForm.event_observations"
+                        placeholder="Observações adicionais..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
+                        rows="2"
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Seção de Avistamento de Praga -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                  <h4 class="text-md font-medium text-gray-900 mb-3 flex items-center">
+                    Avistamento de Praga (opcional)
+                  </h4>
+
+                  <div class="space-y-3">
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Praga</label>
+                      <select
+                        v-model="newRoomForm.pest_type"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="">Selecione o tipo...</option>
+                        <option value="Formiga">Formiga</option>
+                        <option value="Barata">Barata</option>
+                        <option value="Rato">Rato</option>
+                        <option value="Mosca">Mosca</option>
+                        <option value="Mosquito">Mosquito</option>
+                        <option value="Aranha">Aranha</option>
+                        <option value="Cupim">Cupim</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Data do Avistamento</label>
+                      <input
+                        v-model="newRoomForm.pest_sighting_date"
+                        type="date"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Localização no Cômodo</label>
+                      <input
+                        v-model="newRoomForm.pest_location"
+                        type="text"
+                        placeholder="Ex: perto da janela, embaixo da pia..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Quantidade Observada</label>
+                      <input
+                        v-model="newRoomForm.pest_quantity"
+                        type="number"
+                        min="1"
+                        placeholder="Ex: 3"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                    </div>
+
+                    <div>
+                      <label class="block text-sm font-medium text-gray-700 mb-1">Observação</label>
+                      <textarea
+                        v-model="newRoomForm.pest_observation"
+                        placeholder="Observações sobre o avistamento..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
+                        rows="2"
+                      ></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-2">Observação (opcional)</label>
-              <textarea
-                v-model="newRoomForm.observation"
-                placeholder="Digite uma observação para este cômodo..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm resize-none"
-                rows="3"
-              ></textarea>
+            <!-- Mensagem de erro geral -->
+            <div v-if="roomFormErrors.general" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <div class="flex">
+                <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div class="ml-3">
+                  <p class="text-sm text-red-800">{{ roomFormErrors.general }}</p>
+                </div>
+              </div>
             </div>
 
-            <div class="flex justify-end space-x-3">
+            <!-- Botões de Ação -->
+            <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
               <button
                 @click="showAddRoomModal = false"
                 class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
@@ -760,9 +983,9 @@
                 Cancelar
               </button>
               <button
-                @click="addRoom"
-                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                :disabled="!newRoomForm.room_id || isAddingRoom"
+                @click="addRoomWithEventAndPest"
+                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="isAddingRoom"
               >
                 <span v-if="isAddingRoom">Adicionando...</span>
                 <span v-else>Adicionar Cômodo</span>
@@ -771,1370 +994,183 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Aba: Eventos de Dispositivos -->
-    <div v-if="activeTab === 'device-events'">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Eventos de Dispositivos</h3>
-        <button
-          @click="showDeviceEventModal = true"
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
-        >
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          Novo Evento
-        </button>
-      </div>
+      <!-- Modal para Evento do Cômodo -->
+      <div v-if="showRoomEventModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+              {{ selectedRoomForEvent && props.workOrder.rooms?.find(r => r.id === selectedRoomForEvent)?.pivot?.event_type ? 'Editar Evento' : 'Adicionar Evento' }}
+            </h3>
 
-      <!-- Modal para criar Evento de Dispositivo -->
-      <div v-if="showDeviceEventModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
-          <div class="p-6 overflow-y-auto max-h-[85vh]">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-xl font-semibold text-gray-900">Novo Evento de Dispositivo</h3>
-              <button
-                @click="showDeviceEventModal = false"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <form @submit.prevent="submitDeviceEvent" class="space-y-6">
-              <!-- Primeira linha: Tipo de Evento e Dispositivo -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Evento *</label>
-                  <select v-model="deviceEventForm.event_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione o tipo</option>
-                    <option value="bait_consumption">Consumo de Isca</option>
-                    <option value="cleaning">Limpeza</option>
-                    <option value="bait_change">Troca de Isca</option>
-                    <option value="technician_notes">Observações do Técnico</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Dispositivo *</label>
-                  <select v-model="deviceEventForm.device_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione o dispositivo</option>
-                    <option v-for="device in availableDevices" :key="device.id" :value="device.id">
-                      {{ device.label }} ({{ device.number }}) - {{ device.room?.name }}
-                    </option>
-                  </select>
-
-                  <!-- Informações sobre dispositivos disponíveis -->
-                  <div class="mt-2 text-xs text-gray-500">
-                    <div v-if="availableDevices.length > 0">
-                      <span class="text-green-600 font-medium">{{ availableDevices.length }} dispositivo(s) encontrado(s) no endereço "{{ props.workOrder.address?.nickname }}"</span>
-                    </div>
-                    <div v-else class="text-amber-600 font-medium">
-                      ⚠️ Nenhum dispositivo cadastrado para o endereço "{{ props.workOrder.address?.nickname }}"
-                      <br>
-                      <span class="text-gray-500">É necessário cadastrar dispositivos neste endereço antes de criar eventos.</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Segunda linha: Data do Evento -->
+            <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Data do Evento *</label>
-                <input
-                  type="datetime-local"
-                  v-model="deviceEventForm.event_date"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-              </div>
-
-              <!-- Campos específicos para Consumo de Isca -->
-              <div v-if="deviceEventForm.event_type === 'bait_consumption'" class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Status do Consumo *</label>
-                  <select v-model="deviceEventForm.bait_consumption_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione o status</option>
-                    <option value="partial">Parcial</option>
-                    <option value="total">Total</option>
-                    <option value="none">Não houve</option>
-                    <option value="spoiled">Estragada</option>
-                    <option value="replacement">Reposição</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade Consumida</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="999.99"
-                    v-model="deviceEventForm.bait_consumption_quantity"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="0.00"
-                  >
-                </div>
-              </div>
-
-              <!-- Campos específicos para Limpeza -->
-              <div v-if="deviceEventForm.event_type === 'cleaning'" class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Limpeza Realizada *</label>
-                  <select v-model="deviceEventForm.cleaning_done" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione</option>
-                    <option :value="true">Sim</option>
-                    <option :value="false">Não</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações da Limpeza</label>
-                  <textarea
-                    v-model="deviceEventForm.cleaning_notes"
-                    rows="2"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Observações sobre a limpeza realizada..."
-                  ></textarea>
-                </div>
-              </div>
-
-              <!-- Campos específicos para Troca de Isca -->
-              <div v-if="deviceEventForm.event_type === 'bait_change'" class="grid grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo da Nova Isca</label>
-                  <input
-                    type="text"
-                    v-model="deviceEventForm.bait_change_type"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Tipo da isca"
-                  >
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Lote da Nova Isca</label>
-                  <input
-                    type="text"
-                    v-model="deviceEventForm.bait_change_lot"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Número do lote"
-                  >
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade da Nova Isca</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="999.99"
-                    v-model="deviceEventForm.bait_change_quantity"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="0.00"
-                  >
-                </div>
-              </div>
-
-              <!-- Campos específicos para Observações do Técnico -->
-              <div v-if="deviceEventForm.event_type === 'technician_notes'">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Observações do Técnico *</label>
-                <textarea
-                  v-model="deviceEventForm.technician_notes"
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Observações técnicas sobre o dispositivo..."
-                ></textarea>
-              </div>
-
-              <!-- Terceira linha: Descrição e Observações -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                  <textarea
-                    v-model="deviceEventForm.description"
-                    rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Descreva o evento realizado..."
-                  ></textarea>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
-                  <textarea
-                    v-model="deviceEventForm.observations"
-                    rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Observações adicionais..."
-                  ></textarea>
-                </div>
-              </div>
-
-              <!-- Botões -->
-              <div class="flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  @click="showDeviceEventModal = false"
-                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  :disabled="isSubmitting"
-                  class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="isSubmitting">Salvando...</span>
-                  <span v-else>Salvar Evento</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal para Visualizar Evento de Dispositivo -->
-      <div v-if="showViewEventModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
-          <div class="p-6 overflow-y-auto max-h-[85vh]">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-xl font-semibold text-gray-900">Detalhes do Evento</h3>
-              <button
-                @click="showViewEventModal = false"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <div v-if="selectedEvent" class="space-y-6">
-              <!-- Informações básicas -->
-              <div class="grid grid-cols-2 gap-6">
-                <div>
-                  <label class="block text-sm font-medium text-gray-500">Tipo de Evento</label>
-                  <p class="mt-1 text-sm text-gray-900">
-                    {{ selectedEvent.event_type_text || getEventTypeText(selectedEvent.event_type) }}
-                  </p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-500">Data do Evento</label>
-                  <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(selectedEvent.event_date) }}</p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-500">Dispositivo</label>
-                  <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.device?.label }} ({{ selectedEvent.device?.number }})</p>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-500">Cômodo</label>
-                  <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.device?.room?.name }}</p>
-                </div>
-              </div>
-
-              <!-- TODOS os campos com dados preenchidos -->
-              <div class="border-t pt-4">
-                <h4 class="text-sm font-medium text-gray-700 mb-3">Detalhes do Evento</h4>
-                <div class="grid grid-cols-2 gap-6">
-                  <!-- Status do Consumo (se preenchido) -->
-                  <div v-if="selectedEvent.bait_consumption_status">
-                    <label class="block text-sm font-medium text-gray-500">Status do Consumo</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ getBaitConsumptionStatusText(selectedEvent.bait_consumption_status) }}</p>
-                  </div>
-
-                  <!-- Quantidade Consumida (se preenchida) -->
-                  <div v-if="selectedEvent.bait_consumption_quantity">
-                    <label class="block text-sm font-medium text-gray-500">Quantidade Consumida</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.bait_consumption_quantity }}</p>
-                  </div>
-
-                  <!-- Limpeza Realizada (se preenchida) -->
-                  <div v-if="selectedEvent.cleaning_done !== null && selectedEvent.cleaning_done !== undefined">
-                    <label class="block text-sm font-medium text-gray-500">Limpeza Realizada</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.cleaning_done ? 'Sim' : 'Não' }}</p>
-                  </div>
-
-                  <!-- Observações da Limpeza (se preenchidas) -->
-                  <div v-if="selectedEvent.cleaning_notes">
-                    <label class="block text-sm font-medium text-gray-500">Observações da Limpeza</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.cleaning_notes }}</p>
-                  </div>
-
-                  <!-- Tipo da Nova Isca (se preenchido) -->
-                  <div v-if="selectedEvent.bait_change_type">
-                    <label class="block text-sm font-medium text-gray-500">Tipo da Nova Isca</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.bait_change_type }}</p>
-                  </div>
-
-                  <!-- Lote da Nova Isca (se preenchido) -->
-                  <div v-if="selectedEvent.bait_change_lot">
-                    <label class="block text-sm font-medium text-gray-500">Lote da Nova Isca</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.bait_change_lot }}</p>
-                  </div>
-
-                  <!-- Quantidade da Nova Isca (se preenchida) -->
-                  <div v-if="selectedEvent.bait_change_quantity">
-                    <label class="block text-sm font-medium text-gray-500">Quantidade da Nova Isca</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.bait_change_quantity }}</p>
-                  </div>
-
-                  <!-- Observações do Técnico (se preenchidas) -->
-                  <div v-if="selectedEvent.technician_notes" class="col-span-2">
-                    <label class="block text-sm font-medium text-gray-500">Observações do Técnico</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.technician_notes }}</p>
-                  </div>
-
-                  <!-- Descrição (se preenchida) -->
-                  <div v-if="selectedEvent.description" class="col-span-2">
-                    <label class="block text-sm font-medium text-gray-500">Descrição</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.description }}</p>
-                  </div>
-
-                  <!-- Observações (se preenchidas) -->
-                  <div v-if="selectedEvent.observations" class="col-span-2">
-                    <label class="block text-sm font-medium text-gray-500">Observações</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.observations }}</p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Informações do Sistema -->
-              <div class="border-t pt-4">
-                <h4 class="text-sm font-medium text-gray-700 mb-3">Informações do Sistema</h4>
-                <div class="grid grid-cols-3 gap-6 text-xs">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-500">ID do Evento</label>
-                    <p class="mt-1 text-sm text-gray-900">#{{ selectedEvent.id }}</p>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-500">Status</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedEvent.active ? 'Ativo' : 'Inativo' }}</p>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-500">Criado em</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(selectedEvent.created_at) }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Botões -->
-            <div class="flex justify-end space-x-4 pt-6">
-              <button
-                type="button"
-                @click="showViewEventModal = false"
-                class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-              >
-                Fechar
-              </button>
-              <button
-                v-if="selectedEvent"
-                type="button"
-                @click="editEvent(selectedEvent)"
-                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-              >
-                Editar Evento
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal para Editar Evento de Dispositivo -->
-      <div v-if="showEditEventModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
-          <div class="p-6 overflow-y-auto max-h-[85vh]">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-xl font-semibold text-gray-900">Editar Evento de Dispositivo</h3>
-              <button
-                @click="showEditEventModal = false"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <form @submit.prevent="updateEvent" class="space-y-6">
-              <!-- Primeira linha: Tipo de Evento e Dispositivo -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Evento *</label>
-                  <select v-model="editEventForm.event_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione o tipo</option>
-                    <option value="bait_consumption">Consumo de Isca</option>
-                    <option value="cleaning">Limpeza</option>
-                    <option value="bait_change">Troca de Isca</option>
-                    <option value="technician_notes">Observações do Técnico</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Dispositivo *</label>
-                  <select v-model="editEventForm.device_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione o dispositivo</option>
-                    <option v-for="device in availableDevices" :key="device.id" :value="device.id">
-                      {{ device.label }} ({{ device.number }}) - {{ device.room?.name }}
-                    </option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Segunda linha: Data do Evento -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Data do Evento *</label>
-                <input
-                  type="datetime-local"
-                  v-model="editEventForm.event_date"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-              </div>
-
-              <!-- Campos específicos para Consumo de Isca -->
-              <div v-if="editEventForm.event_type === 'bait_consumption'" class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Status do Consumo *</label>
-                  <select v-model="editEventForm.bait_consumption_status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione o status</option>
-                    <option value="partial">Parcial</option>
-                    <option value="total">Total</option>
-                    <option value="none">Não houve</option>
-                    <option value="spoiled">Estragada</option>
-                    <option value="replacement">Reposição</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade Consumida</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="999.99"
-                    v-model="editEventForm.bait_consumption_quantity"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="0.00"
-                  >
-                </div>
-              </div>
-
-              <!-- Campos específicos para Limpeza -->
-              <div v-if="editEventForm.event_type === 'cleaning'" class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Limpeza Realizada *</label>
-                  <select v-model="editEventForm.cleaning_done" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione</option>
-                    <option :value="true">Sim</option>
-                    <option :value="false">Não</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações da Limpeza</label>
-                  <textarea
-                    v-model="editEventForm.cleaning_notes"
-                    rows="2"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Observações sobre a limpeza realizada..."
-                  ></textarea>
-                </div>
-              </div>
-
-              <!-- Campos específicos para Troca de Isca -->
-              <div v-if="editEventForm.event_type === 'bait_change'" class="grid grid-cols-3 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo da Nova Isca</label>
-                  <input
-                    type="text"
-                    v-model="editEventForm.bait_change_type"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Tipo da isca"
-                  >
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Lote da Nova Isca</label>
-                  <input
-                    type="text"
-                    v-model="editEventForm.bait_change_lot"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Número do lote"
-                  >
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade da Nova Isca</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max="999.99"
-                    v-model="editEventForm.bait_change_quantity"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="0.00"
-                  >
-                </div>
-              </div>
-
-              <!-- Campos específicos para Observações do Técnico -->
-              <div v-if="editEventForm.event_type === 'technician_notes'">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Observações do Técnico *</label>
-                <textarea
-                  v-model="editEventForm.technician_notes"
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Observações técnicas sobre o dispositivo..."
-                ></textarea>
-              </div>
-
-              <!-- Terceira linha: Descrição e Observações -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                  <textarea
-                    v-model="editEventForm.description"
-                    rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Descreva o evento realizado..."
-                  ></textarea>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
-                  <textarea
-                    v-model="editEventForm.observations"
-                    rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Observações adicionais..."
-                  ></textarea>
-                </div>
-              </div>
-
-              <!-- Botões -->
-              <div class="flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  @click="showEditEventModal = false"
-                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  :disabled="isUpdating"
-                  class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="isUpdating">Salvando...</span>
-                  <span v-else>Salvar Alterações</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal para criar Produto -->
-      <div v-if="showProductModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4" @click="console.log('Modal produto renderizado')">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
-          <div class="p-6 overflow-y-auto max-h-[85vh]">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-xl font-semibold text-gray-900">Novo Produto</h3>
-              <button
-                @click="showProductModal = false"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <form @submit.prevent="submitProduct" class="space-y-6">
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Produto *</label>
-                  <input
-                    v-model="productForm.name"
-                    type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Digite o nome do produto"
-                    required
-                  >
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Fabricante</label>
-                  <input
-                    v-model="productForm.manufacturer"
-                    type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Nome do fabricante"
-                  >
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                <textarea
-                  v-model="productForm.description"
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Descreva o produto..."
-                ></textarea>
-              </div>
-
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Concentração</label>
-                  <input
-                    v-model="productForm.concentration"
-                    type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ex: 2,5%"
-                  >
-                </div>
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Formulação</label>
-                  <input
-                    v-model="productForm.formulation"
-                    type="text"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Ex: Pó molhável"
-                  >
-                </div>
-              </div>
-
-              <!-- Botões -->
-              <div class="flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  @click="showProductModal = false"
-                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  :disabled="isSubmittingProduct"
-                  class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="isSubmittingProduct">Criando...</span>
-                  <span v-else>Criar Produto</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal para criar Serviço -->
-      <div v-if="showServiceModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4" @click="console.log('Modal serviço renderizado')">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
-          <div class="p-6 overflow-y-auto max-h-[85vh]">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-xl font-semibold text-gray-900">Novo Serviço</h3>
-              <button
-                @click="showServiceModal = false"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <form @submit.prevent="submitService" class="space-y-6">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Serviço *</label>
-                <input
-                  v-model="serviceForm.name"
-                  type="text"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Digite o nome do serviço"
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Evento *</label>
+                <select
+                  v-model="roomEventForm.event_type"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required
                 >
+                  <option value="">Selecione o tipo de evento...</option>
+                  <option value="inspection">Inspeção</option>
+                  <option value="cleaning">Limpeza</option>
+                  <option value="maintenance">Manutenção</option>
+                  <option value="repair">Reparo</option>
+                  <option value="installation">Instalação</option>
+                  <option value="other">Outros</option>
+                </select>
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Data do Evento *</label>
+                <input
+                  v-model="roomEventForm.event_date"
+                  type="date"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Dispositivo (Opcional)</label>
+                <select
+                  v-model="roomEventForm.device_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Nenhum dispositivo</option>
+                  <option v-for="device in availableDevices" :key="device.id" :value="device.id">
+                    {{ device.label }} ({{ device.number }})
+                  </option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Descrição do Evento</label>
                 <textarea
-                  v-model="serviceForm.description"
+                  v-model="roomEventForm.event_description"
                   rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Descreva o serviço..."
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Descreva o evento realizado..."
                 ></textarea>
               </div>
 
-              <!-- Botões -->
-              <div class="flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  @click="showServiceModal = false"
-                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  :disabled="isSubmittingService"
-                  class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="isSubmittingService">Criando...</span>
-                  <span v-else>Criar Serviço</span>
-                </button>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                <textarea
+                  v-model="roomEventForm.event_observations"
+                  rows="3"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Observações adicionais..."
+                ></textarea>
               </div>
-            </form>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+              <button
+                @click="showRoomEventModal = false"
+                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancelar
+              </button>
+              <button
+                @click="saveRoomEvent"
+                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                :disabled="!roomEventForm.event_type || !roomEventForm.event_date"
+              >
+                Salvar Evento
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Modal para editar Produto na OS -->
-      <div v-if="showEditProductModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 transform transition-all">
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-xl font-semibold text-gray-900">Editar Produto</h3>
-              <button
-                @click="showEditProductModal = false"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
+      <!-- Modal para Avistamento de Praga do Cômodo -->
+      <div v-if="showRoomPestSightingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">
+              {{ selectedRoomForPestSighting && props.workOrder.rooms?.find(r => r.id === selectedRoomForPestSighting)?.pivot?.pest_type ? 'Editar Avistamento' : 'Adicionar Avistamento' }}
+            </h3>
 
-            <div v-if="selectedProduct" class="mb-4 p-3 bg-blue-50 rounded-lg">
-              <h4 class="font-medium text-blue-900">{{ selectedProduct.name }}</h4>
-              <p v-if="selectedProduct.manufacturer" class="text-sm text-blue-700">{{ selectedProduct.manufacturer }}</p>
-            </div>
-
-            <form @submit.prevent="updateProductInOS" class="space-y-6">
+            <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade *</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Praga *</label>
+                <select
+                  v-model="roomPestSightingForm.pest_type"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Selecione o tipo de praga...</option>
+                  <option value="cockroach">Barata</option>
+                  <option value="ant">Formiga</option>
+                  <option value="mouse">Rato</option>
+                  <option value="fly">Mosca</option>
+                  <option value="mosquito">Mosquito</option>
+                  <option value="spider">Aranha</option>
+                  <option value="termite">Cupim</option>
+                  <option value="other">Outros</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Data do Avistamento *</label>
                 <input
-                  v-model="editProductForm.quantity"
+                  v-model="roomPestSightingForm.pest_sighting_date"
+                  type="date"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Localização no Cômodo</label>
+                <input
+                  v-model="roomPestSightingForm.pest_location"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ex: Perto da janela, embaixo da mesa..."
+                />
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade Observada</label>
+                <input
+                  v-model="roomPestSightingForm.pest_quantity"
                   type="number"
                   min="1"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Ex: 3"
+                />
               </div>
 
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Observação</label>
                 <textarea
-                  v-model="editProductForm.observations"
+                  v-model="roomPestSightingForm.pest_observation"
                   rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Observações sobre o uso do produto..."
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Observações sobre o avistamento..."
                 ></textarea>
               </div>
+            </div>
 
-              <!-- Botões -->
-              <div class="flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  @click="showEditProductModal = false"
-                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  :disabled="isUpdatingProduct"
-                  class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="isUpdatingProduct">Salvando...</span>
-                  <span v-else>Salvar Alterações</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal para editar Serviço na OS -->
-      <div v-if="showEditServiceModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 transform transition-all">
-          <div class="p-6">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-xl font-semibold text-gray-900">Editar Serviço</h3>
+            <div class="flex justify-end space-x-3 mt-6">
               <button
-                @click="showEditServiceModal = false"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
+                @click="showRoomPestSightingModal = false"
+                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
               >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <div v-if="selectedService" class="mb-4 p-3 bg-green-50 rounded-lg">
-              <h4 class="font-medium text-green-900">{{ selectedService.name }}</h4>
-              <p v-if="selectedService.description" class="text-sm text-green-700">{{ selectedService.description }}</p>
-            </div>
-
-            <form @submit.prevent="updateServiceInOS" class="space-y-6">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
-                <textarea
-                  v-model="editServiceForm.observations"
-                  rows="4"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Observações sobre a realização do serviço..."
-                ></textarea>
-              </div>
-
-              <!-- Botões -->
-              <div class="flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  @click="showEditServiceModal = false"
-                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  :disabled="isUpdatingService"
-                  class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="isUpdatingService">Salvando...</span>
-                  <span v-else>Salvar Alterações</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal para visualizar Avistamento de Praga -->
-      <div v-if="showViewPestSightingModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
-          <div class="p-6 overflow-y-auto max-h-[85vh]">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-xl font-semibold text-gray-900">Visualizar Avistamento de Praga</h3>
-              <button
-                @click="showViewPestSightingModal = false"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <div v-if="selectedPestSighting" class="space-y-6">
-              <!-- Informações básicas -->
-              <div class="grid grid-cols-2 gap-6">
-                <div>
-                  <label class="block text-sm font-medium text-gray-500">Tipo de Praga</label>
-                  <p class="mt-1 text-sm text-gray-900">{{ getPestTypeText(selectedPestSighting.pest_type) }}</p>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Nível de Severidade</label>
-                  <p class="text-sm text-gray-900">{{ getSeverityLevelText(selectedPestSighting.severity_level) }}</p>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Data do Avistamento</label>
-                  <p class="text-sm text-gray-900">{{ formatDateTime(selectedPestSighting.sighting_date) }}</p>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Localização</label>
-                  <p class="text-sm text-gray-900">{{ selectedPestSighting.location_description }}</p>
-                </div>
-
-                <!-- Campos opcionais -->
-                <div v-if="selectedPestSighting.description" class="col-span-2">
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-                  <p class="text-sm text-gray-900">{{ selectedPestSighting.description }}</p>
-                </div>
-
-                <div v-if="selectedPestSighting.observations" class="col-span-2">
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Observações</label>
-                  <p class="text-sm text-gray-900">{{ selectedPestSighting.observations }}</p>
-                </div>
-
-                <div v-if="selectedPestSighting.environmental_conditions" class="col-span-2">
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Condições Ambientais</label>
-                  <p class="text-sm text-gray-900">{{ selectedPestSighting.environmental_conditions }}</p>
-                </div>
-
-                <div v-if="selectedPestSighting.control_measures_applied" class="col-span-2">
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Medidas de Controle Aplicadas</label>
-                  <p class="text-sm text-gray-900">{{ selectedPestSighting.control_measures_applied }}</p>
-                </div>
-
-                <div v-if="selectedPestSighting.technician_notes" class="col-span-2">
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Observações do Técnico</label>
-                  <p class="text-sm text-gray-900">{{ selectedPestSighting.technician_notes }}</p>
-                </div>
-              </div>
-
-              <!-- Informações do Sistema -->
-              <div class="border-t pt-4">
-                <h4 class="text-sm font-medium text-gray-700 mb-3">Informações do Sistema</h4>
-                <div class="grid grid-cols-3 gap-6 text-xs">
-                  <div>
-                    <label class="block text-sm font-medium text-gray-500">ID do Evento</label>
-                    <p class="mt-1 text-sm text-gray-900">#{{ selectedPestSighting.id }}</p>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-500">Status</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ selectedPestSighting.active ? 'Ativo' : 'Inativo' }}</p>
-                  </div>
-                  <div>
-                    <label class="block text-sm font-medium text-gray-500">Criado em</label>
-                    <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(selectedPestSighting.created_at) }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Botões -->
-            <div class="flex justify-end space-x-4 pt-6">
-              <button
-                type="button"
-                @click="showViewPestSightingModal = false"
-                class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-              >
-                Fechar
+                Cancelar
               </button>
               <button
-                v-if="selectedPestSighting"
-                type="button"
-                @click="editPestSighting(selectedPestSighting)"
-                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                @click="saveRoomPestSighting"
+                class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                :disabled="!roomPestSightingForm.pest_type || !roomPestSightingForm.pest_sighting_date"
               >
-                Editar Avistamento
+                Salvar Avistamento
               </button>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- Modal para editar Avistamento de Praga -->
-      <div v-if="showEditPestSightingModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
-          <div class="p-6 overflow-y-auto max-h-[85vh]">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-xl font-semibold text-gray-900">Editar Avistamento de Praga</h3>
-              <button
-                @click="showEditPestSightingModal = false"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <form @submit.prevent="updatePestSighting" class="space-y-6">
-              <!-- Primeira linha: Tipo de Praga e Nível de Severidade -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Praga *</label>
-                  <select v-model="editPestSightingForm.pest_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione o tipo</option>
-                    <option value="rats">Ratos</option>
-                    <option value="mice">Camundongos</option>
-                    <option value="cockroaches">Baratas</option>
-                    <option value="ants">Formigas</option>
-                    <option value="termites">Cupins</option>
-                    <option value="flies">Moscas</option>
-                    <option value="fleas">Pulgas</option>
-                    <option value="ticks">Carrapatos</option>
-                    <option value="scorpions">Escorpiões</option>
-                    <option value="spiders">Aranhas</option>
-                    <option value="bees">Abelhas</option>
-                    <option value="wasps">Vespas</option>
-                    <option value="other">Outros</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Nível de Severidade *</label>
-                  <select v-model="editPestSightingForm.severity_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione a severidade</option>
-                    <option value="low">Baixa</option>
-                    <option value="medium">Média</option>
-                    <option value="high">Alta</option>
-                    <option value="critical">Crítica</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Segunda linha: Data e Localização -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Data do Avistamento *</label>
-                  <input
-                    type="datetime-local"
-                    v-model="editPestSightingForm.sighting_date"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Localização *</label>
-                  <input
-                    type="text"
-                    v-model="editPestSightingForm.location_description"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Ex: Cozinha, Sala, Quarto, etc."
-                  >
-                </div>
-              </div>
-
-              <!-- Terceira linha: Descrição e Observações -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                  <textarea
-                    v-model="editPestSightingForm.description"
-                    rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Descreva o avistamento..."
-                  ></textarea>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
-                  <textarea
-                    v-model="editPestSightingForm.observations"
-                    rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Observações adicionais..."
-                  ></textarea>
-                </div>
-              </div>
-
-              <!-- Quarta linha: Condições e Medidas -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Condições Ambientais</label>
-                  <textarea
-                    v-model="editPestSightingForm.environmental_conditions"
-                    rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Descreva as condições ambientais..."
-                  ></textarea>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Medidas de Controle Aplicadas</label>
-                  <textarea
-                    v-model="editPestSightingForm.control_measures_applied"
-                    rows="3"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Descreva as medidas aplicadas..."
-                  ></textarea>
-                </div>
-              </div>
-
-              <!-- Quinta linha: Observações do Técnico -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Observações do Técnico</label>
-                <textarea
-                  v-model="editPestSightingForm.technician_notes"
-                  rows="3"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Observações técnicas..."
-                ></textarea>
-              </div>
-
-              <!-- Botões -->
-              <div class="flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  @click="showEditPestSightingModal = false"
-                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  :disabled="isUpdatingPestSighting"
-                  class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="isUpdatingPestSighting">Salvando...</span>
-                  <span v-else>Salvar Alterações</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="props.workOrder.device_events && props.workOrder.device_events.length > 0" class="space-y-4">
-        <div v-for="event in props.workOrder.device_events" :key="event.id" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-          <div class="flex items-start justify-between">
-            <div class="flex items-start space-x-3">
-              <div class="flex-shrink-0">
-                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                  </svg>
-                </div>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center space-x-2 mb-1">
-                  <span class="text-sm font-medium text-gray-900">
-                    {{ event.device?.label }} ({{ event.device?.number }})
-                  </span>
-                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {{ getEventTypeText(event.event_type) }}
-                  </span>
-                </div>
-                <div class="text-sm text-gray-500">
-                  {{ formatDateTime(event.event_date) }}
-                </div>
-                <div v-if="event.description" class="text-sm text-gray-600 mt-1">
-                  {{ event.description }}
-                </div>
-              </div>
-            </div>
-            <div class="flex space-x-2">
-              <button
-                @click="viewEvent(event)"
-                class="text-green-600 hover:text-green-900 text-sm font-medium"
-              >
-                Ver Detalhes
-              </button>
-              <button
-                @click="editEvent(event)"
-                class="text-blue-600 hover:text-blue-900 text-sm font-medium"
-              >
-                Editar
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="text-center py-8">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-        </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum evento de dispositivo</h3>
-        <p class="mt-1 text-sm text-gray-500">Comece criando um novo evento de dispositivo.</p>
-      </div>
-    </div>
-
-    <!-- Aba: Avistamentos de Pragas -->
-    <div v-if="activeTab === 'pest-sightings'">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Avistamentos de Pragas</h3>
-        <button
-          @click="showPestSightingModal = true"
-          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
-        >
-          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          Novo Avistamento
-        </button>
-      </div>
-
-      <!-- Modal para criar Avistamento de Praga -->
-      <div v-if="showPestSightingModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
-        <div class="relative bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 transform transition-all max-h-[85vh] overflow-hidden">
-          <div class="p-6 overflow-y-auto max-h-[85vh]">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-xl font-semibold text-gray-900">Novo Avistamento de Praga</h3>
-              <button
-                @click="showPestSightingModal = false"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-
-            <form @submit.prevent="submitPestSighting" class="space-y-4">
-              <!-- Primeira linha: Tipo de Praga e Nível de Severidade -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Praga *</label>
-                  <select v-model="pestSightingForm.pest_type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione o tipo</option>
-                    <option value="rats">Ratos</option>
-                    <option value="mice">Camundongos</option>
-                    <option value="cockroaches">Baratas</option>
-                    <option value="ants">Formigas</option>
-                    <option value="termites">Cupins</option>
-                    <option value="flies">Moscas</option>
-                    <option value="fleas">Pulgas</option>
-                    <option value="ticks">Carrapatos</option>
-                    <option value="scorpions">Escorpiões</option>
-                    <option value="spiders">Aranhas</option>
-                    <option value="bees">Abelhas</option>
-                    <option value="wasps">Vespas</option>
-                    <option value="other">Outros</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Nível de Severidade *</label>
-                  <select v-model="pestSightingForm.severity_level" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <option value="">Selecione a severidade</option>
-                    <option value="low">Baixa</option>
-                    <option value="medium">Média</option>
-                    <option value="high">Alta</option>
-                    <option value="critical">Crítica</option>
-                  </select>
-                </div>
-              </div>
-
-              <!-- Segunda linha: Data e Localização -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Data do Avistamento *</label>
-                  <input
-                    type="datetime-local"
-                    v-model="pestSightingForm.sighting_date"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Localização *</label>
-                  <input
-                    type="text"
-                    v-model="pestSightingForm.location_description"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Ex: Cozinha, Sala, Quarto, etc."
-                  >
-                </div>
-              </div>
-
-              <!-- Terceira linha: Descrição e Observações -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
-                  <textarea
-                    v-model="pestSightingForm.description"
-                    rows="2"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Descreva o avistamento..."
-                  ></textarea>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
-                  <textarea
-                    v-model="pestSightingForm.observations"
-                    rows="2"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Observações adicionais..."
-                  ></textarea>
-                </div>
-              </div>
-
-              <!-- Quarta linha: Condições e Medidas -->
-              <div class="grid grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Condições Ambientais</label>
-                  <textarea
-                    v-model="pestSightingForm.environmental_conditions"
-                    rows="2"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Descreva as condições ambientais..."
-                  ></textarea>
-                </div>
-
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">Medidas de Controle Aplicadas</label>
-                  <textarea
-                    v-model="pestSightingForm.control_measures_applied"
-                    rows="2"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="Descreva as medidas aplicadas..."
-                  ></textarea>
-                </div>
-              </div>
-
-              <!-- Quinta linha: Observações do Técnico -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Observações do Técnico</label>
-                <textarea
-                  v-model="pestSightingForm.technician_notes"
-                  rows="2"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  placeholder="Observações técnicas..."
-                ></textarea>
-              </div>
-
-              <!-- Botões -->
-              <div class="flex justify-end space-x-4 pt-4">
-                <button
-                  type="button"
-                  @click="showPestSightingModal = false"
-                  class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  :disabled="isSubmittingPestSighting"
-                  class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span v-if="isSubmittingPestSighting">Salvando...</span>
-                  <span v-else>Salvar Avistamento</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="props.workOrder.pest_sightings && props.workOrder.pest_sightings.length > 0" class="space-y-4">
-        <div
-          v-for="sighting in props.workOrder.pest_sightings"
-          :key="sighting.id"
-          class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex-1">
-              <div class="flex items-center space-x-3">
-                <div class="flex-shrink-0">
-                  <div class="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
-                    <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-                    </svg>
-                  </div>
-                </div>
-                <div class="flex-1">
-                  <h4 class="text-sm font-medium text-gray-900">{{ getPestTypeText(sighting.pest_type) }}</h4>
-                  <p class="text-sm text-gray-500">
-                    Severidade: {{ getSeverityLevelText(sighting.severity_level) }}
-                  </p>
-                  <p class="text-sm text-gray-500">
-                    {{ formatDateTime(sighting.sighting_date) }}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div class="flex space-x-2">
-              <button
-                @click="viewPestSighting(sighting)"
-                class="text-green-600 hover:text-green-900 text-sm font-medium"
-              >
-                Ver Detalhes
-              </button>
-              <button
-                @click="editPestSighting(sighting)"
-                class="text-blue-600 hover:text-blue-900 text-sm font-medium"
-              >
-                Editar
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="text-center py-8">
-        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
-        </svg>
-        <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum avistamento de praga</h3>
-        <p class="mt-1 text-sm text-gray-500">Comece criando um novo avistamento de praga.</p>
       </div>
     </div>
 
@@ -2863,7 +1899,7 @@
             <!-- Linha 1 -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Praga</label>
-              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ getPestTypeText(selectedPestSighting.pest_type) }}</p>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ getPestSightingTypeText(selectedPestSighting.pest_type) }}</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Nível de Severidade</label>
@@ -3076,7 +2112,6 @@
         </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup>
@@ -3589,16 +2624,59 @@ const isUpdatingPestSighting = ref(false);
 // Estado para gerenciar cômodos
 const showAddRoomModal = ref(false);
 const availableRooms = ref([]);
+const availableDevices = ref([]);
 const isLoadingAvailableRooms = ref(false);
 const isAddingRoom = ref(false);
 const isRemovingRoom = ref(false);
 const editingRoomId = ref(null);
 const roomObservations = ref({});
 
+// Estados para validação do modal de adicionar cômodo
+const roomFormErrors = ref({
+  room_id: '',
+  event_type: '',
+  event_date: '',
+  general: ''
+});
+
+// Modais para eventos e avistamentos
+const showRoomEventModal = ref(false);
+const showRoomPestSightingModal = ref(false);
+const selectedRoomForEvent = ref(null);
+const selectedRoomForPestSighting = ref(null);
+
 // Formulário para adicionar cômodo
 const newRoomForm = useForm({
   room_id: '',
-  observation: ''
+  // Campos do evento (obrigatórios)
+  event_type: '',
+  event_date: '',
+  event_description: '',
+  event_observations: '',
+  device_id: '',
+  // Campos do avistamento de praga (opcionais)
+  pest_type: '',
+  pest_sighting_date: '',
+  pest_location: '',
+  pest_quantity: '',
+  pest_observation: ''
+});
+
+// Formulários para eventos e avistamentos de cômodos
+const roomEventForm = useForm({
+  event_type: '',
+  event_date: '',
+  event_description: '',
+  event_observations: '',
+  device_id: ''
+});
+
+const roomPestSightingForm = useForm({
+  pest_type: '',
+  pest_sighting_date: '',
+  pest_location: '',
+  pest_quantity: '',
+  pest_observation: ''
 });
 
 // Sistema de Toast
@@ -4207,6 +3285,59 @@ const formatCurrency = (value) => {
   });
 };
 
+// Funções para converter valores em texto legível
+const getEventTypeText = (eventType) => {
+  const types = {
+    'treatment': 'Tratamento',
+    'inspection': 'Inspeção',
+    'maintenance': 'Manutenção',
+    'installation': 'Instalação',
+    'removal': 'Remoção',
+    'other': 'Outro',
+    // Valores em português (como são salvos)
+    'Aplicação': 'Aplicação',
+    'Inspeção': 'Inspeção',
+    'Manutenção': 'Manutenção',
+    'Monitoramento': 'Monitoramento',
+    'Outro': 'Outro'
+  };
+  return types[eventType] || eventType;
+};
+
+const getDeviceInfo = (deviceId) => {
+  // Buscar dispositivo em todos os cômodos da ordem de serviço
+  const allDevices = props.workOrder.rooms?.flatMap(room => room.devices || []) || [];
+  const device = allDevices.find(d => d.id == deviceId);
+
+  if (device) {
+    return `${device.label} (${device.number})`;
+  }
+
+  // Se não encontrou nos cômodos da OS, buscar nos cômodos disponíveis
+  const availableDevicesList = availableRooms.value.flatMap(room => room.devices || []);
+  const availableDevice = availableDevicesList.find(d => d.id == deviceId);
+
+  if (availableDevice) {
+    return `${availableDevice.label} (${availableDevice.number})`;
+  }
+
+  return `Dispositivo ID: ${deviceId}`;
+};
+
+const getPestTypeText = (pestType) => {
+  const types = {
+    'cockroach': 'Barata',
+    'ant': 'Formiga',
+    'spider': 'Aranha',
+    'rat': 'Rato',
+    'mosquito': 'Mosquito',
+    'fly': 'Mosca',
+    'termite': 'Cupim',
+    'other': 'Outro'
+  };
+  return types[pestType] || pestType;
+};
+
 // Funções para máscara de moeda
 const formatCurrencyInput = (value) => {
   if (!value || value === '') return '';
@@ -4661,8 +3792,8 @@ const submitFinancialInfo = async () => {
   }
 };
 
-// Função para obter o texto do tipo de evento
-const getEventTypeText = (eventType) => {
+// Função para obter o texto do tipo de evento de dispositivo
+const getDeviceEventTypeText = (eventType) => {
   switch (eventType) {
     case 'bait_consumption':
       return 'Consumo de Isca';
@@ -4695,8 +3826,8 @@ const getBaitConsumptionStatusText = (status) => {
   }
 };
 
-// Função para obter o texto do tipo de praga
-const getPestTypeText = (pestType) => {
+// Função para obter o texto do tipo de praga de avistamento
+const getPestSightingTypeText = (pestType) => {
   switch (pestType) {
     case 'rats':
       return 'Ratos';
@@ -4891,9 +4022,72 @@ const loadAvailableRooms = async () => {
   }
 };
 
-const addRoom = async () => {
+const loadAvailableDevices = async (roomId = null) => {
+  try {
+    const response = await fetch(`/work-orders/rooms/by-client?client_id=${props.workOrder.client_id}`);
+    const data = await response.json();
+
+    if (roomId) {
+      // Filtrar dispositivos do cômodo específico
+      const selectedRoom = data.rooms?.find(room => room.id == roomId);
+      availableDevices.value = selectedRoom?.devices || [];
+    } else {
+      // Se não há cômodo selecionado, limpar dispositivos
+      availableDevices.value = [];
+    }
+  } catch (error) {
+    console.error('Erro ao carregar dispositivos disponíveis:', error);
+    availableDevices.value = [];
+  }
+};
+
+// Função para validar formulário de adicionar cômodo
+const validateRoomForm = () => {
+  // Limpar erros anteriores
+  roomFormErrors.value = {
+    room_id: '',
+    event_type: '',
+    event_date: '',
+    general: ''
+  };
+
+  let hasErrors = false;
+
+  // Validar cômodo
   if (!newRoomForm.room_id) {
-    displayToast('Por favor, selecione um cômodo.', 'error');
+    roomFormErrors.value.room_id = 'Selecione um cômodo';
+    hasErrors = true;
+  }
+
+  // Validar tipo de evento
+  if (!newRoomForm.event_type) {
+    roomFormErrors.value.event_type = 'Selecione o tipo de evento';
+    hasErrors = true;
+  }
+
+  // Validar data do evento
+  if (!newRoomForm.event_date) {
+    roomFormErrors.value.event_date = 'Selecione a data do evento';
+    hasErrors = true;
+  } else {
+    // Validar se a data não é futura
+    const selectedDate = new Date(newRoomForm.event_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate > today) {
+      roomFormErrors.value.event_date = 'A data do evento não pode ser futura';
+      hasErrors = true;
+    }
+  }
+
+  return !hasErrors;
+};
+
+const addRoomWithEventAndPest = async () => {
+  // Validar formulário
+  if (!validateRoomForm()) {
+    displayToast('Por favor, corrija os erros no formulário.', 'error');
     return;
   }
 
@@ -4903,7 +4097,26 @@ const addRoom = async () => {
     const formData = new FormData();
     formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
     formData.append('room_id', newRoomForm.room_id);
-    formData.append('observation', newRoomForm.observation || '');
+
+    // Adicionar campos do evento (obrigatórios)
+    formData.append('event_type', newRoomForm.event_type);
+    formData.append('event_date', newRoomForm.event_date);
+    formData.append('event_description', newRoomForm.event_description || '');
+    formData.append('event_observations', newRoomForm.event_observations || '');
+    if (newRoomForm.device_id && newRoomForm.device_id !== '') {
+      formData.append('device_id', newRoomForm.device_id);
+    }
+
+    // Adicionar campos do avistamento se preenchidos
+    if (newRoomForm.pest_type || newRoomForm.pest_sighting_date) {
+      formData.append('pest_type', newRoomForm.pest_type || '');
+      formData.append('pest_sighting_date', newRoomForm.pest_sighting_date || '');
+      formData.append('pest_location', newRoomForm.pest_location || '');
+      if (newRoomForm.pest_quantity && newRoomForm.pest_quantity !== '') {
+        formData.append('pest_quantity', newRoomForm.pest_quantity);
+      }
+      formData.append('pest_observation', newRoomForm.pest_observation || '');
+    }
 
     const response = await fetch(`/work-orders/${props.workOrder.id}/rooms`, {
       method: 'POST',
@@ -4920,9 +4133,27 @@ const addRoom = async () => {
       displayToast('Cômodo adicionado com sucesso!', 'success');
       showAddRoomModal.value = false;
       newRoomForm.reset();
+      // Limpar erros
+      roomFormErrors.value = {
+        room_id: '',
+        event_type: '',
+        event_date: '',
+        general: ''
+      };
       availableRooms.value = availableRooms.value.filter(room => room.id !== newRoomForm.room_id);
       window.location.reload();
     } else {
+      // Tratar erros de validação do backend
+      if (result.errors) {
+        roomFormErrors.value = {
+          room_id: result.errors.room_id ? result.errors.room_id[0] : '',
+          event_type: result.errors.event_type ? result.errors.event_type[0] : '',
+          event_date: result.errors.event_date ? result.errors.event_date[0] : '',
+          general: ''
+        };
+      } else {
+        roomFormErrors.value.general = result.message || 'Erro desconhecido';
+      }
       displayToast('Erro ao adicionar cômodo: ' + (result.message || 'Erro desconhecido'), 'error');
     }
   } catch (error) {
@@ -5009,10 +4240,196 @@ const updateRoomObservation = async (roomId) => {
   }
 };
 
+// Funções para gerenciar eventos e avistamentos de cômodos
+const openRoomEventModal = (roomId) => {
+  selectedRoomForEvent.value = roomId;
+
+  // Buscar o cômodo e preencher o formulário se já houver evento
+  const room = props.workOrder.rooms?.find(r => r.id === roomId);
+
+  // Carregar dispositivos do cômodo selecionado
+  loadAvailableDevices(roomId);
+
+  if (room?.pivot?.event_type) {
+    // Preencher formulário com dados existentes
+    roomEventForm.event_type = room.pivot.event_type || '';
+    roomEventForm.event_date = room.pivot.event_date ? formatDateForInput(room.pivot.event_date) : '';
+    roomEventForm.event_description = room.pivot.event_description || '';
+    roomEventForm.event_observations = room.pivot.event_observations || '';
+    roomEventForm.device_id = room.pivot.device_id ? String(room.pivot.device_id) : '';
+  } else {
+    // Limpar formulário para novo evento
+    roomEventForm.reset();
+  }
+
+  showRoomEventModal.value = true;
+};
+
+const openRoomPestSightingModal = (roomId) => {
+  selectedRoomForPestSighting.value = roomId;
+
+  // Buscar o cômodo e preencher o formulário se já houver avistamento
+  const room = props.workOrder.rooms?.find(r => r.id === roomId);
+  if (room?.pivot?.pest_type) {
+    // Preencher formulário com dados existentes
+    roomPestSightingForm.pest_type = room.pivot.pest_type || '';
+    roomPestSightingForm.pest_sighting_date = room.pivot.pest_sighting_date ? formatDateForInput(room.pivot.pest_sighting_date) : '';
+    roomPestSightingForm.pest_location = room.pivot.pest_location || '';
+    roomPestSightingForm.pest_quantity = room.pivot.pest_quantity || '';
+    roomPestSightingForm.pest_observation = room.pivot.pest_observation || '';
+  } else {
+    // Limpar formulário para novo avistamento
+    roomPestSightingForm.reset();
+  }
+
+  showRoomPestSightingModal.value = true;
+};
+
+// Função auxiliar para formatar data para input
+const formatDateForInput = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toISOString().split('T')[0];
+};
+
+// Funções para salvar eventos e avistamentos
+const saveRoomEvent = async () => {
+  if (!roomEventForm.event_type || !roomEventForm.event_date) {
+    displayToast('Por favor, preencha o tipo e a data do evento.', 'error');
+    return;
+  }
+
+  try {
+    const room = props.workOrder.rooms?.find(r => r.id === selectedRoomForEvent.value);
+    const isEditing = room?.pivot?.event_type;
+
+    const formData = new FormData();
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+    if (isEditing) {
+      formData.append('_method', 'PUT');
+    }
+
+    formData.append('event_type', roomEventForm.event_type);
+    formData.append('event_date', roomEventForm.event_date);
+    formData.append('event_description', roomEventForm.event_description || '');
+    formData.append('event_observations', roomEventForm.event_observations || '');
+    if (roomEventForm.device_id && roomEventForm.device_id !== '') {
+      formData.append('device_id', roomEventForm.device_id);
+    }
+
+    const response = await fetch(`/work-orders/${props.workOrder.id}/rooms/${selectedRoomForEvent.value}/event`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    // Verificar se a resposta é JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Resposta não é JSON:', text);
+      displayToast('Erro no servidor. Verifique o console para mais detalhes.', 'error');
+      return;
+    }
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast(result.message || 'Evento salvo com sucesso!', 'success');
+      showRoomEventModal.value = false;
+      // Recarregar a página para atualizar os dados
+      window.location.reload();
+    } else {
+      displayToast('Erro ao salvar evento: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro ao salvar evento:', error);
+    displayToast('Erro ao salvar evento: ' + error.message, 'error');
+  }
+};
+
+const saveRoomPestSighting = async () => {
+  if (!roomPestSightingForm.pest_type || !roomPestSightingForm.pest_sighting_date) {
+    displayToast('Por favor, preencha o tipo e a data do avistamento.', 'error');
+    return;
+  }
+
+  try {
+    const room = props.workOrder.rooms?.find(r => r.id === selectedRoomForPestSighting.value);
+    const isEditing = room?.pivot?.pest_type;
+
+    const formData = new FormData();
+    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+
+    if (isEditing) {
+      formData.append('_method', 'PUT');
+    }
+
+    formData.append('pest_type', roomPestSightingForm.pest_type);
+    formData.append('pest_sighting_date', roomPestSightingForm.pest_sighting_date);
+    formData.append('pest_location', roomPestSightingForm.pest_location || '');
+    if (roomPestSightingForm.pest_quantity && roomPestSightingForm.pest_quantity !== '') {
+      formData.append('pest_quantity', roomPestSightingForm.pest_quantity);
+    }
+    formData.append('pest_observation', roomPestSightingForm.pest_observation || '');
+
+    const response = await fetch(`/work-orders/${props.workOrder.id}/rooms/${selectedRoomForPestSighting.value}/pest-sighting`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    // Verificar se a resposta é JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      const text = await response.text();
+      console.error('Resposta não é JSON:', text);
+      displayToast('Erro no servidor. Verifique o console para mais detalhes.', 'error');
+      return;
+    }
+
+    const result = await response.json();
+
+    if (response.ok) {
+      displayToast(result.message || 'Avistamento salvo com sucesso!', 'success');
+      showRoomPestSightingModal.value = false;
+      // Recarregar a página para atualizar os dados
+      window.location.reload();
+    } else {
+      displayToast('Erro ao salvar avistamento: ' + (result.message || 'Erro desconhecido'), 'error');
+    }
+  } catch (error) {
+    console.error('Erro ao salvar avistamento:', error);
+    displayToast('Erro ao salvar avistamento: ' + error.message, 'error');
+  }
+};
+
+
 // Watch para carregar cômodos disponíveis quando o modal abrir
 watch(showAddRoomModal, (newValue) => {
   if (newValue) {
     loadAvailableRooms();
+    // Limpar dispositivos e cômodo selecionado quando modal abrir
+    availableDevices.value = [];
+    newRoomForm.device_id = '';
+    // Limpar erros
+    roomFormErrors.value = {
+      room_id: '',
+      event_type: '',
+      event_date: '',
+      general: ''
+    };
+  }
+});
+
+// Watch para carregar dispositivos quando o cômodo for selecionado
+watch(() => newRoomForm.room_id, (newRoomId) => {
+  if (newRoomId) {
+    loadAvailableDevices(newRoomId);
+    // Limpar dispositivo selecionado quando cômodo mudar
+    newRoomForm.device_id = '';
+  } else {
+    availableDevices.value = [];
+    newRoomForm.device_id = '';
   }
 });
 

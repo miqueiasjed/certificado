@@ -123,7 +123,19 @@ class WorkOrderController extends Controller
             'products',
             'services',
             'rooms' => function($query) {
-                $query->withPivot('observation');
+                $query->withPivot([
+                    'observation',
+                    'event_type',
+                    'event_date',
+                    'event_description',
+                    'event_observations',
+                    'device_id',
+                    'pest_type',
+                    'pest_sighting_date',
+                    'pest_location',
+                    'pest_quantity',
+                    'pest_observation'
+                ])->with('devices');
             },
             'deviceEvents' => function ($query) {
                 $query->with([
@@ -227,16 +239,24 @@ class WorkOrderController extends Controller
                 $query->where('active', true);
             }]);
 
-            foreach ($workOrder->client->addresses as $address) {
-                foreach ($address->rooms as $room) {
-                    $rooms->push([
-                        'id' => $room->id,
-                        'name' => $room->name,
-                        'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
-                        'address' => $address->nickname ?? $address->short_address,
-                    ]);
-                }
-            }
+               foreach ($workOrder->client->addresses as $address) {
+                   foreach ($address->rooms as $room) {
+                       $rooms->push([
+                           'id' => $room->id,
+                           'name' => $room->name,
+                           'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
+                           'address' => $address->nickname ?? $address->short_address,
+                           'devices' => $room->devices()->where('active', true)->get()->map(function($device) {
+                               return [
+                                   'id' => $device->id,
+                                   'label' => $device->label,
+                                   'number' => $device->number,
+                                   'display_name' => $device->label . ' (' . $device->number . ')'
+                               ];
+                           })
+                       ]);
+                   }
+               }
         }
 
         return Inertia::render('WorkOrders/Edit', [
@@ -717,17 +737,62 @@ class WorkOrderController extends Controller
     public function addRoom(Request $request, WorkOrder $workOrder)
     {
         try {
-            $request->validate([
+            // Preparar dados para validação
+            $data = $request->all();
+
+            // Converter campos opcionais vazios para null
+            if (empty($data['device_id']) || $data['device_id'] === '') {
+                $data['device_id'] = null;
+            }
+            if (empty($data['pest_quantity']) || $data['pest_quantity'] === '') {
+                $data['pest_quantity'] = null;
+            }
+
+            $request->merge($data);
+
+            $validationRules = [
                 'room_id' => 'required|exists:rooms,id',
-                'observation' => 'nullable|string|max:500'
-            ]);
+                // Campos de evento (obrigatórios)
+                'event_type' => 'required|string|max:255',
+                'event_date' => 'required|date',
+                'event_description' => 'nullable|string|max:1000',
+                'event_observations' => 'nullable|string|max:1000',
+                // Campos de avistamento (opcionais)
+                'pest_type' => 'nullable|string|max:255',
+                'pest_sighting_date' => 'nullable|date',
+                'pest_location' => 'nullable|string|max:255',
+                'pest_observation' => 'nullable|string|max:1000'
+            ];
+
+            // Só validar device_id se não for null
+            if ($request->device_id !== null) {
+                $validationRules['device_id'] = 'exists:devices,id';
+            }
+
+            // Só validar pest_quantity se não for null
+            if ($request->pest_quantity !== null) {
+                $validationRules['pest_quantity'] = 'integer|min:1';
+            }
+
+            $request->validate($validationRules);
 
             if ($workOrder->rooms()->where('room_id', $request->room_id)->exists()) {
                 return response()->json(['message' => 'Cômodo já está vinculado a esta ordem de serviço'], 400);
             }
 
             $workOrder->rooms()->attach($request->room_id, [
-                'observation' => $request->observation,
+                // Campos de evento (obrigatórios)
+                'event_type' => $request->event_type,
+                'event_date' => $request->event_date,
+                'event_description' => $request->event_description ?: null,
+                'event_observations' => $request->event_observations ?: null,
+                'device_id' => $request->device_id ?: null,
+                // Campos de avistamento (opcionais)
+                'pest_type' => $request->pest_type ?: null,
+                'pest_sighting_date' => $request->pest_sighting_date ?: null,
+                'pest_location' => $request->pest_location ?: null,
+                'pest_quantity' => $request->pest_quantity ?: null,
+                'pest_observation' => $request->pest_observation ?: null,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
@@ -800,6 +865,373 @@ class WorkOrderController extends Controller
 
         } catch (\Exception $e) {
             return response()->json(['message' => 'Erro ao buscar cômodos: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Get rooms by client with devices for Work Orders
+     */
+    public function getRoomsByClientWithDevices(Request $request)
+    {
+        $clientId = $request->get('client_id');
+
+        if (!$clientId) {
+            return response()->json(['rooms' => []]);
+        }
+
+        $client = Client::with(['addresses.rooms' => function($query) {
+            $query->where('active', true);
+        }])->find($clientId);
+
+        if (!$client) {
+            return response()->json(['rooms' => []]);
+        }
+
+        $rooms = [];
+        foreach ($client->addresses as $address) {
+            foreach ($address->rooms as $room) {
+                $rooms[] = [
+                    'id' => $room->id,
+                    'name' => $room->name,
+                    'address' => $address->nickname ?? $address->short_address,
+                    'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
+                    'devices' => $room->devices()->where('active', true)->get()->map(function($device) {
+                        return [
+                            'id' => $device->id,
+                            'label' => $device->label,
+                            'number' => $device->number,
+                            'display_name' => $device->label . ' (' . $device->number . ')'
+                        ];
+                    })
+                ];
+            }
+        }
+
+        return response()->json(['rooms' => $rooms]);
+    }
+
+    /**
+     * Adicionar evento a um cômodo
+     */
+    public function addRoomEvent(Request $request, WorkOrder $workOrder, $roomId)
+    {
+        try {
+            // Preparar dados para validação
+            $data = $request->all();
+
+            // Converter device_id vazio para null
+            if (empty($data['device_id']) || $data['device_id'] === '') {
+                $data['device_id'] = null;
+            }
+
+            $request->merge($data);
+
+            $validationRules = [
+                'event_type' => 'required|string|max:255',
+                'event_date' => 'required|date',
+                'event_description' => 'nullable|string|max:1000',
+                'event_observations' => 'nullable|string|max:1000',
+            ];
+
+            // Só validar device_id se não for null
+            if ($request->device_id !== null) {
+                $validationRules['device_id'] = 'exists:devices,id';
+            }
+
+            $request->validate($validationRules);
+
+            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+                return response()->json(['message' => 'Cômodo não encontrado nesta ordem de serviço'], 404);
+            }
+
+            // Verificar se já existe evento para este cômodo
+            $room = $workOrder->rooms()->where('room_id', $roomId)->first();
+            if ($room->pivot->event_type) {
+                return response()->json(['message' => 'Já existe um evento registrado para este cômodo'], 400);
+            }
+
+            // Adicionar evento
+            $workOrder->rooms()->updateExistingPivot($roomId, [
+                'event_type' => $request->event_type,
+                'event_date' => $request->event_date,
+                'event_description' => $request->event_description ?: null,
+                'event_observations' => $request->event_observations ?: null,
+                'device_id' => $request->device_id ?: null
+            ]);
+
+            return response()->json(['message' => 'Evento adicionado com sucesso']);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao adicionar evento do cômodo', [
+                'work_order_id' => $workOrder->id,
+                'room_id' => $roomId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['message' => 'Erro ao adicionar evento: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Atualizar evento de um cômodo
+     */
+    public function updateRoomEvent(Request $request, WorkOrder $workOrder, $roomId)
+    {
+        try {
+            // Preparar dados para validação
+            $data = $request->all();
+
+
+            // Converter device_id vazio para null
+            if (empty($data['device_id']) || $data['device_id'] === '') {
+                $data['device_id'] = null;
+            }
+
+            $request->merge($data);
+
+            $validationRules = [
+                'event_type' => 'required|string|max:255',
+                'event_date' => 'required|date',
+                'event_description' => 'nullable|string|max:1000',
+                'event_observations' => 'nullable|string|max:1000',
+            ];
+
+            // Só validar device_id se não for null
+            if ($request->device_id !== null) {
+                $validationRules['device_id'] = 'exists:devices,id';
+            }
+
+            $request->validate($validationRules);
+
+            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+                return response()->json(['message' => 'Cômodo não encontrado nesta ordem de serviço'], 404);
+            }
+
+            // Verificar se existe evento para este cômodo
+            $room = $workOrder->rooms()->where('room_id', $roomId)->first();
+            if (!$room->pivot->event_type) {
+                return response()->json(['message' => 'Nenhum evento encontrado para este cômodo'], 404);
+            }
+
+            // Atualizar evento
+            $workOrder->rooms()->updateExistingPivot($roomId, [
+                'event_type' => $request->event_type,
+                'event_date' => $request->event_date,
+                'event_description' => $request->event_description ?: null,
+                'event_observations' => $request->event_observations ?: null,
+                'device_id' => $request->device_id ?: null
+            ]);
+
+            return response()->json(['message' => 'Evento atualizado com sucesso']);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao atualizar evento do cômodo', [
+                'work_order_id' => $workOrder->id,
+                'room_id' => $roomId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['message' => 'Erro ao atualizar evento: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Remover evento de um cômodo
+     */
+    public function removeRoomEvent(Request $request, WorkOrder $workOrder, $roomId)
+    {
+        try {
+            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+                return response()->json(['message' => 'Cômodo não encontrado nesta ordem de serviço'], 404);
+            }
+
+            // Verificar se existe evento para este cômodo
+            $room = $workOrder->rooms()->where('room_id', $roomId)->first();
+            if (!$room->pivot->event_type) {
+                return response()->json(['message' => 'Nenhum evento encontrado para este cômodo'], 404);
+            }
+
+            // Remover evento (limpar campos)
+            $workOrder->rooms()->updateExistingPivot($roomId, [
+                'event_type' => null,
+                'event_date' => null,
+                'event_description' => null,
+                'event_observations' => null,
+                'device_id' => null
+            ]);
+
+            return response()->json(['message' => 'Evento removido com sucesso']);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao remover evento do cômodo', [
+                'work_order_id' => $workOrder->id,
+                'room_id' => $roomId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['message' => 'Erro ao remover evento: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Adicionar avistamento de praga a um cômodo
+     */
+    public function addRoomPestSighting(Request $request, WorkOrder $workOrder, $roomId)
+    {
+        try {
+            // Preparar dados para validação
+            $data = $request->all();
+
+            // Converter pest_quantity vazio para null
+            if (empty($data['pest_quantity']) || $data['pest_quantity'] === '') {
+                $data['pest_quantity'] = null;
+            }
+
+            $request->merge($data);
+
+            $validationRules = [
+                'pest_type' => 'required|string|max:255',
+                'pest_sighting_date' => 'required|date',
+                'pest_location' => 'nullable|string|max:255',
+                'pest_observation' => 'nullable|string|max:1000'
+            ];
+
+            // Só validar pest_quantity se não for null
+            if ($request->pest_quantity !== null) {
+                $validationRules['pest_quantity'] = 'integer|min:1';
+            }
+
+            $request->validate($validationRules);
+
+            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+                return response()->json(['message' => 'Cômodo não encontrado nesta ordem de serviço'], 404);
+            }
+
+            // Verificar se já existe avistamento para este cômodo
+            $room = $workOrder->rooms()->where('room_id', $roomId)->first();
+            if ($room->pivot->pest_type) {
+                return response()->json(['message' => 'Já existe um avistamento registrado para este cômodo'], 400);
+            }
+
+            // Adicionar avistamento
+            $workOrder->rooms()->updateExistingPivot($roomId, [
+                'pest_type' => $request->pest_type,
+                'pest_sighting_date' => $request->pest_sighting_date,
+                'pest_location' => $request->pest_location ?: null,
+                'pest_quantity' => $request->pest_quantity ?: null,
+                'pest_observation' => $request->pest_observation ?: null
+            ]);
+
+            return response()->json(['message' => 'Avistamento adicionado com sucesso']);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao adicionar avistamento de praga do cômodo', [
+                'work_order_id' => $workOrder->id,
+                'room_id' => $roomId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['message' => 'Erro ao adicionar avistamento: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Atualizar avistamento de praga de um cômodo
+     */
+    public function updateRoomPestSighting(Request $request, WorkOrder $workOrder, $roomId)
+    {
+        try {
+            // Preparar dados para validação
+            $data = $request->all();
+
+            // Converter pest_quantity vazio para null
+            if (empty($data['pest_quantity']) || $data['pest_quantity'] === '') {
+                $data['pest_quantity'] = null;
+            }
+
+            $request->merge($data);
+
+            $validationRules = [
+                'pest_type' => 'required|string|max:255',
+                'pest_sighting_date' => 'required|date',
+                'pest_location' => 'nullable|string|max:255',
+                'pest_observation' => 'nullable|string|max:1000'
+            ];
+
+            // Só validar pest_quantity se não for null
+            if ($request->pest_quantity !== null) {
+                $validationRules['pest_quantity'] = 'integer|min:1';
+            }
+
+            $request->validate($validationRules);
+
+            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+                return response()->json(['message' => 'Cômodo não encontrado nesta ordem de serviço'], 404);
+            }
+
+            // Verificar se existe avistamento para este cômodo
+            $room = $workOrder->rooms()->where('room_id', $roomId)->first();
+            if (!$room->pivot->pest_type) {
+                return response()->json(['message' => 'Nenhum avistamento encontrado para este cômodo'], 404);
+            }
+
+            // Atualizar avistamento
+            $workOrder->rooms()->updateExistingPivot($roomId, [
+                'pest_type' => $request->pest_type,
+                'pest_sighting_date' => $request->pest_sighting_date,
+                'pest_location' => $request->pest_location ?: null,
+                'pest_quantity' => $request->pest_quantity ?: null,
+                'pest_observation' => $request->pest_observation ?: null
+            ]);
+
+            return response()->json(['message' => 'Avistamento atualizado com sucesso']);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao atualizar avistamento de praga do cômodo', [
+                'work_order_id' => $workOrder->id,
+                'room_id' => $roomId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['message' => 'Erro ao atualizar avistamento: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Remover avistamento de praga de um cômodo
+     */
+    public function removeRoomPestSighting(Request $request, WorkOrder $workOrder, $roomId)
+    {
+        try {
+            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+                return response()->json(['message' => 'Cômodo não encontrado nesta ordem de serviço'], 404);
+            }
+
+            // Verificar se existe avistamento para este cômodo
+            $room = $workOrder->rooms()->where('room_id', $roomId)->first();
+            if (!$room->pivot->pest_type) {
+                return response()->json(['message' => 'Nenhum avistamento encontrado para este cômodo'], 404);
+            }
+
+            // Remover avistamento (limpar campos)
+            $workOrder->rooms()->updateExistingPivot($roomId, [
+                'pest_type' => null,
+                'pest_sighting_date' => null,
+                'pest_location' => null,
+                'pest_quantity' => null,
+                'pest_observation' => null
+            ]);
+
+            return response()->json(['message' => 'Avistamento removido com sucesso']);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao remover avistamento de praga do cômodo', [
+                'work_order_id' => $workOrder->id,
+                'room_id' => $roomId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json(['message' => 'Erro ao remover avistamento: ' . $e->getMessage()], 500);
         }
     }
 }

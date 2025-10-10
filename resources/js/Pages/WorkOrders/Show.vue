@@ -461,8 +461,6 @@ import Alert from '@/Components/Alert.vue';
     { name: 'products-services', label: 'Produtos e Serviços' },
     { name: 'technician', label: 'Técnicos' },
     { name: 'rooms', label: 'Cômodos Atendidos', count: props.workOrder?.rooms?.length || 0 },
-    { name: 'device-events', label: 'Eventos de Dispositivos', count: props.workOrder?.device_events?.length || 0 },
-    { name: 'pest-sightings', label: 'Avistamentos de Pragas', count: props.workOrder?.pest_sightings?.length || 0 },
   ];
 
   const formatDate = (date) => {

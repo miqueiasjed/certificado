@@ -67,9 +67,19 @@ class WorkOrderService
             $syncData = [];
             foreach ($rooms as $room) {
                 if (!empty($room['id'])) {
-                    $syncData[$room['id']] = [
-                        'observation' => $room['observation'] ?? null
-                    ];
+                   $syncData[$room['id']] = [
+                       'observation' => $room['observation'] ?? null,
+                       'event_type' => $room['event_type'] ?? null,
+                       'event_date' => $room['event_date'] ?? null,
+                       'event_description' => $room['event_description'] ?? null,
+                       'event_observations' => $room['event_observations'] ?? null,
+                       'device_id' => $room['device_id'] ?? null,
+                       'pest_type' => $room['pest_type'] ?? null,
+                       'pest_sighting_date' => $room['pest_sighting_date'] ?? null,
+                       'pest_location' => $room['pest_location'] ?? null,
+                       'pest_quantity' => $room['pest_quantity'] ?? null,
+                       'pest_observation' => $room['pest_observation'] ?? null,
+                   ];
                 }
             }
             $workOrder->rooms()->sync($syncData);
@@ -139,9 +149,19 @@ class WorkOrderService
             $syncData = [];
             foreach ($rooms as $room) {
                 if (!empty($room['id'])) {
-                    $syncData[$room['id']] = [
-                        'observation' => $room['observation'] ?? null
-                    ];
+                   $syncData[$room['id']] = [
+                       'observation' => $room['observation'] ?? null,
+                       'event_type' => $room['event_type'] ?? null,
+                       'event_date' => $room['event_date'] ?? null,
+                       'event_description' => $room['event_description'] ?? null,
+                       'event_observations' => $room['event_observations'] ?? null,
+                       'device_id' => $room['device_id'] ?? null,
+                       'pest_type' => $room['pest_type'] ?? null,
+                       'pest_sighting_date' => $room['pest_sighting_date'] ?? null,
+                       'pest_location' => $room['pest_location'] ?? null,
+                       'pest_quantity' => $room['pest_quantity'] ?? null,
+                       'pest_observation' => $room['pest_observation'] ?? null,
+                   ];
                 }
             }
             $workOrder->rooms()->sync($syncData);

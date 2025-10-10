@@ -10,91 +10,38 @@
       <Card>
         <div class="p-6">
             <form @submit.prevent="submit" class="space-y-6">
-              <!-- Cliente -->
+              <!-- Cliente (Readonly) -->
               <div>
                 <label for="client_id" class="block text-sm font-medium text-gray-700 mb-2">
-                  Cliente *
+                  Cliente
                 </label>
-                <select
+                <input
                   id="client_id"
-                  v-model="form.client_id"
-                  required
-                  @change="onClientChange"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  :class="{ 'border-red-500': form.errors.client_id }"
-                >
-                  <option value="">Selecione um cliente</option>
-                  <option v-for="client in clients" :key="client.id" :value="client.id">
-                    {{ client.name }}
-                  </option>
-                </select>
-                <p v-if="form.errors.client_id" class="mt-1 text-sm text-red-600">
-                  {{ form.errors.client_id }}
+                  type="text"
+                  readonly
+                  :value="props.workOrder.client?.name || 'Cliente não encontrado'"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed"
+                />
+                <p class="mt-1 text-xs text-gray-500">
+                  O cliente não pode ser alterado após a criação da ordem de serviço
                 </p>
               </div>
 
-              <!-- Segunda linha: Endereço e Técnicos -->
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Endereço (Readonly) -->
-                <div>
-                  <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
-                    Endereço
-                  </label>
-                  <input
-                    id="address_id"
-                    type="text"
-                    readonly
-                    :value="getAddressDisplayText()"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed"
-                  />
-                  <p class="mt-1 text-xs text-gray-500">
-                    O endereço não pode ser alterado após a criação da ordem de serviço
-                  </p>
-                </div>
-
-                <!-- Técnicos -->
-                <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Técnicos *
-                  </label>
-                  <div class="space-y-2">
-                    <div v-for="(technicianId, index) in form.technicians" :key="index" class="flex gap-2 items-center">
-                      <select
-                        v-model="form.technicians[index]"
-                        class="flex-1 h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                        :class="{ 'border-red-500': form.errors.technicians }"
-                        required
-                      >
-                        <option value="">Selecione um técnico</option>
-                        <option v-for="technician in getAvailableTechnicians(index)" :key="technician.id" :value="technician.id">
-                          {{ technician.name }} - {{ technician.specialty }}
-                        </option>
-                      </select>
-                      <button
-                        type="button"
-                        @click="removeTechnician(index)"
-                        class="h-10 w-10 text-red-600 border border-red-300 rounded-md hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors flex items-center justify-center"
-                        title="Remover técnico"
-                      >
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                      </button>
-                    </div>
-                    <div class="flex gap-2">
-                      <button
-                        type="button"
-                        @click="addTechnician"
-                        class="px-3 py-2 text-green-600 border border-green-300 rounded-md hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors text-sm"
-                      >
-                        + Adicionar Técnico
-                      </button>
-                    </div>
-                  </div>
-                  <p v-if="form.errors.technicians" class="mt-1 text-sm text-red-600">
-                    {{ form.errors.technicians }}
-                  </p>
-                </div>
+              <!-- Endereço (Readonly) -->
+              <div>
+                <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
+                  Endereço
+                </label>
+                <input
+                  id="address_id"
+                  type="text"
+                  readonly
+                  :value="getAddressDisplayText()"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 text-gray-600 cursor-not-allowed"
+                />
+                <p class="mt-1 text-xs text-gray-500">
+                  O endereço não pode ser alterado após a criação da ordem de serviço
+                </p>
               </div>
 
               <!-- Tipo de Serviço -->
@@ -269,155 +216,6 @@
                   {{ form.errors.observations }}
                 </p>
               </div>
-
-
-              <!-- Produtos -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Produtos Utilizados
-                </label>
-                <div class="space-y-4">
-                  <div v-for="(product, index) in form.products" :key="index" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                    <div class="md:col-span-4">
-                      <select
-                        v-model="product.id"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      >
-                        <option value="">Selecione um produto</option>
-                        <option v-for="prod in availableProducts(index)" :key="prod.id" :value="prod.id">
-                          {{ prod.name }}
-                        </option>
-                      </select>
-                    </div>
-                    <div class="md:col-span-2">
-                      <input
-                        v-model.number="product.quantity"
-                        type="number"
-                        min="1"
-                        placeholder="Qtd"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      />
-                    </div>
-                    <div class="md:col-span-5">
-                      <input
-                        v-model="product.observations"
-                        type="text"
-                        placeholder="Observações (opcional)"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      />
-                    </div>
-                    <div class="md:col-span-1">
-                      <button
-                        type="button"
-                        @click="removeProduct(index)"
-                        class="w-full px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    @click="addProduct"
-                    class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-green-500 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    + Adicionar Produto
-                  </button>
-                </div>
-              </div>
-
-              <!-- Serviços -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Serviços Realizados
-                </label>
-                <div class="space-y-4">
-                  <div v-for="(service, index) in form.services" :key="index" class="grid grid-cols-1 md:grid-cols-11 gap-4 items-end">
-                    <div class="md:col-span-5">
-                      <select
-                        v-model="service.id"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      >
-                        <option value="">Selecione um serviço</option>
-                        <option v-for="serv in availableServices(index)" :key="serv.id" :value="serv.id">
-                          {{ serv.name }}
-                        </option>
-                      </select>
-                    </div>
-                    <div class="md:col-span-5">
-                      <input
-                        v-model="service.observations"
-                        type="text"
-                        placeholder="Observações (opcional)"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      />
-                    </div>
-                    <div class="md:col-span-1">
-                      <button
-                        type="button"
-                        @click="removeService(index)"
-                        class="w-full px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    @click="addService"
-                    class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-green-500 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    + Adicionar Serviço
-                  </button>
-                </div>
-              </div>
-
-              <!-- Cômodos Atendidos -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Cômodos Atendidos
-                </label>
-                <div class="space-y-4">
-                  <div v-for="(room, index) in form.rooms" :key="index" class="grid grid-cols-1 md:grid-cols-11 gap-4 items-end">
-                    <div class="md:col-span-5">
-                      <select
-                        v-model="room.id"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      >
-                        <option value="">Selecione um cômodo</option>
-                        <option v-for="rm in availableRooms(index)" :key="rm.id" :value="rm.id">
-                          {{ rm.full_name || rm.name }}
-                        </option>
-                      </select>
-                    </div>
-                    <div class="md:col-span-5">
-                      <input
-                        v-model="room.observation"
-                        type="text"
-                        placeholder="Observações (opcional)"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      />
-                    </div>
-                    <div class="md:col-span-1">
-                      <button
-                        type="button"
-                        @click="removeRoom(index)"
-                        class="w-full px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    @click="addRoom"
-                    class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-green-500 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-                  >
-                    + Adicionar Cômodo
-                  </button>
-                </div>
-              </div>
-
               <!-- Status Ativo -->
               <div class="flex items-center">
                 <input
@@ -460,6 +258,7 @@
       @close="showServiceTypeModal = false"
       @service-type-created="onServiceTypeCreated"
     />
+
   </AuthenticatedLayout>
 </template>
 
@@ -541,32 +340,7 @@ const formatDateForDateInput = (dateString) => {
 
 
 const form = useForm({
-  client_id: String(props.workOrder.client_id || ''),
-  technician_id: String(props.workOrder.technician_id || ''),
-  technicians: props.workOrder.technicians && props.workOrder.technicians.length > 0
-    ? props.workOrder.technicians.map(t => t.id)
-    : (props.workOrder.technician_id ? [props.workOrder.technician_id] : ['']),
   service_type_id: String(props.workOrder.service_type_id || ''),
-  products: props.workOrder.products && props.workOrder.products.length > 0
-    ? props.workOrder.products.map(p => ({
-        id: p.id,
-        quantity: p.pivot.quantity || 1,
-        observations: p.pivot.observations || ''
-      }))
-    : [{ id: '', quantity: 1, observations: '' }],
-  services: props.workOrder.services && props.workOrder.services.length > 0
-    ? props.workOrder.services.map(s => ({
-        id: s.id,
-        observations: s.pivot.observations || ''
-      }))
-    : [{ id: '', observations: '' }],
-  rooms: props.workOrder.rooms && props.workOrder.rooms.length > 0
-    ? props.workOrder.rooms.map(r => ({
-        id: r.id,
-        name: r.name,
-        observation: r.pivot.observation || ''
-      }))
-    : [{ id: '', name: '', observation: '' }],
   priority_level: props.workOrder.priority_level || '',
   scheduled_date: formatDateForDateInput(props.workOrder.scheduled_date),
   start_time: formatDateForInput(props.workOrder.start_time),
@@ -605,25 +379,6 @@ const getAddressDisplayText = () => {
 };
 
 const submit = () => {
-  // Filtrar técnicos vazios ANTES de criar os dados do form
-  const cleanedTechnicians = form.technicians.filter(id => id !== '' && id !== null && id !== undefined);
-
-  // Filtrar produtos vazios ANTES de criar os dados do form
-  const cleanedProducts = form.products.filter(product => product.id && product.id !== '');
-
-  // Filtrar serviços vazios ANTES de criar os dados do form
-  const cleanedServices = form.services.filter(service => service.id && service.id !== '');
-
-  // Filtrar cômodos vazios ANTES de criar os dados do form
-  const cleanedRooms = form.rooms.filter(room => room.id && room.id !== '');
-
-  // Atualizar o form com dados limpos
-  form.technicians = cleanedTechnicians;
-  form.products = cleanedProducts;
-  form.services = cleanedServices;
-  form.rooms = cleanedRooms;
-
-
   form.put(`/work-orders/${props.workOrder.id}`, {
     onSuccess: () => {
       // Ordem de serviço atualizada com sucesso
@@ -633,78 +388,6 @@ const submit = () => {
     }
   });
 };
-
-// Filtrar técnicos disponíveis para cada select (evitar duplicatas)
-const getAvailableTechnicians = (currentIndex) => {
-  const selectedIds = form.technicians.filter((id, index) => index !== currentIndex && id !== '');
-  return props.technicians.filter(technician => !selectedIds.includes(technician.id));
-};
-
-// Funções para gerenciar técnicos
-const addTechnician = () => {
-  form.technicians.push('');
-};
-
-const removeTechnician = (index) => {
-  form.technicians.splice(index, 1);
-};
-
-// Funções para gerenciar produtos
-const addProduct = () => {
-  form.products.push({ id: '', quantity: 1, observations: '' });
-};
-
-const removeProduct = (index) => {
-  form.products.splice(index, 1);
-};
-
-// Funções para gerenciar serviços
-const addService = () => {
-  form.services.push({ id: '', observations: '' });
-};
-
-const removeService = (index) => {
-  form.services.splice(index, 1);
-};
-
-// Funções para gerenciar cômodos
-const addRoom = () => {
-  form.rooms.push({ id: '', observation: '' });
-};
-
-const removeRoom = (index) => {
-  form.rooms.splice(index, 1);
-};
-
-// Computed para produtos disponíveis (filtrar já selecionados, exceto o atual)
-const availableProducts = computed(() => {
-  return (currentProductIndex) => {
-    const selectedIds = form.products
-      .map((p, index) => index !== currentProductIndex ? p.id : null)
-      .filter(id => id);
-    return props.products.filter(prod => !selectedIds.includes(prod.id));
-  };
-});
-
-// Computed para serviços disponíveis (filtrar já selecionados, exceto o atual)
-const availableServices = computed(() => {
-  return (currentServiceIndex) => {
-    const selectedIds = form.services
-      .map((s, index) => index !== currentServiceIndex ? s.id : null)
-      .filter(id => id);
-    return props.services.filter(serv => !selectedIds.includes(serv.id));
-  };
-});
-
-// Computed para cômodos disponíveis (filtrar já selecionados, exceto o atual) - IGUAL AOS PRODUTOS/SERVIÇOS
-const availableRooms = computed(() => {
-  return (currentRoomIndex) => {
-    const selectedIds = form.rooms
-      .map((r, index) => index !== currentRoomIndex ? r.id : null)
-      .filter(id => id);
-    return props.rooms.filter(room => !selectedIds.includes(room.id));
-  };
-});
 
 // Função para lidar com criação de novo tipo de serviço
 const onServiceTypeCreated = (serviceType) => {

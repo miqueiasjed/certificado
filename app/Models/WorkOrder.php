@@ -147,7 +147,19 @@ class WorkOrder extends Model
     public function rooms(): BelongsToMany
     {
         return $this->belongsToMany(Room::class, 'work_order_room')
-                    ->withPivot('observation')
+                    ->withPivot([
+                        'observation',
+                        'event_type',
+                        'event_date',
+                        'event_description',
+                        'event_observations',
+                        'device_id',
+                        'pest_type',
+                        'pest_sighting_date',
+                        'pest_location',
+                        'pest_quantity',
+                        'pest_observation'
+                    ])
                     ->withTimestamps();
     }
 

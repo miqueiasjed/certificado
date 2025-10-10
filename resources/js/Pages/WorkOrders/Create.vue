@@ -8,6 +8,38 @@
     <div class="max-w-6xl mx-auto">
       <Card>
         <form @submit.prevent="submit" class="p-6 space-y-6">
+          <!-- Alerta de Validação para Cômodos -->
+          <div
+            v-if="hasValidationErrors"
+            class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6"
+          >
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+              </div>
+              <div class="ml-3 flex-1">
+                <h3 class="text-sm font-medium text-red-800 mb-2">
+                  Campos Obrigatórios Não Preenchidos
+                </h3>
+                <div class="space-y-2">
+                  <p class="text-sm text-red-700">
+                    Os seguintes campos são obrigatórios para os cômodos selecionados:
+                  </p>
+                  <ul class="list-disc list-inside space-y-1 text-sm text-red-600">
+                    <li v-for="error in validationErrors" :key="error">
+                      {{ error }}
+                    </li>
+                  </ul>
+                  <p class="text-sm text-red-600 font-medium mt-2">
+                    💡 Dica: Clique em "Adicionar Evento" para preencher os dados obrigatórios.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Primeira linha: Cliente -->
           <div class="grid grid-cols-1 gap-6">
             <!-- Cliente -->
@@ -234,13 +266,12 @@
           <!-- Descrição -->
           <div>
             <label for="description" class="block text-sm font-medium text-gray-700 mb-2">
-              Descrição *
+              Descrição
             </label>
             <textarea
               id="description"
               v-model="form.description"
               rows="4"
-              required
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
               :class="{ 'border-red-500': form.errors.description }"
               placeholder="Descreva detalhadamente o serviço a ser realizado..."
@@ -374,35 +405,103 @@
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Cômodos Atendidos
             </label>
-            <div class="space-y-4">
-              <div v-for="(room, index) in form.rooms" :key="index" class="grid grid-cols-1 md:grid-cols-11 gap-4 items-end">
-                <div class="md:col-span-5">
+            <div class="space-y-6">
+              <div v-for="(room, index) in form.rooms" :key="index" class="border border-gray-200 rounded-lg p-4 space-y-4">
+                <!-- Cabeçalho do Cômodo -->
+                <div class="flex items-center justify-between">
+                  <h4 class="text-sm font-medium text-gray-900">Cômodo {{ index + 1 }}</h4>
+                  <button
+                    type="button"
+                    @click="removeRoom(index)"
+                    class="text-red-600 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Seleção do Cômodo -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Cômodo *
+                  </label>
                   <select
                     v-model="room.id"
+                    required
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    :class="{ 'border-red-500': form.errors[`rooms.${index}.id`] }"
                   >
                     <option value="">Selecione um cômodo</option>
                     <option v-for="rm in availableRooms(index)" :key="rm.id" :value="rm.id">
                       {{ rm.full_name }}
                     </option>
                   </select>
+                  <p v-if="form.errors[`rooms.${index}.id`]" class="mt-1 text-sm text-red-600">
+                    {{ form.errors[`rooms.${index}.id`] }}
+                  </p>
                 </div>
-                <div class="md:col-span-5">
-                  <input
-                    v-model="room.observation"
-                    type="text"
-                    placeholder="Observações (opcional)"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  />
-                </div>
-                <div class="md:col-span-1">
-                  <button
-                    type="button"
-                    @click="removeRoom(index)"
-                    class="w-full px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  >
-                    ×
-                  </button>
+
+
+                <!-- Botões para Evento e Avistamento (só aparecem se cômodo selecionado) -->
+                <div v-if="room.id" class="border-t pt-4">
+                  <div class="flex gap-3">
+                    <button
+                      type="button"
+                      @click="openEventModal(index)"
+                      class="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                      <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                      </svg>
+                      Adicionar Evento
+                    </button>
+                    <button
+                      type="button"
+                      @click="openPestSightingModal(index)"
+                      class="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                    >
+                      <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                      </svg>
+                      Adicionar Avistamento de Praga
+                    </button>
+                  </div>
+
+                  <!-- Resumo dos dados adicionados -->
+                  <div v-if="room.event_type || room.pest_type" class="mt-4 space-y-2">
+                    <div v-if="room.event_type" class="flex items-center text-sm text-green-700">
+                      <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      Evento: {{ getEventTypeText(room.event_type) }} - {{ room.event_date }}
+                    </div>
+                    <div v-if="room.pest_type" class="flex items-center text-sm text-orange-700">
+                      <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                      </svg>
+                      Avistamento: {{ getPestTypeText(room.pest_type) }} - {{ room.pest_sighting_date }}
+                    </div>
+                  </div>
+
+                  <!-- Aviso se cômodo selecionado não tem evento -->
+                  <div v-if="showValidationErrors && room.id && !room.event_type" class="mt-4 p-4 bg-red-50 border-2 border-red-300 rounded-lg shadow-sm">
+                    <div class="flex items-start">
+                      <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                      </div>
+                      <div class="ml-3">
+                        <h4 class="text-sm font-medium text-red-800 mb-1">
+                          Evento Obrigatório
+                        </h4>
+                        <p class="text-sm text-red-700">
+                          É obrigatório adicionar um evento para este cômodo antes de salvar a ordem de serviço.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               <button
@@ -456,6 +555,203 @@
       @close="showServiceTypeModal = false"
       @service-type-created="onServiceTypeCreated"
     />
+
+    <!-- Modal para Adicionar Evento -->
+    <div v-if="showEventModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Adicionar Evento ao Cômodo</h3>
+
+          <form @submit.prevent="saveEvent">
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Evento *
+                  </label>
+                  <select
+                    v-model="eventForm.event_type"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="">Selecione o tipo</option>
+                    <option value="treatment">Tratamento</option>
+                    <option value="inspection">Inspeção</option>
+                    <option value="maintenance">Manutenção</option>
+                    <option value="installation">Instalação</option>
+                    <option value="removal">Remoção</option>
+                    <option value="other">Outro</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Data do Evento *
+                  </label>
+                  <input
+                    v-model="eventForm.event_date"
+                    type="date"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Descrição do Evento *
+                </label>
+                <textarea
+                  v-model="eventForm.event_description"
+                  rows="3"
+                  required
+                  placeholder="Descreva detalhadamente o evento realizado no cômodo"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                ></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Observações do Evento
+                </label>
+                <textarea
+                  v-model="eventForm.event_observations"
+                  rows="2"
+                  placeholder="Observações adicionais sobre o evento"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                ></textarea>
+              </div>
+
+              <!-- Campo de Dispositivo (só aparece se o cômodo tiver dispositivos) -->
+              <div v-if="getRoomDevices(currentRoomIndex).length > 0">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Dispositivo (Opcional)
+                </label>
+                <select
+                  v-model="eventForm.device_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="">Nenhum dispositivo específico</option>
+                  <option v-for="device in getRoomDevices(currentRoomIndex)" :key="device.id" :value="device.id">
+                    {{ device.display_name }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                @click="closeEventModal"
+                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                Salvar Evento
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal para Adicionar Avistamento de Praga -->
+    <div v-if="showPestSightingModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Adicionar Avistamento de Praga ao Cômodo</h3>
+
+          <form @submit.prevent="savePestSighting">
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Praga
+                  </label>
+                  <select
+                    v-model="pestSightingForm.pest_type"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="">Selecione o tipo</option>
+                    <option value="cockroach">Barata</option>
+                    <option value="ant">Formiga</option>
+                    <option value="spider">Aranha</option>
+                    <option value="rat">Rato</option>
+                    <option value="mosquito">Mosquito</option>
+                    <option value="fly">Mosca</option>
+                    <option value="termite">Cupim</option>
+                    <option value="other">Outro</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Data do Avistamento
+                  </label>
+                  <input
+                    v-model="pestSightingForm.pest_sighting_date"
+                    type="date"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Localização no Cômodo
+                  </label>
+                  <input
+                    v-model="pestSightingForm.pest_location"
+                    type="text"
+                    placeholder="Ex: Parede norte, próximo à janela"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Quantidade Observada
+                  </label>
+                  <input
+                    v-model.number="pestSightingForm.pest_quantity"
+                    type="number"
+                    min="1"
+                    placeholder="Ex: 3"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Observação
+                </label>
+                <textarea
+                  v-model="pestSightingForm.pest_observation"
+                  rows="3"
+                  placeholder="Observação sobre o avistamento de praga..."
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                ></textarea>
+              </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                @click="closePestSightingModal"
+                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                Salvar Avistamento
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </AuthenticatedLayout>
 </template>
 
@@ -483,18 +779,42 @@ const props = defineProps({
 });
 
 
-// Estado do modal
+// Estado dos modais
 const showServiceTypeModal = ref(false);
+const showEventModal = ref(false);
+const showPestSightingModal = ref(false);
+const currentRoomIndex = ref(null);
+
+// Formulários dos modais
+const eventForm = ref({
+  event_type: '',
+  event_date: '',
+  event_description: '',
+  event_observations: '',
+  device_id: ''
+});
+
+const pestSightingForm = ref({
+  pest_description: ''
+});
 
 const form = useForm({
   client_id: props.preselectedClient || '',
   address_id: props.preselectedAddress || '',
-  technician_id: props.preselectedTechnician || '',
   technicians: props.preselectedTechnician ? [props.preselectedTechnician] : [''],
   service_type_id: '',
   products: [{ id: '', quantity: 1, observations: '' }],
   services: [{ id: '', observations: '' }],
-  rooms: [{ id: '', observation: '' }],
+  rooms: [{
+    id: '',
+    observation: '',
+    event_type: '',
+    event_date: '',
+    event_description: '',
+    event_observations: '',
+    device_id: '',
+    pest_description: ''
+  }],
   priority_level: '',
   scheduled_date: new Date().toISOString().slice(0, 10),
   start_time: '',
@@ -521,7 +841,7 @@ const fetchRoomsByClient = async (clientId) => {
   }
 
   try {
-    const response = await fetch(`/service-orders/rooms/by-client?client_id=${clientId}`);
+    const response = await fetch(`/work-orders/rooms/by-client?client_id=${clientId}`);
     const data = await response.json();
     availableRoomsList.value = data.rooms || [];
   } catch (error) {
@@ -565,6 +885,16 @@ watch(() => form.client_id, (newValue) => {
 });
 
 const submit = () => {
+  // Ativar validação visual
+  showValidationErrors.value = true;
+
+  // Verificar se há erros de validação nos cômodos
+  const roomErrors = getRoomValidationErrors();
+  if (roomErrors.length > 0) {
+    // Há erros de validação, não enviar o formulário
+    return;
+  }
+
   // Filtrar técnicos vazios ANTES de criar os dados do form
   const cleanedTechnicians = form.technicians.filter(id => id !== '' && id !== null && id !== undefined);
 
@@ -582,7 +912,6 @@ const submit = () => {
   form.products = cleanedProducts;
   form.services = cleanedServices;
   form.rooms = cleanedRooms;
-
 
   form.post('/work-orders', {
     onSuccess: () => {
@@ -623,12 +952,140 @@ const removeService = (index) => {
 
 // Funções para gerenciar cômodos
 const addRoom = () => {
-  form.rooms.push({ id: '', observation: '' });
+  form.rooms.push({
+    id: '',
+    observation: '',
+    event_type: '',
+    event_date: '',
+    event_description: '',
+    event_observations: '',
+    device_id: '',
+    pest_description: ''
+  });
 };
 
 const removeRoom = (index) => {
   form.rooms.splice(index, 1);
 };
+
+// Funções para gerenciar modais de evento
+const openEventModal = (roomIndex) => {
+  currentRoomIndex.value = roomIndex;
+  showEventModal.value = true;
+  // Limpar formulário
+  eventForm.value = {
+    event_type: '',
+    event_date: '',
+    event_description: '',
+    event_observations: '',
+    device_id: ''
+  };
+};
+
+const closeEventModal = () => {
+  showEventModal.value = false;
+  currentRoomIndex.value = null;
+};
+
+const saveEvent = () => {
+  if (currentRoomIndex.value !== null) {
+    const room = form.rooms[currentRoomIndex.value];
+    room.event_type = eventForm.value.event_type;
+    room.event_date = eventForm.value.event_date;
+    room.event_description = eventForm.value.event_description;
+    room.event_observations = eventForm.value.event_observations;
+    room.device_id = eventForm.value.device_id;
+    closeEventModal();
+  }
+};
+
+// Funções para gerenciar modais de avistamento de praga
+const openPestSightingModal = (roomIndex) => {
+  currentRoomIndex.value = roomIndex;
+  showPestSightingModal.value = true;
+  // Limpar formulário
+  pestSightingForm.value = {
+    pest_description: ''
+  };
+};
+
+const closePestSightingModal = () => {
+  showPestSightingModal.value = false;
+  currentRoomIndex.value = null;
+};
+
+const savePestSighting = () => {
+  if (currentRoomIndex.value !== null) {
+    const room = form.rooms[currentRoomIndex.value];
+    room.pest_description = pestSightingForm.value.pest_description;
+    closePestSightingModal();
+  }
+};
+
+// Funções auxiliares para converter valores em texto legível
+const getEventTypeText = (eventType) => {
+  const types = {
+    'treatment': 'Tratamento',
+    'inspection': 'Inspeção',
+    'maintenance': 'Manutenção',
+    'installation': 'Instalação',
+    'removal': 'Remoção',
+    'other': 'Outro'
+  };
+  return types[eventType] || eventType;
+};
+
+const getPestTypeText = (pestType) => {
+  const types = {
+    'cockroach': 'Barata',
+    'ant': 'Formiga',
+    'spider': 'Aranha',
+    'rat': 'Rato',
+    'mosquito': 'Mosquito',
+    'fly': 'Mosca',
+    'termite': 'Cupim',
+    'other': 'Outro'
+  };
+  return types[pestType] || pestType;
+};
+
+// Função para obter dispositivos de um cômodo
+const getRoomDevices = (roomIndex) => {
+  if (roomIndex === null || !form.rooms[roomIndex]?.id) return [];
+
+  const selectedRoom = availableRoomsList.value.find(room => room.id === form.rooms[roomIndex].id);
+  return selectedRoom?.devices || [];
+};
+
+// Função para verificar se há erros de validação nos cômodos
+const getRoomValidationErrors = () => {
+  const errors = [];
+  form.rooms.forEach((room, index) => {
+    if (room.id && !room.event_type) {
+      errors.push(`Cômodo ${index + 1}: Tipo de evento é obrigatório`);
+    }
+    if (room.id && !room.event_date) {
+      errors.push(`Cômodo ${index + 1}: Data do evento é obrigatória`);
+    }
+    if (room.id && !room.event_description) {
+      errors.push(`Cômodo ${index + 1}: Descrição do evento é obrigatória`);
+    }
+  });
+  return errors;
+};
+
+// Estado para controlar quando mostrar os erros de validação
+const showValidationErrors = ref(false);
+
+// Computed para verificar se há erros de validação
+const hasValidationErrors = computed(() => {
+  return showValidationErrors.value && getRoomValidationErrors().length > 0;
+});
+
+// Computed para obter erros de validação
+const validationErrors = computed(() => {
+  return getRoomValidationErrors();
+});
 
 // Computed para produtos disponíveis (filtrar já selecionados, exceto o atual)
 const availableProducts = computed(() => {

@@ -115,23 +115,34 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/work-orders/client/{clientId}', [WorkOrderController::class, 'getByClient'])->name('work-orders.by-client');
     Route::get('/work-orders/{workOrder}/pdf', [WorkOrderController::class, 'generatePDF'])->name('work-orders.pdf');
 
-// Rotas para gerenciar produtos e serviços das work orders
-Route::post('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'addProduct'])->name('work-orders.products.add');
-Route::put('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'updateProduct'])->name('work-orders.products.update');
-Route::delete('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'removeProduct'])->name('work-orders.products.remove');
-       Route::post('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'addService'])->name('work-orders.services.add');
-       Route::put('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'updateService'])->name('work-orders.services.update');
-       Route::delete('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'removeService'])->name('work-orders.services.remove');
+    // Rotas para gerenciar produtos e serviços das work orders
+    Route::post('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'addProduct'])->name('work-orders.products.add');
+    Route::put('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'updateProduct'])->name('work-orders.products.update');
+    Route::delete('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'removeProduct'])->name('work-orders.products.remove');
+    Route::post('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'addService'])->name('work-orders.services.add');
+    Route::put('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'updateService'])->name('work-orders.services.update');
+    Route::delete('/work-orders/{workOrder}/services/{service}', [WorkOrderController::class, 'removeService'])->name('work-orders.services.remove');
 
-       // Rotas para gerenciar técnicos das work orders
-       Route::post('/work-orders/{workOrder}/technicians/{technician}', [WorkOrderController::class, 'addTechnician'])->name('work-orders.technicians.add');
-       Route::delete('/work-orders/{workOrder}/technicians/{technician}', [WorkOrderController::class, 'removeTechnician'])->name('work-orders.technicians.remove');
+    // Rotas para gerenciar técnicos das work orders
+    Route::post('/work-orders/{workOrder}/technicians/{technician}', [WorkOrderController::class, 'addTechnician'])->name('work-orders.technicians.add');
+    Route::delete('/work-orders/{workOrder}/technicians/{technician}', [WorkOrderController::class, 'removeTechnician'])->name('work-orders.technicians.remove');
 
-       // Rotas para gerenciar cômodos das work orders
-       Route::post('/work-orders/{workOrder}/rooms', [WorkOrderController::class, 'addRoom'])->name('work-orders.rooms.add');
-       Route::put('/work-orders/{workOrder}/rooms/{roomId}/observation', [WorkOrderController::class, 'updateRoomObservation'])->name('work-orders.rooms.update-observation');
-       Route::delete('/work-orders/{workOrder}/rooms/{roomId}', [WorkOrderController::class, 'removeRoom'])->name('work-orders.rooms.remove');
-       Route::get('/work-orders/{workOrder}/rooms/available', [WorkOrderController::class, 'getAvailableRooms'])->name('work-orders.rooms.available');
+    // Rotas para gerenciar cômodos das work orders
+    Route::post('/work-orders/{workOrder}/rooms', [WorkOrderController::class, 'addRoom'])->name('work-orders.rooms.add');
+    Route::put('/work-orders/{workOrder}/rooms/{roomId}/observation', [WorkOrderController::class, 'updateRoomObservation'])->name('work-orders.rooms.update-observation');
+    Route::delete('/work-orders/{workOrder}/rooms/{roomId}', [WorkOrderController::class, 'removeRoom'])->name('work-orders.rooms.remove');
+    Route::get('/work-orders/{workOrder}/rooms/available', [WorkOrderController::class, 'getAvailableRooms'])->name('work-orders.rooms.available');
+    Route::get('/work-orders/rooms/by-client', [WorkOrderController::class, 'getRoomsByClientWithDevices'])->name('work-orders.rooms.by-client');
+
+    // Rotas para gerenciar eventos de cômodos
+    Route::post('/work-orders/{workOrder}/rooms/{roomId}/event', [WorkOrderController::class, 'addRoomEvent'])->name('work-orders.rooms.event.add');
+    Route::put('/work-orders/{workOrder}/rooms/{roomId}/event', [WorkOrderController::class, 'updateRoomEvent'])->name('work-orders.rooms.event.update');
+    Route::delete('/work-orders/{workOrder}/rooms/{roomId}/event', [WorkOrderController::class, 'removeRoomEvent'])->name('work-orders.rooms.event.remove');
+
+    // Rotas para gerenciar avistamentos de praga de cômodos
+    Route::post('/work-orders/{workOrder}/rooms/{roomId}/pest-sighting', [WorkOrderController::class, 'addRoomPestSighting'])->name('work-orders.rooms.pest-sighting.add');
+    Route::put('/work-orders/{workOrder}/rooms/{roomId}/pest-sighting', [WorkOrderController::class, 'updateRoomPestSighting'])->name('work-orders.rooms.pest-sighting.update');
+    Route::delete('/work-orders/{workOrder}/rooms/{roomId}/pest-sighting', [WorkOrderController::class, 'removeRoomPestSighting'])->name('work-orders.rooms.pest-sighting.remove');
 
     // Rotas de Eventos de Dispositivos
     Route::resource('device-events', DeviceEventController::class);
