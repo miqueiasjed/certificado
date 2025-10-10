@@ -119,7 +119,7 @@ class CertificateController extends Controller
         $clients = Client::orderBy('name')->limit(500)->get();
         $products = Product::orderBy('name')->limit(500)->get();
         $services = Service::where('is_active', true)->orderBy('name')->limit(500)->get();
-        
+
         // Carregar endereços do cliente para certificados avulsos
         $addresses = $certificate->client ? $certificate->client->addresses()->orderBy('nickname')->get() : collect();
 
@@ -178,7 +178,8 @@ class CertificateController extends Controller
         // Carregar as relações necessárias
         $certificate->load([
             'client',
-            'workOrder.address.client',
+            'address', // Endereço do certificado (para certificados avulsos)
+            'workOrder.address.client', // Endereço da OS (para certificados gerados por OS)
             'products.activeIngredient',
             'products.chemicalGroup',
             'products.antidote',

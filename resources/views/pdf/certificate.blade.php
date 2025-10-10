@@ -232,9 +232,17 @@
         <p><strong>Cliente:</strong> {{ $certificate->client->name ?? 'Não informado' }}</p>
         <p><strong>CPF/CNPJ:</strong> {{ $certificate->client->cnpj ?? 'Não informado' }}</p>
         <p><strong>Endereço:</strong>
-            @php($address = $certificate->workOrder->address ?? null)
+            @php
+                // Se tem OS, pega o endereço da OS, senão pega o endereço do certificado
+                $address = null;
+                if ($certificate->workOrder && $certificate->workOrder->address) {
+                    $address = $certificate->workOrder->address;
+                } elseif ($certificate->address) {
+                    $address = $certificate->address;
+                }
+            @endphp
             @if($address)
-                {{ $address->street }}, {{ $address->number }}@if($address->neighborhood) - {{ $address->neighborhood }}@endif, {{ $address->city }}/{{ $address->state }}@if($address->zip_code) - CEP: {{ $address->zip_code }}@endif
+                {{ $address->street }}, {{ $address->number }}@if($address->district) - {{ $address->district }}@endif, {{ $address->city }}/{{ $address->state }}@if($address->zip) - CEP: {{ $address->zip }}@endif
             @else
                 Não informado
             @endif
