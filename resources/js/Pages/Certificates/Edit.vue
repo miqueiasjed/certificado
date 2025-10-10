@@ -36,6 +36,7 @@
                 <select
                   id="client_id"
                   v-model="form.client_id"
+                  @change="loadClientAddresses"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-500': errors.client_id }"
                 >
@@ -45,6 +46,25 @@
                   </option>
                 </select>
                 <p v-if="errors.client_id" class="mt-1 text-sm text-red-600">{{ errors.client_id }}</p>
+              </div>
+
+              <!-- Campo de endereço - só aparece quando não há OS selecionada -->
+              <div v-if="!form.work_order_id">
+                <label for="address_id" class="block text-sm font-medium text-gray-700 mb-1">
+                  Endereço *
+                </label>
+                <select
+                  id="address_id"
+                  v-model="form.address_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  :class="{ 'border-red-500': errors.address_id }"
+                >
+                  <option value="">Selecione um endereço</option>
+                  <option v-for="address in clientAddresses" :key="address.id" :value="address.id">
+                    {{ address.name }} - {{ address.street }}, {{ address.number }}, {{ address.neighborhood }}, {{ address.city }}/{{ address.state }}
+                  </option>
+                </select>
+                <p v-if="errors.address_id" class="mt-1 text-sm text-red-600">{{ errors.address_id }}</p>
               </div>
 
               <div>
@@ -78,16 +98,15 @@
 
               <div>
                 <label for="work_order_id" class="block text-sm font-medium text-gray-700 mb-1">
-                  Ordem de Serviço *
+                  Ordem de Serviço
                 </label>
                 <select
                   id="work_order_id"
                   v-model="form.work_order_id"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-500': errors.work_order_id }"
-                  required
                 >
-                  <option value="">Selecione uma OS</option>
+                  <option value="">Selecione uma OS (opcional)</option>
                   <option v-for="wo in workOrders" :key="wo.id" :value="wo.id">
                     {{ wo.order_number }} - {{ wo.client.name }} - {{ new Date(wo.scheduled_date).toLocaleDateString('pt-BR') }}
                   </option>
@@ -315,6 +334,7 @@ import Card from '@/Components/Card.vue';
 const props = defineProps({
   certificate: Object,
   clients: Array,
+  addresses: Array,
   products: Array,
   services: Array,
   technicians: Array,
@@ -332,6 +352,7 @@ const formatDateForInput = (dateString) => {
 
 const form = useForm({
   client_id: props.certificate.client_id || '',
+  address_id: props.certificate.address_id || '',
   work_order_id: props.certificate.work_order_id || '',
   products: props.certificate.products ? props.certificate.products.map(p => ({ product_id: p.id })) : [],
   services: props.certificate.services ? props.certificate.services.map(s => ({ service_id: s.id })) : [],
@@ -344,6 +365,28 @@ const form = useForm({
 // Debug: Log dos dados iniciais do formulário
 console.log('Dados iniciais do certificado:', props.certificate);
 console.log('Dados iniciais do formulário:', form.data());
+
+// Variáveis reativas
+const clientAddresses = ref(props.addresses || []);
+
+// Função para carregar endereços do cliente
+const loadClientAddresses = async () => {
+  if (!form.client_id) {
+    clientAddresses.value = [];
+    return;
+  }
+
+  try {
+    const response = await fetch(`/clients/${form.client_id}/addresses`);
+    if (response.ok) {
+      const data = await response.json();
+      clientAddresses.value = data.addresses || [];
+    }
+  } catch (error) {
+    console.error('Erro ao carregar endereços:', error);
+    clientAddresses.value = [];
+  }
+};
 
 
 const addProduct = () => {
@@ -368,13 +411,13 @@ const removeService = (index) => {
 
 const submitForm = () => {
   console.log('Enviando formulário:', form.data());
-  
+
   // Validação básica antes de enviar
   if (!form.execution_date) {
     alert('O campo Data da Execução é obrigatório.');
     return;
   }
-  
+
   form.put(`/certificates/${props.certificate.id}`, {
     onSuccess: (page) => {
       console.log('Sucesso ao atualizar certificado');
@@ -384,7 +427,7 @@ const submitForm = () => {
     onError: (errors) => {
       console.error('Erro ao atualizar certificado:', errors);
       console.error('Dados do formulário:', form.data());
-      
+
       // Mostrar erros específicos
       if (errors.procedure_used) {
         alert('Erro no Procedimento Utilizado: ' + errors.procedure_used[0]);

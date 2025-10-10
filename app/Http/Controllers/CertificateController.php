@@ -119,6 +119,9 @@ class CertificateController extends Controller
         $clients = Client::orderBy('name')->limit(500)->get();
         $products = Product::orderBy('name')->limit(500)->get();
         $services = Service::where('is_active', true)->orderBy('name')->limit(500)->get();
+        
+        // Carregar endereços do cliente para certificados avulsos
+        $addresses = $certificate->client ? $certificate->client->addresses()->orderBy('name')->get() : collect();
 
         // Otimizar: carregar apenas work orders do cliente do certificado ou limitar a quantidade
         $workOrders = WorkOrder::with('client')
@@ -130,6 +133,7 @@ class CertificateController extends Controller
         return Inertia::render('Certificates/Edit', [
             'certificate' => $certificate,
             'clients' => $clients,
+            'addresses' => $addresses,
             'products' => $products,
             'services' => $services,
             'workOrders' => $workOrders,
