@@ -238,6 +238,30 @@
           </div>
         </Card>
 
+        <!-- Procedimento Utilizado -->
+        <Card>
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Procedimento Utilizado</h3>
+          </div>
+          <div class="p-6">
+            <div>
+              <label for="procedure_used" class="block text-sm font-medium text-gray-700 mb-1">
+                Procedimento Utilizado *
+              </label>
+              <textarea
+                id="procedure_used"
+                v-model="form.procedure_used"
+                rows="4"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                :class="{ 'border-red-500': errors.procedure_used }"
+                placeholder="Descreva detalhadamente o procedimento utilizado..."
+                required
+              ></textarea>
+              <p v-if="errors.procedure_used" class="mt-1 text-sm text-red-600">{{ errors.procedure_used }}</p>
+            </div>
+          </div>
+        </Card>
+
         <!-- Observações -->
         <Card>
           <div class="px-6 py-4 border-b border-gray-200">
@@ -314,6 +338,7 @@ const form = useForm({
   execution_date: props.certificate.execution_date ? formatDateForInput(props.certificate.execution_date) : '',
   warranty: props.certificate.warranty ? formatDateForInput(props.certificate.warranty) : '',
   notes: props.certificate.notes || '',
+  procedure_used: props.certificate.procedure_used || '',
 });
 
 

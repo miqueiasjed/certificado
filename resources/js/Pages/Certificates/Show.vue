@@ -191,6 +191,16 @@
         </div>
       </Card>
 
+      <!-- Procedimento Utilizado -->
+      <Card v-if="certificate.procedure_used">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-medium text-gray-900">Procedimento Utilizado</h3>
+        </div>
+        <div class="p-6">
+          <p class="text-sm text-gray-700 whitespace-pre-line">{{ certificate.procedure_used }}</p>
+        </div>
+      </Card>
+
       <!-- Observações -->
       <Card v-if="certificate.notes">
         <div class="px-6 py-4 border-b border-gray-200">

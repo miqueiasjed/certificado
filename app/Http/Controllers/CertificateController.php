@@ -77,6 +77,7 @@ class CertificateController extends Controller
             'execution_date' => 'required|date',
             'warranty' => 'nullable|date',
             'notes' => 'nullable|string|max:2000',
+            'procedure_used' => 'required|string|max:2000',
         ]);
 
         $payload = array_merge($data, [

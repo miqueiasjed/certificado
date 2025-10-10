@@ -26,6 +26,7 @@ class CertificateRequest extends FormRequest
             'execution_date' => 'required|date',
             'warranty' => 'nullable|date',
             'notes' => 'nullable|string|max:1000',
+            'procedure_used' => 'required|string|max:2000',
         ];
     }
 
@@ -46,6 +47,8 @@ class CertificateRequest extends FormRequest
             'execution_date.date' => 'A data da execução deve ser uma data válida.',
             'warranty.date' => 'A garantia deve ser uma data válida.',
             'notes.max' => 'As observações não podem ter mais de 1000 caracteres.',
+            'procedure_used.required' => 'O procedimento utilizado é obrigatório.',
+            'procedure_used.max' => 'O procedimento utilizado não pode ter mais de 2000 caracteres.',
         ];
     }
 }

@@ -378,6 +378,20 @@
                   </div>
 
                   <div>
+                    <label for="procedure_used" class="block text-sm font-medium text-gray-700 mb-2">
+                      Procedimento Utilizado *
+                    </label>
+                    <textarea
+                      id="procedure_used"
+                      v-model="certificateForm.procedure_used"
+                      rows="4"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Descreva detalhadamente o procedimento utilizado..."
+                      required
+                    ></textarea>
+                  </div>
+
+                  <div>
                     <label for="notes" class="block text-sm font-medium text-gray-700 mb-2">
                       Observações
                     </label>
@@ -452,7 +466,8 @@ import Alert from '@/Components/Alert.vue';
   const certificateForm = ref({
     execution_date: '',
     warranty: '',
-    notes: ''
+    notes: '',
+    procedure_used: ''
   });
 
   const allTabs = [
@@ -524,6 +539,17 @@ import Alert from '@/Components/Alert.vue';
 
   // Função para emitir certificado a partir da OS
   const emitCertificateFromOS = async () => {
+    // Validação dos campos obrigatórios
+    if (!certificateForm.value.execution_date) {
+      alert('Por favor, preencha a data da execução.');
+      return;
+    }
+
+    if (!certificateForm.value.procedure_used) {
+      alert('Por favor, preencha o procedimento utilizado.');
+      return;
+    }
+
     isSubmittingCertificate.value = true;
 
     try {
@@ -534,6 +560,7 @@ import Alert from '@/Components/Alert.vue';
         execution_date: certificateForm.value.execution_date,
         warranty: certificateForm.value.warranty || null,
         notes: certificateForm.value.notes || '',
+        procedure_used: certificateForm.value.procedure_used || '',
         status: 'active'
       };
 

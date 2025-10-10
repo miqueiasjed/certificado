@@ -20,6 +20,7 @@ class Certificate extends Model
         'certificate_number',
         'status',
         'notes',
+        'procedure_used',
     ];
 
     protected $casts = [

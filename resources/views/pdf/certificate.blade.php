@@ -137,6 +137,7 @@
             /* Centraliza o texto dos procedimentos */
         }
 
+
         .footer-ceatox {
             position: absolute;
             bottom: 15px;
@@ -261,6 +262,10 @@
                     Não informado
                 @endif
             </p>
+        </div>
+
+        <div class="procedures">
+            <p><strong>Procedimento Utilizado:</strong> {{ $certificate->procedure_used ?? 'Não informado' }}</p>
         </div>
 
         @if($certificate->products && $certificate->products->count() > 0)
