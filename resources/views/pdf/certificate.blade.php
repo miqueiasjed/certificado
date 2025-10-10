@@ -250,7 +250,7 @@
     <div class="content">
 
         <div class="procedures">
-            <p><strong>Serviços Prestados:</strong>
+            <p><strong>Serviço Prestado:</strong>
                 @if($certificate->services && $certificate->services->count() > 0)
                     @foreach ($certificate->services as $service)
                         {{ $service->name }}@if (!$loop->last)
