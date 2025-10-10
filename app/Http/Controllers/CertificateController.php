@@ -121,7 +121,7 @@ class CertificateController extends Controller
         $services = Service::where('is_active', true)->orderBy('name')->limit(500)->get();
         
         // Carregar endereços do cliente para certificados avulsos
-        $addresses = $certificate->client ? $certificate->client->addresses()->orderBy('name')->get() : collect();
+        $addresses = $certificate->client ? $certificate->client->addresses()->orderBy('nickname')->get() : collect();
 
         // Otimizar: carregar apenas work orders do cliente do certificado ou limitar a quantidade
         $workOrders = WorkOrder::with('client')

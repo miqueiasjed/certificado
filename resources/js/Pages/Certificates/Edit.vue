@@ -61,7 +61,7 @@
                 >
                   <option value="">Selecione um endereço</option>
                   <option v-for="address in clientAddresses" :key="address.id" :value="address.id">
-                    {{ address.name }} - {{ address.street }}, {{ address.number }}, {{ address.neighborhood }}, {{ address.city }}/{{ address.state }}
+                    {{ address.nickname }} - {{ address.street }}, {{ address.number }}, {{ address.district }}, {{ address.city }}/{{ address.state }}
                   </option>
                 </select>
                 <p v-if="errors.address_id" class="mt-1 text-sm text-red-600">{{ errors.address_id }}</p>
