@@ -108,23 +108,20 @@
             </select>
           </div>
 
-          <!-- Tipo de Ordem -->
+          <!-- Serviço -->
           <div>
-            <label for="order_type" class="block text-sm font-medium text-gray-700 mb-2">
-              Tipo
+            <label for="service_id" class="block text-sm font-medium text-gray-700 mb-2">
+              Serviço
             </label>
             <select
-              id="order_type"
-              v-model="filters.order_type"
+              id="service_id"
+              v-model="filters.service_id"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
             >
-              <option value="">Todos os tipos</option>
-              <option value="preventive">Preventiva</option>
-              <option value="corrective">Corretiva</option>
-              <option value="emergency">Emergência</option>
-              <option value="inspection">Inspeção</option>
-              <option value="maintenance">Manutenção</option>
-              <option value="other">Outros</option>
+              <option value="">Todos os serviços</option>
+              <option v-for="service in services" :key="service.id" :value="service.id">
+                {{ service.name }}
+              </option>
             </select>
           </div>
 
@@ -231,9 +228,6 @@
                       >
                         {{ workOrder.priority_level_text }}
                       </span>
-                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {{ workOrder.order_type_text }}
-                      </span>
                     </div>
                     <p class="text-sm text-gray-500">
                       {{ workOrder.client?.name }} - {{ workOrder.address?.street }}, {{ workOrder.address?.number }} - {{ workOrder.address?.city }}/{{ workOrder.address?.state }}
@@ -309,6 +303,7 @@ const props = defineProps({
   clients: Array,
   addresses: Array,
   technicians: Array,
+  services: Array,
 });
 
 const filters = ref({
@@ -317,7 +312,7 @@ const filters = ref({
   technician_id: props.filters?.technician_id || '',
   status: props.filters?.status || '',
   priority_level: props.filters?.priority_level || '',
-  order_type: props.filters?.order_type || '',
+  service_id: props.filters?.service_id || '',
   date_from: props.filters?.date_from || '',
   date_to: props.filters?.date_to || '',
 });
@@ -336,7 +331,7 @@ const clearFilters = () => {
     technician_id: '',
     status: '',
     priority_level: '',
-    order_type: '',
+    service_id: '',
     date_from: '',
     date_to: '',
   };

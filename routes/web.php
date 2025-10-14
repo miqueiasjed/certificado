@@ -11,7 +11,6 @@ use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\CadastrosController;
 use App\Http\Controllers\TechnicianController;
-use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\RoomController;
@@ -28,6 +27,7 @@ use App\Http\Controllers\CashFlowController;
 use App\Http\Controllers\FinancialDashboardController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EventTypeController;
 use App\Models\Client;
 use App\Models\Product;
 use App\Models\Technician;
@@ -64,9 +64,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Rotas de Técnicos
     Route::resource('technicians', TechnicianController::class);
-
-    // Rotas de Tipos de Serviço
-    Route::resource('service-types', ServiceTypeController::class);
 
     // Rotas de Princípio Ativo
     Route::resource('active-ingredients', ActiveIngredientController::class);
@@ -149,6 +146,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Rotas de Avistamentos de Pragas
     Route::resource('pest-sightings', PestSightingController::class);
+
+    // Rotas de Tipos de Evento
+    Route::resource('event-types', EventTypeController::class);
 
     // Rotas de Detalhes de Pagamento
 Route::resource('payment-details', PaymentDetailController::class);

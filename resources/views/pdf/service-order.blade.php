@@ -98,10 +98,6 @@
         <div class="section-title">INFORMAÇÕES GERAIS</div>
         <div class="info-grid">
             <div class="info-item">
-                <div class="info-label">Tipo de Serviço:</div>
-                <div class="info-value">{{ $serviceOrder->service_type_label }}</div>
-            </div>
-            <div class="info-item">
                 <div class="info-label">Status:</div>
                 <div class="info-value">
                     <span class="status-badge status-{{ $serviceOrder->status }}">
@@ -145,11 +141,22 @@
                 <div class="info-label">Endereço:</div>
                 <div class="info-value">
                     {{ $serviceOrder->client->address }}, {{ $serviceOrder->client->number }}<br>
-                    {{ $serviceOrder->client->neighborhood }} - {{ $serviceOrder->client->city }}
+                    {{ $serviceOrder->client->neighborhood }} - {{ $serviceOrder->client->city }}/{{ $serviceOrder->client->state }}<br>
+                    CEP: {{ $serviceOrder->client->zip_code }}
                 </div>
             </div>
         </div>
     </div>
+
+    @if($serviceOrder->service)
+    <div class="section">
+        <div class="section-title">SERVIÇO</div>
+        <div class="info-value">{{ $serviceOrder->service->name }}</div>
+        @if($serviceOrder->service->description)
+        <div class="text-sm text-gray-600 mt-2">{{ $serviceOrder->service->description }}</div>
+        @endif
+    </div>
+    @endif
 
     @if($serviceOrder->description)
     <div class="section">

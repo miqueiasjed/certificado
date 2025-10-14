@@ -95,7 +95,7 @@ class AddressController extends Controller
     {
         $addresses = $this->addressService->getAddressesByClient($clientId);
 
-        return response()->json($addresses);
+        return response()->json(['addresses' => $addresses]);
     }
 
     public function getByCity(Request $request, $city)

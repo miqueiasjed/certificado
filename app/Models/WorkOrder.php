@@ -16,7 +16,7 @@ class WorkOrder extends Model
         'client_id',
         'address_id',
         'technician_id',
-        'service_type_id',
+        'service_id',
         'order_number',
         'priority_level',
         'scheduled_date',
@@ -82,6 +82,14 @@ class WorkOrder extends Model
         return $this->belongsTo(Technician::class, 'technician_id');
     }
 
+    /**
+     * Get the service for this work order.
+     */
+    public function service(): BelongsTo
+    {
+        return $this->belongsTo(Service::class);
+    }
+
     public function technicians(): BelongsToMany
     {
         return $this->belongsToMany(Technician::class, 'work_order_technicians', 'work_order_id', 'technician_id')
@@ -94,8 +102,8 @@ class WorkOrder extends Model
      */
     public function products(): BelongsToMany
     {
-        return $this->belongsToMany(Product::class, 'work_order_products', 'work_order_id', 'product_id')
-            ->withPivot('quantity', 'observations')
+        return $this->belongsToMany(Product::class, 'work_order_product', 'work_order_id', 'product_id')
+            ->withPivot(['quantity', 'unit', 'observations'])
             ->withTimestamps();
     }
 
@@ -149,7 +157,7 @@ class WorkOrder extends Model
         return $this->belongsToMany(Room::class, 'work_order_room')
                     ->withPivot([
                         'observation',
-                        'event_type',
+                        'event_type_id',
                         'event_date',
                         'event_description',
                         'event_observations',

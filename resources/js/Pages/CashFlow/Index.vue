@@ -309,19 +309,30 @@ const loadEntries = (page = 1) => {
   });
 };
 
-const loadStats = () => {
+const loadStats = async () => {
   const params = new URLSearchParams(filters);
 
-  fetch(`/cash-flow/stats?${params}`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        Object.assign(props.stats, data.stats);
+  try {
+    const response = await fetch(`/cash-flow/stats?${params}`, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
       }
-    })
-    .catch(error => {
-      console.error('Erro ao carregar estatísticas:', error);
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Atualizar os stats recebidos
+    if (data) {
+      Object.assign(props.stats, data);
+    }
+  } catch (error) {
+    console.error('Erro ao carregar estatísticas:', error);
+  }
 };
 
 const debounceSearch = () => {

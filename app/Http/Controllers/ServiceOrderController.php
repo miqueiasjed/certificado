@@ -112,7 +112,7 @@ class ServiceOrderController extends Controller
         $serviceOrder->load([
             'client',
             'technician',
-            'serviceType',
+            'service',
             'rooms' => function($query) {
                 $query->withPivot('observation');
             }

@@ -74,19 +74,9 @@ class PestSightingController extends Controller
         try {
             $pestSighting = $this->pestSightingService->createPestSighting($request->validated());
 
-            // Recarregar o modelo com relacionamentos
-            $pestSighting->load(['address.client', 'workOrder.technician']);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Avistamento de praga criado com sucesso!',
-                'pestSighting' => $pestSighting
-            ], 201);
+            return back()->with('success', 'Avistamento de praga criado com sucesso!');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao criar avistamento: ' . $e->getMessage()
-            ], 500);
+            return back()->withErrors(['message' => 'Erro ao criar avistamento: ' . $e->getMessage()]);
         }
     }
 
@@ -130,22 +120,12 @@ class PestSightingController extends Controller
                 $pestSighting->refresh();
                 $pestSighting->load(['address.client', 'workOrder.technician']);
 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Avistamento de praga atualizado com sucesso!',
-                    'pestSighting' => $pestSighting
-                ]);
+                return back()->with('success', 'Avistamento de praga atualizado com sucesso!');
             } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Erro ao atualizar avistamento de praga'
-                ], 500);
+                return back()->withErrors(['message' => 'Erro ao atualizar avistamento de praga']);
             }
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao atualizar avistamento: ' . $e->getMessage()
-            ], 500);
+            return back()->withErrors(['message' => 'Erro ao atualizar avistamento: ' . $e->getMessage()]);
         }
     }
 

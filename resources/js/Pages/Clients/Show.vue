@@ -178,7 +178,7 @@
                 </svg>
               </button>
             </div>
-            
+
             <form @submit.prevent="submitAddress" class="space-y-4">
               <!-- Apelido do Endereço -->
               <div>
@@ -426,7 +426,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useForm, Link } from '@inertiajs/vue3';
+import { useForm, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
@@ -482,8 +482,8 @@ const submitAddress = async () => {
       onSuccess: () => {
         showAddressModal.value = false;
         addressForm.reset();
-        // Recarregar a página para mostrar o novo endereço
-        window.location.reload();
+        // Recarregar a página para mostrar o novo endereço usando Inertia
+        router.reload({ only: ['client'] });
       },
       onError: () => {
         // Erro será tratado pelo sistema de alertas do layout

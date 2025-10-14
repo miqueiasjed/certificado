@@ -220,8 +220,7 @@
 </template>
 
 <script setup>
-import { useForm } from '@inertiajs/vue3';
-import { Link } from '@inertiajs/vue3';
+import { useForm, Link, router } from '@inertiajs/vue3';
 import { ref, watch, computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
@@ -256,9 +255,19 @@ watch(() => form.client_id, async (newClientId) => {
 
   if (newClientId) {
     try {
-      const response = await fetch(`/service-orders/rooms/by-client?client_id=${newClientId}`);
-      const data = await response.json();
-      availableRooms.value = data.rooms || [];
+      router.get(`/service-orders/rooms/by-client`, { client_id: newClientId }, {
+        preserveState: true,
+        preserveScroll: true,
+        only: [],
+        onSuccess: (page) => {
+          if (page.props.rooms) {
+            availableRooms.value = page.props.rooms;
+          }
+        },
+        onError: (error) => {
+          console.error('Erro ao buscar cômodos:', error);
+        }
+      });
     } catch (error) {
       console.error('Erro ao buscar cômodos:', error);
     }

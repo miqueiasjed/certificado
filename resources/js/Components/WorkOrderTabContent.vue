@@ -11,8 +11,8 @@
             <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.order_number }}</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-500">Tipo de Ordem</label>
-          <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.order_type_text }}</p>
+            <label class="block text-sm font-medium text-gray-500">Serviço</label>
+            <p class="mt-1 text-sm text-gray-900">{{ props.workOrder.service?.name || '-' }}</p>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-500">Status</label>
@@ -111,7 +111,7 @@
     <!-- Aba: Produtos e Serviços -->
     <div v-if="activeTab === 'products-services'">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-medium text-gray-900">Produtos e Serviços</h3>
+        <h3 class="text-lg font-medium text-gray-900">Produtos</h3>
         <div class="flex space-x-2">
           <button
             @click="showProductModal = true; console.log('Produto modal:', showProductModal)"
@@ -121,15 +121,6 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
             Adicionar Produto
-          </button>
-          <button
-            @click="showServiceModal = true; console.log('Serviço modal:', showServiceModal)"
-            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
-          >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            Adicionar Serviço
           </button>
         </div>
       </div>
@@ -165,10 +156,14 @@
                 </button>
               </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-500">Quantidade</label>
-                <p class="mt-1 text-sm text-gray-900">{{ product.pivot.quantity || 1 }}</p>
+                <p class="mt-1 text-sm text-gray-900">{{ product.pivot.quantity || '-' }}</p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-500">Unidade</label>
+                <p class="mt-1 text-sm text-gray-900">{{ product.pivot.unit || '-' }}</p>
               </div>
               <div v-if="product.pivot.observations">
                 <label class="block text-sm font-medium text-gray-500">Observações</label>
@@ -183,52 +178,6 @@
           </svg>
           <p class="mt-2 text-sm">Nenhum produto foi registrado para esta ordem de serviço.</p>
           <p class="mt-1 text-xs text-gray-400">Comece criando um novo produto.</p>
-        </div>
-      </div>
-
-      <!-- Serviços Realizados -->
-      <div>
-        <h4 class="text-md font-medium text-gray-900 mb-4">Serviços Realizados</h4>
-        <div v-if="props.workOrder.services && props.workOrder.services.length > 0" class="space-y-4">
-          <div v-for="service in props.workOrder.services" :key="service.id" class="bg-gray-50 rounded-lg p-4">
-            <div class="flex justify-between items-start mb-3">
-              <div class="flex-1">
-                <h5 class="font-medium text-gray-900">{{ service.name }}</h5>
-                <p v-if="service.description" class="text-sm text-gray-600">{{ service.description }}</p>
-              </div>
-              <div class="flex space-x-2">
-                <button
-                  @click="editServiceInOS(service)"
-                  class="inline-flex items-center px-3 py-1 border border-green-300 text-xs font-medium rounded text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                  </svg>
-                  Editar
-                </button>
-                <button
-                  @click="removeServiceFromOS(service)"
-                  class="inline-flex items-center px-3 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                >
-                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
-                  Remover
-                </button>
-              </div>
-            </div>
-            <div v-if="service.pivot.observations">
-              <label class="block text-sm font-medium text-gray-500">Observações</label>
-              <p class="mt-1 text-sm text-gray-900">{{ service.pivot.observations }}</p>
-            </div>
-          </div>
-        </div>
-        <div v-else class="text-center py-8 text-gray-500">
-          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          <p class="mt-2 text-sm">Nenhum serviço foi registrado para esta ordem de serviço.</p>
-          <p class="mt-1 text-xs text-gray-400">Comece criando um novo serviço.</p>
         </div>
       </div>
 
@@ -270,10 +219,29 @@
                     type="number"
                     v-model="productForm.quantity"
                     required
-                    min="1"
+                    step="0.01"
+                    min="0"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="1"
+                    placeholder="0.00"
                   />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Unidade</label>
+                  <select
+                    v-model="productForm.unit"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="unidade">Unidade</option>
+                    <option value="kg">Quilograma (kg)</option>
+                    <option value="g">Grama (g)</option>
+                    <option value="mg">Miligrama (mg)</option>
+                    <option value="L">Litro (L)</option>
+                    <option value="mL">Mililitro (mL)</option>
+                    <option value="caixa">Caixa</option>
+                    <option value="pacote">Pacote</option>
+                  </select>
                 </div>
 
                 <div>
@@ -408,9 +376,28 @@
                     type="number"
                     v-model="editProductForm.quantity"
                     required
-                    min="1"
+                    step="0.01"
+                    min="0"
                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Unidade</label>
+                  <select
+                    v-model="editProductForm.unit"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Selecione</option>
+                    <option value="unidade">Unidade</option>
+                    <option value="kg">Quilograma (kg)</option>
+                    <option value="g">Grama (g)</option>
+                    <option value="mg">Miligrama (mg)</option>
+                    <option value="L">Litro (L)</option>
+                    <option value="mL">Mililitro (mL)</option>
+                    <option value="caixa">Caixa</option>
+                    <option value="pacote">Pacote</option>
+                  </select>
                 </div>
 
                 <div>
@@ -684,13 +671,13 @@
                 <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                 </svg>
-                {{ room.pivot?.event_type ? 'Editar' : 'Adicionar' }}
+                {{ room.pivot?.event_type_id ? 'Editar' : 'Adicionar' }}
               </button>
             </h5>
-            <div v-if="room.pivot?.event_type" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div v-if="room.pivot?.event_type_id" class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-sm font-medium text-gray-500 mb-1">Tipo de Evento</label>
-                <p class="text-sm text-gray-900">{{ getEventTypeText(room.pivot.event_type) }}</p>
+                <p class="text-sm text-gray-900">{{ getEventTypeText(room.pivot.event_type_id) }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-500 mb-1">Data do Evento</label>
@@ -709,7 +696,7 @@
               <label class="block text-sm font-medium text-gray-500 mb-1">Observações do Evento</label>
               <p class="text-sm text-gray-900">{{ room.pivot.event_observations }}</p>
         </div>
-            <div v-if="!room.pivot?.event_type" class="text-sm text-gray-500 italic">
+            <div v-if="!room.pivot?.event_type_id" class="text-sm text-gray-500 italic">
               Nenhum evento registrado para este cômodo.
       </div>
             </div>
@@ -1000,7 +987,7 @@
         <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
           <div class="mt-3">
             <h3 class="text-lg font-medium text-gray-900 mb-4">
-              {{ selectedRoomForEvent && props.workOrder.rooms?.find(r => r.id === selectedRoomForEvent)?.pivot?.event_type ? 'Editar Evento' : 'Adicionar Evento' }}
+              {{ selectedRoomForEvent && props.workOrder.rooms?.find(r => r.id === selectedRoomForEvent)?.pivot?.event_type_id ? 'Editar Evento' : 'Adicionar Evento' }}
             </h3>
 
             <div class="space-y-4">
@@ -1012,12 +999,13 @@
                   required
                 >
                   <option value="">Selecione o tipo de evento...</option>
-                  <option value="inspection">Inspeção</option>
-                  <option value="cleaning">Limpeza</option>
-                  <option value="maintenance">Manutenção</option>
-                  <option value="repair">Reparo</option>
-                  <option value="installation">Instalação</option>
-                  <option value="other">Outros</option>
+                  <option
+                    v-for="eventType in props.eventTypes"
+                    :key="eventType.id"
+                    :value="eventType.id"
+                  >
+                    {{ eventType.name }}
+                  </option>
                 </select>
               </div>
 
@@ -2116,7 +2104,7 @@
 
 <script setup>
 import { ref, computed, nextTick, watch } from 'vue';
-import { Link, useForm } from '@inertiajs/vue3';
+import { Link, useForm, router } from '@inertiajs/vue3';
 
 const props = defineProps({
   workOrder: {
@@ -2144,6 +2132,10 @@ const props = defineProps({
     default: () => []
   },
   availableTechnicians: {
+    type: Array,
+    default: () => []
+  },
+  eventTypes: {
     type: Array,
     default: () => []
   }
@@ -2228,6 +2220,7 @@ const pestSightingForm = useForm({
 const productForm = useForm({
   product_id: '',
   quantity: 1,
+  unit: '',
   observations: ''
 });
 
@@ -2244,6 +2237,7 @@ const technicianForm = useForm({
 // Formulários para editar produtos/serviços na OS
 const editProductForm = useForm({
   quantity: 1,
+  unit: '',
   observations: ''
 });
 
@@ -2776,32 +2770,20 @@ const updateEvent = async () => {
 
     console.log('Enviando dados para atualização:', updateData);
 
-    const response = await fetch(`/device-events/${editEventForm.id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+    // Usar router.put do Inertia
+    router.put(`/device-events/${editEventForm.id}`, updateData, {
+      preserveScroll: true,
+      onSuccess: () => {
+        showEditEventModal.value = false;
+        editEventForm.reset();
+        selectedEvent.value = null;
+        // Recarregar apenas os eventos
+        router.reload({ only: ['deviceEvents'] });
       },
-      body: JSON.stringify(updateData)
+      onError: (errors) => {
+        displayToast('Erro ao atualizar evento: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (result.success) {
-      // Sucesso: mostrar toast e fechar modal
-      displayToast(result.message, 'success');
-      showEditEventModal.value = false;
-      editEventForm.reset();
-      selectedEvent.value = null;
-
-      // Aguardar 2 segundos antes de recarregar para permitir ver os logs
-      setTimeout(() => {
-        window.location.reload();
-      }, 2000);
-    } else {
-      // Erro: mostrar toast de erro
-      displayToast('Erro ao atualizar evento: ' + result.message, 'error');
-    }
   } catch (error) {
     console.error('Erro na atualização:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
@@ -2838,23 +2820,18 @@ const submitDeviceEvent = async () => {
 
   try {
     console.log('Enviando dados:', deviceEventForm.data());
-    const response = await fetch('/device-events', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+    // Usar deviceEventForm.post do Inertia
+    deviceEventForm.post('/device-events', {
+      preserveScroll: true,
+      onSuccess: () => {
+        showDeviceEventModal.value = false;
+        deviceEventForm.reset();
+        router.reload({ only: ['deviceEvents'] });
       },
-      body: JSON.stringify(deviceEventForm.data())
+      onError: (errors) => {
+        displayToast('Erro ao criar evento: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-    const result = await response.json();
-    if (result.success) {
-      displayToast(result.message, 'success');
-      showDeviceEventModal.value = false;
-      deviceEventForm.reset();
-      window.location.reload();
-    } else {
-      displayToast('Erro ao criar evento: ' + result.message, 'error');
-    }
   } catch (error) {
     console.error('Erro na submissão:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
@@ -2872,26 +2849,18 @@ const submitPestSighting = async () => {
   isSubmittingPestSighting.value = true;
 
   try {
-    const response = await fetch('/pest-sightings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+    // Usar pestSightingForm.post do Inertia
+    pestSightingForm.post('/pest-sightings', {
+      preserveScroll: true,
+      onSuccess: () => {
+        showPestSightingModal.value = false;
+        pestSightingForm.reset();
+        router.reload({ only: ['pestSightings'] });
       },
-      body: JSON.stringify(pestSightingForm.data())
+      onError: (errors) => {
+        displayToast('Erro ao criar avistamento: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (result.success) {
-      displayToast(result.message, 'success');
-      showPestSightingModal.value = false;
-      pestSightingForm.reset();
-      // Recarregar a página para mostrar o novo avistamento
-      window.location.reload();
-    } else {
-      displayToast('Erro ao criar avistamento: ' + result.message, 'error');
-    }
   } catch (error) {
     console.error('Erro na submissão:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
@@ -2912,28 +2881,22 @@ const addProductToOS = async () => {
   try {
     const formData = new FormData();
     formData.append('quantity', productForm.quantity);
+    formData.append('unit', productForm.unit || '');
     formData.append('observations', productForm.observations || '');
     formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
 
-    const response = await fetch(`/work-orders/${props.workOrder.id}/products/${productForm.product_id}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+    // Usar router.post do Inertia
+    router.post(`/work-orders/${props.workOrder.id}/products/${productForm.product_id}`, formData, {
+      preserveScroll: true,
+      onSuccess: () => {
+        showProductModal.value = false;
+        productForm.reset();
+        router.reload({ only: ['workOrder'] });
       },
-      body: formData
+      onError: (errors) => {
+        displayToast('Erro ao adicionar produto: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      displayToast('Produto adicionado à OS com sucesso!', 'success');
-      showProductModal.value = false;
-      productForm.reset();
-      window.location.reload();
-    } else {
-      displayToast('Erro ao criar produto: ' + (result.message || 'Erro desconhecido'), 'error');
-    }
   } catch (error) {
     console.error('Erro na submissão:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
@@ -2951,29 +2914,22 @@ const addServiceToOS = async () => {
   isSubmittingService.value = true;
 
   try {
-    const formData = new FormData();
-    formData.append('observations', serviceForm.observations || '');
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    const formData = {
+      observations: serviceForm.observations || ''
+    };
 
-    const response = await fetch(`/work-orders/${props.workOrder.id}/services/${serviceForm.service_id}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+    // Usar router.post do Inertia
+    router.post(`/work-orders/${props.workOrder.id}/services/${serviceForm.service_id}`, formData, {
+      preserveScroll: true,
+      onSuccess: () => {
+        showServiceModal.value = false;
+        serviceForm.reset();
+        router.reload({ only: ["workOrder"] });
       },
-      body: formData
+      onError: (errors) => {
+        displayToast('Erro ao adicionar serviço: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      displayToast('Serviço adicionado à OS com sucesso!', 'success');
-      showServiceModal.value = false;
-      serviceForm.reset();
-      window.location.reload();
-    } else {
-      displayToast('Erro ao criar serviço: ' + (result.message || 'Erro desconhecido'), 'error');
-    }
   } catch (error) {
     console.error('Erro na submissão:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
@@ -2987,6 +2943,7 @@ const editProductInOS = (product) => {
   console.log('🔍 editProductInOS chamado:', product);
   selectedProduct.value = product;
   editProductForm.quantity = product.pivot.quantity || 1;
+  editProductForm.unit = product.pivot.unit || '';
   editProductForm.observations = product.pivot.observations || '';
   showEditProductModal.value = true;
   console.log('🔍 showEditProductModal.value:', showEditProductModal.value);
@@ -3006,31 +2963,24 @@ const updateProductInOS = async () => {
   isUpdatingProduct.value = true;
 
   try {
-    const formData = new FormData();
-    formData.append('quantity', editProductForm.quantity);
-    formData.append('observations', editProductForm.observations || '');
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-    formData.append('_method', 'PUT');
+    const formData = {
+      quantity: editProductForm.quantity,
+      unit: editProductForm.unit || '',
+      observations: editProductForm.observations || ''
+    };
 
-    const response = await fetch(`/work-orders/${props.workOrder.id}/products/${selectedProduct.value.id}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+    // Usar router.put do Inertia
+    router.put(`/work-orders/${props.workOrder.id}/products/${selectedProduct.value.id}`, formData, {
+      preserveScroll: true,
+      onSuccess: () => {
+        showEditProductModal.value = false;
+        selectedProduct.value = null;
+        router.reload({ only: ["workOrder"] });
       },
-      body: formData
+      onError: (errors) => {
+        displayToast('Erro ao atualizar produto: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      displayToast('Produto atualizado com sucesso!', 'success');
-      showEditProductModal.value = false;
-      selectedProduct.value = null;
-      window.location.reload();
-    } else {
-      displayToast('Erro ao atualizar produto: ' + (result.message || 'Erro desconhecido'), 'error');
-    }
   } catch (error) {
     console.error('Erro na atualização:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
@@ -3045,30 +2995,22 @@ const updateServiceInOS = async () => {
   isUpdatingService.value = true;
 
   try {
-    const formData = new FormData();
-    formData.append('observations', editServiceForm.observations || '');
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-    formData.append('_method', 'PUT');
+    const formData = {
+      observations: editServiceForm.observations || ''
+    };
 
-    const response = await fetch(`/work-orders/${props.workOrder.id}/services/${selectedService.value.id}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+    // Usar router.put do Inertia
+    router.put(`/work-orders/${props.workOrder.id}/services/${selectedService.value.id}`, formData, {
+      preserveScroll: true,
+      onSuccess: () => {
+        showEditServiceModal.value = false;
+        selectedService.value = null;
+        router.reload({ only: ["workOrder"] });
       },
-      body: formData
+      onError: (errors) => {
+        displayToast('Erro ao atualizar serviço: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      displayToast('Serviço atualizado com sucesso!', 'success');
-      showEditServiceModal.value = false;
-      selectedService.value = null;
-      window.location.reload();
-    } else {
-      displayToast('Erro ao atualizar serviço: ' + (result.message || 'Erro desconhecido'), 'error');
-    }
   } catch (error) {
     console.error('Erro na atualização:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
@@ -3083,27 +3025,15 @@ const removeProductFromOS = async (product) => {
   }
 
   try {
-    const formData = new FormData();
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-    formData.append('_method', 'DELETE');
-
-    const response = await fetch(`/work-orders/${props.workOrder.id}/products/${product.id}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+    // Usar router.delete do Inertia
+    router.delete(`/work-orders/${props.workOrder.id}/products/${product.id}`, {
+      preserveScroll: true,
+      onSuccess: () => {
       },
-      body: formData
+      onError: (errors) => {
+        displayToast('Erro ao remover produto: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      displayToast('Produto removido com sucesso!', 'success');
-      window.location.reload();
-    } else {
-      displayToast('Erro ao remover produto: ' + (result.message || 'Erro desconhecido'), 'error');
-    }
   } catch (error) {
     console.error('Erro na remoção:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
@@ -3116,27 +3046,15 @@ const removeServiceFromOS = async (service) => {
   }
 
   try {
-    const formData = new FormData();
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-    formData.append('_method', 'DELETE');
-
-    const response = await fetch(`/work-orders/${props.workOrder.id}/services/${service.id}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+    // Usar router.delete do Inertia
+    router.delete(`/work-orders/${props.workOrder.id}/services/${service.id}`, {
+      preserveScroll: true,
+      onSuccess: () => {
       },
-      body: formData
+      onError: (errors) => {
+        displayToast('Erro ao remover serviço: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      displayToast('Serviço removido com sucesso!', 'success');
-      window.location.reload();
-    } else {
-      displayToast('Erro ao remover serviço: ' + (result.message || 'Erro desconhecido'), 'error');
-    }
   } catch (error) {
     console.error('Erro na remoção:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
@@ -3253,7 +3171,7 @@ const updatePestSighting = async () => {
 
       // Aguardar 2 segundos antes de recarregar para permitir ver os logs
       setTimeout(() => {
-        window.location.reload();
+        router.reload({ only: ["workOrder"] });
       }, 2000);
     } else {
       displayToast('Erro ao atualizar avistamento: ' + result.message, 'error');
@@ -3286,22 +3204,10 @@ const formatCurrency = (value) => {
 };
 
 // Funções para converter valores em texto legível
-const getEventTypeText = (eventType) => {
-  const types = {
-    'treatment': 'Tratamento',
-    'inspection': 'Inspeção',
-    'maintenance': 'Manutenção',
-    'installation': 'Instalação',
-    'removal': 'Remoção',
-    'other': 'Outro',
-    // Valores em português (como são salvos)
-    'Aplicação': 'Aplicação',
-    'Inspeção': 'Inspeção',
-    'Manutenção': 'Manutenção',
-    'Monitoramento': 'Monitoramento',
-    'Outro': 'Outro'
-  };
-  return types[eventType] || eventType;
+const getEventTypeText = (eventTypeId) => {
+  // Buscar o tipo de evento na lista de eventTypes
+  const eventType = props.eventTypes?.find(et => et.id == eventTypeId);
+  return eventType?.name || 'Tipo não encontrado';
 };
 
 const getDeviceInfo = (deviceId) => {
@@ -3538,14 +3444,13 @@ const confirmReceivePayment = async () => {
     if (remainingAmount > 0) {
       displayToast(`Pagamento parcial recebido! Parcela pendente de ${formatCurrency(remainingAmount)} será criada automaticamente.`, 'success');
     } else {
-      displayToast('Pagamento recebido com sucesso!', 'success');
     }
 
     showReceivePaymentModal.value = false;
     selectedPayment.value = null;
     receivePaymentForm.reset();
     // Recarregar a página para atualizar os dados
-    window.location.reload();
+    router.reload({ only: ["workOrder"] });
 
   } catch (error) {
     console.error('Erro ao receber pagamento:', error);
@@ -3600,9 +3505,8 @@ const deletePayment = async (paymentId) => {
     });
 
     if (response.ok) {
-      displayToast('Pagamento excluído com sucesso!', 'success');
       // Recarregar a página para atualizar os dados
-      window.location.reload();
+      router.reload({ only: ["workOrder"] });
     } else {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Erro ao excluir pagamento');
@@ -3628,9 +3532,8 @@ const reopenPayment = async (payment) => {
     });
 
     if (response.ok) {
-      displayToast('Pagamento reaberto com sucesso! O valor foi debitado das entradas financeiras.', 'success');
       // Recarregar a página para atualizar os dados
-      window.location.reload();
+      router.reload({ only: ["workOrder"] });
     } else {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Erro ao reabrir pagamento');
@@ -3674,11 +3577,10 @@ const submitPayment = async () => {
     const data = await response.json();
 
     if (data.success) {
-      displayToast('Pagamento adicionado com sucesso!', 'success');
       showAddPaymentModal.value = false;
       paymentForm.reset();
       // Recarregar a página para atualizar os dados
-      window.location.reload();
+      router.reload({ only: ["workOrder"] });
     } else {
       throw new Error(data.message || 'Erro ao adicionar pagamento');
     }
@@ -3720,11 +3622,10 @@ const updatePayment = async () => {
     console.log('Resposta do servidor:', data);
 
     if (data.success) {
-      displayToast('Pagamento atualizado com sucesso!', 'success');
       showEditPaymentModal.value = false;
       selectedPayment.value = null;
       // Recarregar a página para atualizar os dados
-      window.location.reload();
+      router.reload({ only: ["workOrder"] });
     } else {
       throw new Error(data.message || 'Erro ao atualizar pagamento');
     }
@@ -3770,7 +3671,6 @@ const submitFinancialInfo = async () => {
     const data = await response.json();
 
     if (data.success) {
-      displayToast('Informações financeiras atualizadas com sucesso!', 'success');
       showEditFinancialModal.value = false;
 
       // Atualizar os dados do workOrder com os novos valores
@@ -3931,29 +3831,22 @@ const addTechnicianToOS = async () => {
   isSubmittingTechnician.value = true;
 
   try {
-    const formData = new FormData();
-    formData.append('is_primary', technicianForm.is_primary ? '1' : '0');
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    const formData = {
+      is_primary: technicianForm.is_primary ? 1 : 0
+    };
 
-    const response = await fetch(`/work-orders/${props.workOrder.id}/technicians/${technicianForm.technician_id}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+    // Usar router.post do Inertia
+    router.post(`/work-orders/${props.workOrder.id}/technicians/${technicianForm.technician_id}`, formData, {
+      preserveScroll: true,
+      onSuccess: () => {
+        showTechnicianModal.value = false;
+        technicianForm.reset();
+        router.reload({ only: ["workOrder"] });
       },
-      body: formData
+      onError: (errors) => {
+        displayToast('Erro ao adicionar técnico: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      displayToast('Técnico adicionado à OS com sucesso!', 'success');
-      showTechnicianModal.value = false;
-      technicianForm.reset();
-      window.location.reload();
-    } else {
-      displayToast('Erro ao adicionar técnico: ' + (result.message || 'Erro desconhecido'), 'error');
-    }
   } catch (error) {
     console.error('Erro ao adicionar técnico:', error);
     displayToast('Erro ao adicionar técnico. Tente novamente.', 'error');
@@ -3968,27 +3861,15 @@ const removeTechnicianFromOS = async (technician) => {
   }
 
   try {
-    const formData = new FormData();
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-    formData.append('_method', 'DELETE');
-
-    const response = await fetch(`/work-orders/${props.workOrder.id}/technicians/${technician.id}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
+    // Usar router.delete do Inertia
+    router.delete(`/work-orders/${props.workOrder.id}/technicians/${technician.id}`, {
+      preserveScroll: true,
+      onSuccess: () => {
       },
-      body: formData
+      onError: (errors) => {
+        displayToast('Erro ao remover técnico: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      displayToast('Técnico removido com sucesso!', 'success');
-      window.location.reload();
-    } else {
-      displayToast('Erro ao remover técnico: ' + (result.message || 'Erro desconhecido'), 'error');
-    }
   } catch (error) {
     console.error('Erro ao remover técnico:', error);
     displayToast('Erro ao remover técnico. Tente novamente.', 'error');
@@ -4130,7 +4011,6 @@ const addRoomWithEventAndPest = async () => {
     const result = await response.json();
 
     if (response.ok) {
-      displayToast('Cômodo adicionado com sucesso!', 'success');
       showAddRoomModal.value = false;
       newRoomForm.reset();
       // Limpar erros
@@ -4141,7 +4021,7 @@ const addRoomWithEventAndPest = async () => {
         general: ''
       };
       availableRooms.value = availableRooms.value.filter(room => room.id !== newRoomForm.room_id);
-      window.location.reload();
+      router.reload({ only: ["workOrder"] });
     } else {
       // Tratar erros de validação do backend
       if (result.errors) {
@@ -4172,27 +4052,13 @@ const removeRoom = async (roomId) => {
   isRemovingRoom.value = true;
 
   try {
-    const formData = new FormData();
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-    formData.append('_method', 'DELETE');
-
-    const response = await fetch(`/work-orders/${props.workOrder.id}/rooms/${roomId}`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData
+    // Usar router.delete do Inertia
+    router.delete(`/work-orders/${props.workOrder.id}/rooms/${roomId}`, {
+      preserveScroll: true,
+      onError: (errors) => {
+        displayToast('Erro ao remover cômodo: ' + (errors.message || 'Erro desconhecido'), 'error');
+      }
     });
-
-    const result = await response.json();
-
-    if (response.ok) {
-      displayToast('Cômodo removido com sucesso!', 'success');
-      window.location.reload();
-    } else {
-      displayToast('Erro ao remover cômodo: ' + (result.message || 'Erro desconhecido'), 'error');
-    }
   } catch (error) {
     console.error('Erro ao remover cômodo:', error);
     displayToast('Erro ao remover cômodo: ' + error.message, 'error');
@@ -4223,12 +4089,12 @@ const updateRoomObservation = async (roomId) => {
     const result = await response.json();
 
     if (response.ok) {
-      displayToast('Observação atualizada com sucesso!', 'success');
       // Atualizar o valor original para sincronizar o botão
       const room = props.workOrder.rooms.find(r => r.id === roomId);
       if (room && room.pivot) {
         room.pivot.observation = observation;
       }
+      router.reload({ only: ["workOrder"] });
     } else {
       displayToast('Erro ao atualizar observação: ' + (result.message || 'Erro desconhecido'), 'error');
     }
@@ -4250,9 +4116,9 @@ const openRoomEventModal = (roomId) => {
   // Carregar dispositivos do cômodo selecionado
   loadAvailableDevices(roomId);
 
-  if (room?.pivot?.event_type) {
+  if (room?.pivot?.event_type_id) {
     // Preencher formulário com dados existentes
-    roomEventForm.event_type = room.pivot.event_type || '';
+    roomEventForm.event_type = room.pivot.event_type_id || '';
     roomEventForm.event_date = room.pivot.event_date ? formatDateForInput(room.pivot.event_date) : '';
     roomEventForm.event_description = room.pivot.event_description || '';
     roomEventForm.event_observations = room.pivot.event_observations || '';
@@ -4301,46 +4167,61 @@ const saveRoomEvent = async () => {
 
   try {
     const room = props.workOrder.rooms?.find(r => r.id === selectedRoomForEvent.value);
-    const isEditing = room?.pivot?.event_type;
+    const isEditing = room?.pivot?.event_type_id;
 
-    const formData = new FormData();
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-
-    if (isEditing) {
-      formData.append('_method', 'PUT');
-    }
-
-    formData.append('event_type', roomEventForm.event_type);
-    formData.append('event_date', roomEventForm.event_date);
-    formData.append('event_description', roomEventForm.event_description || '');
-    formData.append('event_observations', roomEventForm.event_observations || '');
-    if (roomEventForm.device_id && roomEventForm.device_id !== '') {
-      formData.append('device_id', roomEventForm.device_id);
-    }
-
-    const response = await fetch(`/work-orders/${props.workOrder.id}/rooms/${selectedRoomForEvent.value}/event`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    // Verificar se a resposta é JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.error('Resposta não é JSON:', text);
-      displayToast('Erro no servidor. Verifique o console para mais detalhes.', 'error');
+    // Garantir que event_type seja enviado
+    if (!roomEventForm.event_type) {
+      displayToast('Por favor, selecione um tipo de evento.', 'error');
       return;
     }
 
-    const result = await response.json();
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
-    if (response.ok) {
-      displayToast(result.message || 'Evento salvo com sucesso!', 'success');
-      showRoomEventModal.value = false;
-      // Recarregar a página para atualizar os dados
-      window.location.reload();
+    if (!csrfToken) {
+      displayToast('Erro: Token CSRF não encontrado. Por favor, recarregue a página.', 'error');
+      return;
+    }
+
+    // Preparar dados para envio
+    const requestData = {
+      event_type: parseInt(roomEventForm.event_type),
+      event_date: roomEventForm.event_date,
+      event_description: roomEventForm.event_description || '',
+      event_observations: roomEventForm.event_observations || '',
+    };
+
+    // Adicionar device_id apenas se não for vazio
+    if (roomEventForm.device_id && roomEventForm.device_id !== '') {
+      requestData.device_id = parseInt(roomEventForm.device_id);
+    }
+
+    console.log('Sending data:', {
+      method: isEditing ? 'PUT' : 'POST',
+      url: `/work-orders/${props.workOrder.id}/rooms/${selectedRoomForEvent.value}/event`,
+      data: requestData
+    });
+
+    // Usar router do Inertia
+    const url = route(isEditing ? 'work-orders.rooms.event.update' : 'work-orders.rooms.event.add', {
+      workOrder: props.workOrder.id,
+      roomId: selectedRoomForEvent.value
+    });
+    const options = {
+      preserveScroll: true,
+      onSuccess: () => {
+        showRoomEventModal.value = false;
+        router.reload({ only: ["workOrder"] });
+      },
+      onError: (errors) => {
+        const message = errors?.message || 'Erro ao salvar evento';
+        displayToast(message, 'error');
+      }
+    };
+
+    if (isEditing) {
+      router.put(url, requestData, options);
     } else {
-      displayToast('Erro ao salvar evento: ' + (result.message || 'Erro desconhecido'), 'error');
+      router.post(url, requestData, options);
     }
   } catch (error) {
     console.error('Erro ao salvar evento:', error);
@@ -4373,30 +4254,23 @@ const saveRoomPestSighting = async () => {
     }
     formData.append('pest_observation', roomPestSightingForm.pest_observation || '');
 
-    const response = await fetch(`/work-orders/${props.workOrder.id}/rooms/${selectedRoomForPestSighting.value}/pest-sighting`, {
-      method: 'POST',
-      body: formData,
+    // Usar router.post do Inertia
+    const psUrl = route('work-orders.rooms.pest-sighting.add', {
+      workOrder: props.workOrder.id,
+      roomId: selectedRoomForPestSighting.value
     });
-
-    // Verificar se a resposta é JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      console.error('Resposta não é JSON:', text);
-      displayToast('Erro no servidor. Verifique o console para mais detalhes.', 'error');
-      return;
-    }
-
-    const result = await response.json();
-
-    if (response.ok) {
-      displayToast(result.message || 'Avistamento salvo com sucesso!', 'success');
-      showRoomPestSightingModal.value = false;
-      // Recarregar a página para atualizar os dados
-      window.location.reload();
-    } else {
-      displayToast('Erro ao salvar avistamento: ' + (result.message || 'Erro desconhecido'), 'error');
-    }
+    const psData = Object.fromEntries(formData);
+    router.post(psUrl, psData, {
+      preserveScroll: true,
+      onSuccess: () => {
+        showRoomPestSightingModal.value = false;
+        router.reload({ only: ["workOrder"] });
+      },
+      onError: (errors) => {
+        const message = errors?.message || 'Erro ao salvar avistamento';
+        displayToast(message, 'error');
+      }
+    });
   } catch (error) {
     console.error('Erro ao salvar avistamento:', error);
     displayToast('Erro ao salvar avistamento: ' + error.message, 'error');

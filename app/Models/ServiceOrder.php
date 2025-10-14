@@ -14,7 +14,7 @@ class ServiceOrder extends Model
     protected $fillable = [
         'client_id',
         'technician_id',
-        'service_type_id',
+        'service_id',
         'order_number',
         'order_date',
         'start_time',
@@ -41,11 +41,6 @@ class ServiceOrder extends Model
         return $this->belongsTo(User::class, 'technician_id');
     }
 
-    public function serviceType(): BelongsTo
-    {
-        return $this->belongsTo(ServiceType::class);
-    }
-
     public function rooms(): BelongsToMany
     {
         return $this->belongsToMany(Room::class, 'room_service_order')
@@ -53,14 +48,21 @@ class ServiceOrder extends Model
                     ->withTimestamps();
     }
 
+    public function service(): BelongsTo
+    {
+        return $this->belongsTo(Service::class);
+    }
+
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'service_order_product')
+            ->withPivot(['quantity', 'unit'])
+            ->withTimestamps();
+    }
+
     public function scopeByStatus($query, $status)
     {
         return $query->where('status', $status);
-    }
-
-    public function scopeByServiceType($query, $serviceTypeId)
-    {
-        return $query->where('service_type_id', $serviceTypeId);
     }
 
     public function scopePending($query)
@@ -102,7 +104,7 @@ class ServiceOrder extends Model
 
     public function getServiceTypeBadgeAttribute(): string
     {
-        return $this->serviceType ? $this->serviceType->name : 'Não definido';
+        return $this->service ? $this->service->name : 'Nenhum serviço';
     }
 
     public function getStatusColorAttribute(): string
@@ -118,16 +120,17 @@ class ServiceOrder extends Model
 
     public function getServiceTypeColorAttribute(): string
     {
-        // Cores baseadas no ID do tipo de serviço para manter consistência
-        $colors = [
-            1 => 'red',    // Dedetização
-            2 => 'blue',   // Desinsetização
-            3 => 'orange', // Descupinização
-            4 => 'purple', // Desratização
-            5 => 'green',  // Sanitização
-        ];
-
-        return $colors[$this->service_type_id] ?? 'gray';
+        if ($this->service) {
+            $colors = [
+                1 => 'red',
+                2 => 'blue',
+                3 => 'orange',
+                4 => 'purple',
+                5 => 'green',
+            ];
+            return $colors[$this->service->id] ?? 'blue';
+        }
+        return 'gray';
     }
 
     public function getIsOverdueAttribute(): bool

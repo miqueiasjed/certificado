@@ -383,7 +383,7 @@
                 <strong>Prioridade:</strong> {{ $workOrder->priority_level_text }}
             </div>
             <div class="header-item">
-                <strong>Tipo:</strong> {{ $workOrder->order_type_text }}
+                <strong>Serviço:</strong> {{ $workOrder->service->name ?? '-' }}
             </div>
         </div>
     </div>
@@ -425,7 +425,7 @@
                 </div>
                 <div class="info-item">
                     <div class="info-label">CEP</div>
-                    <div class="info-value">{{ $workOrder->address->zip_code ?? 'Não informado' }}</div>
+                    <div class="info-value">{{ $workOrder->address->zip ?? 'Não informado' }}</div>
                 </div>
             </div>
         </div>
@@ -493,63 +493,76 @@
                         @endif
 
                         <!-- Evento -->
+                        @if($room->pivot->event_type_id)
                         <div style="margin-bottom: 15px; padding: 10px; background-color: #f0f8ff; border-left: 4px solid #2f3091;">
                             <div style="font-weight: bold; margin-bottom: 8px; color: #2f3091;">Evento Realizado</div>
-                            @if($room->pivot->event_type)
+                            @php
+                                $eventType = \App\Models\EventType::find($room->pivot->event_type_id);
+                            @endphp
+                            @if($eventType)
                                 <div style="margin-bottom: 5px;">
-                                    <strong>Tipo:</strong> {{ ucfirst(str_replace('_', ' ', $room->pivot->event_type)) }}
+                                    <strong>Tipo:</strong> {{ $eventType->name }}
                                 </div>
-                                @if($room->pivot->event_date)
-                                    <div style="margin-bottom: 5px;">
-                                        <strong>Data:</strong> {{ \Carbon\Carbon::parse($room->pivot->event_date)->format('d/m/Y') }}
-                                    </div>
-                                @endif
-                                @if($room->pivot->event_description)
-                                    <div style="margin-bottom: 5px;">
-                                        <strong>Descrição:</strong> {{ $room->pivot->event_description }}
-                                    </div>
-                                @endif
-                                @if($room->pivot->event_observations)
-                                    <div style="margin-bottom: 5px;">
-                                        <strong>Observações:</strong> {{ $room->pivot->event_observations }}
-                                    </div>
-                                @endif
-                            @else
-                                <div style="color: #666; font-style: italic;">Nenhum evento registrado</div>
+                            @endif
+                            @if($room->pivot->event_date)
+                                <div style="margin-bottom: 5px;">
+                                    <strong>Data:</strong> {{ \Carbon\Carbon::parse($room->pivot->event_date)->format('d/m/Y') }}
+                                </div>
+                            @endif
+                            @if($room->pivot->event_description)
+                                <div style="margin-bottom: 5px;">
+                                    <strong>Descrição:</strong> {{ $room->pivot->event_description }}
+                                </div>
+                            @endif
+                            @if($room->pivot->event_observations)
+                                <div style="margin-bottom: 5px;">
+                                    <strong>Observações:</strong> {{ $room->pivot->event_observations }}
+                                </div>
                             @endif
                         </div>
+                        @endif
 
                         <!-- Avistamento de Praga -->
+                        @if($room->pivot->pest_type)
                         <div style="padding: 10px; background-color: #fff8f0; border-left: 4px solid #ff6b35;">
                             <div style="font-weight: bold; margin-bottom: 8px; color: #ff6b35;">Avistamento de Praga</div>
-                            @if($room->pivot->pest_type)
+                            <div style="margin-bottom: 5px;">
+                                <strong>Tipo:</strong> @php
+                                    $pestTypes = [
+                                        'cockroach' => 'Barata',
+                                        'ant' => 'Formiga',
+                                        'spider' => 'Aranha',
+                                        'rat' => 'Rato',
+                                        'mosquito' => 'Mosquito',
+                                        'fly' => 'Mosca',
+                                        'termite' => 'Cupim',
+                                        'other' => 'Outro'
+                                    ];
+                                    echo $pestTypes[$room->pivot->pest_type] ?? ucfirst(str_replace('_', ' ', $room->pivot->pest_type));
+                                @endphp
+                            </div>
+                            @if($room->pivot->pest_sighting_date)
                                 <div style="margin-bottom: 5px;">
-                                    <strong>Tipo:</strong> {{ ucfirst(str_replace('_', ' ', $room->pivot->pest_type)) }}
+                                    <strong>Data:</strong> {{ \Carbon\Carbon::parse($room->pivot->pest_sighting_date)->format('d/m/Y') }}
                                 </div>
-                                @if($room->pivot->pest_sighting_date)
-                                    <div style="margin-bottom: 5px;">
-                                        <strong>Data:</strong> {{ \Carbon\Carbon::parse($room->pivot->pest_sighting_date)->format('d/m/Y') }}
-                                    </div>
-                                @endif
-                                @if($room->pivot->pest_location)
-                                    <div style="margin-bottom: 5px;">
-                                        <strong>Localização:</strong> {{ $room->pivot->pest_location }}
-                                    </div>
-                                @endif
-                                @if($room->pivot->pest_quantity)
-                                    <div style="margin-bottom: 5px;">
-                                        <strong>Quantidade:</strong> {{ $room->pivot->pest_quantity }}
-                                    </div>
-                                @endif
-                                @if($room->pivot->pest_observation)
-                                    <div style="margin-bottom: 5px;">
-                                        <strong>Observação:</strong> {{ $room->pivot->pest_observation }}
-                                    </div>
-                                @endif
-                            @else
-                                <div style="color: #666; font-style: italic;">Nenhum avistamento registrado</div>
+                            @endif
+                            @if($room->pivot->pest_location)
+                                <div style="margin-bottom: 5px;">
+                                    <strong>Localização:</strong> {{ $room->pivot->pest_location }}
+                                </div>
+                            @endif
+                            @if($room->pivot->pest_quantity)
+                                <div style="margin-bottom: 5px;">
+                                    <strong>Quantidade:</strong> {{ $room->pivot->pest_quantity }}
+                                </div>
+                            @endif
+                            @if($room->pivot->pest_observation)
+                                <div style="margin-bottom: 5px;">
+                                    <strong>Observação:</strong> {{ $room->pivot->pest_observation }}
+                                </div>
                             @endif
                         </div>
+                        @endif
                     </div>
                 @endforeach
             </div>
@@ -603,8 +616,15 @@
                         @foreach($workOrder->products as $product)
                             <div class="item-card">
                                 <h5>{{ $product->name }}</h5>
-                                @if($product->pivot->quantity)
-                                    <div class="quantity-badge">Qtd: {{ $product->pivot->quantity }}</div>
+                                @if($product->pivot->quantity || $product->pivot->unit)
+                                    <div class="quantity-badge">
+                                        @if($product->pivot->quantity)
+                                            Qtd: {{ $product->pivot->quantity }}
+                                        @endif
+                                        @if($product->pivot->unit)
+                                            {{ $product->pivot->unit }}
+                                        @endif
+                                    </div>
                                 @endif
                                 @if($product->pivot->observations)
                                     <div class="observation-text">
@@ -640,52 +660,6 @@
             </div>
         @else
             <div class="no-data">Nenhum produto ou serviço registrado para esta ordem de serviço</div>
-        @endif
-    </div>
-
-    <!-- Avistamentos de Pragas -->
-    <div class="section break-before">
-        <h3>Avistamentos de Pragas</h3>
-        @if($workOrder->pestSightings && $workOrder->pestSightings->count() > 0)
-            @foreach($workOrder->pestSightings as $sighting)
-                <div class="pest-sighting">
-                    <h4>{{ $sighting->pest_type ?? 'Tipo não especificado' }}</h4>
-                    <div class="info-grid">
-                        @if($sighting->sighting_date)
-                        <div class="info-item">
-                            <div class="info-label">Data</div>
-                            <div class="info-value">{{ \Carbon\Carbon::parse($sighting->sighting_date)->format('d/m/Y') }}</div>
-                        </div>
-                        @endif
-                        @if($sighting->location)
-                        <div class="info-item">
-                            <div class="info-label">Local</div>
-                            <div class="info-value">{{ $sighting->location }}</div>
-                        </div>
-                        @endif
-                        @if($sighting->quantity)
-                        <div class="info-item">
-                            <div class="info-label">Quantidade</div>
-                            <div class="info-value">{{ $sighting->quantity }}</div>
-                        </div>
-                        @endif
-                    </div>
-                    @if($sighting->description)
-                        <div class="info-item" style="margin-top: 10px;">
-                            <div class="info-label">Descrição</div>
-                            <div class="info-value">{{ $sighting->description }}</div>
-                        </div>
-                    @endif
-                    @if($sighting->observations)
-                        <div class="info-item">
-                            <div class="info-label">Observações</div>
-                            <div class="info-value">{{ $sighting->observations }}</div>
-                        </div>
-                    @endif
-                </div>
-            @endforeach
-        @else
-            <div class="no-data">Nenhum avistamento de praga registrado</div>
         @endif
     </div>
 

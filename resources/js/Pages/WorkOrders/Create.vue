@@ -137,42 +137,8 @@
             </div>
           </div>
 
-          <!-- Segunda linha: Tipo de Ordem, Nível de Prioridade, Data Agendada -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- Tipo de Serviço -->
-            <div>
-              <label for="service_type_id" class="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Serviço *
-              </label>
-              <div class="flex gap-2">
-                <select
-                  id="service_type_id"
-                  v-model="form.service_type_id"
-                  required
-                  class="flex-1 h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  :class="{ 'border-red-500': form.errors.service_type_id }"
-                >
-                  <option value="">Selecione o tipo de serviço</option>
-                  <option v-for="serviceType in serviceTypes" :key="serviceType.id" :value="serviceType.id">
-                    {{ serviceType.name }}
-                  </option>
-                </select>
-                <button
-                  type="button"
-                  @click="showServiceTypeModal = true"
-                  class="h-10 w-10 text-green-600 border border-green-300 rounded-md hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors flex items-center justify-center"
-                  title="Adicionar novo tipo de serviço"
-                >
-                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                  </svg>
-                </button>
-              </div>
-              <p v-if="form.errors.service_type_id" class="mt-1 text-sm text-red-600">
-                {{ form.errors.service_type_id }}
-              </p>
-            </div>
-
+          <!-- Segunda linha: Nível de Prioridade, Data Agendada -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Nível de Prioridade -->
             <div>
               <label for="priority_level" class="block text-sm font-medium text-gray-700 mb-2">
@@ -216,7 +182,7 @@
             </div>
           </div>
 
-          <!-- Terceira linha: Horário de Início, Status, Status de Pagamento -->
+          <!-- Terceira linha: Horário de Início, Serviço, Status -->
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Horário de Início -->
             <div>
@@ -232,6 +198,28 @@
               />
               <p v-if="form.errors.start_time" class="mt-1 text-sm text-red-600">
                 {{ form.errors.start_time }}
+              </p>
+            </div>
+
+            <!-- Serviço -->
+            <div>
+              <label for="service_id" class="block text-sm font-medium text-gray-700 mb-2">
+                Serviço *
+              </label>
+              <select
+                id="service_id"
+                v-model="form.service_id"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                :class="{ 'border-red-500': form.errors.service_id }"
+              >
+                <option value="">Selecione um serviço</option>
+                <option v-for="service in services" :key="service.id" :value="service.id">
+                  {{ service.name }}
+                </option>
+              </select>
+              <p v-if="form.errors.service_id" class="mt-1 text-sm text-red-600">
+                {{ form.errors.service_id }}
               </p>
             </div>
 
@@ -306,7 +294,7 @@
             </label>
             <div class="space-y-4">
               <div v-for="(product, index) in form.products" :key="index" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-                <div class="md:col-span-4">
+                <div class="md:col-span-3">
                   <select
                     v-model="product.id"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
@@ -321,12 +309,29 @@
                   <input
                     v-model.number="product.quantity"
                     type="number"
-                    min="1"
+                    step="0.01"
+                    min="0"
                     placeholder="Qtd"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   />
                 </div>
-                <div class="md:col-span-5">
+                <div class="md:col-span-2">
+                  <select
+                    v-model="product.unit"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="">Unidade</option>
+                    <option value="unidade">Unidade</option>
+                    <option value="kg">Quilograma (kg)</option>
+                    <option value="g">Grama (g)</option>
+                    <option value="mg">Miligrama (mg)</option>
+                    <option value="L">Litro (L)</option>
+                    <option value="mL">Mililitro (mL)</option>
+                    <option value="caixa">Caixa</option>
+                    <option value="pacote">Pacote</option>
+                  </select>
+                </div>
+                <div class="md:col-span-4">
                   <input
                     v-model="product.observations"
                     type="text"
@@ -350,52 +355,6 @@
                 class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-green-500 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 + Adicionar Produto
-              </button>
-            </div>
-          </div>
-
-          <!-- Serviços -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Serviços Realizados
-            </label>
-            <div class="space-y-4">
-              <div v-for="(service, index) in form.services" :key="index" class="grid grid-cols-1 md:grid-cols-11 gap-4 items-end">
-                <div class="md:col-span-5">
-                  <select
-                    v-model="service.id"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    <option value="">Selecione um serviço</option>
-                    <option v-for="serv in availableServices(index)" :key="serv.id" :value="serv.id">
-                      {{ serv.name }}
-                    </option>
-                  </select>
-                </div>
-                <div class="md:col-span-5">
-                  <input
-                    v-model="service.observations"
-                    type="text"
-                    placeholder="Observações (opcional)"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  />
-                </div>
-                <div class="md:col-span-1">
-                  <button
-                    type="button"
-                    @click="removeService(index)"
-                    class="w-full px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-              <button
-                type="button"
-                @click="addService"
-                class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-green-500 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                + Adicionar Serviço
               </button>
             </div>
           </div>
@@ -549,12 +508,6 @@
     </div>
 
 
-    <!-- Modal de Criação Rápida de Tipo de Serviço -->
-    <QuickServiceTypeModal
-      :show="showServiceTypeModal"
-      @close="showServiceTypeModal = false"
-      @service-type-created="onServiceTypeCreated"
-    />
 
     <!-- Modal para Adicionar Evento -->
     <div v-if="showEventModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -575,12 +528,13 @@
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   >
                     <option value="">Selecione o tipo</option>
-                    <option value="treatment">Tratamento</option>
-                    <option value="inspection">Inspeção</option>
-                    <option value="maintenance">Manutenção</option>
-                    <option value="installation">Instalação</option>
-                    <option value="removal">Remoção</option>
-                    <option value="other">Outro</option>
+                    <option
+                      v-for="eventType in eventTypes"
+                      :key="eventType.id"
+                      :value="eventType.id"
+                    >
+                      {{ eventType.name }}
+                    </option>
                   </select>
                 </div>
                 <div>
@@ -597,12 +551,11 @@
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">
-                  Descrição do Evento *
+                  Descrição do Evento
                 </label>
                 <textarea
                   v-model="eventForm.event_description"
                   rows="3"
-                  required
                   placeholder="Descreva detalhadamente o evento realizado no cômodo"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 ></textarea>
@@ -761,7 +714,6 @@ import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
-import QuickServiceTypeModal from '@/Components/QuickServiceTypeModal.vue';
 
 const { proxy } = getCurrentInstance();
 
@@ -769,9 +721,9 @@ const props = defineProps({
   clients: Array,
   addresses: Array,
   technicians: Array,
-  serviceTypes: Array,
   products: Array,
   services: Array,
+  eventTypes: Array,
   preselectedClient: Number,
   preselectedAddress: Number,
   preselectedTechnician: Number,
@@ -780,7 +732,6 @@ const props = defineProps({
 
 
 // Estado dos modais
-const showServiceTypeModal = ref(false);
 const showEventModal = ref(false);
 const showPestSightingModal = ref(false);
 const currentRoomIndex = ref(null);
@@ -802,9 +753,8 @@ const form = useForm({
   client_id: props.preselectedClient || '',
   address_id: props.preselectedAddress || '',
   technicians: props.preselectedTechnician ? [props.preselectedTechnician] : [''],
-  service_type_id: '',
-  products: [{ id: '', quantity: 1, observations: '' }],
-  services: [{ id: '', observations: '' }],
+  products: [{ id: '', quantity: 1, unit: '', observations: '' }],
+  service_id: '',
   rooms: [{
     id: '',
     observation: '',
@@ -841,7 +791,9 @@ const fetchRoomsByClient = async (clientId) => {
   }
 
   try {
-    const response = await fetch(`/work-orders/rooms/by-client?client_id=${clientId}`);
+    const url = route('work-orders.rooms.by-client', { client_id: clientId });
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     availableRoomsList.value = data.rooms || [];
   } catch (error) {
@@ -901,16 +853,12 @@ const submit = () => {
   // Filtrar produtos vazios ANTES de criar os dados do form
   const cleanedProducts = form.products.filter(product => product.id && product.id !== '');
 
-  // Filtrar serviços vazios ANTES de criar os dados do form
-  const cleanedServices = form.services.filter(service => service.id && service.id !== '');
-
   // Filtrar cômodos vazios ANTES de criar os dados do form
   const cleanedRooms = form.rooms.filter(room => room.id && room.id !== '');
 
   // Atualizar o form com dados limpos
   form.technicians = cleanedTechnicians;
   form.products = cleanedProducts;
-  form.services = cleanedServices;
   form.rooms = cleanedRooms;
 
   form.post('/work-orders', {
@@ -934,20 +882,11 @@ const removeTechnician = (index) => {
 
 // Funções para gerenciar produtos
 const addProduct = () => {
-  form.products.push({ id: '', quantity: 1, observations: '' });
+  form.products.push({ id: '', quantity: 1, unit: '', observations: '' });
 };
 
 const removeProduct = (index) => {
   form.products.splice(index, 1);
-};
-
-// Funções para gerenciar serviços
-const addService = () => {
-  form.services.push({ id: '', observations: '' });
-};
-
-const removeService = (index) => {
-  form.services.splice(index, 1);
 };
 
 // Funções para gerenciar cômodos
@@ -990,11 +929,11 @@ const closeEventModal = () => {
 const saveEvent = () => {
   if (currentRoomIndex.value !== null) {
     const room = form.rooms[currentRoomIndex.value];
-    room.event_type = eventForm.value.event_type;
+    room.event_type = parseInt(eventForm.value.event_type);
     room.event_date = eventForm.value.event_date;
     room.event_description = eventForm.value.event_description;
     room.event_observations = eventForm.value.event_observations;
-    room.device_id = eventForm.value.device_id;
+    room.device_id = eventForm.value.device_id ? parseInt(eventForm.value.device_id) : null;
     closeEventModal();
   }
 };
@@ -1067,9 +1006,6 @@ const getRoomValidationErrors = () => {
     if (room.id && !room.event_date) {
       errors.push(`Cômodo ${index + 1}: Data do evento é obrigatória`);
     }
-    if (room.id && !room.event_description) {
-      errors.push(`Cômodo ${index + 1}: Descrição do evento é obrigatória`);
-    }
   });
   return errors;
 };
@@ -1097,23 +1033,5 @@ const availableProducts = computed(() => {
   };
 });
 
-// Computed para serviços disponíveis (filtrar já selecionados, exceto o atual)
-const availableServices = computed(() => {
-  return (currentServiceIndex) => {
-    const selectedIds = form.services
-      .map((s, index) => index !== currentServiceIndex ? s.id : null)
-      .filter(id => id);
-    return props.services.filter(serv => !selectedIds.includes(serv.id));
-  };
-});
-
-
 // Função para quando um tipo de serviço é criado
-const onServiceTypeCreated = (serviceType) => {
-  // Selecionar automaticamente o tipo de serviço recém-criado
-  form.service_type_id = serviceType.id;
-
-  // Recarregar a página para atualizar a lista de tipos de serviço
-  router.reload({ only: ['serviceTypes'] });
-};
 </script>

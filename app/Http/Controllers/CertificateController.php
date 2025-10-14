@@ -99,11 +99,14 @@ class CertificateController extends Controller
         $certificate->load([
             'client',
             'workOrder.address.client',
+            'products' => function($query) {
+                $query->withPivot(['quantity', 'unit']);
+            },
             'products.activeIngredient',
             'products.chemicalGroup',
             'products.antidote',
             'products.organRegistration',
-            'services'
+            'service'
         ]);
 
         return Inertia::render('Certificates/Show', [
@@ -114,7 +117,13 @@ class CertificateController extends Controller
     public function edit(Certificate $certificate)
     {
         // Carregar relacionamentos do certificado
-        $certificate->load(['client', 'products', 'services']);
+        $certificate->load([
+            'client',
+            'products' => function($query) {
+                $query->withPivot(['quantity', 'unit']);
+            },
+            'service'
+        ]);
 
         $clients = Client::orderBy('name')->limit(500)->get();
         $products = Product::orderBy('name')->limit(500)->get();
@@ -184,7 +193,7 @@ class CertificateController extends Controller
             'products.chemicalGroup',
             'products.antidote',
             'products.organRegistration',
-            'services'
+            'service'
         ]);
 
         // Gerar o PDF com os dados fornecidos

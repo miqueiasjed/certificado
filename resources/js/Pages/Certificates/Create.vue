@@ -133,112 +133,117 @@
               <div
                 v-for="(product, index) in form.products"
                 :key="index"
-                class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50"
+                class="grid grid-cols-1 gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50"
               >
-                <div class="md:col-span-3">
-                  <label :for="`product_${index}`" class="block text-sm font-medium text-gray-700 mb-1">
-                    Produto {{ index + 1 }}
-                  </label>
-                  <select
-                    :id="`product_${index}`"
-                    v-model="product.product_id"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    :class="{ 'border-red-500': errors[`products.${index}.product_id`] }"
-                  >
-                    <option value="">Selecione um produto</option>
-                    <option v-for="prod in products" :key="prod.id" :value="prod.id">
-                      {{ prod.name }}
-                    </option>
-                  </select>
-                  <p v-if="errors[`products.${index}.product_id`]" class="mt-1 text-sm text-red-600">
-                    {{ errors[`products.${index}.product_id`] }}
-                  </p>
-                </div>
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                  <!-- Produto -->
+                  <div class="md:col-span-5">
+                    <label :for="`product_${index}`" class="block text-sm font-medium text-gray-700 mb-1">
+                      Produto {{ index + 1 }} *
+                    </label>
+                    <select
+                      :id="`product_${index}`"
+                      v-model="product.product_id"
+                      @change="checkDuplicateProducts(index)"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      :class="{ 'border-red-500': errors[`products.${index}.product_id`] || product.isDuplicate }"
+                      required
+                    >
+                      <option value="">Selecione um produto</option>
+                      <option v-for="prod in products" :key="prod.id" :value="prod.id">
+                        {{ prod.name }}
+                      </option>
+                    </select>
+                    <p v-if="product.isDuplicate" class="mt-1 text-sm text-red-600">
+                      Este produto já foi adicionado
+                    </p>
+                    <p v-else-if="errors[`products.${index}.product_id`]" class="mt-1 text-sm text-red-600">
+                      {{ errors[`products.${index}.product_id`] }}
+                    </p>
+                  </div>
 
-                <div class="flex items-end">
-                  <button
-                    type="button"
-                    @click="removeProduct(index)"
-                    class="w-full px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
-                    title="Remover produto"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                    <span class="ml-2 text-sm">Remover</span>
-                  </button>
+                  <!-- Quantidade -->
+                  <div class="md:col-span-3">
+                    <label :for="`quantity_${index}`" class="block text-sm font-medium text-gray-700 mb-1">
+                      Quantidade
+                    </label>
+                    <input
+                      :id="`quantity_${index}`"
+                      v-model="product.quantity"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <!-- Unidade -->
+                  <div class="md:col-span-3">
+                    <label :for="`unit_${index}`" class="block text-sm font-medium text-gray-700 mb-1">
+                      Unidade
+                    </label>
+                    <select
+                      :id="`unit_${index}`"
+                      v-model="product.unit"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione</option>
+                      <option value="unidade">Unidade</option>
+                      <option value="kg">Quilograma (kg)</option>
+                      <option value="g">Grama (g)</option>
+                      <option value="mg">Miligrama (mg)</option>
+                      <option value="L">Litro (L)</option>
+                      <option value="mL">Mililitro (mL)</option>
+                      <option value="caixa">Caixa</option>
+                      <option value="pacote">Pacote</option>
+                    </select>
+                  </div>
+
+                  <!-- Botão Remover -->
+                  <div class="md:col-span-1 flex items-end">
+                    <button
+                      type="button"
+                      @click="removeProduct(index)"
+                      class="w-full px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
+                      title="Remover produto"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </Card>
 
-        <!-- Serviços -->
+        <!-- Serviço -->
         <Card>
           <div class="px-6 py-4 border-b border-gray-200">
-            <div class="flex justify-between items-center">
-              <h3 class="text-lg font-medium text-gray-900">Serviços</h3>
-              <button
-                type="button"
-                @click="addService"
-                class="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-              >
-                <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                </svg>
-                Adicionar Serviço
-              </button>
-            </div>
+            <h3 class="text-lg font-medium text-gray-900">Serviço *</h3>
           </div>
           <div class="p-6">
-            <div v-if="form.services.length === 0" class="text-center py-8 text-gray-500">
-              <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p class="mt-2">Nenhum serviço adicionado</p>
-              <p class="text-sm">Clique em "Adicionar Serviço" para começar</p>
-            </div>
-
-            <div v-else class="space-y-4">
-              <div
-                v-for="(service, index) in form.services"
-                :key="index"
-                class="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50"
+            <div>
+              <label for="service_id" class="block text-sm font-medium text-gray-700 mb-1">
+                Selecione o Serviço *
+              </label>
+              <select
+                id="service_id"
+                v-model="form.service_id"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                :class="{ 'border-red-500': errors.service_id }"
+                required
               >
-                <div class="md:col-span-3">
-                  <label :for="`service_${index}`" class="block text-sm font-medium text-gray-700 mb-1">
-                    Serviço {{ index + 1 }}
-                  </label>
-                  <select
-                    :id="`service_${index}`"
-                    v-model="service.service_id"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    :class="{ 'border-red-500': errors[`services.${index}.service_id`] }"
-                  >
-                    <option value="">Selecione um serviço</option>
-                    <option v-for="serv in services" :key="serv.id" :value="serv.id">
-                      {{ serv.name }} - {{ serv.category }}
-                    </option>
-                  </select>
-                  <p v-if="errors[`services.${index}.service_id`]" class="mt-1 text-sm text-red-600">
-                    {{ errors[`services.${index}.service_id`] }}
-                  </p>
-                </div>
-
-                <div class="flex items-end">
-                  <button
-                    type="button"
-                    @click="removeService(index)"
-                    class="w-full px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors flex items-center justify-center"
-                    title="Remover serviço"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                    <span class="ml-2 text-sm">Remover</span>
-                  </button>
-                </div>
-              </div>
+                <option value="">Selecione um serviço</option>
+                <option v-for="serv in services" :key="serv.id" :value="serv.id">
+                  {{ serv.name }} - {{ serv.category }}
+                </option>
+              </select>
+              <p v-if="errors.service_id" class="mt-1 text-sm text-red-600">
+                {{ errors.service_id }}
+              </p>
             </div>
           </div>
         </Card>
@@ -317,7 +322,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
-import { Link, router } from '@inertiajs/vue3';
+import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
@@ -339,7 +344,7 @@ const form = useForm({
   client_id: '',
   address_id: '',
   products: [],
-  services: [],
+  service_id: '',
   execution_date: '',
   warranty: '',
   notes: '',
@@ -362,21 +367,33 @@ watch(() => form.client_id, (val) => {
 const addProduct = () => {
   form.products.push({
     product_id: '',
+    quantity: null,
+    unit: '',
+    isDuplicate: false,
   });
 };
 
 const removeProduct = (index) => {
   form.products.splice(index, 1);
+  // Revalidar duplicatas após remover
+  form.products.forEach((_, idx) => checkDuplicateProducts(idx));
 };
 
-const addService = () => {
-  form.services.push({
-    service_id: '',
-  });
-};
+const checkDuplicateProducts = (currentIndex) => {
+  const currentProduct = form.products[currentIndex];
+  if (!currentProduct.product_id) {
+    currentProduct.isDuplicate = false;
+    return;
+  }
 
-const removeService = (index) => {
-  form.services.splice(index, 1);
+  // Verificar se o produto já existe em outro índice
+  const hasDuplicate = form.products.some((product, index) =>
+    index !== currentIndex &&
+    product.product_id &&
+    product.product_id === currentProduct.product_id
+  );
+
+  currentProduct.isDuplicate = hasDuplicate;
 };
 
 
@@ -389,10 +406,23 @@ const loadClientAddresses = async () => {
   }
 
   try {
-    const response = await fetch(`/api/clients/${form.client_id}/addresses`);
+    const response = await fetch(`/api/clients/${form.client_id}/addresses`, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
     const data = await response.json();
-    clientAddresses.value = data.addresses || [];
-    form.address_id = '';
+
+    if (data.addresses) {
+      clientAddresses.value = data.addresses;
+      form.address_id = '';
+    }
   } catch (error) {
     console.error('Erro ao carregar endereços:', error);
     clientAddresses.value = [];
@@ -400,10 +430,22 @@ const loadClientAddresses = async () => {
 };
 
 const submitForm = () => {
-  form.post('/certificates', {
+  // Verificar se há produtos duplicados
+  const hasDuplicates = form.products.some(product => product.isDuplicate);
+  if (hasDuplicates) {
+    alert('Por favor, remova os produtos duplicados antes de continuar.');
+    return;
+  }
+
+  // Usar form.post() do Inertia com rota nomeada
+  form.post(route('certificates.store'), {
+    preserveScroll: true,
     onSuccess: () => {
-      // Sucesso
+      // Sucesso - o Inertia já redireciona automaticamente
     },
+    onError: (errors) => {
+      console.error('Erro ao criar certificado:', errors);
+    }
   });
 };
 

@@ -160,6 +160,7 @@
               :available-products="availableProducts"
               :available-services="availableServices"
               :available-technicians="availableTechnicians"
+              :event-types="eventTypes"
               @show-device-event-modal="showDeviceEventModal = true"
               @show-pest-sighting-modal="showPestSightingModal = true"
             />
@@ -436,7 +437,7 @@
 
   <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import WorkOrderTabContent from '@/Components/WorkOrderTabContent.vue';
@@ -449,6 +450,7 @@ import Alert from '@/Components/Alert.vue';
     availableProducts: Array,
     availableServices: Array,
     availableTechnicians: Array,
+    eventTypes: Array,
   });
 
   const activeTab = ref('financial');
@@ -473,7 +475,7 @@ import Alert from '@/Components/Alert.vue';
   const allTabs = [
     { name: 'financial', label: 'Informações Financeiras' },
     { name: 'details', label: 'Detalhes da Ordem' },
-    { name: 'products-services', label: 'Produtos e Serviços' },
+    { name: 'products-services', label: 'Produtos' },
     { name: 'technician', label: 'Técnicos' },
     { name: 'rooms', label: 'Cômodos Atendidos', count: props.workOrder?.rooms?.length || 0 },
   ];
@@ -564,23 +566,19 @@ import Alert from '@/Components/Alert.vue';
         status: 'active'
       };
 
-      const response = await fetch(route('work-orders.certificates.store', props.workOrder.id), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      // Usar router.post do Inertia
+      router.post(route('work-orders.certificates.store', props.workOrder.id), formData, {
+        preserveScroll: true,
+        onSuccess: () => {
+          // Sucesso - redirecionar para a página de certificados
+          router.visit(route('certificates.index'));
         },
-        body: JSON.stringify(formData)
+        onError: (errors) => {
+          // Erro - mostrar mensagem
+          const errorMessage = errors.message || 'Erro desconhecido';
+          alert('Erro ao emitir certificado: ' + errorMessage);
+        }
       });
-
-      if (response.ok) {
-        // Sucesso - redirecionar para a página de certificados
-        window.location.href = route('certificates.index');
-      } else {
-        // Erro - mostrar mensagem
-        const errorData = await response.json();
-        alert('Erro ao emitir certificado: ' + (errorData.message || 'Erro desconhecido'));
-      }
     } catch (error) {
       console.error('Erro ao emitir certificado:', error);
       alert('Erro ao emitir certificado. Tente novamente.');

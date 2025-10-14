@@ -443,7 +443,7 @@ const loadData = () => {
   const params = {}
   if (filters.start_date) params.start_date = filters.start_date
   if (filters.end_date) params.end_date = filters.end_date
-  
+
   router.get('/financial-dashboard', params, {
     preserveState: true,
     preserveScroll: true,
@@ -517,24 +517,17 @@ const submitForm = async () => {
       amount: parseCurrencyValue(form.amount)
     }
 
-    const response = await fetch('/financial-entries', {
-      method: 'POST',
-      headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
+    // Usar router.post do Inertia
+    router.post('/financial-entries', formData, {
+      preserveScroll: true,
+      onSuccess: () => {
+        showCreateModal.value = false
+        router.reload({ only: ['entries', 'summary'] })
       },
-      body: JSON.stringify(formData)
+      onError: (errors) => {
+        alert('Erro ao salvar entrada: ' + (errors.message || 'Erro desconhecido'))
+      }
     })
-
-    const data = await response.json()
-
-    if (data.success) {
-      showCreateModal.value = false
-      window.location.reload()
-    } else {
-      alert('Erro ao salvar entrada: ' + data.message)
-    }
   } catch (error) {
     alert('Erro ao salvar entrada: ' + error.message)
   } finally {
@@ -547,7 +540,7 @@ onMounted(() => {
   // Set default date to today
   const today = new Date().toISOString().split('T')[0]
   form.entry_date = today
-  
+
   // Initialize date range only if no dates are set
   if (!filters.start_date && !filters.end_date) {
     updateDateRange()

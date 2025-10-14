@@ -46,7 +46,7 @@ class Room extends Model
         return $this->belongsToMany(WorkOrder::class, 'work_order_room')
                     ->withPivot([
                         'observation',
-                        'event_type',
+                        'event_type_id',
                         'event_date',
                         'event_description',
                         'event_observations',

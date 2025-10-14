@@ -72,7 +72,7 @@ class FinancialEntryController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(FinancialEntryRequest $request): JsonResponse
+    public function store(FinancialEntryRequest $request)
     {
         try {
             $data = $request->validated();
@@ -81,18 +81,14 @@ class FinancialEntryController extends Controller
 
             $entry = FinancialEntry::create($data);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Entrada financeira criada com sucesso!',
-                'entry' => $entry->load(['workOrder', 'paymentDetail', 'createdBy'])
-            ], 201);
+            return redirect()->route('financial-entries.index')
+                ->with('success', 'Entrada financeira criada com sucesso!');
 
         } catch (\Exception $e) {
             Log::error('Erro ao criar entrada financeira: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao criar entrada financeira: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()
+                ->withErrors(['error' => 'Erro ao criar entrada financeira: ' . $e->getMessage()])
+                ->withInput();
         }
     }
 
@@ -108,61 +104,49 @@ class FinancialEntryController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(FinancialEntryRequest $request, FinancialEntry $financialEntry): JsonResponse
+    public function update(FinancialEntryRequest $request, FinancialEntry $financialEntry)
     {
         try {
             // Verificar se a entrada veio de uma OS (não pode ser editada)
             if ($financialEntry->source === 'work_order' || $financialEntry->source === 'payment_reopen') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Não é possível editar entradas financeiras geradas automaticamente por ordens de serviço. Use a opção "Reabrir Pagamento" na OS correspondente.'
-                ], 422);
+                return redirect()->back()
+                    ->withErrors(['error' => 'Não é possível editar entradas financeiras geradas automaticamente por ordens de serviço. Use a opção "Reabrir Pagamento" na OS correspondente.']);
             }
 
             $financialEntry->update($request->validated());
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Entrada financeira atualizada com sucesso!',
-                'entry' => $financialEntry->load(['workOrder', 'paymentDetail', 'createdBy'])
-            ]);
+            return redirect()->route('financial-entries.index')
+                ->with('success', 'Entrada financeira atualizada com sucesso!');
 
         } catch (\Exception $e) {
             Log::error('Erro ao atualizar entrada financeira: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao atualizar entrada financeira: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()
+                ->withErrors(['error' => 'Erro ao atualizar entrada financeira: ' . $e->getMessage()])
+                ->withInput();
         }
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(FinancialEntry $financialEntry): JsonResponse
+    public function destroy(FinancialEntry $financialEntry)
     {
         try {
             // Verificar se a entrada veio de uma OS (não pode ser excluída)
             if ($financialEntry->source === 'work_order' || $financialEntry->source === 'payment_reopen') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Não é possível excluir entradas financeiras geradas automaticamente por ordens de serviço. Use a opção "Reabrir Pagamento" na OS correspondente.'
-                ], 422);
+                return redirect()->back()
+                    ->withErrors(['error' => 'Não é possível excluir entradas financeiras geradas automaticamente por ordens de serviço. Use a opção "Reabrir Pagamento" na OS correspondente.']);
             }
 
             $financialEntry->delete();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Entrada financeira excluída com sucesso!'
-            ]);
+            return redirect()->route('financial-entries.index')
+                ->with('success', 'Entrada financeira excluída com sucesso!');
 
         } catch (\Exception $e) {
             Log::error('Erro ao excluir entrada financeira: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao excluir entrada financeira: ' . $e->getMessage()
-            ], 500);
+            return redirect()->back()
+                ->withErrors(['error' => 'Erro ao excluir entrada financeira: ' . $e->getMessage()]);
         }
     }
 

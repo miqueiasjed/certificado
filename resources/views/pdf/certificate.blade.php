@@ -258,12 +258,8 @@
 
         <div class="procedures">
             <p><strong>Serviço Prestado:</strong>
-                @if($certificate->services && $certificate->services->count() > 0)
-                    @foreach ($certificate->services as $service)
-                        {{ $service->name }}@if (!$loop->last)
-                            -
-                        @endif
-                    @endforeach
+                @if($certificate->service)
+                    {{ $certificate->service->name }}
                 @else
                     Não informado
                 @endif
@@ -281,6 +277,8 @@
                     <th>Princípio Ativo</th>
                     <th>Grupo Químico</th>
                     <th>Antídoto</th>
+                    <th>Quantidade</th>
+                    <th>Unidade</th>
                     <th>Registro do Ministério da Saúde</th>
                 </tr>
             </thead>
@@ -290,6 +288,8 @@
                         <td>{{ $product->activeIngredient->name ?? 'Não informado' }}</td>
                         <td>{{ $product->chemicalGroup->name ?? 'Não informado' }}</td>
                         <td>{{ $product->antidote->name ?? 'Não informado' }}</td>
+                        <td>{{ $product->pivot->quantity ?? '-' }}</td>
+                        <td>{{ $product->pivot->unit ?? '-' }}</td>
                         <td>{{ $product->organRegistration->record ?? 'Não informado' }}</td>
                     </tr>
                 @endforeach

@@ -71,17 +71,9 @@ class DeviceEventController extends Controller
         try {
             $deviceEvent = $this->deviceEventService->createDeviceEvent($request->validated());
 
-            // Retornar resposta JSON de sucesso em vez de redirecionar
-            return response()->json([
-                'success' => true,
-                'message' => 'Evento do dispositivo criado com sucesso!',
-                'deviceEvent' => $deviceEvent
-            ], 201);
+            return back()->with('success', 'Evento do dispositivo criado com sucesso!');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao criar evento: ' . $e->getMessage()
-            ], 500);
+            return back()->withErrors(['message' => 'Erro ao criar evento: ' . $e->getMessage()]);
         }
     }
 
@@ -113,26 +105,12 @@ class DeviceEventController extends Controller
             $updated = $this->deviceEventService->updateDeviceEvent($deviceEvent, $request->validated());
 
             if ($updated) {
-                // Recarregar o modelo com relacionamentos
-                $deviceEvent->refresh();
-                $deviceEvent->load(['device.room.address.client', 'workOrder.technician']);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Evento do dispositivo atualizado com sucesso!',
-                    'deviceEvent' => $deviceEvent
-                ]);
+                return back()->with('success', 'Evento do dispositivo atualizado com sucesso!');
             } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Erro ao atualizar evento do dispositivo'
-                ], 500);
+                return back()->withErrors(['message' => 'Erro ao atualizar evento do dispositivo']);
             }
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao atualizar evento: ' . $e->getMessage()
-            ], 500);
+            return back()->withErrors(['message' => 'Erro ao atualizar evento: ' . $e->getMessage()]);
         }
     }
 

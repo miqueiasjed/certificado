@@ -10,12 +10,12 @@ class CertificateService
 {
     public function getAllCertificates(): Collection
     {
-        return Certificate::with(['client', 'address', 'products', 'services'])->orderBy('created_at', 'desc')->get();
+        return Certificate::with(['client', 'address', 'products', 'service'])->orderBy('created_at', 'desc')->get();
     }
 
     public function getCertificatesPaginated(int $perPage = 15): LengthAwarePaginator
     {
-        $certificates = Certificate::with(['client', 'address', 'products', 'services'])
+        $certificates = Certificate::with(['client', 'address', 'products', 'service'])
             ->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
@@ -30,7 +30,7 @@ class CertificateService
 
     public function findCertificate(int $id): ?Certificate
     {
-        $certificate = Certificate::with(['client', 'address', 'products', 'services'])->find($id);
+        $certificate = Certificate::with(['client', 'address', 'products', 'service'])->find($id);
 
         if ($certificate) {
             $certificate->append(['calculated_status', 'status_text', 'status_color']);
@@ -41,33 +41,34 @@ class CertificateService
 
     public function createCertificate(array $data): Certificate
     {
-        // Extrair produtos e serviços dos dados para relacionamentos many-to-many
+        // Extrair produtos dos dados para relacionamentos many-to-many
         $products = $data['products'] ?? [];
-        $services = $data['services'] ?? [];
 
-        // Se há work_order_id, puxar produtos e serviços automaticamente da OS
-        if (!empty($data['work_order_id']) && (empty($products) || empty($services))) {
-            $workOrder = \App\Models\WorkOrder::with(['products', 'services'])->find($data['work_order_id']);
+        // Se há work_order_id, puxar produtos e serviço automaticamente da OS
+        if (!empty($data['work_order_id'])) {
+            $workOrder = \App\Models\WorkOrder::with(['products', 'service'])->find($data['work_order_id']);
 
             if ($workOrder) {
                 // Se não há produtos selecionados, usar os da OS
                 if (empty($products) && $workOrder->products->isNotEmpty()) {
                     $products = $workOrder->products->map(function($product) {
-                        return ['product_id' => $product->id];
+                        return [
+                            'product_id' => $product->id,
+                            'quantity' => $product->pivot->quantity ?? null,
+                            'unit' => $product->pivot->unit ?? null,
+                        ];
                     })->toArray();
                 }
 
-                // Se não há serviços selecionados, usar os da OS
-                if (empty($services) && $workOrder->services->isNotEmpty()) {
-                    $services = $workOrder->services->map(function($service) {
-                        return ['service_id' => $service->id];
-                    })->toArray();
+                // Se não há serviço selecionado, usar o da OS
+                if (empty($data['service_id']) && $workOrder->service_id) {
+                    $data['service_id'] = $workOrder->service_id;
                 }
             }
         }
 
-        // Remover produtos e serviços dos dados para criar o certificado
-        unset($data['products'], $data['services']);
+        // Remover produtos dos dados para criar o certificado
+        unset($data['products']);
 
         // Definir valores padrão
         $data['status'] = 'active';
@@ -80,47 +81,48 @@ class CertificateService
 
         // Associar produtos (many-to-many)
         if (!empty($products)) {
-            $productIds = collect($products)->pluck('product_id')->filter()->toArray();
-            if (!empty($productIds)) {
-                $certificate->products()->attach($productIds);
+            $productData = [];
+            foreach ($products as $product) {
+                if (!empty($product['product_id'])) {
+                    $productData[$product['product_id']] = [
+                        'quantity' => $product['quantity'] ?? null,
+                        'unit' => $product['unit'] ?? null,
+                    ];
+                }
+            }
+            if (!empty($productData)) {
+                $certificate->products()->attach($productData);
             }
         }
 
-        // Associar serviços (many-to-many)
-        if (!empty($services)) {
-            $serviceIds = collect($services)->pluck('service_id')->filter()->toArray();
-            if (!empty($serviceIds)) {
-                $certificate->services()->attach($serviceIds);
-            }
-        }
-
-        $certificate = $certificate->load(['client', 'address', 'products', 'services']);
+        $certificate = $certificate->load(['client', 'address', 'products', 'service']);
         $certificate->append(['calculated_status', 'status_text', 'status_color']);
         return $certificate;
     }
 
     public function updateCertificate(Certificate $certificate, array $data): bool
     {
-        // Extrair produtos e serviços dos dados para relacionamentos many-to-many
+        // Extrair produtos dos dados para relacionamentos many-to-many
         $products = $data['products'] ?? [];
-        $services = $data['services'] ?? [];
 
-        // Remover produtos e serviços dos dados para atualizar o certificado
-        unset($data['products'], $data['services']);
+        // Remover produtos dos dados para atualizar o certificado
+        unset($data['products']);
 
         // Atualizar o certificado
         $result = $certificate->update($data);
 
         // Sincronizar produtos (many-to-many)
         if (isset($products)) {
-            $productIds = collect($products)->pluck('product_id')->filter()->toArray();
-            $certificate->products()->sync($productIds);
-        }
-
-        // Sincronizar serviços (many-to-many)
-        if (isset($services)) {
-            $serviceIds = collect($services)->pluck('service_id')->filter()->toArray();
-            $certificate->services()->sync($serviceIds);
+            $productData = [];
+            foreach ($products as $product) {
+                if (!empty($product['product_id'])) {
+                    $productData[$product['product_id']] = [
+                        'quantity' => $product['quantity'] ?? null,
+                        'unit' => $product['unit'] ?? null,
+                    ];
+                }
+            }
+            $certificate->products()->sync($productData);
         }
 
         return $result;
@@ -130,7 +132,6 @@ class CertificateService
     {
         // Remover relacionamentos many-to-many
         $certificate->products()->detach();
-        $certificate->services()->detach();
 
         // Deletar o certificado
         return $certificate->delete();
@@ -138,7 +139,7 @@ class CertificateService
 
     public function searchCertificates(string $search): LengthAwarePaginator
     {
-        $certificates = Certificate::with(['client', 'workOrder.address', 'products', 'services'])
+        $certificates = Certificate::with(['client', 'workOrder.address', 'products', 'service'])
             ->where(function($query) use ($search) {
                 $query->where('id', 'like', "%{$search}%")
                       ->orWhere('certificate_number', 'like', "%{$search}%")
@@ -165,7 +166,7 @@ class CertificateService
 
     public function getCertificatesByStatus(string $status): Collection
     {
-        return Certificate::with(['client', 'workOrder.address', 'products', 'services'])
+        return Certificate::with(['client', 'workOrder.address', 'products', 'service'])
             ->where('status', $status)
             ->orderBy('created_at', 'desc')
             ->get();

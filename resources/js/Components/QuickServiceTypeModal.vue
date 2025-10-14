@@ -125,23 +125,16 @@ const close = () => {
 
 const submit = async () => {
   try {
-    const response = await fetch('/service-types', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(form.data())
-    });
+    // Usar form.post do Inertia
+    form.post('/service-types', {
+      preserveScroll: true,
+      onSuccess: (page) => {
+        // Emitir evento com o tipo de serviço criado
+        if (page.props.serviceType) {
+          emit('service-type-created', page.props.serviceType);
+        }
 
-    if (response.ok) {
-      const result = await response.json();
-
-      // Emitir evento com o tipo de serviço criado
-      emit('service-type-created', result.serviceType);
-
-      // Limpar formulário
+        // Limpar formulário
       form.reset();
 
       // Fechar modal

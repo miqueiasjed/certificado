@@ -15,6 +15,7 @@ class Certificate extends Model
         'client_id',
         'address_id',
         'work_order_id',
+        'service_id',
         'execution_date',
         'warranty',
         'certificate_number',
@@ -43,16 +44,16 @@ class Certificate extends Model
         return $this->belongsTo(WorkOrder::class);
     }
 
-
+    public function service(): BelongsTo
+    {
+        return $this->belongsTo(Service::class);
+    }
 
     public function products(): BelongsToMany
     {
-        return $this->belongsToMany(Product::class, 'certificate_product');
-    }
-
-    public function services(): BelongsToMany
-    {
-        return $this->belongsToMany(Service::class, 'certificate_service');
+        return $this->belongsToMany(Product::class, 'certificate_product')
+            ->withPivot(['quantity', 'unit'])
+            ->withTimestamps();
     }
 
     public function procedures(): BelongsToMany

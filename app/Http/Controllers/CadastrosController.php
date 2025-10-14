@@ -38,15 +38,6 @@ class CadastrosController extends Controller
                 'count' => \App\Models\Service::count(),
             ],
             [
-                'id' => 'service-types',
-                'name' => 'Tipos de Serviço',
-                'description' => 'Gerenciar tipos de ordem de serviço',
-                'route' => '/service-types',
-                'icon' => 'cog',
-                'color' => 'purple',
-                'count' => \App\Models\ServiceType::count(),
-            ],
-            [
                 'id' => 'active-ingredients',
                 'name' => 'Princípio Ativo',
                 'description' => 'Gerenciar princípios ativos',
@@ -90,6 +81,15 @@ class CadastrosController extends Controller
                 'icon' => 'document-text',
                 'color' => 'indigo',
                 'count' => \App\Models\OrganRegistration::count(),
+            ],
+            [
+                'id' => 'event-types',
+                'name' => 'Tipos de Evento',
+                'description' => 'Gerenciar tipos de eventos realizados',
+                'route' => '/event-types',
+                'icon' => 'calendar',
+                'color' => 'blue',
+                'count' => \App\Models\EventType::count(),
             ],
         ];
 

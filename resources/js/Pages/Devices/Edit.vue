@@ -214,8 +214,8 @@ const alert = ref({
 const showBaitTypeModal = ref(false);
 
 const refreshBaitTypes = () => {
-  // Recarregar a página para atualizar a lista de tipos de isca
-  window.location.reload();
+  // Recarregar a página para atualizar a lista de tipos de isca usando Inertia
+  router.reload({ only: ['baitTypes'] });
 };
 
 const submit = () => {

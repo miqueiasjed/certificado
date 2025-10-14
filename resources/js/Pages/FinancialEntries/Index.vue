@@ -547,21 +547,13 @@ const deleteEntry = async (id) => {
   if (!confirm('Tem certeza que deseja excluir esta entrada?')) return
 
   try {
-    const response = await fetch(`/financial-entries/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Accept': 'application/json',
-      },
+    // Usar router.delete do Inertia
+    router.delete(`/financial-entries/${id}`, {
+      preserveScroll: true,
+      onError: (errors) => {
+        alert('Erro ao excluir entrada: ' + (errors.message || 'Erro desconhecido'))
+      }
     })
-
-    const data = await response.json()
-
-    if (data.success) {
-      window.location.reload()
-    } else {
-      alert('Erro ao excluir entrada: ' + data.message)
-    }
   } catch (error) {
     alert('Erro ao excluir entrada: ' + error.message)
   }
@@ -582,23 +574,27 @@ const submitForm = async () => {
 
     const method = showEditModal.value ? 'PUT' : 'POST'
 
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify(formData)
-    })
-
-    const data = await response.json()
-
-    if (data.success) {
-      closeModal()
-      window.location.reload()
-    } else {
-      alert('Erro ao salvar entrada: ' + data.message)
+    // Usar router do Inertia
+    if (method === 'POST') {
+      router.post(url, formData, {
+        preserveScroll: true,
+        onSuccess: () => {
+          closeModal()
+        },
+        onError: (errors) => {
+          alert('Erro ao salvar entrada: ' + (errors.message || 'Erro desconhecido'))
+        }
+      })
+    } else if (method === 'PUT') {
+      router.put(url, formData, {
+        preserveScroll: true,
+        onSuccess: () => {
+          closeModal()
+        },
+        onError: (errors) => {
+          alert('Erro ao salvar entrada: ' + (errors.message || 'Erro desconhecido'))
+        }
+      })
     }
   } catch (error) {
     alert('Erro ao salvar entrada: ' + error.message)

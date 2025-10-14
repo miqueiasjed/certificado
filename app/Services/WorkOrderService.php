@@ -41,7 +41,8 @@ class WorkOrderService
             foreach ($products as $product) {
                 if (!empty($product['id'])) {
                     $syncData[$product['id']] = [
-                        'quantity' => $product['quantity'] ?? 1,
+                        'quantity' => $product['quantity'] ?? null,
+                        'unit' => $product['unit'] ?? null,
                         'observations' => $product['observations'] ?? null
                     ];
                 }
@@ -69,7 +70,7 @@ class WorkOrderService
                 if (!empty($room['id'])) {
                    $syncData[$room['id']] = [
                        'observation' => $room['observation'] ?? null,
-                       'event_type' => $room['event_type'] ?? null,
+                       'event_type_id' => $room['event_type'] ?? null,
                        'event_date' => $room['event_date'] ?? null,
                        'event_description' => $room['event_description'] ?? null,
                        'event_observations' => $room['event_observations'] ?? null,
@@ -123,7 +124,8 @@ class WorkOrderService
             foreach ($products as $product) {
                 if (!empty($product['id'])) {
                     $syncData[$product['id']] = [
-                        'quantity' => $product['quantity'] ?? 1,
+                        'quantity' => $product['quantity'] ?? null,
+                        'unit' => $product['unit'] ?? null,
                         'observations' => $product['observations'] ?? null
                     ];
                 }
@@ -151,7 +153,7 @@ class WorkOrderService
                 if (!empty($room['id'])) {
                    $syncData[$room['id']] = [
                        'observation' => $room['observation'] ?? null,
-                       'event_type' => $room['event_type'] ?? null,
+                       'event_type_id' => $room['event_type'] ?? null,
                        'event_date' => $room['event_date'] ?? null,
                        'event_description' => $room['event_description'] ?? null,
                        'event_observations' => $room['event_observations'] ?? null,

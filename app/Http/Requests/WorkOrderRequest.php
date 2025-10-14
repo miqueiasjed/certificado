@@ -27,18 +27,17 @@ class WorkOrderRequest extends FormRequest
             'technicians.*' => 'nullable|exists:technicians,id',
             'products' => 'nullable|array',
             'products.*.id' => 'required_with:products|exists:products,id',
-            'products.*.quantity' => 'nullable|integer|min:1',
+            'products.*.quantity' => 'nullable|numeric|min:0',
+            'products.*.unit' => 'nullable|string',
             'products.*.observations' => 'nullable|string|max:500',
-            'services' => 'nullable|array',
-            'services.*.id' => 'required_with:services|exists:services,id',
-            'services.*.observations' => 'nullable|string|max:500',
+            'service_id' => 'required|exists:services,id',
             'rooms' => 'nullable|array',
             'rooms.*.id' => 'required_with:rooms|exists:rooms,id',
             'rooms.*.observation' => 'nullable|string|max:500',
             // Campos de evento (obrigatório quando cômodo é selecionado)
-            'rooms.*.event_type' => 'required_with:rooms.*.id|string|max:255',
+            'rooms.*.event_type' => 'required_with:rooms.*.id|integer|exists:event_types,id',
             'rooms.*.event_date' => 'required_with:rooms.*.id|date',
-            'rooms.*.event_description' => 'required_with:rooms.*.id|string|max:1000',
+            'rooms.*.event_description' => 'nullable|string|max:1000',
                'rooms.*.event_observations' => 'nullable|string|max:1000',
                // Campo de dispositivo (opcional)
                'rooms.*.device_id' => 'nullable|exists:devices,id',
@@ -48,7 +47,6 @@ class WorkOrderRequest extends FormRequest
                'rooms.*.pest_location' => 'nullable|string|max:255',
                'rooms.*.pest_quantity' => 'nullable|integer|min:1',
                'rooms.*.pest_observation' => 'nullable|string|max:1000',
-            'service_type_id' => 'required|exists:service_types,id',
             'order_number' => 'nullable|string|max:255',
             'priority_level' => 'required|in:low,medium,high,urgent,emergency',
             'scheduled_date' => 'required|date',
@@ -82,8 +80,8 @@ class WorkOrderRequest extends FormRequest
             'address_id.exists' => 'O endereço selecionado não existe.',
             'technician_id.required' => 'O técnico é obrigatório.',
             'technician_id.exists' => 'O técnico selecionado não existe.',
-            'service_type_id.required' => 'O tipo de serviço é obrigatório.',
-            'service_type_id.exists' => 'O tipo de serviço selecionado não existe.',
+            'service_id.required' => 'O serviço é obrigatório.',
+            'service_id.exists' => 'O serviço selecionado não existe.',
             'order_number.unique' => 'Este número de ordem já está em uso.',
             'order_number.max' => 'O número da ordem não pode ter mais de 255 caracteres.',
             'priority_level.required' => 'O nível de prioridade é obrigatório.',
@@ -105,10 +103,10 @@ class WorkOrderRequest extends FormRequest
             'rooms.*.observation.max' => 'A observação do cômodo não pode ter mais de 500 caracteres.',
             // Mensagens para campos de evento
             'rooms.*.event_type.required_with' => 'O tipo de evento é obrigatório para o cômodo.',
-            'rooms.*.event_type.max' => 'O tipo de evento não pode ter mais de 255 caracteres.',
+            'rooms.*.event_type.integer' => 'O tipo de evento deve ser um ID válido.',
+            'rooms.*.event_type.exists' => 'O tipo de evento selecionado não existe.',
             'rooms.*.event_date.required_with' => 'A data do evento é obrigatória para o cômodo.',
             'rooms.*.event_date.date' => 'A data do evento deve ser uma data válida.',
-            'rooms.*.event_description.required_with' => 'A descrição do evento é obrigatória para o cômodo.',
             'rooms.*.event_description.max' => 'A descrição do evento não pode ter mais de 1000 caracteres.',
             'rooms.*.event_observations.max' => 'As observações do evento não podem ter mais de 1000 caracteres.',
             // Mensagens para campos de avistamento de praga
@@ -160,24 +158,19 @@ class WorkOrderRequest extends FormRequest
                 if (!empty($room['id'])) {
                     $hasEventType = !empty($room['event_type']);
                     $hasEventDate = !empty($room['event_date']);
-                    $hasEventDescription = !empty($room['event_description']);
 
-                    // Se algum campo de evento está preenchido, todos devem estar
-                    if ($hasEventType || $hasEventDate || $hasEventDescription) {
+                    // Se algum campo de evento está preenchido, tipo e data devem estar
+                    if ($hasEventType || $hasEventDate) {
                         if (!$hasEventType) {
                             $validator->errors()->add("rooms.{$index}.event_type", 'O tipo de evento é obrigatório para o cômodo selecionado.');
                         }
                         if (!$hasEventDate) {
                             $validator->errors()->add("rooms.{$index}.event_date", 'A data do evento é obrigatória para o cômodo selecionado.');
                         }
-                        if (!$hasEventDescription) {
-                            $validator->errors()->add("rooms.{$index}.event_description", 'A descrição do evento é obrigatória para o cômodo selecionado.');
-                        }
                     } else {
-                        // Se nenhum campo de evento está preenchido, é obrigatório preencher todos
+                        // Se nenhum campo de evento está preenchido, é obrigatório preencher tipo e data
                         $validator->errors()->add("rooms.{$index}.event_type", 'É obrigatório adicionar um evento para o cômodo selecionado.');
                         $validator->errors()->add("rooms.{$index}.event_date", 'É obrigatório adicionar uma data para o evento do cômodo selecionado.');
-                        $validator->errors()->add("rooms.{$index}.event_description", 'É obrigatório adicionar uma descrição para o evento do cômodo selecionado.');
                     }
                 }
             }

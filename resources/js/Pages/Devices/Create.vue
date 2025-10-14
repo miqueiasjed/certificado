@@ -191,7 +191,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { Link, useForm } from '@inertiajs/vue3';
+import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
@@ -224,8 +224,8 @@ const onBaitTypeCreated = (newBaitType) => {
   form.bait_type_id = newBaitType.id;
   showBaitTypeModal.value = false;
 
-  // Recarregar a página para atualizar a lista
-  window.location.reload();
+  // Recarregar a página para atualizar a lista usando Inertia
+  router.reload({ only: ['baitTypes'] });
 };
 
 const submit = () => {

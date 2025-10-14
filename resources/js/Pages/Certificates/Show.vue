@@ -91,15 +91,13 @@
           <h3 class="text-lg font-medium text-gray-900">Informações do Serviço</h3>
         </div>
         <div class="p-6">
-          <div v-if="certificate.services && certificate.services.length > 0" class="space-y-3">
-            <div v-for="service in certificate.services" :key="service.id" class="flex items-center space-x-2">
-              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                {{ service.name }}
-              </span>
-              <span v-if="service.category" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                {{ service.category }}
-              </span>
-            </div>
+          <div v-if="certificate.service" class="flex items-center space-x-2">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800">
+              {{ certificate.service.name }}
+            </span>
+            <span v-if="certificate.service.category" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+              {{ certificate.service.category }}
+            </span>
           </div>
           <div v-else class="text-gray-500 text-sm">
             Nenhum serviço informado
