@@ -585,7 +585,7 @@
                                         </div>
                                     @endif
                                     <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
-                                        <strong>Status:</strong> 
+                                        <strong>Status:</strong>
                                         @if($device->active)
                                             <span style="color: #10b981;">Ativo</span>
                                         @else
