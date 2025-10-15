@@ -812,11 +812,13 @@
                         :class="roomFormErrors.event_type ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'"
                       >
                         <option value="">Selecione o tipo...</option>
-                        <option value="Inspeção">Inspeção</option>
-                        <option value="Aplicação">Aplicação</option>
-                        <option value="Manutenção">Manutenção</option>
-                        <option value="Monitoramento">Monitoramento</option>
-                        <option value="Outro">Outro</option>
+                        <option
+                          v-for="eventType in props.eventTypes"
+                          :key="eventType.id"
+                          :value="eventType.id"
+                        >
+                          {{ eventType.name }}
+                        </option>
                       </select>
                       <p v-if="roomFormErrors.event_type" class="text-sm text-red-600 mt-1">{{ roomFormErrors.event_type }}</p>
                     </div>
@@ -3974,43 +3976,30 @@ const addRoomWithEventAndPest = async () => {
 
   isAddingRoom.value = true;
 
-  try {
-    const formData = new FormData();
-    formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-    formData.append('room_id', newRoomForm.room_id);
+  // Preparar dados para envio
+  const roomData = {
+    room_id: parseInt(newRoomForm.room_id),
+    event_type: parseInt(newRoomForm.event_type),
+    event_date: newRoomForm.event_date,
+    event_description: newRoomForm.event_description || '',
+    event_observations: newRoomForm.event_observations || '',
+    device_id: newRoomForm.device_id && newRoomForm.device_id !== '' ? parseInt(newRoomForm.device_id) : null,
+    pest_type: newRoomForm.pest_type || '',
+    pest_sighting_date: newRoomForm.pest_sighting_date || '',
+    pest_location: newRoomForm.pest_location || '',
+    pest_quantity: newRoomForm.pest_quantity && newRoomForm.pest_quantity !== '' ? parseInt(newRoomForm.pest_quantity) : null,
+    pest_observation: newRoomForm.pest_observation || ''
+  };
 
-    // Adicionar campos do evento (obrigatórios)
-    formData.append('event_type', newRoomForm.event_type);
-    formData.append('event_date', newRoomForm.event_date);
-    formData.append('event_description', newRoomForm.event_description || '');
-    formData.append('event_observations', newRoomForm.event_observations || '');
-    if (newRoomForm.device_id && newRoomForm.device_id !== '') {
-      formData.append('device_id', newRoomForm.device_id);
-    }
+  // Verificar se os valores convertidos são válidos
+  if (isNaN(roomData.room_id) || isNaN(roomData.event_type)) {
+    displayToast('Erro: Valores inválidos detectados. Por favor, recarregue a página e tente novamente.', 'error');
+    return;
+  }
 
-    // Adicionar campos do avistamento se preenchidos
-    if (newRoomForm.pest_type || newRoomForm.pest_sighting_date) {
-      formData.append('pest_type', newRoomForm.pest_type || '');
-      formData.append('pest_sighting_date', newRoomForm.pest_sighting_date || '');
-      formData.append('pest_location', newRoomForm.pest_location || '');
-      if (newRoomForm.pest_quantity && newRoomForm.pest_quantity !== '') {
-        formData.append('pest_quantity', newRoomForm.pest_quantity);
-      }
-      formData.append('pest_observation', newRoomForm.pest_observation || '');
-    }
-
-    const response = await fetch(`/work-orders/${props.workOrder.id}/rooms`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      },
-      body: formData
-    });
-
-    const result = await response.json();
-
-    if (response.ok) {
+  router.post(`/work-orders/${props.workOrder.id}/rooms`, roomData, {
+    preserveScroll: true,
+    onSuccess: () => {
       showAddRoomModal.value = false;
       newRoomForm.reset();
       // Limpar erros
@@ -4022,26 +4011,21 @@ const addRoomWithEventAndPest = async () => {
       };
       availableRooms.value = availableRooms.value.filter(room => room.id !== newRoomForm.room_id);
       router.reload({ only: ["workOrder"] });
-    } else {
+    },
+    onError: (errors) => {
       // Tratar erros de validação do backend
-      if (result.errors) {
-        roomFormErrors.value = {
-          room_id: result.errors.room_id ? result.errors.room_id[0] : '',
-          event_type: result.errors.event_type ? result.errors.event_type[0] : '',
-          event_date: result.errors.event_date ? result.errors.event_date[0] : '',
-          general: ''
-        };
-      } else {
-        roomFormErrors.value.general = result.message || 'Erro desconhecido';
-      }
-      displayToast('Erro ao adicionar cômodo: ' + (result.message || 'Erro desconhecido'), 'error');
+      roomFormErrors.value = {
+        room_id: errors.room_id || '',
+        event_type: errors.event_type || '',
+        event_date: errors.event_date || '',
+        general: errors.message || ''
+      };
+      displayToast('Erro ao adicionar cômodo: ' + (errors.message || 'Erro desconhecido'), 'error');
+    },
+    onFinish: () => {
+      isAddingRoom.value = false;
     }
-  } catch (error) {
-    console.error('Erro ao adicionar cômodo:', error);
-    displayToast('Erro ao adicionar cômodo: ' + error.message, 'error');
-  } finally {
-    isAddingRoom.value = false;
-  }
+  });
 };
 
 const removeRoom = async (roomId) => {

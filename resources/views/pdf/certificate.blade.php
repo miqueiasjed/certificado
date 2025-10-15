@@ -277,8 +277,6 @@
                     <th>Princípio Ativo</th>
                     <th>Grupo Químico</th>
                     <th>Antídoto</th>
-                    <th>Quantidade</th>
-                    <th>Unidade</th>
                     <th>Registro do Ministério da Saúde</th>
                 </tr>
             </thead>
@@ -288,8 +286,6 @@
                         <td>{{ $product->activeIngredient->name ?? 'Não informado' }}</td>
                         <td>{{ $product->chemicalGroup->name ?? 'Não informado' }}</td>
                         <td>{{ $product->antidote->name ?? 'Não informado' }}</td>
-                        <td>{{ $product->pivot->quantity ?? '-' }}</td>
-                        <td>{{ $product->pivot->unit ?? '-' }}</td>
                         <td>{{ $product->organRegistration->record ?? 'Não informado' }}</td>
                     </tr>
                 @endforeach
