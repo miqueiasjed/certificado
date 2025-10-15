@@ -138,11 +138,24 @@
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
                     </svg>
                   </Link>
-                  <Link :href="`/devices/${device.id}/edit`" class="btn-primary btn-sm">
+                  <Link
+                    :href="`/devices/${device.id}/edit?return_url=${encodeURIComponent($page.url)}`"
+                    class="btn-primary btn-sm"
+                  >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                     </svg>
                   </Link>
+                  <button
+                    @click="checkAndDeleteDevice(device)"
+                    class="btn-danger btn-sm"
+                    :disabled="isCheckingDelete"
+                    :title="isCheckingDelete ? 'Verificando...' : 'Excluir dispositivo'"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
@@ -233,10 +246,54 @@ const props = defineProps({
 });
 
 const showDeviceModal = ref(false);
+const isCheckingDelete = ref(false);
 
 const refreshDevices = () => {
   // Recarregar a página para atualizar a lista de dispositivos
   router.reload();
+};
+
+// Função para verificar e excluir dispositivo
+const checkAndDeleteDevice = async (device) => {
+  if (!confirm(`Tem certeza que deseja excluir o dispositivo "${device.label} (${device.number})"?`)) {
+    return;
+  }
+
+  isCheckingDelete.value = true;
+
+  try {
+    // Verificar se pode excluir
+    const response = await fetch(route('devices.can-delete', device.id), {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      }
+    });
+
+    const result = await response.json();
+
+    if (!result.can_delete) {
+      alert(result.message);
+      return;
+    }
+
+    // Se pode excluir, prosseguir com a exclusão
+    router.delete(route('devices.destroy', device.id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        // A página será automaticamente atualizada pelo Inertia após o redirect
+      },
+      onError: (errors) => {
+        alert('Erro ao excluir dispositivo: ' + (errors.message || 'Erro desconhecido'));
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao verificar exclusão:', error);
+    alert('Erro ao verificar se o dispositivo pode ser excluído');
+  } finally {
+    isCheckingDelete.value = false;
+  }
 };
 
 const refreshBaitTypes = () => {

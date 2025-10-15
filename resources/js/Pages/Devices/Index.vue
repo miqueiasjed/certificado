@@ -170,7 +170,7 @@
                   Ver Detalhes
                 </Link>
                 <Link
-                  :href="route('devices.edit', device.id)"
+                  :href="`${route('devices.edit', device.id)}?return_url=${encodeURIComponent($page.url)}`"
                   class="text-blue-600 hover:text-blue-900 text-sm font-medium"
                 >
                   Editar
@@ -295,7 +295,7 @@ const checkAndDeleteDevice = async (device) => {
     router.delete(route('devices.destroy', device.id), {
       preserveScroll: true,
       onSuccess: () => {
-        // Sucesso será tratado pelo redirect do backend
+        // A página será automaticamente atualizada pelo Inertia após o redirect
       },
       onError: (errors) => {
         alert('Erro ao excluir dispositivo: ' + (errors.message || 'Erro desconhecido'));

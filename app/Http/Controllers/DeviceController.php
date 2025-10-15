@@ -88,7 +88,7 @@ class DeviceController extends Controller
         ]);
     }
 
-    public function edit(Device $device)
+    public function edit(Device $device, Request $request)
     {
         // Carregar o dispositivo com todos os relacionamentos necessários
         $device->load(['room.address.client', 'baitType']);
@@ -106,6 +106,7 @@ class DeviceController extends Controller
             'device' => $device,
             'rooms' => $rooms,
             'baitTypes' => $baitTypes,
+            'returnUrl' => $request->get('return_url'), // URL de retorno
         ]);
     }
 
@@ -113,8 +114,13 @@ class DeviceController extends Controller
     {
         $this->deviceService->updateDevice($device, $request->validated());
 
-        return redirect()->route('devices.show', $device)
-            ->with('success', 'Dispositivo atualizado com sucesso!');
+        // Verificar se há uma URL de retorno específica
+        $returnUrl = $request->get('return_url');
+        if ($returnUrl) {
+            return redirect($returnUrl)->with('success', 'Dispositivo atualizado com sucesso!');
+        }
+
+        return back()->with('success', 'Dispositivo atualizado com sucesso!');
     }
 
     public function destroy(Device $device)
@@ -122,11 +128,9 @@ class DeviceController extends Controller
         try {
             $this->deviceService->deleteDevice($device);
 
-            return redirect()->route('devices.index')
-                ->with('success', 'Dispositivo excluído com sucesso!');
+            return back()->with('success', 'Dispositivo excluído com sucesso!');
         } catch (\Exception $e) {
-            return redirect()->route('devices.index')
-                ->with('error', $e->getMessage());
+            return back()->with('error', $e->getMessage());
         }
     }
 

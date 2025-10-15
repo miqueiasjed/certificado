@@ -563,6 +563,39 @@
                             @endif
                         </div>
                         @endif
+
+                        <!-- Dispositivos do Cômodo -->
+                        @if($room->devices && $room->devices->count() > 0)
+                        <div style="padding: 10px; background-color: #f0f9ff; border-left: 4px solid #3b82f6; margin-top: 10px;">
+                            <div style="font-weight: bold; margin-bottom: 8px; color: #3b82f6;">Dispositivos Utilizados</div>
+                            @foreach($room->devices as $device)
+                                <div style="margin-bottom: 8px; padding: 8px; background-color: #ffffff; border-radius: 4px; border: 1px solid #e5e7eb;">
+                                    <div style="font-weight: bold; color: #374151;">{{ $device->label }} ({{ $device->number }})</div>
+                                    @if($device->baitType)
+                                        <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                                            <strong>Tipo de Isca:</strong> {{ $device->baitType->name }}
+                                            @if($device->baitType->brand)
+                                                - {{ $device->baitType->brand }}
+                                            @endif
+                                        </div>
+                                    @endif
+                                    @if($device->default_location_note)
+                                        <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                                            <strong>Localização:</strong> {{ $device->default_location_note }}
+                                        </div>
+                                    @endif
+                                    <div style="font-size: 12px; color: #6b7280; margin-top: 2px;">
+                                        <strong>Status:</strong> 
+                                        @if($device->active)
+                                            <span style="color: #10b981;">Ativo</span>
+                                        @else
+                                            <span style="color: #ef4444;">Inativo</span>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                        @endif
                     </div>
                 @endforeach
             </div>

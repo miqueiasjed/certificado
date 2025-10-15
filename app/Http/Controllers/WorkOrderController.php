@@ -504,7 +504,7 @@ class WorkOrderController extends Controller
                         'pest_location',
                         'pest_quantity',
                         'pest_observation'
-                    ]);
+                    ])->with(['devices.baitType']);
                 },
                 'deviceEvents.device.room',
                 'pestSightings' => function ($query) {

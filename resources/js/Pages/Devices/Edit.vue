@@ -24,6 +24,18 @@
 
     <!-- Alertas -->
     <Alert
+      v-if="$page.props.flash.success"
+      type="success"
+      title="Sucesso!"
+      :message="$page.props.flash.success"
+    />
+    <Alert
+      v-if="$page.props.flash.error"
+      type="error"
+      title="Erro!"
+      :message="$page.props.flash.error"
+    />
+    <Alert
       v-if="alert.show"
       :type="alert.type"
       :title="alert.title"
@@ -208,6 +220,10 @@ const props = defineProps({
   baitTypes: {
     type: Array,
     default: () => []
+  },
+  returnUrl: {
+    type: String,
+    default: null
   }
 });
 
@@ -218,6 +234,7 @@ const form = useForm({
   bait_type_id: props.device.bait_type_id || null,
   default_location_note: props.device.default_location_note || '',
   active: props.device.active !== undefined ? props.device.active : true,
+  return_url: props.returnUrl || null,
 });
 
 const alert = ref({
@@ -236,13 +253,10 @@ const refreshBaitTypes = () => {
 
 const submit = () => {
   form.put(`/devices/${props.device.id}`, {
+    preserveScroll: true,
     onSuccess: () => {
-      alert.value = {
-        show: true,
-        type: 'success',
-        title: 'Dispositivo atualizado!',
-        message: 'Dispositivo atualizado com sucesso no sistema.'
-      };
+      // A página será automaticamente atualizada pelo Inertia após o redirect
+      // As mensagens de sucesso serão exibidas via flash messages do backend
     },
     onError: (errors) => {
       alert.value = {
