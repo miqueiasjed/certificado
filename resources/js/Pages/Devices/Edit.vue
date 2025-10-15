@@ -34,17 +34,29 @@
     <div class="max-w-4xl mx-auto">
       <Card>
         <form @submit.prevent="submit" class="space-y-6">
-          <!-- Campo hidden para room_id -->
-          <input type="hidden" name="room_id" :value="device.room_id" />
-
-          <!-- Cômodo (Readonly) -->
+          <!-- Cômodo -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Cômodo
+            <label for="room_id" class="block text-sm font-medium text-gray-700 mb-2">
+              Cômodo *
             </label>
-            <div class="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-900">
-              {{ device.room?.name || 'N/A' }} - {{ device.room?.address?.street || 'N/A' }}, {{ device.room?.address?.number || 'N/A' }} - {{ device.room?.address?.city || 'N/A' }}/{{ device.room?.address?.state || 'N/A' }}
-            </div>
+            <select
+              id="room_id"
+              v-model="form.room_id"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              :class="{ 'border-red-500': form.errors.room_id }"
+            >
+              <option value="">Selecione um cômodo</option>
+              <option v-for="room in rooms" :key="room.id" :value="room.id">
+                {{ room.name }} - {{ room.address?.street }}, {{ room.address?.number }}
+              </option>
+            </select>
+            <p v-if="form.errors.room_id" class="mt-1 text-sm text-red-600">
+              {{ form.errors.room_id }}
+            </p>
+            <p class="mt-1 text-xs text-gray-500">
+              Endereço: {{ device.room?.address?.street }}, {{ device.room?.address?.number }} - {{ device.room?.address?.city }}/{{ device.room?.address?.state }}
+            </p>
           </div>
 
           <!-- Nome do Dispositivo -->
@@ -189,6 +201,10 @@ import BaitTypeModal from '@/Components/BaitTypeModal.vue';
 const props = defineProps({
   device: Object,
   errors: Object,
+  rooms: {
+    type: Array,
+    default: () => []
+  },
   baitTypes: {
     type: Array,
     default: () => []

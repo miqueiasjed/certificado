@@ -106,6 +106,7 @@ Route::middleware(['auth'])->group(function () {
     // Rotas de Dispositivos
     Route::resource('devices', DeviceController::class);
     Route::get('/devices/room/{roomId}', [DeviceController::class, 'getByRoom'])->name('devices.by-room');
+    Route::get('/devices/{device}/can-delete', [DeviceController::class, 'canDelete'])->name('devices.can-delete');
 
     // Rotas de Ordens de Serviço
     Route::resource('work-orders', WorkOrderController::class);

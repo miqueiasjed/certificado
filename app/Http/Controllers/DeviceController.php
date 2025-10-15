@@ -93,7 +93,11 @@ class DeviceController extends Controller
         // Carregar o dispositivo com todos os relacionamentos necessários
         $device->load(['room.address.client', 'baitType']);
 
-        $rooms = \App\Models\Room::with('address.client')->orderBy('name')->limit(500)->get();
+        // Carregar apenas os cômodos do endereço atual do dispositivo
+        $rooms = \App\Models\Room::with('address.client')
+            ->where('address_id', $device->room->address_id)
+            ->orderBy('name')
+            ->get();
 
         // Carregar tipos de isca para o formulário de edição
         $baitTypes = \App\Models\BaitType::orderBy('name')->limit(200)->get();
@@ -115,10 +119,30 @@ class DeviceController extends Controller
 
     public function destroy(Device $device)
     {
-        $this->deviceService->deleteDevice($device);
+        try {
+            $this->deviceService->deleteDevice($device);
 
-        return redirect()->route('devices.index')
-            ->with('success', 'Dispositivo excluído com sucesso!');
+            return redirect()->route('devices.index')
+                ->with('success', 'Dispositivo excluído com sucesso!');
+        } catch (\Exception $e) {
+            return redirect()->route('devices.index')
+                ->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Check if device can be deleted.
+     */
+    public function canDelete(Device $device)
+    {
+        $canDelete = $this->deviceService->canDeleteDevice($device);
+
+        return response()->json([
+            'can_delete' => $canDelete,
+            'message' => $canDelete
+                ? 'Dispositivo pode ser excluído'
+                : 'Dispositivo não pode ser excluído pois está vinculado a ordens de serviço ou eventos'
+        ]);
     }
 
     public function getByRoom($roomId)

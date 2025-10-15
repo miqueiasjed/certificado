@@ -175,6 +175,13 @@
                 >
                   Editar
                 </Link>
+                <button
+                  @click="checkAndDeleteDevice(device)"
+                  class="text-red-600 hover:text-red-900 text-sm font-medium disabled:text-gray-400 disabled:cursor-not-allowed"
+                  :disabled="isCheckingDelete"
+                >
+                  {{ isCheckingDelete ? 'Verificando...' : 'Excluir' }}
+                </button>
               </div>
             </div>
           </div>
@@ -255,6 +262,52 @@ const clearFilters = () => {
     bait_type_id: '',
   };
   router.get(route('devices.index'));
+};
+
+// Estado para verificação de exclusão
+const isCheckingDelete = ref(false);
+
+// Função para verificar e excluir dispositivo
+const checkAndDeleteDevice = async (device) => {
+  if (!confirm(`Tem certeza que deseja excluir o dispositivo "${device.label} (${device.number})"?`)) {
+    return;
+  }
+
+  isCheckingDelete.value = true;
+
+  try {
+    // Verificar se pode excluir
+    const response = await fetch(route('devices.can-delete', device.id), {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      }
+    });
+
+    const result = await response.json();
+
+    if (!result.can_delete) {
+      alert(result.message);
+      return;
+    }
+
+    // Se pode excluir, prosseguir com a exclusão
+    router.delete(route('devices.destroy', device.id), {
+      preserveScroll: true,
+      onSuccess: () => {
+        // Sucesso será tratado pelo redirect do backend
+      },
+      onError: (errors) => {
+        alert('Erro ao excluir dispositivo: ' + (errors.message || 'Erro desconhecido'));
+      }
+    });
+
+  } catch (error) {
+    console.error('Erro ao verificar exclusão:', error);
+    alert('Erro ao verificar se o dispositivo pode ser excluído');
+  } finally {
+    isCheckingDelete.value = false;
+  }
 };
 </script>
 
