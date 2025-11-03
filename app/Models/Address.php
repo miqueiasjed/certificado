@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Address extends Model
 {
@@ -47,6 +48,11 @@ class Address extends Model
     public function pestSightings(): HasMany
     {
         return $this->hasMany(PestSighting::class);
+    }
+
+    public function contract(): HasOne
+    {
+        return $this->hasOne(Contract::class);
     }
 
     // Scopes

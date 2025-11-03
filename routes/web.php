@@ -20,6 +20,7 @@ use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\DeviceEventController;
 use App\Http\Controllers\PestSightingController;
 use App\Http\Controllers\PaymentDetailController;
+use App\Http\Controllers\ContractController;
 use App\Http\Controllers\WorkOrderFinancialController;
 use App\Http\Controllers\FinancialEntryController;
 use App\Http\Controllers\FinancialWithdrawalController;
@@ -95,6 +96,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/addresses/client/{clientId}', [AddressController::class, 'getByClient'])->name('addresses.by-client');
     Route::get('/addresses/city/{city}', [AddressController::class, 'getByCity'])->name('addresses.by-city');
     Route::get('/addresses/state/{state}', [AddressController::class, 'getByState'])->name('addresses.by-state');
+    Route::get('/addresses/{address}/contract/pdf', [ContractController::class, 'generatePDF'])->name('addresses.contract.pdf');
+
+    // Rotas de Contratos
+    Route::resource('contracts', ContractController::class);
+    Route::get('/addresses/{address}/contracts/create', [ContractController::class, 'create'])->name('addresses.contracts.create');
+    Route::post('/addresses/{address}/contracts', [ContractController::class, 'store'])->name('addresses.contracts.store');
+    Route::post('/contracts', [ContractController::class, 'store'])->name('contracts.store');
 
     // Rotas de Cômodos
     Route::resource('rooms', RoomController::class);
