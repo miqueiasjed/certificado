@@ -63,9 +63,13 @@
     </style>
 </head>
 <body>
-    <div class="header">
-        CONTRATO DE PRESTAÇÃO DE SERVIÇOS DE<br>
-        DEDETIZAÇÃO
+    <!-- Cabeçalho com Logo e Título -->
+    <div style="text-align: center; margin-bottom: 20px;">
+        <img src="{{ public_path('images/logo.png') }}" alt="Logo" style="height: 200px; width: auto; display: block; margin: 0 auto 0px auto;">
+        <div class="header" style="margin-top: 10px;">
+            CONTRATO DE PRESTAÇÃO DE SERVIÇOS DE<br>
+            DEDETIZAÇÃO
+        </div>
     </div>
 
     <div class="section">
