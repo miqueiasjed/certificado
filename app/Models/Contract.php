@@ -15,10 +15,10 @@ class Contract extends Model
         'service_value',
         'service_type',
         'visit_frequency',
+        'visit_count',
         'pest_target',
         'payment_method',
         'payment_details',
-        'warranty_period_days',
     ];
 
     protected $casts = [

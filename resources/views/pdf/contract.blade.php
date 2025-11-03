@@ -114,9 +114,18 @@
         <p><strong>Periódica (Manutenção Programada):</strong> execução de serviços de dedetização de forma contínua,
         com visitas periódicas
         @if($contract->service_type === 'periodico' && $contract->visit_frequency)
-            {{ $contract->visit_frequency == 1 ? 'mensais' : ($contract->visit_frequency == 3 ? 'trimestrais' : ($contract->visit_frequency == 6 ? 'semestrais' : 'a cada ' . $contract->visit_frequency . ' meses')) }}
+            @php
+                $frequencyLabels = [
+                    'weekly' => 'semanais',
+                    'biweekly' => 'quinzenais',
+                    'monthly' => 'mensais'
+                ];
+                $frequencyLabel = $frequencyLabels[$contract->visit_frequency] ?? 'mensais';
+                $visitCount = $contract->visit_count ?? 1;
+                echo $visitCount . ' visita' . ($visitCount > 1 ? 's' : '') . ' ' . $frequencyLabel;
+            @endphp
         @else
-            [mensais/trimestrais/semestrais]
+            [X visitas semanais/quinzenais/mensais]
         @endif
         durante o período de
         @if($contract->start_date && $contract->end_date)
@@ -188,8 +197,7 @@
 
     <div class="clause">
         <p><strong>2.5. Garantia do Serviço – Reaplicação:</strong> A CONTRATADA garante a eficácia dos serviços
-        prestados pelo prazo mínimo legal de {{ $contract->warranty_period_days }} ({{ $contract->warranty_period_days == 90 ? 'noventa' : $contract->warranty_period_days }}) dias contados da sua realização, nos termos do
-        art. 26, II do CDC. Dentro desse período, caso ocorra reincidência das pragas tratadas ou se o
+        prestados até o término da vigência do contrato, conforme estabelecido na Cláusula 6ª. Durante a vigência do contrato, caso ocorra reincidência das pragas tratadas ou se o
         resultado não for satisfatório em função de vício na prestação do serviço, a CONTRATADA obriga-se
         a reexecutar o serviço sem custo adicional para o CONTRATANTE, dentro do escopo originalmente
         contratado, tão logo seja informada da falha.</p>
@@ -321,7 +329,7 @@
             forma, juntamente com duas testemunhas, para que produza seus efeitos legais.
         </p>
         <p style="text-align: center; margin-top: 30px;">
-            Fortaleza/CE, {{ $currentDate }}.
+            Trairi/CE, {{ $currentDate }}.
         </p>
 
         <div style="display: flex; justify-content: space-around; margin-top: 80px;">

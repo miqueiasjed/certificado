@@ -91,19 +91,43 @@
             <!-- Frequência de Visitas -->
             <div>
               <label for="visit_frequency" class="block text-sm font-medium text-gray-700 mb-2">
-                Frequência de Visitas (meses) *
+                Frequência de Visitas *
+              </label>
+              <select
+                id="visit_frequency"
+                v-model="form.visit_frequency"
+                @change="onFrequencyChange"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                :class="{ 'border-red-500': form.errors.visit_frequency }"
+              >
+                <option value="">Selecione a frequência</option>
+                <option value="weekly">Semanal</option>
+                <option value="biweekly">Quinzenal</option>
+                <option value="monthly">Mensal</option>
+              </select>
+              <p v-if="form.errors.visit_frequency" class="mt-1 text-sm text-red-600">
+                {{ form.errors.visit_frequency }}
+              </p>
+            </div>
+
+            <!-- Quantidade de Visitas (baseada na frequência) -->
+            <div v-if="form.visit_frequency">
+              <label for="visit_count" class="block text-sm font-medium text-gray-700 mb-2">
+                Quantidade de Visitas {{ getFrequencyLabel() }} *
               </label>
               <input
-                id="visit_frequency"
-                v-model.number="form.visit_frequency"
+                id="visit_count"
+                v-model.number="form.visit_count"
                 type="number"
                 min="1"
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                :class="{ 'border-red-500': form.errors.visit_frequency }"
+                :class="{ 'border-red-500': form.errors.visit_count }"
+                :placeholder="`Ex: 2 visitas ${getFrequencyLabel(true)}`"
               />
-              <p v-if="form.errors.visit_frequency" class="mt-1 text-sm text-red-600">
-                {{ form.errors.visit_frequency }}
+              <p v-if="form.errors.visit_count" class="mt-1 text-sm text-red-600">
+                {{ form.errors.visit_count }}
               </p>
             </div>
 
@@ -114,10 +138,10 @@
               </label>
               <input
                 id="service_value"
-                v-model.number="form.service_value"
-                type="number"
-                step="0.01"
-                min="0"
+                v-model="serviceValueDisplay"
+                @input="formatServiceValue"
+                type="text"
+                placeholder="0,00"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
               />
             </div>
@@ -164,19 +188,6 @@
               ></textarea>
             </div>
 
-            <!-- Período de Garantia -->
-            <div>
-              <label for="warranty_period_days" class="block text-sm font-medium text-gray-700 mb-2">
-                Período de Garantia (dias)
-              </label>
-              <input
-                id="warranty_period_days"
-                v-model.number="form.warranty_period_days"
-                type="number"
-                min="1"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              />
-            </div>
 
             <!-- Botões -->
             <div class="flex justify-end gap-3 pt-4 border-t">
@@ -202,7 +213,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
@@ -222,17 +233,43 @@ const contractPeriods = [
   { months: 36, label: '3 Anos' },
 ];
 
+// Função para formatar data para input type="date" (YYYY-MM-DD)
+const formatDateForInput = (date) => {
+  if (!date) return null;
+  // Se já estiver no formato correto
+  if (typeof date === 'string' && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    return date;
+  }
+  // Se for uma data ISO ou outro formato, converter
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) return null;
+  return dateObj.toISOString().split('T')[0];
+};
+
 const form = useForm({
-  start_date: props.contract.start_date || new Date().toISOString().split('T')[0],
-  end_date: props.contract.end_date || null,
+  start_date: formatDateForInput(props.contract.start_date) || new Date().toISOString().split('T')[0],
+  end_date: formatDateForInput(props.contract.end_date) || null,
   service_value: props.contract.service_value || null,
   service_type: props.contract.service_type || 'pontual',
-  visit_frequency: props.contract.visit_frequency || 1,
+  visit_frequency: getVisitFrequencyFromValue(props.contract.visit_frequency) || '',
+  visit_count: props.contract.visit_count || null,
   pest_target: props.contract.pest_target || '',
   payment_method: props.contract.payment_method || '',
   payment_details: props.contract.payment_details || '',
-  warranty_period_days: props.contract.warranty_period_days || 90,
 });
+
+const serviceValueDisplay = ref('');
+
+// Função para converter valor antigo de visit_frequency para o novo formato
+function getVisitFrequencyFromValue(value) {
+  if (!value) return '';
+  // Se for número, assume que é mensal (compatibilidade)
+  if (typeof value === 'number') {
+    return 'monthly';
+  }
+  // Se já for string, retorna como está
+  return value;
+}
 
 const setContractPeriod = (months) => {
   selectedPeriod.value = months;
@@ -256,7 +293,63 @@ const handleServiceTypeChange = () => {
   // Todos os campos são obrigatórios agora
 };
 
+// Função para formatar valor de moeda
+const formatServiceValue = (event) => {
+  const input = event.target;
+  let value = input.value;
+
+  // Remove tudo exceto números
+  let numbers = value.replace(/\D/g, '');
+
+  if (numbers === '') {
+    serviceValueDisplay.value = '';
+    form.service_value = null;
+    return;
+  }
+
+  // Converte para centavos e depois para reais
+  let amount = parseFloat(numbers) / 100;
+
+  // Formata o valor
+  let formatted = amount.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+
+  // Atualiza o display e o valor numérico
+  serviceValueDisplay.value = formatted;
+  form.service_value = amount;
+};
+
+// Função para obter o label da frequência
+const getFrequencyLabel = (lowercase = false) => {
+  const labels = {
+    'weekly': lowercase ? 'por semana' : 'Por Semana',
+    'biweekly': lowercase ? 'quinzenalmente' : 'Quinzenalmente',
+    'monthly': lowercase ? 'por mês' : 'Por Mês'
+  };
+  return labels[form.visit_frequency] || '';
+};
+
+// Função quando mudar a frequência
+const onFrequencyChange = () => {
+  // Limpar a quantidade quando mudar a frequência
+  form.visit_count = null;
+};
+
+// Função para converter valor formatado antes de enviar
+const parseServiceValue = (value) => {
+  if (!value || value === '') return null;
+  const cleanValue = value.toString().replace(/[^\d,]/g, '');
+  if (cleanValue === '') return null;
+  const numericValue = cleanValue.replace(',', '.');
+  return parseFloat(numericValue) || null;
+};
+
 const submit = () => {
+  // Converter valor formatado para número antes de enviar
+  form.service_value = parseServiceValue(serviceValueDisplay.value);
+
   form.put(`/contracts/${props.contract.id}`, {
     onSuccess: () => {
       router.visit('/contracts');
@@ -265,6 +358,14 @@ const submit = () => {
 };
 
 onMounted(() => {
+  // Inicializar valor formatado
+  if (props.contract.service_value) {
+    serviceValueDisplay.value = parseFloat(props.contract.service_value).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
   // Calcular período se tiver data de fim
   if (form.end_date && form.start_date) {
     const start = new Date(form.start_date);

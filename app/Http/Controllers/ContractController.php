@@ -77,11 +77,11 @@ class ContractController extends Controller
             'end_date' => 'required|date|after:start_date',
             'service_value' => 'nullable|numeric|min:0',
             'service_type' => 'required|in:pontual,periodico',
-            'visit_frequency' => 'required|integer|min:1',
+            'visit_frequency' => 'required|in:weekly,biweekly,monthly',
+            'visit_count' => 'required|integer|min:1',
             'pest_target' => 'nullable|string',
             'payment_method' => 'nullable|string',
             'payment_details' => 'nullable|string',
-            'warranty_period_days' => 'nullable|integer|min:1',
         ];
 
         // Se não veio pela rota com endereço, exigir address_id
@@ -173,6 +173,10 @@ class ContractController extends Controller
     {
         $contract->load('address.client');
 
+        // Garantir que as datas estejam no formato YYYY-MM-DD para o input type="date"
+        $contract->start_date = $contract->start_date ? $contract->start_date->format('Y-m-d') : null;
+        $contract->end_date = $contract->end_date ? $contract->end_date->format('Y-m-d') : null;
+
         return Inertia::render('Contracts/Edit', [
             'contract' => $contract,
             'address' => $contract->address,
@@ -190,11 +194,11 @@ class ContractController extends Controller
             'end_date' => 'required|date|after:start_date',
             'service_value' => 'nullable|numeric|min:0',
             'service_type' => 'required|in:pontual,periodico',
-            'visit_frequency' => 'required|integer|min:1',
+            'visit_frequency' => 'required|in:weekly,biweekly,monthly',
+            'visit_count' => 'required|integer|min:1',
             'pest_target' => 'nullable|string',
             'payment_method' => 'nullable|string',
             'payment_details' => 'nullable|string',
-            'warranty_period_days' => 'nullable|integer|min:1',
         ]);
 
         $contract->update($validated);
