@@ -7,51 +7,53 @@
     <style>
         @page {
             size: A4 portrait;
-            margin: 15mm;
+            margin: 10mm 15mm;
         }
 
         body {
             font-family: Arial, sans-serif;
-            font-size: 9px;
+            font-size: 11px;
             margin: 0;
             padding: 0;
-            line-height: 1.2;
+            line-height: 1.3;
             color: #000;
-            background-color: #d1fae5;
+            background-color: #fff;
         }
 
         .header-section {
             text-align: center;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             position: relative;
+            min-height: 120px;
         }
 
         .logo-container {
             position: absolute;
-            top: 0;
-            right: 0;
+            top: -29px;
+            left: 50%;
+            transform: translateX(-50%);
         }
 
         .logo-container img {
-            height: 60px;
+            height: 130px;
             width: auto;
         }
 
         .document-title {
             font-weight: bold;
-            font-size: 16px;
+            font-size: 18px;
             text-transform: uppercase;
-            background-color: #10b981;
+            background-color: #059669;
             color: #fff;
-            padding: 8px;
+            padding: 10px;
             border: 2px solid #000;
-            margin-top: 35px;
+            margin-top: 100px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
             background-color: #fff;
         }
 
@@ -60,24 +62,24 @@
         }
 
         th, td {
-            padding: 4px 6px;
+            padding: 5px 8px;
             text-align: left;
             vertical-align: top;
-            font-size: 9px;
+            font-size: 11px;
         }
 
         th {
-            background-color: #10b981;
+            background-color: #059669;
             color: #fff;
             font-weight: bold;
         }
 
         .section-title {
-            background-color: #10b981;
+            background-color: #059669;
             color: #fff;
             font-weight: bold;
-            font-size: 10px;
-            padding: 5px 6px;
+            font-size: 11px;
+            padding: 6px 8px;
             text-align: left;
         }
 
@@ -108,26 +110,37 @@
         .signature-table {
             background-color: transparent;
             border: none;
-            margin-top: 5px;
+            margin-top: 8px;
         }
 
         .signature-table td {
             border: none;
             text-align: center;
-            padding: 5px;
+            padding: 8px;
+            vertical-align: bottom;
         }
 
         .signature-img {
-            width: 60px;
-            height: auto;
+            width: 80px;
+            height: 80px;
             display: block;
-            margin: 0 auto 3px auto;
+            margin: 0 auto 5px auto;
+            object-fit: contain;
+        }
+
+        .signature-line {
+            border-top: 1px solid #000;
+            padding-top: 5px;
+            margin-top: 5px;
+            font-size: 10px;
+            text-align: center;
+            min-height: 35px;
         }
 
         .page-number {
             text-align: right;
-            margin-top: 5px;
-            font-size: 8px;
+            margin-top: 8px;
+            font-size: 9px;
         }
     </style>
 </head>
@@ -135,7 +148,7 @@
     <!-- Cabeçalho -->
     <div class="header-section">
         <div class="logo-container">
-            <img src="{{ public_path('images/logo.png') }}" alt="Logo">
+            <img src="{{ public_path('images/logo-nome.png') }}" alt="Logo">
         </div>
         <div class="document-title">
             CERTIFICADO DE GARANTIA
@@ -282,21 +295,19 @@
     <!-- Tabela: Informações Legais -->
     <table>
         <tr>
-            <td colspan="3" class="section-title">INFORMAÇÕES LEGAIS E DE SEGURANÇA</td>
+            <td colspan="2" class="section-title">INFORMAÇÕES LEGAIS E DE SEGURANÇA</td>
         </tr>
         <tr>
-            <td class="col-33 text-center"><strong>N° Licença Ambiental</strong></td>
-            <td class="col-33 text-center"><strong>N° Alvará Sanitário</strong></td>
-            <td class="col-33 text-center"><strong>CEATOX</strong></td>
+            <td class="col-50 text-center"><strong>N° Licença Ambiental</strong></td>
+            <td class="col-50 text-center"><strong>N° Alvará Sanitário</strong></td>
         </tr>
         <tr>
             <td class="text-center">177/2024</td>
             <td class="text-center">062/2025</td>
-            <td class="text-center">(85) 3235-5050</td>
         </tr>
         <tr>
-            <td colspan="3" style="padding: 4px; font-size: 8px;">
-                <strong>CEATOX:</strong> Centro de Assistência Toxicológica - Em caso de intoxicação ou acidente, ligue imediatamente.<br>
+            <td colspan="2" style="padding: 6px; font-size: 9px;">
+                <strong>CEATOX:</strong> Centro de Assistência Toxicológica - Em caso de intoxicação ou acidente, ligue imediatamente. (85) 3235-5050<br>
                 <strong>Obs.:</strong> Este certificado garante a eficácia do serviço até a data de validade indicada.
             </td>
         </tr>
@@ -307,23 +318,18 @@
         <tr>
             <td style="width: 50%;">
                 <img src="{{ public_path('images/signature-operational.png') }}" alt="Assinatura Gerente" class="signature-img">
-                <div style="border-top: 1px solid #000; padding-top: 3px; margin-top: 3px; font-size: 8px;">
+                <div class="signature-line">
                     <strong>Gerente de Operações</strong>
                 </div>
             </td>
             <td style="width: 50%;">
                 <img src="{{ public_path('images/signature-quimico.png') }}" alt="Assinatura Químico" class="signature-img">
-                <div style="border-top: 1px solid #000; padding-top: 3px; margin-top: 3px; font-size: 8px;">
+                <div class="signature-line">
                     <strong>Químico Industrial</strong><br>
-                    CRQ 10º Região Nº 5.253
+                    <span style="font-size: 9px;">CRQ 10º Região Nº 5.253</span>
                 </div>
             </td>
         </tr>
     </table>
-
-    <!-- Número da Página -->
-    <div class="page-number">
-        Página 1 de 1
-    </div>
 </body>
 </html>

@@ -28,7 +28,7 @@
         }
 
         .logo {
-            color: #4CAF50;
+            color: #059669;
             font-size: 12px;
             font-weight: bold;
             margin-bottom: 5px;
@@ -65,11 +65,11 @@
         }
 
         .section-title {
-            color: #4CAF50;
+            color: #059669;
             font-weight: bold;
             font-size: 11px;
             margin-bottom: 6px;
-            border-bottom: 1px solid #4CAF50;
+            border-bottom: 1px solid #059669;
             padding-bottom: 3px;
         }
 
@@ -99,7 +99,7 @@
         /* Seção de pagamento com destaque - largura total */
         .payment-section {
             grid-column: 1 / -1;
-            border: 2px solid #4CAF50;
+            border: 2px solid #059669;
             border-radius: 6px;
             padding: 12px;
             background: white;
@@ -108,7 +108,7 @@
 
         .payment-section .section-title {
             font-size: 12px;
-            color: #4CAF50;
+            color: #059669;
         }
 
         /* Linhas de valores */
@@ -127,7 +127,7 @@
 
         .value-amount {
             font-weight: bold;
-            color: #4CAF50;
+            color: #059669;
         }
 
         .value-amount.discount {
@@ -136,14 +136,14 @@
 
         /* Histórico de pagamentos */
         .payment-history {
-            background: #e8f5e8;
+            background: #f0fdf4;
             border-radius: 4px;
             padding: 8px;
             margin: 8px 0;
         }
 
         .payment-history-title {
-            color: #4CAF50;
+            color: #059669;
             font-weight: bold;
             font-size: 10px;
             margin-bottom: 5px;
@@ -162,12 +162,12 @@
 
         .payment-item-right {
             font-weight: bold;
-            color: #4CAF50;
+            color: #059669;
         }
 
         /* Linha separadora */
         .separator {
-            border-top: 1px solid #4CAF50;
+            border-top: 1px solid #059669;
             margin: 6px 0;
             padding-top: 6px;
         }

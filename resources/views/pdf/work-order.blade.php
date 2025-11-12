@@ -406,8 +406,8 @@
 
     <!-- Cabeçalho com Logo e Título -->
     <div style="text-align: center; margin-bottom: 20px;">
-        <img src="{{ public_path('images/logo.png') }}" alt="Logo" style="height: 120px; width: auto; display: block; margin: 0 auto 0px auto;">
-        <h1 style="color: #059669; font-size: 24px; margin: -10px 0 0 0; font-weight: bold;">ORDEM DE SERVIÇO</h1>
+        <img src="{{ public_path('images/logo-nome.png') }}" alt="Logo" style="height: 130px; width: auto; display: block; margin: 0 auto 10px auto;">
+        <h1 style="color: #059669; font-size: 24px; margin: 10px 0 0 0; font-weight: bold;">ORDEM DE SERVIÇO</h1>
     </div>
 
     <!-- Informações da empresa -->

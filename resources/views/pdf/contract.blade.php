@@ -65,7 +65,7 @@
 <body>
     <!-- Cabeçalho com Logo e Título -->
     <div style="text-align: center; margin-bottom: 20px;">
-        <img src="{{ public_path('images/logo.png') }}" alt="Logo" style="height: 200px; width: auto; display: block; margin: 0 auto 0px auto;">
+        <img src="{{ public_path('images/logo-nome.png') }}" alt="Logo" style="height: 200px; width: auto; display: block; margin: 0 auto 0px auto;">
         <div class="header" style="margin-top: 10px;">
             CONTRATO DE PRESTAÇÃO DE SERVIÇOS DE<br>
             DEDETIZAÇÃO

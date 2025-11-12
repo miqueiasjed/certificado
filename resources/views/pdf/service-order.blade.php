@@ -13,7 +13,7 @@
         }
         .header {
             text-align: center;
-            border-bottom: 2px solid #333;
+            border-bottom: 2px solid #059669;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
@@ -21,6 +21,7 @@
             font-size: 24px;
             font-weight: bold;
             margin-bottom: 10px;
+            color: #059669;
         }
         .subtitle {
             font-size: 18px;
@@ -32,10 +33,11 @@
         .section-title {
             font-size: 16px;
             font-weight: bold;
-            background-color: #f5f5f5;
+            background-color: #f0fdf4;
             padding: 10px;
             margin-bottom: 15px;
-            border-left: 4px solid #333;
+            border-left: 4px solid #059669;
+            color: #059669;
         }
         .info-grid {
             display: grid;
@@ -48,7 +50,7 @@
         }
         .info-label {
             font-weight: bold;
-            color: #666;
+            color: #059669;
         }
         .info-value {
             margin-top: 5px;
@@ -84,7 +86,7 @@
         }
         .status-pending { background-color: #fff3cd; color: #856404; }
         .status-in_progress { background-color: #d1ecf1; color: #0c5460; }
-        .status-completed { background-color: #d4edda; color: #155724; }
+        .status-completed { background-color: #d4edda; color: #059669; }
         .status-cancelled { background-color: #f8d7da; color: #721c24; }
     </style>
 </head>
