@@ -367,6 +367,62 @@
             break-inside: avoid;
         }
 
+        /* Classe para compactar quando há muito conteúdo */
+        body.compact-mode {
+            font-size: 9px;
+            padding: 10px;
+        }
+
+        body.compact-mode .header-info,
+        body.compact-mode .info-section {
+            margin-bottom: 8px;
+        }
+
+        body.compact-mode .section-header {
+            font-size: 11px;
+            padding: 6px 10px;
+            margin: 10px 0 8px 0;
+        }
+
+        body.compact-mode .info-table td {
+            padding: 4px;
+            font-size: 9px;
+        }
+
+        body.compact-mode .company-info {
+            margin: 0 0 10px 0;
+            padding: 8px;
+            font-size: 11px;
+        }
+
+        body.compact-mode h1 {
+            font-size: 18px !important;
+        }
+
+        body.compact-mode .signature-section {
+            margin-top: 15px;
+            gap: 20px;
+        }
+
+        body.compact-mode .signature-box {
+            padding-top: 5px;
+        }
+
+        body.compact-mode .signature-title {
+            font-size: 10px;
+            margin-bottom: 5px;
+        }
+
+        body.compact-mode .signature-image {
+            width: 60px;
+        }
+
+        body.compact-mode .footer-info {
+            margin-top: 15px;
+            padding-top: 10px;
+            font-size: 8px;
+        }
+
         @media print {
             body {
                 margin: 0;
@@ -402,7 +458,19 @@
     </style>
 </head>
 
-<body>
+@php
+    // Calcula a quantidade de conteúdo para determinar se precisa compactar
+    $contentCount = 0;
+    $contentCount += $workOrder->rooms ? $workOrder->rooms->count() * 3 : 0; // Cada room conta como 3
+    $contentCount += $workOrder->products ? $workOrder->products->count() : 0;
+    $contentCount += $workOrder->services ? $workOrder->services->count() : 0;
+    $contentCount += $workOrder->technicians ? $workOrder->technicians->count() : 0;
+    $contentCount += $workOrder->deviceEvents ? $workOrder->deviceEvents->count() : 0;
+
+    // Se tiver mais de 15 itens de conteúdo, ativa modo compacto
+    $compactMode = $contentCount > 15;
+@endphp
+<body class="{{ $compactMode ? 'compact-mode' : '' }}">
 
     <!-- Cabeçalho com Logo e Título -->
     <div style="text-align: center; margin-bottom: 20px;">
