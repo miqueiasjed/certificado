@@ -459,16 +459,9 @@
 </head>
 
 @php
-    // Calcula a quantidade de conteúdo para determinar se precisa compactar
-    $contentCount = 0;
-    $contentCount += $workOrder->rooms ? $workOrder->rooms->count() * 3 : 0; // Cada room conta como 3
-    $contentCount += $workOrder->products ? $workOrder->products->count() : 0;
-    $contentCount += $workOrder->services ? $workOrder->services->count() : 0;
-    $contentCount += $workOrder->technicians ? $workOrder->technicians->count() : 0;
-    $contentCount += $workOrder->deviceEvents ? $workOrder->deviceEvents->count() : 0;
-
-    // Se tiver mais de 15 itens de conteúdo, ativa modo compacto
-    $compactMode = $contentCount > 15;
+    // A partir de 2 produtos, ativa modo compacto para caber em 1 página
+    $productCount = $workOrder->products ? $workOrder->products->count() : 0;
+    $compactMode = $productCount >= 2;
 @endphp
 <body class="{{ $compactMode ? 'compact-mode' : '' }}">
 

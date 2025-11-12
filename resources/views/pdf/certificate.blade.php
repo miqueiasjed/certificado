@@ -95,6 +95,14 @@
             width: 50%;
         }
 
+        .col-70 {
+            width: 70%;
+        }
+
+        .col-30 {
+            width: 30%;
+        }
+
         .text-center {
             text-align: center;
         }
@@ -158,14 +166,11 @@
     <!-- Tabela: Dados do Certificado -->
     <table>
         <tr>
-            <td class="col-33"><strong>N° do Certificado</strong></td>
-            <td class="col-33"><strong>Data de Emissão</strong></td>
-            <td class="col-33"><strong>Data de Validade (Garantia)</strong></td>
-        </tr>
-        <tr>
-            <td>{{ $certificate->id ?? 'Não informado' }}</td>
-            <td>{{ $certificate->execution_date ? $certificate->execution_date->format('d/m/Y') : ($certificate->workOrder->scheduled_date?->format('d/m/Y') ?? 'Não informada') }}</td>
-            <td>{{ $certificate->warranty ? $certificate->warranty->format('d/m/Y') : 'Não informada' }}</td>
+            <td class="col-33"><strong>N° do Certificado: </strong>{{ $certificate->id ?? 'Não informado' }}</td>
+            <td class="col-33"><strong>Data de Emissão: </strong>
+                {{ $certificate->created_at ? $certificate->created_at->format('d/m/Y') : 'Não informada' }}
+            </td>
+            <td class="col-33"><strong>Data de Validade: </strong>{{ $certificate->warranty ? $certificate->warranty->format('d/m/Y') : 'Não informada' }}</td>
         </tr>
     </table>
 
@@ -175,26 +180,15 @@
             <td colspan="2" class="section-title">DADOS DA EMPRESA CONTRATADA</td>
         </tr>
         <tr>
-            <td class="col-50"><strong>Razão Social</strong></td>
-            <td class="col-50"><strong>CNPJ</strong></td>
+            <td class="col-70"><strong>Razão Social: </strong>EMPRESA CONTROLADORA DE PRAGAS LTDA</td>
+            <td class="col-30"><strong>CNPJ: </strong>19.228.297/0001-75</td>
         </tr>
         <tr>
-            <td>EMPRESA CONTROLADORA DE PRAGAS LTDA</td>
-            <td>19.228.297/0001-75</td>
+            <td colspan="2"><strong>Endereço:</strong> Comunidade 2º Vila Córrego dos Furtados, 153, Bairro Córrego Fundo, Município de Trairi-CE</td>
         </tr>
         <tr>
-            <td colspan="2"><strong>Endereço</strong></td>
-        </tr>
-        <tr>
-            <td colspan="2">Comunidade 2º Vila Córrego dos Furtados, 153, Bairro Córrego Fundo, Município de Trairi-CE</td>
-        </tr>
-        <tr>
-            <td class="col-50"><strong>Telefone</strong></td>
-            <td class="col-50"><strong>CRQ - Conselho Regional de Química</strong></td>
-        </tr>
-        <tr>
-            <td>(85) 99993-8745</td>
-            <td>10º REGIÃO Nº 5.253</td>
+            <td class="col-50"><strong>Telefone</strong> (85) 99993-8745</td>
+            <td class="col-50">CRQ - Conselho Regional de Química 10º REGIÃO Nº 5.253</td>
         </tr>
     </table>
 
@@ -204,18 +198,11 @@
             <td colspan="2" class="section-title">DADOS DO CLIENTE</td>
         </tr>
         <tr>
-            <td class="col-50"><strong>Nome/Razão Social</strong></td>
-            <td class="col-50"><strong>CPF/CNPJ</strong></td>
+            <td class="col-50"><strong>Nome/Razão Social: </strong>{{ $certificate->client->name ?? 'Não informado' }}</td>
+            <td class="col-50"><strong>CPF/CNPJ: </strong>{{ $certificate->client->cnpj ?? 'Não informado' }}</td>
         </tr>
         <tr>
-            <td>{{ $certificate->client->name ?? 'Não informado' }}</td>
-            <td>{{ $certificate->client->cnpj ?? 'Não informado' }}</td>
-        </tr>
-        <tr>
-            <td colspan="2"><strong>Endereço do Local do Serviço</strong></td>
-        </tr>
-        <tr>
-            <td colspan="2">
+            <td colspan="2"><strong>Local do Serviço: </strong>
                 @php
                     $address = null;
                     if ($certificate->workOrder && $certificate->workOrder->address) {
@@ -238,25 +225,24 @@
         <tr>
             <td colspan="2" class="section-title">DADOS DO SERVIÇO EXECUTADO</td>
         </tr>
+
         <tr>
-            <td class="col-50"><strong>Serviço Prestado</strong></td>
-            <td class="col-50"><strong>Data da Execução</strong></td>
-        </tr>
-        <tr>
-            <td>
+            <td colspan="2"><strong>Serviço Prestado:</strong>
                 @if($certificate->service)
                     {{ $certificate->service->name }}
                 @else
                     Não informado
                 @endif
             </td>
-            <td>{{ $certificate->execution_date ? $certificate->execution_date->format('d/m/Y') : ($certificate->workOrder->scheduled_date?->format('d/m/Y') ?? 'Não informada') }}</td>
         </tr>
+
         <tr>
-            <td colspan="2"><strong>Procedimento Utilizado</strong></td>
-        </tr>
-        <tr>
-            <td colspan="2">{{ $certificate->procedure_used ?? 'Não informado' }}</td>
+            <td class="col-50"><strong>Data da Execução:</strong>
+            {{ $certificate->execution_date ? $certificate->execution_date->format('d/m/Y') : ($certificate->workOrder->scheduled_date?->format('d/m/Y') ?? 'Não informada') }}
+            </td>
+            <td class="col-50"><strong>Procedimento Utilizado:</strong>
+            {{ $certificate->procedure_used ?? 'Não informado' }}
+            </td>
         </tr>
     </table>
 
@@ -298,12 +284,8 @@
             <td colspan="2" class="section-title">INFORMAÇÕES LEGAIS E DE SEGURANÇA</td>
         </tr>
         <tr>
-            <td class="col-50 text-center"><strong>N° Licença Ambiental</strong></td>
-            <td class="col-50 text-center"><strong>N° Alvará Sanitário</strong></td>
-        </tr>
-        <tr>
-            <td class="text-center">177/2024</td>
-            <td class="text-center">062/2025</td>
+            <td class="col-50 text-center"><strong>N° Licença Ambiental: </strong>177/2024</td>
+            <td class="col-50 text-center"><strong>N° Alvará Sanitário: </strong>062/2025</td>
         </tr>
         <tr>
             <td colspan="2" style="padding: 6px; font-size: 9px;">
