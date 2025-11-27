@@ -180,7 +180,7 @@
             <td colspan="2" class="section-title">DADOS DA EMPRESA CONTRATADA</td>
         </tr>
         <tr>
-            <td class="col-70"><strong>Razão Social: </strong>EMPRESA CONTROLADORA DE PRAGAS LTDA</td>
+            <td class="col-70"><strong>Razão Social: </strong>MESQUITA DEDETIZACAO LTDA</td>
             <td class="col-30"><strong>CNPJ: </strong>19.228.297/0001-75</td>
         </tr>
         <tr>
