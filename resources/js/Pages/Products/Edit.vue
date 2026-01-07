@@ -326,10 +326,10 @@ const props = defineProps({
 
 const form = useForm({
   name: props.product.name,
-  active_ingredient_id: props.product.active_ingredient_id || '',
-  chemical_group_id: props.product.chemical_group_id || '',
-  antidote_id: props.product.antidote_id || '',
-  organ_registration_id: props.product.organ_registration_id || '',
+  active_ingredient_id: props.product.active_ingredient_id ? String(props.product.active_ingredient_id) : '',
+  chemical_group_id: props.product.chemical_group_id ? String(props.product.chemical_group_id) : '',
+  antidote_id: props.product.antidote_id ? String(props.product.antidote_id) : '',
+  organ_registration_id: props.product.organ_registration_id ? String(props.product.organ_registration_id) : '',
 });
 
 const isSubmitting = ref(false);

@@ -962,7 +962,7 @@ const form = useForm({
   client_id: props.preselectedClient || '',
   address_id: props.preselectedAddress || '',
   technicians: props.preselectedTechnician ? [props.preselectedTechnician] : [''],
-  products: [{ id: '', quantity: 1, unit: '', observations: '' }],
+  products: [{ id: '', quantity: 1, unit: '', observations: '50 miligramas a cada 10 litros de agua' }],
   service_id: '',
   rooms: [{
     id: '',
@@ -1127,7 +1127,7 @@ const removeTechnician = (index) => {
 
 // Funções para gerenciar produtos
 const addProduct = () => {
-  form.products.push({ id: '', quantity: 1, unit: '', observations: '' });
+  form.products.push({ id: '', quantity: 1, unit: '', observations: '50 miligramas a cada 10 litros de agua' });
 };
 
 const removeProduct = (index) => {
