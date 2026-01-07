@@ -641,16 +641,16 @@
             // Combinar dispositivos da tabela work_order_device com dispositivos únicos dos eventos
             $devicesFromTable = $workOrder->devices ?? collect();
             $events = $workOrder->workOrderDeviceEvents ?? collect();
-            
+
             // IDs de dispositivos da tabela
             $deviceIdsFromTable = $devicesFromTable->pluck('id')->toArray();
-            
+
             // IDs de dispositivos únicos dos eventos
             $deviceIdsFromEvents = $events->pluck('device_id')->unique()->toArray();
-            
+
             // Combinar IDs únicos
             $allDeviceIds = array_unique(array_merge($deviceIdsFromTable, $deviceIdsFromEvents));
-            
+
             // Buscar todos os dispositivos
             $devices = collect();
             if (count($allDeviceIds) > 0) {
@@ -805,38 +805,6 @@
 
         @if((!$workOrder->products || $workOrder->products->count() == 0) && (!$workOrder->services || $workOrder->services->count() == 0))
             <p>Nenhum produto ou serviço registrado para esta ordem de serviço</p>
-        @endif
-    </div>
-
-    <!-- Manutenção de Dispositivos -->
-    <div class="section-header">Manutenção de Dispositivos</div>
-    <div class="info-section">
-        @if($workOrder->deviceEvents && $workOrder->deviceEvents->count() > 0)
-            <table class="info-table">
-                <tr>
-                    <th style="background-color: #f0fdf4; font-weight: bold;">Dispositivo</th>
-                    <th style="background-color: #f0fdf4; font-weight: bold;">Data</th>
-                    <th style="background-color: #f0fdf4; font-weight: bold;">Tipo</th>
-                    <th style="background-color: #f0fdf4; font-weight: bold;">Cômodo</th>
-                    <th style="background-color: #f0fdf4; font-weight: bold;">Descrição</th>
-                </tr>
-                @foreach($workOrder->deviceEvents as $event)
-                <tr>
-                    <td>{{ $event->device->name ?? 'Não especificado' }}</td>
-                    <td>{{ $event->event_date ? \Carbon\Carbon::parse($event->event_date)->format('d/m/Y') : '-' }}</td>
-                    <td>{{ $event->event_type ?? '-' }}</td>
-                    <td>{{ $event->room->name ?? '-' }}</td>
-                    <td>{{ $event->description ?? '-' }}</td>
-                </tr>
-                @if($event->observations)
-                <tr>
-                    <td colspan="5" style="background-color: #fafafa;"><strong>Observações:</strong> {{ $event->observations }}</td>
-                </tr>
-                @endif
-                @endforeach
-            </table>
-        @else
-            <p>Nenhuma manutenção de dispositivo registrada</p>
         @endif
     </div>
 
