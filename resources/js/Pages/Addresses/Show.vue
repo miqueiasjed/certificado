@@ -401,6 +401,112 @@
       @close="showRoomModal = false"
       @room-created="refreshRooms"
     />
+
+    <!-- Modal para Criar Dispositivo -->
+    <div v-if="showDeviceModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+      <div class="relative bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 transform transition-all">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold text-gray-900">Novo Dispositivo</h3>
+            <button @click="showDeviceModal = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <form @submit.prevent="saveDevice" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Nome/Etiqueta *
+              </label>
+              <input
+                v-model="deviceForm.label"
+                type="text"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Ex: Ratoeira 1"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Número/Identificação *
+              </label>
+              <input
+                v-model="deviceForm.number"
+                type="text"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Ex: 001"
+              />
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Isca
+              </label>
+              <select
+                v-model="deviceForm.bait_type_id"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              >
+                <option value="">Selecione um tipo de isca...</option>
+                <option
+                  v-for="baitType in baitTypes"
+                  :key="baitType.id"
+                  :value="baitType.id"
+                >
+                  {{ baitType.name }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Localização Padrão
+              </label>
+              <textarea
+                v-model="deviceForm.default_location_note"
+                rows="2"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Ex: Perto da porta de entrada"
+              ></textarea>
+            </div>
+
+            <div class="flex items-center">
+              <input
+                id="device-active"
+                v-model="deviceForm.active"
+                type="checkbox"
+                class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+              />
+              <label for="device-active" class="ml-2 block text-sm text-gray-900">
+                Dispositivo ativo
+              </label>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                @click="showDeviceModal = false"
+                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                :disabled="isSavingDevice"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="isSavingDevice"
+              >
+                <span v-if="isSavingDevice">Salvando...</span>
+                <span v-else>Salvar Dispositivo</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </AuthenticatedLayout>
 </template>
 
