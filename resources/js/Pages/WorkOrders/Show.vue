@@ -435,7 +435,7 @@
   </template>
 
   <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
@@ -470,13 +470,30 @@ import Alert from '@/Components/Alert.vue';
     procedure_used: ''
   });
 
+  // Computed para contar dispositivos (combina devices da tabela e dispositivos únicos dos eventos)
+  const deviceCount = computed(() => {
+    const devices = props.workOrder?.devices || [];
+    const events = props.workOrder?.workOrderDeviceEvents || props.workOrder?.work_order_device_events || [];
+    
+    // IDs de dispositivos da tabela work_order_device
+    const deviceIdsFromTable = new Set(devices.map(d => d.id).filter(Boolean));
+    
+    // IDs de dispositivos únicos dos eventos
+    const deviceIdsFromEvents = new Set(events.map(e => e.device_id).filter(Boolean));
+    
+    // Combinar ambos os sets
+    const allDeviceIds = new Set([...deviceIdsFromTable, ...deviceIdsFromEvents]);
+    
+    return allDeviceIds.size;
+  });
+
   const allTabs = [
     { name: 'financial', label: 'Informações Financeiras' },
     { name: 'details', label: 'Detalhes da Ordem' },
     { name: 'products-services', label: 'Produtos' },
     { name: 'technician', label: 'Técnicos' },
     { name: 'rooms', label: 'Cômodos Atendidos', count: props.workOrder?.rooms?.length || 0 },
-    { name: 'devices', label: 'Dispositivos', count: (props.workOrder?.devices || []).length },
+    { name: 'devices', label: 'Dispositivos', count: deviceCount.value },
   ];
 
   const formatDate = (date) => {
