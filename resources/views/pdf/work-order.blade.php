@@ -638,7 +638,27 @@
     <div class="info-section">
         @php
             // Buscar todos os dispositivos da OS (com ou sem eventos)
-            $devices = $workOrder->devices ?? collect();
+            // Combinar dispositivos da tabela work_order_device com dispositivos únicos dos eventos
+            $devicesFromTable = $workOrder->devices ?? collect();
+            $events = $workOrder->workOrderDeviceEvents ?? collect();
+            
+            // IDs de dispositivos da tabela
+            $deviceIdsFromTable = $devicesFromTable->pluck('id')->toArray();
+            
+            // IDs de dispositivos únicos dos eventos
+            $deviceIdsFromEvents = $events->pluck('device_id')->unique()->toArray();
+            
+            // Combinar IDs únicos
+            $allDeviceIds = array_unique(array_merge($deviceIdsFromTable, $deviceIdsFromEvents));
+            
+            // Buscar todos os dispositivos
+            $devices = collect();
+            if (count($allDeviceIds) > 0) {
+                $devices = \App\Models\Device::whereIn('id', $allDeviceIds)
+                    ->where('address_id', $workOrder->address_id)
+                    ->with(['baitType'])
+                    ->get();
+            }
         @endphp
 
         @if($devices && $devices->count() > 0)
