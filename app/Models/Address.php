@@ -55,6 +55,11 @@ class Address extends Model
         return $this->hasOne(Contract::class);
     }
 
+    public function devices(): HasMany
+    {
+        return $this->hasMany(Device::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {

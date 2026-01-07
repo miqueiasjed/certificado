@@ -161,7 +161,6 @@ class WorkOrder extends Model
                         'event_date',
                         'event_description',
                         'event_observations',
-                        'device_id',
                         'pest_type',
                         'pest_sighting_date',
                         'pest_location',
@@ -169,6 +168,24 @@ class WorkOrder extends Model
                         'pest_observation'
                     ])
                     ->withTimestamps();
+    }
+
+    /**
+     * Get the devices for this work order.
+     */
+    public function devices(): BelongsToMany
+    {
+        return $this->belongsToMany(Device::class, 'work_order_device', 'work_order_id', 'device_id')
+            ->withPivot('observation')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the device events for this work order.
+     */
+    public function workOrderDeviceEvents(): HasMany
+    {
+        return $this->hasMany(WorkOrderDeviceEvent::class);
     }
 
 

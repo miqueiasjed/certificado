@@ -8,26 +8,26 @@
     <div class="max-w-4xl mx-auto">
       <Card>
         <form @submit.prevent="submit" class="p-6 space-y-6">
-          <!-- Cômodo -->
+          <!-- Endereço -->
           <div>
-            <label for="room_id" class="block text-sm font-medium text-gray-700 mb-2">
-              Cômodo *
+            <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
+              Endereço *
             </label>
             <select
-              id="room_id"
-              v-model="form.room_id"
+              id="address_id"
+              v-model="form.address_id"
               required
-              @change="onRoomChange"
+              @change="onAddressChange"
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.room_id }"
+              :class="{ 'border-red-500': form.errors.address_id }"
             >
-              <option value="">Selecione um cômodo</option>
-              <option v-for="room in rooms" :key="room.id" :value="room.id">
-                {{ room.name }} - {{ room.address?.client?.name }} - {{ room.address?.street }}, {{ room.address?.number }}
+              <option value="">Selecione um endereço</option>
+              <option v-for="address in addresses" :key="address.id" :value="address.id">
+                {{ address.nickname }} - {{ address.client?.name }} - {{ address.street }}, {{ address.number }}
               </option>
             </select>
-            <p v-if="form.errors.room_id" class="mt-1 text-sm text-red-600">
-              {{ form.errors.room_id }}
+            <p v-if="form.errors.address_id" class="mt-1 text-sm text-red-600">
+              {{ form.errors.address_id }}
             </p>
           </div>
 
@@ -131,7 +131,7 @@
           <!-- Localização -->
           <div>
             <label for="location" class="block text-sm font-medium text-gray-700 mb-2">
-              Localização no Cômodo
+              Localização no Endereço
             </label>
             <input
               id="location"
@@ -198,7 +198,7 @@ import Card from '@/Components/Card.vue';
 import BaitTypeModal from '@/Components/BaitTypeModal.vue';
 
 const props = defineProps({
-  rooms: Array,
+  addresses: Array,
   baitTypes: Array,
   errors: Object,
 });
@@ -206,7 +206,7 @@ const props = defineProps({
 const showBaitTypeModal = ref(false);
 
 const form = useForm({
-  room_id: '',
+  address_id: '',
   label: '',
   number: '',
   bait_type_id: '',
@@ -215,8 +215,8 @@ const form = useForm({
   active: true,
 });
 
-const onRoomChange = () => {
-  // Lógica adicional se necessário quando o cômodo muda
+const onAddressChange = () => {
+  // Lógica adicional se necessário quando o endereço muda
 };
 
 const onBaitTypeCreated = (newBaitType) => {

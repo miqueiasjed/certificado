@@ -69,14 +69,10 @@ class RoomController extends Controller
 
     public function show(Room $room)
     {
-        $room->load(['address.client', 'devices']);
-
-        // Carregar tipos de isca para o modal de criação de dispositivos
-        $baitTypes = \App\Models\BaitType::orderBy('name')->get();
+        $room->load(['address.client']);
 
         return Inertia::render('Rooms/Show', [
             'room' => $room,
-            'baitTypes' => $baitTypes,
         ]);
     }
 

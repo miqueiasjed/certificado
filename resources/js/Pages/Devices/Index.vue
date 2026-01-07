@@ -54,24 +54,6 @@
             </select>
           </div>
 
-          <!-- Cômodo -->
-          <div>
-            <label for="room_id" class="block text-sm font-medium text-gray-700 mb-2">
-              Cômodo
-            </label>
-            <select
-              id="room_id"
-              v-model="filters.room_id"
-              :disabled="!filters.address_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              <option value="">Todos os cômodos</option>
-              <option v-for="room in filteredRooms" :key="room.id" :value="room.id">
-                {{ room.name }}
-              </option>
-            </select>
-          </div>
-
           <!-- Tipo de Isca -->
           <div>
             <label for="bait_type_id" class="block text-sm font-medium text-gray-700 mb-2">
@@ -90,7 +72,7 @@
           </div>
 
           <!-- Botões de Filtro -->
-          <div class="md:col-span-2 lg:col-span-4 flex justify-end space-x-3">
+          <div class="md:col-span-2 lg:col-span-3 flex justify-end space-x-3">
             <button
               type="button"
               @click="clearFilters"
@@ -147,15 +129,12 @@
                       <span v-if="device.bait_type" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {{ device.bait_type.name }}
                       </span>
-                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {{ device.room?.name }}
-                      </span>
                     </div>
                     <p class="text-sm text-gray-500">
-                      {{ device.room?.address?.client?.name }} - {{ device.room?.address?.street }}, {{ device.room?.address?.number }}
+                      {{ device.address?.client?.name }} - {{ device.address?.street }}, {{ device.address?.number }}
                     </p>
                     <p class="text-sm text-gray-500">
-                      {{ device.room?.address?.city }}/{{ device.room?.address?.state }}
+                      {{ device.address?.city }}/{{ device.address?.state }}
                     </p>
                   </div>
                 </div>
@@ -211,14 +190,12 @@ const props = defineProps({
   filters: Object,
   clients: Array,
   addresses: Array,
-  rooms: Array,
   baitTypes: Array,
 });
 
 const filters = ref({
   client_id: props.filters?.client_id || '',
   address_id: props.filters?.address_id || '',
-  room_id: props.filters?.room_id || '',
   bait_type_id: props.filters?.bait_type_id || '',
 });
 
@@ -228,24 +205,10 @@ const filteredAddresses = computed(() => {
   return (props.addresses || []).filter(address => address.client_id == filters.value.client_id);
 });
 
-// Filtrar cômodos baseado no endereço selecionado
-const filteredRooms = computed(() => {
-  if (!filters.value.address_id) return props.rooms || [];
-  return (props.rooms || []).filter(room => room.address_id == filters.value.address_id);
-});
-
 // Limpar endereço quando cliente muda
 const onClientChange = () => {
   filters.value.address_id = '';
-  filters.value.room_id = '';
 };
-
-// Limpar cômodo quando endereço muda
-watch(() => filters.value.address_id, (newValue) => {
-  if (!newValue) {
-    filters.value.room_id = '';
-  }
-});
 
 const applyFilters = () => {
   router.get(route('devices.index'), filters.value, {
@@ -258,7 +221,6 @@ const clearFilters = () => {
   filters.value = {
     client_id: '',
     address_id: '',
-    room_id: '',
     bait_type_id: '',
   };
   router.get(route('devices.index'));

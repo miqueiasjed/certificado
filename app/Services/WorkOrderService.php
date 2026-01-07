@@ -15,8 +15,9 @@ class WorkOrderService
         $products = $data['products'] ?? [];
         $services = $data['services'] ?? [];
         $rooms = $data['rooms'] ?? [];
+        $devices = $data['devices'] ?? [];
 
-        unset($data['technicians'], $data['products'], $data['services'], $data['rooms']);
+        unset($data['technicians'], $data['products'], $data['services'], $data['rooms'], $data['devices']);
 
         $workOrder = WorkOrder::create($data);
 
@@ -74,7 +75,6 @@ class WorkOrderService
                        'event_date' => $room['event_date'] ?? null,
                        'event_description' => $room['event_description'] ?? null,
                        'event_observations' => $room['event_observations'] ?? null,
-                       'device_id' => $room['device_id'] ?? null,
                        'pest_type' => $room['pest_type'] ?? null,
                        'pest_sighting_date' => $room['pest_sighting_date'] ?? null,
                        'pest_location' => $room['pest_location'] ?? null,
@@ -84,6 +84,34 @@ class WorkOrderService
                 }
             }
             $workOrder->rooms()->sync($syncData);
+        }
+
+        // Processar dispositivos e seus eventos
+        if (!empty($devices)) {
+            foreach ($devices as $deviceData) {
+                if (!empty($deviceData['id'])) {
+                    // Salvar dispositivo na OS (mesmo sem eventos)
+                    $workOrder->devices()->syncWithoutDetaching([$deviceData['id'] => [
+                        'observation' => $deviceData['observation'] ?? null
+                    ]]);
+
+                    // Salvar eventos do dispositivo (se houver)
+                    if (!empty($deviceData['device_events']) && is_array($deviceData['device_events'])) {
+                        foreach ($deviceData['device_events'] as $deviceEvent) {
+                            if (!empty($deviceEvent['event_type']) && !empty($deviceEvent['event_date'])) {
+                                \App\Models\WorkOrderDeviceEvent::create([
+                                    'work_order_id' => $workOrder->id,
+                                    'device_id' => $deviceData['id'],
+                                    'event_type_id' => $deviceEvent['event_type'],
+                                    'event_date' => $deviceEvent['event_date'],
+                                    'event_description' => $deviceEvent['event_description'] ?? null,
+                                    'event_observations' => $deviceEvent['event_observations'] ?? null,
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         return $workOrder;
@@ -98,8 +126,9 @@ class WorkOrderService
         $products = $data['products'] ?? [];
         $services = $data['services'] ?? [];
         $rooms = $data['rooms'] ?? [];
+        $devices = $data['devices'] ?? [];
 
-        unset($data['technicians'], $data['products'], $data['services'], $data['rooms']);
+        unset($data['technicians'], $data['products'], $data['services'], $data['rooms'], $data['devices']);
 
         $result = $workOrder->update($data);
 
@@ -157,7 +186,6 @@ class WorkOrderService
                        'event_date' => $room['event_date'] ?? null,
                        'event_description' => $room['event_description'] ?? null,
                        'event_observations' => $room['event_observations'] ?? null,
-                       'device_id' => $room['device_id'] ?? null,
                        'pest_type' => $room['pest_type'] ?? null,
                        'pest_sighting_date' => $room['pest_sighting_date'] ?? null,
                        'pest_location' => $room['pest_location'] ?? null,
@@ -167,6 +195,42 @@ class WorkOrderService
                 }
             }
             $workOrder->rooms()->sync($syncData);
+        }
+
+        // Processar dispositivos e seus eventos
+        if (!empty($devices)) {
+            $syncData = [];
+            foreach ($devices as $deviceData) {
+                if (!empty($deviceData['id'])) {
+                    // Preparar dados para sincronização
+                    $syncData[$deviceData['id']] = [
+                        'observation' => $deviceData['observation'] ?? null
+                    ];
+                }
+            }
+            // Sincronizar dispositivos
+            $workOrder->devices()->sync($syncData);
+
+            // Remover eventos de dispositivo existentes e recriar
+            $workOrder->workOrderDeviceEvents()->delete();
+
+            // Processar eventos dos dispositivos
+            foreach ($devices as $deviceData) {
+                if (!empty($deviceData['id']) && !empty($deviceData['device_events']) && is_array($deviceData['device_events'])) {
+                    foreach ($deviceData['device_events'] as $deviceEvent) {
+                        if (!empty($deviceEvent['event_type']) && !empty($deviceEvent['event_date'])) {
+                            \App\Models\WorkOrderDeviceEvent::create([
+                                'work_order_id' => $workOrder->id,
+                                'device_id' => $deviceData['id'],
+                                'event_type_id' => $deviceEvent['event_type'],
+                                'event_date' => $deviceEvent['event_date'],
+                                'event_description' => $deviceEvent['event_description'] ?? null,
+                                'event_observations' => $deviceEvent['event_observations'] ?? null,
+                            ]);
+                        }
+                    }
+                }
+            }
         }
 
         return $result;

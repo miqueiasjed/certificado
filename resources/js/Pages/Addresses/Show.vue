@@ -142,21 +142,56 @@
         </div>
       </Card>
 
-      <!-- Cômodos do Endereço -->
+      <!-- Cômodos e Dispositivos do Endereço -->
       <Card>
-        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 class="text-lg font-medium text-gray-900">Cômodos do Endereço</h3>
-          <button
-            @click="showRoomModal = true"
-            class="btn-primary"
-          >
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-            </svg>
-            Novo Cômodo
-          </button>
+        <!-- Tabs -->
+        <div class="border-b border-gray-200">
+          <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+            <button
+              @click="activeTab = 'rooms'"
+              :class="[
+                'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm',
+                activeTab === 'rooms'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ]"
+            >
+              Cômodos
+              <span v-if="address.rooms" class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">
+                {{ address.rooms.length }}
+              </span>
+            </button>
+            <button
+              @click="activeTab = 'devices'"
+              :class="[
+                'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm',
+                activeTab === 'devices'
+                  ? 'border-green-500 text-green-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              ]"
+            >
+              Dispositivos
+              <span v-if="address.devices" class="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs font-medium">
+                {{ address.devices.length }}
+              </span>
+            </button>
+          </nav>
         </div>
-        <div class="p-6">
+
+        <!-- Conteúdo da Aba Cômodos -->
+        <div v-show="activeTab === 'rooms'" class="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Cômodos do Endereço</h3>
+            <button
+              @click="showRoomModal = true"
+              class="btn-primary"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              Novo Cômodo
+            </button>
+          </div>
           <div v-if="address.rooms && address.rooms.length > 0" class="space-y-4">
             <div
               v-for="room in address.rooms"
@@ -179,17 +214,8 @@
                     </span>
                   </div>
 
-                  <div v-if="room.notes" class="text-sm text-gray-600 mb-3">
+                  <div v-if="room.notes" class="text-sm text-gray-600">
                     {{ room.notes }}
-                  </div>
-
-                  <div class="flex items-center gap-4 text-sm text-gray-500">
-                    <div class="flex items-center gap-1">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 002 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
-                      </svg>
-                      {{ room.devices?.length || 0 }} dispositivos
-                    </div>
                   </div>
                 </div>
 
@@ -227,6 +253,96 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                 </svg>
                 Adicionar Cômodo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conteúdo da Aba Dispositivos -->
+        <div v-show="activeTab === 'devices'" class="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Dispositivos do Endereço</h3>
+            <button
+              @click="showDeviceModal = true"
+              class="btn-primary"
+            >
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              Novo Dispositivo
+            </button>
+          </div>
+
+          <div v-if="address.devices && address.devices.length > 0" class="space-y-4">
+            <div
+              v-for="device in address.devices"
+              :key="device.id"
+              class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="flex items-center gap-3 mb-2">
+                    <h4 class="text-md font-semibold text-gray-900">
+                      {{ device.label }} ({{ device.number }})
+                    </h4>
+                    <span
+                      :class="[
+                        'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                        device.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      ]"
+                    >
+                      {{ device.active ? 'Ativo' : 'Inativo' }}
+                    </span>
+                    <span v-if="device.bait_type || device.baitType" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {{ (device.bait_type || device.baitType)?.name }}
+                    </span>
+                  </div>
+
+                  <div v-if="device.default_location_note" class="text-sm text-gray-600 mb-3">
+                    <strong>Localização:</strong> {{ device.default_location_note }}
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <Link
+                    :href="`/devices/${device.id}`"
+                    class="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Ver
+                  </Link>
+                  <Link
+                    :href="`/devices/${device.id}/edit`"
+                    class="px-3 py-1 text-sm text-green-600 hover:text-green-800 font-medium"
+                  >
+                    Editar
+                  </Link>
+                  <button
+                    @click="deleteDevice(device.id)"
+                    class="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-center py-8">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhum dispositivo cadastrado</h3>
+            <p class="mt-1 text-sm text-gray-500">
+              Comece criando o primeiro dispositivo para este endereço.
+            </p>
+            <div class="mt-6">
+              <button
+                @click="showDeviceModal = true"
+                class="btn-primary"
+              >
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+                Adicionar Dispositivo
               </button>
             </div>
           </div>
@@ -290,7 +406,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { Link, router } from '@inertiajs/vue3';
+import { Link, router, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
@@ -298,13 +414,86 @@ import RoomModal from '@/Components/RoomModal.vue';
 
 const props = defineProps({
   address: Object,
+  baitTypes: {
+    type: Array,
+    default: () => []
+  }
 });
 
+const activeTab = ref('rooms');
 const showRoomModal = ref(false);
+const showDeviceModal = ref(false);
+const isSavingDevice = ref(false);
+
+const deviceForm = useForm({
+  label: '',
+  number: '',
+  bait_type_id: '',
+  default_location_note: '',
+  active: true,
+});
+
+const saveDevice = async () => {
+  isSavingDevice.value = true;
+  try {
+    const response = await fetch(`/addresses/${props.address.id}/devices`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(deviceForm.data()),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showDeviceModal.value = false;
+      deviceForm.reset();
+      router.reload();
+    } else {
+      alert(data.message || 'Erro ao criar dispositivo');
+    }
+  } catch (error) {
+    console.error('Erro ao criar dispositivo:', error);
+    alert('Erro ao criar dispositivo');
+  } finally {
+    isSavingDevice.value = false;
+  }
+};
 
 const refreshRooms = () => {
   // Recarregar a página para atualizar a lista de cômodos
   router.reload();
+};
+
+const deleteDevice = async (deviceId) => {
+  if (!confirm('Tem certeza que deseja excluir este dispositivo?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/addresses/${props.address.id}/devices/${deviceId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+        'Accept': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      router.reload();
+    } else {
+      alert(data.message || 'Erro ao excluir dispositivo');
+    }
+  } catch (error) {
+    console.error('Erro ao excluir dispositivo:', error);
+    alert('Erro ao excluir dispositivo');
+  }
 };
 
 const getStatusColor = (status) => {

@@ -12,6 +12,7 @@ use App\Models\Device;
 use App\Models\ServiceType;
 use App\Models\Product;
 use App\Models\Service;
+use App\Models\WorkOrderDeviceEvent;
 use App\Services\WorkOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -136,6 +137,7 @@ class WorkOrderController extends Controller
         $workOrder->load([
             'client',
             'address.client',
+            'address.devices.baitType',
             'technician',
             'technicians',
             'products' => function($query) {
@@ -149,18 +151,21 @@ class WorkOrderController extends Controller
                     'event_date',
                     'event_description',
                     'event_observations',
-                    'device_id',
                     'pest_type',
                     'pest_sighting_date',
                     'pest_location',
                     'pest_quantity',
                     'pest_observation'
-                ])->with('devices');
+                ]);
             },
-            'deviceEvents' => function ($query) {
+            'devices' => function ($query) {
+                $query->with(['baitType'])->orderBy('label');
+            },
+            'workOrderDeviceEvents' => function ($query) {
                 $query->with([
-                    'device.room.address.client',
-                    'device.baitType'
+                    'device.address.client',
+                    'device.baitType',
+                    'eventType'
                 ])->orderBy('event_date', 'desc');
             },
             'paymentDetails' => function ($query) {
@@ -177,18 +182,6 @@ class WorkOrderController extends Controller
         // Accessors já estão incluídos automaticamente via $appends no modelo
 
         // Dados financeiros agora vêm diretamente da tabela work_orders
-
-        // Carregar dispositivos disponíveis do endereço específico da ordem de serviço
-        $availableDevices = collect();
-        if ($workOrder->address) {
-            $availableDevices = Device::with(['room', 'baitType'])
-                ->whereHas('room', function ($query) use ($workOrder) {
-                    $query->where('address_id', $workOrder->address_id);
-                })
-                ->orderBy('label')
-                ->get();
-
-        }
 
         // Carregar endereços disponíveis do cliente para avistamentos
         $availableAddresses = collect();
@@ -213,7 +206,6 @@ class WorkOrderController extends Controller
 
         return Inertia::render('WorkOrders/Show', [
             'workOrder' => $workOrder,
-            'availableDevices' => $availableDevices,
             'availableAddresses' => $availableAddresses,
             'availableProducts' => $availableProducts,
             'availableServices' => $availableServices,
@@ -236,7 +228,6 @@ class WorkOrderController extends Controller
             'rooms' => function($query) {
                 $query->withPivot('observation');
             },
-            'deviceEvents.device.room.address.client',
             'paymentDetails' => function ($query) {
                 $query->orderBy('payment_date', 'desc')->orderBy('created_at', 'desc');
             },
@@ -273,14 +264,6 @@ class WorkOrderController extends Controller
                            'name' => $room->name,
                            'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
                            'address' => $address->nickname ?? $address->short_address,
-                           'devices' => $room->devices()->where('active', true)->get()->map(function($device) {
-                               return [
-                                   'id' => $device->id,
-                                   'label' => $device->label,
-                                   'number' => $device->number,
-                                   'display_name' => $device->label . ' (' . $device->number . ')'
-                               ];
-                           })
                        ]);
                    }
                }
@@ -498,15 +481,23 @@ class WorkOrderController extends Controller
                         'event_date',
                         'event_description',
                         'event_observations',
-                        'device_id',
                         'pest_type',
                         'pest_sighting_date',
                         'pest_location',
                         'pest_quantity',
                         'pest_observation'
-                    ])->with(['devices.baitType']);
+                    ]);
                 },
-                'deviceEvents.device.room',
+                'devices' => function($query) {
+                    $query->with(['baitType'])->orderBy('label');
+                },
+                'workOrderDeviceEvents' => function ($query) {
+                    $query->with([
+                        'device.address.client',
+                        'device.baitType',
+                        'eventType'
+                    ])->orderBy('event_date', 'desc');
+                },
                 'pestSightings' => function ($query) {
                     $query->with(['address.client'])->orderBy('sighting_date', 'desc');
                 }
@@ -904,7 +895,7 @@ class WorkOrderController extends Controller
     }
 
     /**
-     * Get rooms by client with devices for Work Orders
+     * Get rooms by client for Work Orders
      */
     public function getRoomsByClientWithDevices(Request $request)
     {
@@ -930,19 +921,47 @@ class WorkOrderController extends Controller
                     'name' => $room->name,
                     'address' => $address->nickname ?? $address->short_address,
                     'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
-                    'devices' => $room->devices()->where('active', true)->get()->map(function($device) {
-                        return [
-                            'id' => $device->id,
-                            'label' => $device->label,
-                            'number' => $device->number,
-                            'display_name' => $device->label . ' (' . $device->number . ')'
-                        ];
-                    })
                 ];
             }
         }
 
         return response()->json(['rooms' => $rooms]);
+    }
+
+    /**
+     * Get devices by address for Work Orders
+     */
+    public function getDevicesByAddress(Request $request)
+    {
+        $addressId = $request->get('address_id');
+
+        if (!$addressId) {
+            return response()->json(['devices' => []]);
+        }
+
+        $address = Address::find($addressId);
+
+        if (!$address) {
+            return response()->json(['devices' => []]);
+        }
+
+        $devices = Device::where('address_id', $addressId)
+            ->where('active', true)
+            ->with('baitType')
+            ->orderBy('label')
+            ->get()
+            ->map(function($device) {
+                return [
+                    'id' => $device->id,
+                    'label' => $device->label,
+                    'number' => $device->number,
+                    'display_name' => $device->label . ' (' . $device->number . ')',
+                    'bait_type' => $device->baitType ? $device->baitType->name : null,
+                    'default_location_note' => $device->default_location_note,
+                ];
+            });
+
+        return response()->json(['devices' => $devices]);
     }
 
     /**
@@ -1267,6 +1286,142 @@ class WorkOrderController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             return back()->withErrors(['message' => 'Erro ao remover avistamento: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Adicionar evento a um dispositivo
+     */
+    public function addDeviceEvent(Request $request, WorkOrder $workOrder, $deviceId)
+    {
+        try {
+            $validationRules = [
+                'event_type' => 'required|integer|exists:event_types,id',
+                'event_date' => 'required|date',
+                'event_description' => 'nullable|string|max:1000',
+                'event_observations' => 'nullable|string|max:1000',
+            ];
+
+            $request->validate($validationRules);
+
+            // Verificar se o dispositivo existe e pertence ao endereço da OS
+            $device = Device::findOrFail($deviceId);
+            
+            if ($device->address_id !== $workOrder->address_id) {
+                return back()->withErrors(['message' => 'Dispositivo não pertence ao endereço desta ordem de serviço']);
+            }
+
+            // Criar evento
+            WorkOrderDeviceEvent::create([
+                'work_order_id' => $workOrder->id,
+                'device_id' => $deviceId,
+                'event_type_id' => $request->event_type,
+                'event_date' => $request->event_date,
+                'event_description' => $request->event_description ?: null,
+                'event_observations' => $request->event_observations ?: null,
+            ]);
+
+            return back()->with('success', 'Evento adicionado com sucesso');
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao adicionar evento do dispositivo', [
+                'work_order_id' => $workOrder->id,
+                'device_id' => $deviceId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->withErrors(['message' => 'Erro ao adicionar evento: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Atualizar evento de um dispositivo
+     */
+    public function updateDeviceEvent(Request $request, WorkOrder $workOrder, $deviceId, $eventId)
+    {
+        try {
+            $validationRules = [
+                'event_type' => 'required|integer|exists:event_types,id',
+                'event_date' => 'required|date',
+                'event_description' => 'nullable|string|max:1000',
+                'event_observations' => 'nullable|string|max:1000',
+            ];
+
+            $request->validate($validationRules);
+
+            // Verificar se o dispositivo existe e pertence ao endereço da OS
+            $device = Device::findOrFail($deviceId);
+            
+            if ($device->address_id !== $workOrder->address_id) {
+                return back()->withErrors(['message' => 'Dispositivo não pertence ao endereço desta ordem de serviço']);
+            }
+
+            $event = WorkOrderDeviceEvent::where('id', $eventId)
+                ->where('work_order_id', $workOrder->id)
+                ->where('device_id', $deviceId)
+                ->first();
+
+            if (!$event) {
+                return back()->withErrors(['message' => 'Evento não encontrado']);
+            }
+
+            // Atualizar evento
+            $event->update([
+                'event_type_id' => $request->event_type,
+                'event_date' => $request->event_date,
+                'event_description' => $request->event_description ?: null,
+                'event_observations' => $request->event_observations ?: null,
+            ]);
+
+            return back()->with('success', 'Evento atualizado com sucesso');
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao atualizar evento do dispositivo', [
+                'work_order_id' => $workOrder->id,
+                'device_id' => $deviceId,
+                'event_id' => $eventId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->withErrors(['message' => 'Erro ao atualizar evento: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Remover evento de um dispositivo
+     */
+    public function deleteDeviceEvent(Request $request, WorkOrder $workOrder, $deviceId, $eventId)
+    {
+        try {
+            // Verificar se o dispositivo existe e pertence ao endereço da OS
+            $device = Device::findOrFail($deviceId);
+            
+            if ($device->address_id !== $workOrder->address_id) {
+                return back()->withErrors(['message' => 'Dispositivo não pertence ao endereço desta ordem de serviço']);
+            }
+
+            $event = WorkOrderDeviceEvent::where('id', $eventId)
+                ->where('work_order_id', $workOrder->id)
+                ->where('device_id', $deviceId)
+                ->first();
+
+            if (!$event) {
+                return back()->withErrors(['message' => 'Evento não encontrado']);
+            }
+
+            $event->delete();
+
+            return back()->with('success', 'Evento removido com sucesso');
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao remover evento do dispositivo', [
+                'work_order_id' => $workOrder->id,
+                'device_id' => $deviceId,
+                'event_id' => $eventId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->withErrors(['message' => 'Erro ao remover evento: ' . $e->getMessage()]);
         }
     }
 }

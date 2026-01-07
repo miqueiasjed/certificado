@@ -155,7 +155,6 @@
             <WorkOrderTabContent
               :work-order="workOrder"
               :active-tab="activeTab"
-              :available-devices="availableDevices"
               :available-addresses="availableAddresses"
               :available-products="availableProducts"
               :available-services="availableServices"
@@ -445,7 +444,6 @@ import Alert from '@/Components/Alert.vue';
 
   const props = defineProps({
     workOrder: Object,
-    availableDevices: Array,
     availableAddresses: Array,
     availableProducts: Array,
     availableServices: Array,
@@ -478,6 +476,7 @@ import Alert from '@/Components/Alert.vue';
     { name: 'products-services', label: 'Produtos' },
     { name: 'technician', label: 'Técnicos' },
     { name: 'rooms', label: 'Cômodos Atendidos', count: props.workOrder?.rooms?.length || 0 },
+    { name: 'devices', label: 'Dispositivos', count: (props.workOrder?.devices || []).length },
   ];
 
   const formatDate = (date) => {

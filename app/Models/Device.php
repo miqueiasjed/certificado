@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Device extends Model
@@ -12,7 +13,7 @@ class Device extends Model
     use HasFactory;
 
     protected $fillable = [
-        'room_id',
+        'address_id',
         'label',
         'number',
         'bait_type_id',
@@ -25,9 +26,9 @@ class Device extends Model
     ];
 
     // Relacionamentos
-    public function room(): BelongsTo
+    public function address(): BelongsTo
     {
-        return $this->belongsTo(Room::class);
+        return $this->belongsTo(Address::class);
     }
 
     public function baitType(): BelongsTo
@@ -40,15 +41,23 @@ class Device extends Model
         return $this->hasMany(DeviceEvent::class);
     }
 
+    /**
+     * Get the work order device events for this device.
+     */
+    public function workOrderEvents(): HasMany
+    {
+        return $this->hasMany(WorkOrderDeviceEvent::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {
         return $query->where('active', true);
     }
 
-    public function scopeByRoom($query, $roomId)
+    public function scopeByAddress($query, $addressId)
     {
-        return $query->where('room_id', $roomId);
+        return $query->where('address_id', $addressId);
     }
 
     public function scopeByNumber($query, $number)

@@ -359,12 +359,44 @@
             </div>
           </div>
 
-          <!-- Cômodos Atendidos -->
+          <!-- Abas para Cômodos e Dispositivos -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Cômodos Atendidos
+              Cômodos e Dispositivos
             </label>
-            <div class="space-y-6">
+            
+            <!-- Tabs -->
+            <div class="border-b border-gray-200 mb-4">
+              <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <button
+                  type="button"
+                  @click="activeTab = 'rooms'"
+                  :class="[
+                    'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm',
+                    activeTab === 'rooms'
+                      ? 'border-green-500 text-green-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ]"
+                >
+                  Cômodos
+                </button>
+                <button
+                  type="button"
+                  @click="activeTab = 'devices'"
+                  :class="[
+                    'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm',
+                    activeTab === 'devices'
+                      ? 'border-green-500 text-green-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ]"
+                >
+                  Dispositivos
+                </button>
+              </nav>
+            </div>
+
+            <!-- Conteúdo da Aba Cômodos -->
+            <div v-show="activeTab === 'rooms'" class="space-y-6">
               <div v-for="(room, index) in form.rooms" :key="index" class="border border-gray-200 rounded-lg p-4 space-y-4">
                 <!-- Cabeçalho do Cômodo -->
                 <div class="flex items-center justify-between">
@@ -471,6 +503,101 @@
                 + Adicionar Cômodo
               </button>
             </div>
+
+            <!-- Conteúdo da Aba Dispositivos -->
+            <div v-show="activeTab === 'devices'" class="space-y-6">
+              <div v-if="!form.address_id" class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p class="text-sm text-yellow-800">
+                  Selecione um endereço acima para poder adicionar dispositivos.
+                </p>
+              </div>
+              
+              <div v-else>
+                <div v-for="(device, index) in form.devices" :key="index" class="border border-gray-200 rounded-lg p-4 space-y-4">
+                  <!-- Cabeçalho do Dispositivo -->
+                  <div class="flex items-center justify-between">
+                    <h4 class="text-sm font-medium text-gray-900">Dispositivo {{ index + 1 }}</h4>
+                    <button
+                      type="button"
+                      @click="removeDevice(index)"
+                      class="text-red-600 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-red-500 rounded"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <!-- Seleção do Dispositivo -->
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                      Dispositivo
+                    </label>
+                    <select
+                      v-model="device.id"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      :class="{ 'border-red-500': form.errors[`devices.${index}.id`] }"
+                    >
+                      <option value="">Selecione um dispositivo</option>
+                      <option v-for="dev in availableDevicesForWorkOrder" :key="dev.id" :value="dev.id">
+                        {{ dev.display_name }}
+                      </option>
+                    </select>
+                    <p v-if="form.errors[`devices.${index}.id`]" class="mt-1 text-sm text-red-600">
+                      {{ form.errors[`devices.${index}.id`] }}
+                    </p>
+                  </div>
+
+                  <!-- Botão para adicionar eventos ao dispositivo -->
+                  <div v-if="device.id" class="border-t pt-4">
+                    <button
+                      type="button"
+                      @click="openDeviceEventModal(index)"
+                      class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                      </svg>
+                      Adicionar Evento ao Dispositivo
+                    </button>
+
+                    <!-- Resumo dos eventos adicionados -->
+                    <div v-if="device.device_events && device.device_events.length > 0" class="mt-4 space-y-2">
+                      <div
+                        v-for="(event, eventIndex) in device.device_events"
+                        :key="eventIndex"
+                        class="flex items-center justify-between text-sm text-blue-700 bg-blue-50 p-2 rounded"
+                      >
+                        <div class="flex items-center">
+                          <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          </svg>
+                          {{ getEventTypeName(event.event_type) }} - {{ event.event_date }}
+                        </div>
+                        <button
+                          type="button"
+                          @click="removeDeviceEvent(index, eventIndex)"
+                          class="text-red-600 hover:text-red-800"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <button
+                  type="button"
+                  @click="addDevice"
+                  :disabled="!form.address_id"
+                  class="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-gray-600 hover:border-green-500 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  + Adicionar Dispositivo
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Status Ativo -->
@@ -572,21 +699,6 @@
                 ></textarea>
               </div>
 
-              <!-- Campo de Dispositivo (só aparece se o cômodo tiver dispositivos) -->
-              <div v-if="getRoomDevices(currentRoomIndex).length > 0">
-                <label class="block text-sm font-medium text-gray-700 mb-1">
-                  Dispositivo (Opcional)
-                </label>
-                <select
-                  v-model="eventForm.device_id"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                >
-                  <option value="">Nenhum dispositivo específico</option>
-                  <option v-for="device in getRoomDevices(currentRoomIndex)" :key="device.id" :value="device.id">
-                    {{ device.display_name }}
-                  </option>
-                </select>
-              </div>
             </div>
 
             <div class="flex justify-end space-x-3 mt-6">
@@ -705,6 +817,92 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal para Adicionar Evento ao Dispositivo -->
+    <div v-if="showDeviceEventModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Adicionar Evento ao Dispositivo</h3>
+
+          <form @submit.prevent="saveDeviceEvent">
+            <div class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Evento *
+                  </label>
+                  <select
+                    v-model="deviceEventForm.event_type"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option value="">Selecione o tipo</option>
+                    <option
+                      v-for="eventType in eventTypes"
+                      :key="eventType.id"
+                      :value="eventType.id"
+                    >
+                      {{ eventType.name }}
+                    </option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    Data do Evento *
+                  </label>
+                  <input
+                    v-model="deviceEventForm.event_date"
+                    type="date"
+                    required
+                    :max="new Date().toISOString().split('T')[0]"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Descrição do Evento
+                </label>
+                <textarea
+                  v-model="deviceEventForm.event_description"
+                  rows="3"
+                  placeholder="Descreva detalhadamente o evento realizado no dispositivo"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                ></textarea>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  Observações do Evento
+                </label>
+                <textarea
+                  v-model="deviceEventForm.event_observations"
+                  rows="2"
+                  placeholder="Observações adicionais sobre o evento"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                ></textarea>
+              </div>
+
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+              <button
+                type="button"
+                @click="closeDeviceEventModal"
+                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                Salvar Evento
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </AuthenticatedLayout>
 </template>
 
@@ -734,7 +932,10 @@ const props = defineProps({
 // Estado dos modais
 const showEventModal = ref(false);
 const showPestSightingModal = ref(false);
+const showDeviceEventModal = ref(false);
 const currentRoomIndex = ref(null);
+const currentDeviceIndex = ref(null);
+const activeTab = ref('rooms'); // 'rooms' ou 'devices'
 
 // Formulários dos modais
 const eventForm = ref({
@@ -747,6 +948,14 @@ const eventForm = ref({
 
 const pestSightingForm = ref({
   pest_description: ''
+});
+
+// Formulário para eventos de dispositivo
+const deviceEventForm = ref({
+  event_type: '',
+  event_date: '',
+  event_description: '',
+  event_observations: ''
 });
 
 const form = useForm({
@@ -762,9 +971,9 @@ const form = useForm({
     event_date: '',
     event_description: '',
     event_observations: '',
-    device_id: '',
     pest_description: ''
   }],
+  devices: [], // Array de dispositivos com eventos
   priority_level: '',
   scheduled_date: new Date().toISOString().slice(0, 10),
   start_time: '',
@@ -783,6 +992,9 @@ const filteredAddresses = computed(() => {
 // Buscar cômodos disponíveis para o cliente selecionado
 const availableRoomsList = ref([]);
 
+// Dispositivos disponíveis para o endereço selecionado
+const availableDevicesForWorkOrder = ref([]);
+
 // Função para buscar cômodos por cliente
 const fetchRoomsByClient = async (clientId) => {
   if (!clientId) {
@@ -799,6 +1011,25 @@ const fetchRoomsByClient = async (clientId) => {
   } catch (error) {
     console.error('Erro ao buscar cômodos:', error);
     availableRoomsList.value = [];
+  }
+};
+
+// Função para buscar dispositivos por endereço
+const fetchDevicesByAddress = async (addressId) => {
+  if (!addressId) {
+    availableDevicesForWorkOrder.value = [];
+    return;
+  }
+
+  try {
+    const url = route('work-orders.devices.by-address', { address_id: addressId });
+    const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    availableDevicesForWorkOrder.value = data.devices || [];
+  } catch (error) {
+    console.error('Erro ao buscar dispositivos:', error);
+    availableDevicesForWorkOrder.value = [];
   }
 };
 
@@ -830,9 +1061,19 @@ watch(() => form.client_id, (newValue) => {
   if (!newValue) {
     form.address_id = '';
     availableRoomsList.value = [];
+    availableDevicesForWorkOrder.value = [];
   } else {
     // Buscar cômodos quando cliente é selecionado
     fetchRoomsByClient(newValue);
+  }
+});
+
+// Buscar dispositivos quando endereço muda
+watch(() => form.address_id, (newValue) => {
+  if (newValue) {
+    fetchDevicesByAddress(newValue);
+  } else {
+    availableDevicesForWorkOrder.value = [];
   }
 });
 
@@ -856,10 +1097,14 @@ const submit = () => {
   // Filtrar cômodos vazios ANTES de criar os dados do form
   const cleanedRooms = form.rooms.filter(room => room.id && room.id !== '');
 
+  // Filtrar dispositivos vazios ANTES de criar os dados do form
+  const cleanedDevices = form.devices.filter(device => device.id && device.id !== '');
+
   // Atualizar o form com dados limpos
   form.technicians = cleanedTechnicians;
   form.products = cleanedProducts;
   form.rooms = cleanedRooms;
+  form.devices = cleanedDevices;
 
   form.post('/work-orders', {
     onSuccess: () => {
@@ -898,7 +1143,6 @@ const addRoom = () => {
     event_date: '',
     event_description: '',
     event_observations: '',
-    device_id: '',
     pest_description: ''
   });
 };
@@ -911,13 +1155,15 @@ const removeRoom = (index) => {
 const openEventModal = (roomIndex) => {
   currentRoomIndex.value = roomIndex;
   showEventModal.value = true;
-  // Limpar formulário
+  
+  const room = form.rooms[roomIndex];
+  
+  // Carregar dados existentes do evento do cômodo
   eventForm.value = {
-    event_type: '',
-    event_date: '',
-    event_description: '',
-    event_observations: '',
-    device_id: ''
+    event_type: room.event_type || '',
+    event_date: room.event_date || '',
+    event_description: room.event_description || '',
+    event_observations: room.event_observations || ''
   };
 };
 
@@ -933,9 +1179,95 @@ const saveEvent = () => {
     room.event_date = eventForm.value.event_date;
     room.event_description = eventForm.value.event_description;
     room.event_observations = eventForm.value.event_observations;
-    room.device_id = eventForm.value.device_id ? parseInt(eventForm.value.device_id) : null;
     closeEventModal();
   }
+};
+
+// Funções para gerenciar dispositivos
+const addDevice = () => {
+  form.devices.push({
+    id: '',
+    device_events: []
+  });
+};
+
+const removeDevice = (index) => {
+  form.devices.splice(index, 1);
+};
+
+// Funções para gerenciar eventos de dispositivo
+const openDeviceEventModal = (deviceIndex) => {
+  console.log('openDeviceEventModal chamado com deviceIndex:', deviceIndex);
+  currentDeviceIndex.value = deviceIndex;
+  showDeviceEventModal.value = true;
+  console.log('showDeviceEventModal.value:', showDeviceEventModal.value);
+  
+  const device = form.devices[deviceIndex];
+  
+  // Garantir que device_events existe
+  if (!device.device_events) {
+    device.device_events = [];
+  }
+  
+  // Limpar formulário de evento de dispositivo
+  deviceEventForm.value = {
+    event_type: '',
+    event_date: '',
+    event_description: '',
+    event_observations: ''
+  };
+};
+
+const closeDeviceEventModal = () => {
+  showDeviceEventModal.value = false;
+  currentDeviceIndex.value = null;
+};
+
+const saveDeviceEvent = () => {
+  // Validar se tipo e data estão preenchidos
+  if (!deviceEventForm.value.event_type || !deviceEventForm.value.event_date) {
+    alert('Por favor, preencha o tipo de evento e a data.');
+    return;
+  }
+
+  if (currentDeviceIndex.value !== null) {
+    const device = form.devices[currentDeviceIndex.value];
+    if (!device.device_events) {
+      device.device_events = [];
+    }
+
+    // Adicionar evento de dispositivo
+    device.device_events.push({
+      event_type: parseInt(deviceEventForm.value.event_type),
+      event_date: deviceEventForm.value.event_date,
+      event_description: deviceEventForm.value.event_description || '',
+      event_observations: deviceEventForm.value.event_observations || ''
+    });
+
+    // Limpar formulário
+    deviceEventForm.value = {
+      event_type: '',
+      event_date: '',
+      event_description: '',
+      event_observations: ''
+    };
+    
+    closeDeviceEventModal();
+  }
+};
+
+const removeDeviceEvent = (deviceIndex, eventIndex) => {
+  if (deviceIndex !== null && form.devices[deviceIndex]) {
+    const device = form.devices[deviceIndex];
+    if (device.device_events && device.device_events[eventIndex]) {
+      device.device_events.splice(eventIndex, 1);
+    }
+  }
+};
+
+const getEventTypeName = (eventTypeId) => {
+  const eventType = props.eventTypes.find(et => et.id === parseInt(eventTypeId));
+  return eventType ? eventType.name : 'Não informado';
 };
 
 // Funções para gerenciar modais de avistamento de praga
@@ -988,13 +1320,6 @@ const getPestTypeText = (pestType) => {
   return types[pestType] || pestType;
 };
 
-// Função para obter dispositivos de um cômodo
-const getRoomDevices = (roomIndex) => {
-  if (roomIndex === null || !form.rooms[roomIndex]?.id) return [];
-
-  const selectedRoom = availableRoomsList.value.find(room => room.id === form.rooms[roomIndex].id);
-  return selectedRoom?.devices || [];
-};
 
 // Função para verificar se há erros de validação nos cômodos
 const getRoomValidationErrors = () => {

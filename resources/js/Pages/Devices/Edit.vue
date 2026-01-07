@@ -46,28 +46,28 @@
     <div class="max-w-4xl mx-auto">
       <Card>
         <form @submit.prevent="submit" class="space-y-6">
-          <!-- Cômodo -->
+          <!-- Endereço -->
           <div>
-            <label for="room_id" class="block text-sm font-medium text-gray-700 mb-2">
-              Cômodo *
+            <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
+              Endereço *
             </label>
             <select
-              id="room_id"
-              v-model="form.room_id"
+              id="address_id"
+              v-model="form.address_id"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.room_id }"
+              :class="{ 'border-red-500': form.errors.address_id }"
             >
-              <option value="">Selecione um cômodo</option>
-              <option v-for="room in rooms" :key="room.id" :value="room.id">
-                {{ room.name }} - {{ room.address?.street }}, {{ room.address?.number }}
+              <option value="">Selecione um endereço</option>
+              <option v-for="address in addresses" :key="address.id" :value="address.id">
+                {{ address.nickname }} - {{ address.client?.name }} - {{ address.street }}, {{ address.number }}
               </option>
             </select>
-            <p v-if="form.errors.room_id" class="mt-1 text-sm text-red-600">
-              {{ form.errors.room_id }}
+            <p v-if="form.errors.address_id" class="mt-1 text-sm text-red-600">
+              {{ form.errors.address_id }}
             </p>
             <p class="mt-1 text-xs text-gray-500">
-              Endereço: {{ device.room?.address?.street }}, {{ device.room?.address?.number }} - {{ device.room?.address?.city }}/{{ device.room?.address?.state }}
+              Endereço atual: {{ device.address?.street }}, {{ device.address?.number }} - {{ device.address?.city }}/{{ device.address?.state }}
             </p>
           </div>
 
@@ -213,7 +213,7 @@ import BaitTypeModal from '@/Components/BaitTypeModal.vue';
 const props = defineProps({
   device: Object,
   errors: Object,
-  rooms: {
+  addresses: {
     type: Array,
     default: () => []
   },
@@ -228,7 +228,7 @@ const props = defineProps({
 });
 
 const form = useForm({
-  room_id: props.device.room_id || '',
+  address_id: props.device.address_id || '',
   label: props.device.label || '',
   number: props.device.number || '',
   bait_type_id: props.device.bait_type_id || null,

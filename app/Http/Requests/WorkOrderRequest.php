@@ -39,8 +39,6 @@ class WorkOrderRequest extends FormRequest
             'rooms.*.event_date' => 'required_with:rooms.*.id|date',
             'rooms.*.event_description' => 'nullable|string|max:1000',
                'rooms.*.event_observations' => 'nullable|string|max:1000',
-               // Campo de dispositivo (opcional)
-               'rooms.*.device_id' => 'nullable|exists:devices,id',
                // Campos de avistamento de praga (opcional)
                'rooms.*.pest_type' => 'nullable|string|max:255',
                'rooms.*.pest_sighting_date' => 'nullable|date',
@@ -59,6 +57,14 @@ class WorkOrderRequest extends FormRequest
             'materials_used.*' => 'string|max:255',
             'completion_notes' => 'nullable|string|max:1000',
             'active' => 'boolean',
+            // Dispositivos (separados de rooms)
+            'devices' => 'nullable|array',
+            'devices.*.id' => 'required_with:devices|exists:devices,id',
+            'devices.*.device_events' => 'nullable|array',
+            'devices.*.device_events.*.event_type' => 'required_with:devices.*.device_events|integer|exists:event_types,id',
+            'devices.*.device_events.*.event_date' => 'required_with:devices.*.device_events|date',
+            'devices.*.device_events.*.event_description' => 'nullable|string|max:1000',
+            'devices.*.device_events.*.event_observations' => 'nullable|string|max:1000',
         ];
 
         // Regras específicas para criação

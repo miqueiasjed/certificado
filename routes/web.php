@@ -97,6 +97,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/addresses/city/{city}', [AddressController::class, 'getByCity'])->name('addresses.by-city');
     Route::get('/addresses/state/{state}', [AddressController::class, 'getByState'])->name('addresses.by-state');
     Route::get('/addresses/{address}/contract/pdf', [ContractController::class, 'generatePDF'])->name('addresses.contract.pdf');
+    
+    // Rotas para gerenciar dispositivos em endereços
+    Route::get('/addresses/{address}/devices', [AddressController::class, 'getDevices'])->name('addresses.devices.index');
+    Route::post('/addresses/{address}/devices', [AddressController::class, 'storeDevice'])->name('addresses.devices.store');
+    Route::put('/addresses/{address}/devices/{device}', [AddressController::class, 'updateDevice'])->name('addresses.devices.update');
+    Route::delete('/addresses/{address}/devices/{device}', [AddressController::class, 'deleteDevice'])->name('addresses.devices.delete');
 
     // Rotas de Contratos
     Route::resource('contracts', ContractController::class);
@@ -113,7 +119,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Rotas de Dispositivos
     Route::resource('devices', DeviceController::class);
-    Route::get('/devices/room/{roomId}', [DeviceController::class, 'getByRoom'])->name('devices.by-room');
+    Route::get('/devices/address/{addressId}', [DeviceController::class, 'getByAddress'])->name('devices.by-address');
     Route::get('/devices/{device}/can-delete', [DeviceController::class, 'canDelete'])->name('devices.can-delete');
 
     // Rotas de Ordens de Serviço
@@ -139,6 +145,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/work-orders/{workOrder}/rooms/{roomId}', [WorkOrderController::class, 'removeRoom'])->name('work-orders.rooms.remove');
     Route::get('/work-orders/{workOrder}/rooms/available', [WorkOrderController::class, 'getAvailableRooms'])->name('work-orders.rooms.available');
     Route::get('/work-orders/rooms/by-client', [WorkOrderController::class, 'getRoomsByClientWithDevices'])->name('work-orders.rooms.by-client');
+    Route::get('/work-orders/devices/by-address', [WorkOrderController::class, 'getDevicesByAddress'])->name('work-orders.devices.by-address');
 
     // Rotas para gerenciar eventos de cômodos
     Route::post('/work-orders/{workOrder}/rooms/{roomId}/event', [WorkOrderController::class, 'addRoomEvent'])->name('work-orders.rooms.event.add');
@@ -149,6 +156,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/work-orders/{workOrder}/rooms/{roomId}/pest-sighting', [WorkOrderController::class, 'addRoomPestSighting'])->name('work-orders.rooms.pest-sighting.add');
     Route::put('/work-orders/{workOrder}/rooms/{roomId}/pest-sighting', [WorkOrderController::class, 'updateRoomPestSighting'])->name('work-orders.rooms.pest-sighting.update');
     Route::delete('/work-orders/{workOrder}/rooms/{roomId}/pest-sighting', [WorkOrderController::class, 'removeRoomPestSighting'])->name('work-orders.rooms.pest-sighting.remove');
+
+    // Rotas para gerenciar eventos de dispositivos
+    Route::post('/work-orders/{workOrder}/devices/{deviceId}/events', [WorkOrderController::class, 'addDeviceEvent'])->name('work-orders.devices.event.add');
+    Route::put('/work-orders/{workOrder}/devices/{deviceId}/events/{eventId}', [WorkOrderController::class, 'updateDeviceEvent'])->name('work-orders.devices.event.update');
+    Route::delete('/work-orders/{workOrder}/devices/{deviceId}/events/{eventId}', [WorkOrderController::class, 'deleteDeviceEvent'])->name('work-orders.devices.event.delete');
 
     // Rotas de Eventos de Dispositivos
     Route::resource('device-events', DeviceEventController::class);

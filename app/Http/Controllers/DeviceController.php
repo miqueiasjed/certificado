@@ -19,23 +19,17 @@ class DeviceController extends Controller
 
     public function index(Request $request)
     {
-        $query = Device::with(['room.address.client', 'baitType']);
+        $query = Device::with(['address.client', 'baitType']);
 
         // Aplicar filtros
         if ($request->filled('client_id')) {
-            $query->whereHas('room.address', function ($q) use ($request) {
+            $query->whereHas('address', function ($q) use ($request) {
                 $q->where('client_id', $request->client_id);
             });
         }
 
         if ($request->filled('address_id')) {
-            $query->whereHas('room', function ($q) use ($request) {
-                $q->where('address_id', $request->address_id);
-            });
-        }
-
-        if ($request->filled('room_id')) {
-            $query->where('room_id', $request->room_id);
+            $query->where('address_id', $request->address_id);
         }
 
         if ($request->filled('bait_type_id')) {
@@ -47,26 +41,24 @@ class DeviceController extends Controller
         // Carregar dados para filtros
         $clients = \App\Models\Client::orderBy('name')->limit(500)->get();
         $addresses = \App\Models\Address::with('client')->orderBy('nickname')->limit(500)->get();
-        $rooms = \App\Models\Room::with('address.client')->orderBy('name')->limit(500)->get();
         $baitTypes = \App\Models\BaitType::orderBy('name')->limit(200)->get();
 
         return Inertia::render('Devices/Index', [
             'devices' => $devices,
-            'filters' => $request->only(['client_id', 'address_id', 'room_id', 'bait_type_id']),
+            'filters' => $request->only(['client_id', 'address_id', 'bait_type_id']),
             'clients' => $clients,
             'addresses' => $addresses,
-            'rooms' => $rooms,
             'baitTypes' => $baitTypes,
         ]);
     }
 
     public function create()
     {
-        $rooms = \App\Models\Room::with('address.client')->orderBy('name')->limit(500)->get();
+        $addresses = \App\Models\Address::with('client')->orderBy('nickname')->limit(500)->get();
         $baitTypes = \App\Models\BaitType::orderBy('name')->limit(200)->get();
 
         return Inertia::render('Devices/Create', [
-            'rooms' => $rooms,
+            'addresses' => $addresses,
             'baitTypes' => $baitTypes,
         ]);
     }
@@ -81,7 +73,7 @@ class DeviceController extends Controller
 
     public function show(Device $device)
     {
-        $device->load(['room.address.client', 'baitType']);
+        $device->load(['address.client', 'baitType']);
 
         return Inertia::render('Devices/Show', [
             'device' => $device,
@@ -91,20 +83,17 @@ class DeviceController extends Controller
     public function edit(Device $device, Request $request)
     {
         // Carregar o dispositivo com todos os relacionamentos necessários
-        $device->load(['room.address.client', 'baitType']);
+        $device->load(['address.client', 'baitType']);
 
-        // Carregar apenas os cômodos do endereço atual do dispositivo
-        $rooms = \App\Models\Room::with('address.client')
-            ->where('address_id', $device->room->address_id)
-            ->orderBy('name')
-            ->get();
+        // Carregar endereços para o formulário de edição
+        $addresses = \App\Models\Address::with('client')->orderBy('nickname')->limit(500)->get();
 
         // Carregar tipos de isca para o formulário de edição
         $baitTypes = \App\Models\BaitType::orderBy('name')->limit(200)->get();
 
         return Inertia::render('Devices/Edit', [
             'device' => $device,
-            'rooms' => $rooms,
+            'addresses' => $addresses,
             'baitTypes' => $baitTypes,
             'returnUrl' => $request->get('return_url'), // URL de retorno
         ]);
@@ -149,10 +138,10 @@ class DeviceController extends Controller
         ]);
     }
 
-    public function getByRoom($roomId)
+    public function getByAddress($addressId)
     {
-        $devices = Device::where('room_id', $roomId)
-            ->with(['room.address.client'])
+        $devices = Device::where('address_id', $addressId)
+            ->with(['address.client', 'baitType'])
             ->get();
 
         return response()->json($devices);

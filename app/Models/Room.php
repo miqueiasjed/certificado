@@ -29,11 +29,6 @@ class Room extends Model
         return $this->belongsTo(Address::class);
     }
 
-    public function devices(): HasMany
-    {
-        return $this->hasMany(Device::class);
-    }
-
     public function serviceOrders(): BelongsToMany
     {
         return $this->belongsToMany(ServiceOrder::class, 'room_service_order')
@@ -50,7 +45,6 @@ class Room extends Model
                         'event_date',
                         'event_description',
                         'event_observations',
-                        'device_id',
                         'pest_type',
                         'pest_sighting_date',
                         'pest_location',
@@ -81,15 +75,5 @@ class Room extends Model
     public function getActiveColorAttribute(): string
     {
         return $this->active ? 'green' : 'red';
-    }
-
-    public function getDevicesCountAttribute(): int
-    {
-        return $this->devices()->count();
-    }
-
-    public function getActiveDevicesCountAttribute(): int
-    {
-        return $this->devices()->where('active', true)->count();
     }
 }

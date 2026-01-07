@@ -626,19 +626,32 @@
                         @endif
                     </table>
                     @endif
+                </div>
+            @endforeach
+        @else
+            <p>Nenhum cômodo atendido registrado para esta ordem de serviço</p>
+        @endif
+    </div>
 
-                    <!-- Dispositivos Utilizados -->
-                    @if($room->devices && $room->devices->count() > 0)
+    <!-- Dispositivos Utilizados -->
+    <div class="section-header">Dispositivos Utilizados</div>
+    <div class="info-section">
+        @php
+            // Buscar todos os dispositivos da OS (com ou sem eventos)
+            $devices = $workOrder->devices ?? collect();
+        @endphp
+
+        @if($devices && $devices->count() > 0)
+            @foreach($devices as $device)
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #059669; font-size: 14px; margin: 10px 0;">{{ $device->label }} ({{ $device->number }})</h4>
+
                     <table class="info-table" style="margin-top: 10px;">
-                        <tr style="background-color: #f0fdf4;">
-                            <td colspan="4" style="font-weight: bold; color: #059669;">Dispositivos Utilizados</td>
-                        </tr>
-                        @foreach($room->devices as $device)
                         <tr>
-                            <td><strong>{{ $device->label }}</strong> ({{ $device->number }})</td>
-                            <td>{{ $device->baitType ? $device->baitType->name : '-' }}</td>
-                            <td>{{ $device->default_location_note ?? '-' }}</td>
+                            <td><strong>Tipo de Isca:</strong> {{ $device->baitType ? $device->baitType->name : '-' }}</td>
+                            <td><strong>Localização:</strong> {{ $device->default_location_note ?? '-' }}</td>
                             <td>
+                                <strong>Status:</strong>
                                 @if($device->active)
                                     <span style="color: #059669;">Ativo</span>
                                 @else
@@ -646,13 +659,50 @@
                                 @endif
                             </td>
                         </tr>
-                        @endforeach
                     </table>
+
+                    <!-- Eventos do Dispositivo -->
+                    @php
+                        $deviceEvents = $workOrder->workOrderDeviceEvents ? $workOrder->workOrderDeviceEvents->where('device_id', $device->id) : collect();
+                    @endphp
+                    @if($deviceEvents && $deviceEvents->count() > 0)
+                    <div style="margin-top: 10px; padding: 8px; background-color: #f9fafb; border-left: 3px solid #059669;">
+                        <p style="font-weight: bold; color: #059669; margin-bottom: 5px; font-size: 12px;">
+                            Eventos do Dispositivo
+                        </p>
+                        <table class="info-table" style="margin-top: 5px; font-size: 10px;">
+                            <tr>
+                                <th style="background-color: #059669; color: #fff; font-weight: bold; padding: 4px;">Tipo</th>
+                                <th style="background-color: #059669; color: #fff; font-weight: bold; padding: 4px;">Data</th>
+                                <th style="background-color: #059669; color: #fff; font-weight: bold; padding: 4px;">Descrição</th>
+                            </tr>
+                            @foreach($deviceEvents as $event)
+                            <tr>
+                                <td style="padding: 4px;">{{ $event->eventType->name ?? 'Não informado' }}</td>
+                                <td style="padding: 4px;">{{ $event->event_date ? $event->event_date->format('d/m/Y') : '-' }}</td>
+                                <td style="padding: 4px;">{{ $event->event_description ?? '-' }}</td>
+                            </tr>
+                            @if($event->event_observations)
+                            <tr>
+                                <td colspan="3" style="background-color: #fafafa; padding: 4px; font-size: 9px;">
+                                    <strong>Observações:</strong> {{ $event->event_observations }}
+                                </td>
+                            </tr>
+                            @endif
+                            @endforeach
+                        </table>
+                    </div>
+                    @else
+                    <div style="margin-top: 10px; padding: 8px; background-color: #f9fafb; border-left: 3px solid #9ca3af;">
+                        <p style="font-style: italic; color: #6b7280; font-size: 11px;">
+                            Nenhum evento registrado para este dispositivo.
+                        </p>
+                    </div>
                     @endif
                 </div>
             @endforeach
         @else
-            <p>Nenhum cômodo atendido registrado para esta ordem de serviço</p>
+            <p>Nenhum dispositivo registrado para esta ordem de serviço</p>
         @endif
     </div>
 
@@ -767,26 +817,6 @@
             </table>
         @else
             <p>Nenhuma manutenção de dispositivo registrada</p>
-        @endif
-    </div>
-
-    <!-- Consumo ou Substituição de Iscas -->
-    <div class="section-header">Consumo ou Substituição de Iscas</div>
-    <div class="info-section">
-        @if($workOrder->consumption_status || $workOrder->consumption_quantity || $workOrder->consumption_notes)
-            <table class="info-table">
-                <tr>
-                    <td><strong>Status do Consumo:</strong> {{ $workOrder->consumption_status_text ?? '-' }}</td>
-                    <td><strong>Quantidade Consumida:</strong> {{ $workOrder->consumption_quantity ?? '-' }}</td>
-                </tr>
-                @if($workOrder->consumption_notes)
-                <tr>
-                    <td colspan="2"><strong>Observações:</strong> {{ $workOrder->consumption_notes }}</td>
-                </tr>
-                @endif
-            </table>
-        @else
-            <p>Nenhuma informação sobre consumo ou substituição de iscas</p>
         @endif
     </div>
 
