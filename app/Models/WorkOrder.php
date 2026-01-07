@@ -56,6 +56,7 @@ class WorkOrder extends Model
         'priority_level_text',
         'payment_status_text',
         'payment_status_color',
+        'duration_text',
     ];
 
     /**
@@ -306,7 +307,18 @@ class WorkOrder extends Model
             return 0;
         }
 
-        return $this->start_time->diffInHours($this->end_time, true);
+        // Garantir que são objetos Carbon
+        $start = \Carbon\Carbon::parse($this->start_time);
+        $end = \Carbon\Carbon::parse($this->end_time);
+
+        // Se start_time for maior que end_time, retornar 0
+        if ($start->gt($end)) {
+            return 0;
+        }
+
+        // Calcular diferença em minutos e converter para horas para maior precisão
+        $minutes = $start->diffInMinutes($end, true);
+        return round($minutes / 60, 2);
     }
 
     /**
@@ -314,17 +326,51 @@ class WorkOrder extends Model
      */
     public function getDurationTextAttribute(): string
     {
-        $hours = $this->duration_hours;
-
-        if ($hours < 1) {
-            return 'Menos de 1 hora';
+        if (!$this->start_time || !$this->end_time) {
+            return 'Não informado';
         }
 
-        if ($hours === 1) {
+        $hours = $this->duration_hours;
+
+        if ($hours <= 0) {
+            return 'Não informado';
+        }
+
+        if ($hours < 1) {
+            // Se for menos de 1 hora, mostrar em minutos
+            $start = \Carbon\Carbon::parse($this->start_time);
+            $end = \Carbon\Carbon::parse($this->end_time);
+            $minutes = $start->diffInMinutes($end, true);
+            
+            if ($minutes == 1) {
+                return '1 minuto';
+            }
+            
+            return $minutes . ' minutos';
+        }
+
+        // Se for exatamente 1 hora
+        if ($hours == 1) {
             return '1 hora';
         }
 
-        return number_format($hours, 1) . ' horas';
+        // Se for mais de 1 hora, mostrar horas e minutos
+        $start = \Carbon\Carbon::parse($this->start_time);
+        $end = \Carbon\Carbon::parse($this->end_time);
+        $totalMinutes = $start->diffInMinutes($end, true);
+        
+        $hoursInt = floor($totalMinutes / 60);
+        $minutesInt = $totalMinutes % 60;
+
+        if ($minutesInt == 0) {
+            return $hoursInt . ' horas';
+        }
+
+        if ($hoursInt == 1) {
+            return '1 hora e ' . $minutesInt . ' minuto' . ($minutesInt > 1 ? 's' : '');
+        }
+
+        return $hoursInt . ' horas e ' . $minutesInt . ' minuto' . ($minutesInt > 1 ? 's' : '');
     }
 
     // Accessors removidos - agora os campos total_cost, discount_amount e final_amount
