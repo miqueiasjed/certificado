@@ -472,7 +472,9 @@ class WorkOrderController extends Controller
                 'address.client',
                 'technician',
                 'technicians',
-                'products',
+                'products' => function($query) {
+                    $query->withPivot(['quantity', 'unit', 'observations']);
+                },
                 'service',
                 'rooms' => function($query) {
                     $query->withPivot([
