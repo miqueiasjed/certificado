@@ -13,15 +13,15 @@ return new class extends Migration
     {
         if (!Schema::hasTable('work_order_device')) {
             Schema::create('work_order_device', function (Blueprint $table) {
-                $table->id();
+            $table->id();
                 $table->foreignId('work_order_id')->constrained()->onDelete('cascade');
                 $table->foreignId('device_id')->constrained()->onDelete('cascade');
                 $table->text('observation')->nullable();
-                $table->timestamps();
+            $table->timestamps();
 
                 // Impedir duplicatas
                 $table->unique(['work_order_id', 'device_id']);
-            });
+        });
         }
     }
 

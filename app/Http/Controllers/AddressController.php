@@ -47,7 +47,7 @@ class AddressController extends Controller
         try {
             $address = $this->addressService->createAddress($request->validated());
 
-            return redirect()->back()
+            return redirect()->route('addresses.index')
                 ->with('success', 'Endereço criado com sucesso!');
         } catch (\Exception $e) {
             return redirect()->back()

@@ -181,17 +181,17 @@
         <!-- Conteúdo da Aba Cômodos -->
         <div v-show="activeTab === 'rooms'" class="p-6">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-medium text-gray-900">Cômodos do Endereço</h3>
-            <button
-              @click="showRoomModal = true"
-              class="btn-primary"
-            >
-              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-              </svg>
-              Novo Cômodo
-            </button>
-          </div>
+          <h3 class="text-lg font-medium text-gray-900">Cômodos do Endereço</h3>
+          <button
+            @click="showRoomModal = true"
+            class="btn-primary"
+          >
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Novo Cômodo
+          </button>
+        </div>
           <div v-if="address.rooms && address.rooms.length > 0" class="space-y-4">
             <div
               v-for="room in address.rooms"

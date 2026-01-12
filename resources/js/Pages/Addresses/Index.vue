@@ -14,6 +14,14 @@
     </template>
 
     <div class="max-w-7xl mx-auto">
+      <!-- Mensagens flash -->
+      <div v-if="$page.props.flash.success" class="mb-4">
+        <Alert type="success" :message="$page.props.flash.success" />
+      </div>
+      <div v-if="$page.props.flash.error" class="mb-4">
+        <Alert type="error" :message="$page.props.flash.error" />
+      </div>
+
       <!-- Estatísticas -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
         <StatCard
@@ -192,6 +200,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import StatCard from '@/Components/StatCard.vue';
 import Pagination from '@/Components/Pagination.vue';
+import Alert from '@/Components/Alert.vue';
 
 const props = defineProps({
   addresses: Object,
@@ -244,7 +253,6 @@ const deleteAddress = (id) => {
   }
 };
 </script>
-
 
 
 

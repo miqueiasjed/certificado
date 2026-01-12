@@ -953,14 +953,14 @@ class WorkOrderController extends Controller
             ->orderBy('label')
             ->get()
             ->map(function($device) {
-                return [
-                    'id' => $device->id,
-                    'label' => $device->label,
-                    'number' => $device->number,
+                        return [
+                            'id' => $device->id,
+                            'label' => $device->label,
+                            'number' => $device->number,
                     'display_name' => $device->label . ' (' . $device->number . ')',
                     'bait_type' => $device->baitType ? $device->baitType->name : null,
                     'default_location_note' => $device->default_location_note,
-                ];
+                        ];
             });
 
         return response()->json(['devices' => $devices]);
