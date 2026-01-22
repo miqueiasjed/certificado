@@ -22,7 +22,6 @@ class FinancialEntryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => 'required|in:payment,manual',
             'source' => 'required|in:work_order,manual',
             'amount' => 'required|numeric|min:0.01',
             'description' => 'required|string|max:255',
@@ -44,8 +43,6 @@ class FinancialEntryRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'type.required' => 'O tipo da entrada é obrigatório.',
-            'type.in' => 'O tipo da entrada deve ser "Pagamento" ou "Manual".',
             'source.required' => 'A origem da entrada é obrigatória.',
             'source.in' => 'A origem da entrada deve ser "Ordem de Serviço" ou "Manual".',
             'amount.required' => 'O valor da entrada é obrigatório.',
@@ -72,7 +69,6 @@ class FinancialEntryRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'type' => 'tipo',
             'source' => 'origem',
             'amount' => 'valor',
             'description' => 'descrição',

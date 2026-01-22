@@ -4,12 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Log;
 
 class FinancialEntry extends Model
 {
     protected $fillable = [
-        'type',
         'source',
         'amount',
         'description',
@@ -30,7 +28,6 @@ class FinancialEntry extends Model
     ];
 
     protected $appends = [
-        'type_text',
         'source_text',
         'status_text',
         'status_color',
@@ -56,21 +53,12 @@ class FinancialEntry extends Model
     }
 
     // Accessors
-    public function getTypeTextAttribute(): string
-    {
-        return match($this->type) {
-            'payment' => 'Pagamento',
-            'withdrawal' => 'Retirada',
-            'manual' => 'Manual',
-            default => 'N/A'
-        };
-    }
-
     public function getSourceTextAttribute(): string
     {
         return match($this->source) {
             'work_order' => 'Ordem de Serviço',
             'payment_reopen' => 'Reabertura de Pagamento',
+            'manual_withdrawal' => 'Manual',
             'manual' => 'Manual',
             default => 'N/A'
         };
@@ -141,21 +129,6 @@ class FinancialEntry extends Model
     public function scopePending($query)
     {
         return $query->where('status', 'pending');
-    }
-
-    public function scopePayments($query)
-    {
-        return $query->where('type', 'payment');
-    }
-
-    public function scopeWithdrawals($query)
-    {
-        return $query->where('type', 'withdrawal');
-    }
-
-    public function scopeByType($query, $type)
-    {
-        return $query->where('type', $type);
     }
 
     public function scopeBySource($query, $source)

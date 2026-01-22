@@ -119,12 +119,12 @@ class CreateMissingDailyBalances extends Command
     private function calculateBalanceFromBeginning(string $untilDate): float
     {
         $totalEntries = FinancialEntry::confirmed()
-            ->whereIn('type', ['payment', 'manual'])
+            ->whereIn('source', ['work_order', 'manual'])
             ->where('entry_date', '<=', $untilDate)
             ->sum('amount');
 
         $totalWithdrawals = FinancialEntry::confirmed()
-            ->where('type', 'withdrawal')
+            ->whereIn('source', ['payment_reopen', 'manual_withdrawal'])
             ->where('entry_date', '<=', $untilDate)
             ->sum('amount');
 

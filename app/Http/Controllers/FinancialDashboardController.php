@@ -40,9 +40,9 @@ class FinancialDashboardController extends Controller
         $baseQuery = FinancialEntry::confirmed()
             ->whereBetween('entry_date', [$startDate, $endDate]);
 
-        $paymentAmount = (clone $baseQuery)->where('type', 'payment')->sum('amount');
-        $manualAmount = (clone $baseQuery)->where('type', 'manual')->sum('amount');
-        $withdrawalAmount = (clone $baseQuery)->where('type', 'withdrawal')->sum('amount');
+        $paymentAmount = (clone $baseQuery)->where('source', 'work_order')->sum('amount');
+        $manualAmount = (clone $baseQuery)->where('source', 'manual')->sum('amount');
+        $withdrawalAmount = (clone $baseQuery)->whereIn('source', ['payment_reopen', 'manual_withdrawal'])->sum('amount');
 
         // Valor líquido = entradas - saídas
         $netAmount = $paymentAmount + $manualAmount - $withdrawalAmount;
@@ -52,7 +52,7 @@ class FinancialDashboardController extends Controller
             'payment_amount' => $paymentAmount,
             'manual_amount' => $manualAmount,
             'withdrawal_amount' => $withdrawalAmount,
-            'total_entries' => (clone $baseQuery)->whereIn('type', ['payment', 'manual'])->count(),
+            'total_entries' => (clone $baseQuery)->whereIn('source', ['work_order', 'manual'])->count(),
         ];
     }
 
@@ -64,17 +64,17 @@ class FinancialDashboardController extends Controller
         // Gráfico por tipo (Doughnut) - apenas entradas
         $typeData = FinancialEntry::confirmed()
             ->whereBetween('entry_date', [$startDate, $endDate])
-            ->whereIn('type', ['payment', 'manual']) // Apenas entradas
-            ->selectRaw('type, SUM(amount) as total')
-            ->groupBy('type')
+            ->whereIn('source', ['work_order', 'manual']) // Apenas entradas
+            ->selectRaw('source, SUM(amount) as total')
+            ->groupBy('source')
             ->get();
 
         $typeChart = [
             'labels' => ['Pagamentos', 'Manuais'],
             'datasets' => [[
                 'data' => [
-                    $typeData->where('type', 'payment')->first()->total ?? 0,
-                    $typeData->where('type', 'manual')->first()->total ?? 0,
+                    $typeData->where('source', 'work_order')->first()->total ?? 0,
+                    $typeData->where('source', 'manual')->first()->total ?? 0,
                 ],
                 'backgroundColor' => ['#3B82F6', '#F59E0B'],
                 'borderWidth' => 2,
@@ -85,7 +85,7 @@ class FinancialDashboardController extends Controller
         // Gráfico por forma de pagamento (Bar) - apenas entradas
         $methodData = FinancialEntry::confirmed()
             ->whereBetween('entry_date', [$startDate, $endDate])
-            ->whereIn('type', ['payment', 'manual']) // Apenas entradas
+            ->whereIn('source', ['work_order', 'manual']) // Apenas entradas
             ->whereNotNull('payment_method')
             ->selectRaw('payment_method, SUM(amount) as total')
             ->groupBy('payment_method')
@@ -121,8 +121,8 @@ class FinancialDashboardController extends Controller
         $monthlyData = FinancialEntry::confirmed()
             ->whereBetween('entry_date', [$startDate, $endDate])
             ->selectRaw('DATE_FORMAT(entry_date, "%Y-%m") as month,
-                        SUM(CASE WHEN type IN ("payment", "manual") THEN amount ELSE 0 END) -
-                        SUM(CASE WHEN type = "withdrawal" THEN amount ELSE 0 END) as total')
+                        SUM(CASE WHEN source IN ("work_order", "manual") THEN amount ELSE 0 END) -
+                        SUM(CASE WHEN source IN ("payment_reopen", "manual_withdrawal") THEN amount ELSE 0 END) as total')
             ->groupBy('month')
             ->orderBy('month')
             ->get();

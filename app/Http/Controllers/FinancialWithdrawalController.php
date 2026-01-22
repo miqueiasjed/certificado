@@ -16,14 +16,10 @@ class FinancialWithdrawalController extends Controller
     public function index(Request $request)
     {
         $query = FinancialEntry::with(['workOrder', 'paymentDetail'])
-            ->whereIn('type', ['withdrawal', 'manual'])
+            ->whereIn('source', ['payment_reopen', 'manual_withdrawal'])
             ->confirmed();
 
         // Apply filters
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
         if ($request->filled('start_date')) {
             $query->where('entry_date', '>=', $request->start_date);
         }
@@ -52,7 +48,7 @@ class FinancialWithdrawalController extends Controller
         return inertia('FinancialWithdrawals/Index', [
             'withdrawals' => $withdrawals,
             'stats' => $this->getStats($request),
-            'filters' => $request->only(['type', 'start_date', 'end_date', 'payment_method', 'search'])
+            'filters' => $request->only(['start_date', 'end_date', 'payment_method', 'search'])
         ]);
     }
 
@@ -65,14 +61,10 @@ class FinancialWithdrawalController extends Controller
         $endDate = $request->input('end_date', now()->endOfMonth()->toDateString());
 
         $baseQuery = FinancialEntry::confirmed()
-            ->whereIn('type', ['withdrawal', 'manual'])
+            ->whereIn('source', ['payment_reopen', 'manual_withdrawal'])
             ->byDateRange($startDate, $endDate);
 
         // Apply additional filters
-        if ($request->filled('type')) {
-            $baseQuery->where('type', $request->type);
-        }
-
         if ($request->filled('payment_method')) {
             $baseQuery->where('payment_method', $request->payment_method);
         }
@@ -88,7 +80,7 @@ class FinancialWithdrawalController extends Controller
 
         $totalWithdrawals = (clone $baseQuery)->sum('amount');
         $reopenAmount = (clone $baseQuery)->where('source', 'payment_reopen')->sum('amount');
-        $manualAmount = (clone $baseQuery)->where('source', 'manual')->sum('amount');
+        $manualAmount = (clone $baseQuery)->where('source', 'manual_withdrawal')->sum('amount');
         $totalEntries = (clone $baseQuery)->count();
 
         // Group by payment method
@@ -125,8 +117,7 @@ class FinancialWithdrawalController extends Controller
         ]);
 
         $withdrawal = FinancialEntry::create([
-            'type' => 'withdrawal',
-            'source' => 'manual',
+            'source' => 'manual_withdrawal',
             'amount' => $request->amount,
             'description' => $request->description,
             'entry_date' => $request->entry_date,
@@ -157,7 +148,7 @@ class FinancialWithdrawalController extends Controller
     public function update(Request $request, FinancialEntry $financialEntry): JsonResponse
     {
         // Only allow editing manual withdrawals
-        if ($financialEntry->source !== 'manual') {
+        if ($financialEntry->source !== 'manual_withdrawal') {
             return response()->json([
                 'success' => false,
                 'message' => 'Não é possível editar saídas financeiras geradas automaticamente por ordens de serviço.'
@@ -195,7 +186,7 @@ class FinancialWithdrawalController extends Controller
     public function destroy(FinancialEntry $financialEntry): JsonResponse
     {
         // Only allow deleting manual withdrawals
-        if ($financialEntry->source !== 'manual') {
+        if ($financialEntry->source !== 'manual_withdrawal') {
             return response()->json([
                 'success' => false,
                 'message' => 'Não é possível excluir saídas financeiras geradas automaticamente por ordens de serviço.'

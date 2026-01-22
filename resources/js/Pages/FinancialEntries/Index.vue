@@ -20,17 +20,7 @@
 
     <div class="space-y-6">
       <div class="bg-white rounded-lg shadow p-6 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <!-- Tipo -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-            <select v-model="filters.type" @change="loadEntries" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm">
-              <option value="">Todos os tipos</option>
-              <option value="payment">Pagamentos</option>
-              <option value="manual">Manuais</option>
-            </select>
-          </div>
-
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <!-- Status -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -134,8 +124,8 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center">
                 <div class="flex-shrink-0">
-                  <span :class="getTypeBadgeClass(entry.type)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                    {{ entry.type_text }}
+                  <span :class="getSourceBadgeClass(entry.source)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {{ entry.source_text }}
                   </span>
                 </div>
                 <div class="ml-4">
@@ -264,20 +254,6 @@
 
           <form @submit.prevent="submitForm">
             <div class="space-y-4">
-              <!-- Tipo -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
-                <select
-                  v-model="form.type"
-                  required
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                >
-                  <option value="">Selecione o tipo</option>
-                  <option value="payment">Pagamento</option>
-                  <option value="manual">Manual</option>
-                </select>
-              </div>
-
               <!-- Fonte -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Origem *</label>
@@ -434,14 +410,12 @@ const isSubmitting = ref(false)
 const editingEntry = ref(null)
 
 const filters = reactive({
-  type: '',
   status: '',
   start_date: '',
   end_date: ''
 })
 
 const form = reactive({
-  type: '',
   source: '',
   amount: '',
   description: '',
@@ -510,9 +484,9 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('pt-BR')
 }
 
-const getTypeBadgeClass = (type) => {
-  switch (type) {
-    case 'payment': return 'bg-blue-100 text-blue-800'
+const getSourceBadgeClass = (source) => {
+  switch (source) {
+    case 'work_order': return 'bg-blue-100 text-blue-800'
     case 'manual': return 'bg-green-100 text-green-800'
     default: return 'bg-gray-100 text-gray-800'
   }

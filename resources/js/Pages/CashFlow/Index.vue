@@ -20,18 +20,7 @@
 
     <div class="space-y-6">
       <div class="bg-white rounded-lg shadow p-6 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <!-- Tipo -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-            <select v-model="filters.type" @change="loadEntries" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
-              <option value="">Todos os tipos</option>
-              <option value="payment">Pagamentos</option>
-              <option value="withdrawal">Saídas</option>
-              <option value="manual">Manuais</option>
-            </select>
-          </div>
-
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <!-- Método -->
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Método</label>
@@ -169,8 +158,8 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center">
                 <div class="flex-shrink-0">
-                  <span :class="getTypeBadgeClass(entry.type)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                    {{ getTypeText(entry.type) }}
+                  <span :class="getTypeBadgeClass(entry.source)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {{ getTypeText(entry.source) }}
                   </span>
                 </div>
                 <div class="ml-4">
@@ -184,8 +173,8 @@
               </div>
               <div class="flex items-center space-x-4">
                 <div class="text-right">
-                  <div class="text-sm font-medium" :class="getAmountClass(entry.type, entry.amount)">
-                    {{ getAmountPrefix(entry.type) }}{{ formatCurrency(entry.amount) }}
+                  <div class="text-sm font-medium" :class="getAmountClass(entry.source)">
+                    {{ getAmountPrefix(entry.source) }}{{ formatCurrency(entry.amount) }}
                   </div>
                   <div class="text-sm text-gray-500">
                     <span :class="getSourceBadgeClass(entry.source)" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium">
@@ -291,7 +280,6 @@ const searchTimeout = ref(null);
 const filters = reactive({
   start_date: props.filters.start_date || '',
   end_date: props.filters.end_date || '',
-  type: props.filters.type || '',
   payment_method: props.filters.payment_method || '',
   search: props.filters.search || ''
 });
@@ -362,31 +350,33 @@ const formatDate = (date) => {
   return new Date(date).toLocaleDateString('pt-BR');
 };
 
-const getTypeText = (type) => {
+const getTypeText = (source) => {
   const types = {
-    payment: 'Pagamento',
-    withdrawal: 'Saída',
-    manual: 'Manual'
+    work_order: 'Pagamento',
+    manual: 'Manual',
+    payment_reopen: 'Saída',
+    manual_withdrawal: 'Saída'
   };
-  return types[type] || type;
+  return types[source] || source;
 };
 
-const getTypeBadgeClass = (type) => {
+const getTypeBadgeClass = (source) => {
   const classes = {
-    payment: 'bg-green-100 text-green-800',
-    withdrawal: 'bg-red-100 text-red-800',
-    manual: 'bg-blue-100 text-blue-800'
+    work_order: 'bg-green-100 text-green-800',
+    manual: 'bg-blue-100 text-blue-800',
+    payment_reopen: 'bg-red-100 text-red-800',
+    manual_withdrawal: 'bg-red-100 text-red-800'
   };
-  return `px-2 py-1 text-xs font-medium rounded-full ${classes[type] || 'bg-gray-100 text-gray-800'}`;
+  return `px-2 py-1 text-xs font-medium rounded-full ${classes[source] || 'bg-gray-100 text-gray-800'}`;
 };
 
-const getAmountClass = (type, amount) => {
-  if (type === 'withdrawal') return 'text-red-600';
+const getAmountClass = (source) => {
+  if (['payment_reopen', 'manual_withdrawal'].includes(source)) return 'text-red-600';
   return 'text-green-600';
 };
 
-const getAmountPrefix = (type) => {
-  return type === 'withdrawal' ? '-' : '+';
+const getAmountPrefix = (source) => {
+  return ['payment_reopen', 'manual_withdrawal'].includes(source) ? '-' : '+';
 };
 
 const getPaymentMethodText = (method) => {
@@ -415,6 +405,7 @@ const getSourceText = (source) => {
   const sources = {
     work_order: 'Ordem de Serviço',
     payment_reopen: 'Reabertura de Pagamento',
+    manual_withdrawal: 'Manual',
     manual: 'Manual'
   };
   return sources[source] || source;
@@ -424,6 +415,7 @@ const getSourceBadgeClass = (source) => {
   const classes = {
     work_order: 'bg-blue-100 text-blue-800',
     payment_reopen: 'bg-orange-100 text-orange-800',
+    manual_withdrawal: 'bg-gray-100 text-gray-800',
     manual: 'bg-gray-100 text-gray-800'
   };
   return `px-2 py-1 text-xs font-medium rounded-full ${classes[source] || 'bg-gray-100 text-gray-800'}`;

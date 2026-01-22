@@ -37,11 +37,11 @@ class DashboardController extends Controller
 
         $financialStats = [
             'monthly_entries' => FinancialEntry::confirmed()
-                ->whereIn('type', ['payment', 'manual'])
+                ->whereIn('source', ['work_order', 'manual'])
                 ->whereBetween('entry_date', [$currentMonth, $endOfMonth])
                 ->sum('amount'),
             'monthly_withdrawals' => FinancialEntry::confirmed()
-                ->where('type', 'withdrawal')
+                ->whereIn('source', ['payment_reopen', 'manual_withdrawal'])
                 ->whereBetween('entry_date', [$currentMonth, $endOfMonth])
                 ->sum('amount'),
             'current_balance' => DailyCashBalance::getTodayBalance()->closing_balance,

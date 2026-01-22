@@ -20,15 +20,11 @@ class FinancialEntryController extends Controller
     {
         // Only show entries (payments and manual entries), not withdrawals
         $query = FinancialEntry::with(['workOrder', 'paymentDetail', 'createdBy'])
-            ->whereIn('type', ['payment', 'manual'])
+            ->whereIn('source', ['work_order', 'manual'])
             ->confirmed()
             ->orderBy('entry_date', 'desc');
 
         // Filtros
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
         if ($request->filled('source')) {
             $query->where('source', $request->source);
         }
@@ -65,7 +61,7 @@ class FinancialEntryController extends Controller
         return inertia('FinancialEntries/Index', [
             'entries' => $entries,
             'stats' => $this->getStatsData($request),
-            'filters' => $request->only(['type', 'source', 'payment_method', 'start_date', 'end_date', 'search'])
+            'filters' => $request->only(['source', 'payment_method', 'start_date', 'end_date', 'search'])
         ]);
     }
 
@@ -108,7 +104,7 @@ class FinancialEntryController extends Controller
     {
         try {
             // Verificar se a entrada veio de uma OS (não pode ser editada)
-            if ($financialEntry->source === 'work_order' || $financialEntry->source === 'payment_reopen') {
+            if (in_array($financialEntry->source, ['work_order', 'payment_reopen', 'manual_withdrawal'], true)) {
                 return redirect()->back()
                     ->withErrors(['error' => 'Não é possível editar entradas financeiras geradas automaticamente por ordens de serviço. Use a opção "Reabrir Pagamento" na OS correspondente.']);
             }
@@ -133,7 +129,7 @@ class FinancialEntryController extends Controller
     {
         try {
             // Verificar se a entrada veio de uma OS (não pode ser excluída)
-            if ($financialEntry->source === 'work_order' || $financialEntry->source === 'payment_reopen') {
+            if (in_array($financialEntry->source, ['work_order', 'payment_reopen', 'manual_withdrawal'], true)) {
                 return redirect()->back()
                     ->withErrors(['error' => 'Não é possível excluir entradas financeiras geradas automaticamente por ordens de serviço. Use a opção "Reabrir Pagamento" na OS correspondente.']);
             }
@@ -157,7 +153,6 @@ class FinancialEntryController extends Controller
     {
         try {
             $entry = FinancialEntry::create([
-                'type' => 'payment',
                 'source' => 'work_order',
                 'amount' => $paymentDetail->amount_paid,
                 'description' => 'Pagamento recebido - OS #' . $paymentDetail->work_order_id,
@@ -197,7 +192,7 @@ class FinancialEntryController extends Controller
 
             // Only show entries (payments and manual entries), not withdrawals
             $query = FinancialEntry::confirmed()
-                ->whereIn('type', ['payment', 'manual'])
+                ->whereIn('source', ['work_order', 'manual'])
                 ->byDateRange($startDate, $endDate);
 
             // Log para debug - verificar filtros
@@ -205,38 +200,38 @@ class FinancialEntryController extends Controller
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'confirmed_only' => true,
-                'types' => ['payment', 'manual']
+                'sources' => ['work_order', 'manual']
             ]);
 
             $paymentAmount = FinancialEntry::confirmed()
                 ->byDateRange($startDate, $endDate)
-                ->byType('payment')
+                ->bySource('work_order')
                 ->sum('amount');
 
             $manualAmount = FinancialEntry::confirmed()
                 ->byDateRange($startDate, $endDate)
-                ->byType('manual')
+                ->bySource('manual')
                 ->sum('amount');
 
             $totalEntries = FinancialEntry::confirmed()
-                ->whereIn('type', ['payment', 'manual'])
+                ->whereIn('source', ['work_order', 'manual'])
                 ->byDateRange($startDate, $endDate)
                 ->count();
 
             // Log para debug - verificar registros
             $allEntries = FinancialEntry::confirmed()
-                ->whereIn('type', ['payment', 'manual'])
+                ->whereIn('source', ['work_order', 'manual'])
                 ->byDateRange($startDate, $endDate)
                 ->get();
 
             $paymentEntries = FinancialEntry::confirmed()
                 ->byDateRange($startDate, $endDate)
-                ->byType('payment')
+                ->bySource('work_order')
                 ->get();
 
             $manualEntries = FinancialEntry::confirmed()
                 ->byDateRange($startDate, $endDate)
-                ->byType('manual')
+                ->bySource('manual')
                 ->get();
 
             Log::info('Registros encontrados - Entradas Financeiras', [
@@ -246,14 +241,14 @@ class FinancialEntryController extends Controller
                 'all_entries' => $allEntries->map(function($entry) {
                     return [
                         'id' => $entry->id,
-                        'type' => $entry->type,
+                        'source' => $entry->source,
                         'amount' => $entry->amount,
                         'entry_date' => $entry->entry_date,
                         'status' => $entry->status
                     ];
                 }),
-                'payment_entries' => $paymentEntries->pluck('type', 'amount'),
-                'manual_entries' => $manualEntries->pluck('type', 'amount'),
+                'payment_entries' => $paymentEntries->pluck('source', 'amount'),
+                'manual_entries' => $manualEntries->pluck('source', 'amount'),
             ]);
 
             // Total de entradas (pagamentos + manuais)
@@ -268,7 +263,7 @@ class FinancialEntryController extends Controller
             ]);
 
             $byMethod = FinancialEntry::confirmed()
-                ->whereIn('type', ['payment', 'manual'])
+                ->whereIn('source', ['work_order', 'manual'])
                 ->byDateRange($startDate, $endDate)
                 ->selectRaw('payment_method, SUM(amount) as total')
                 ->groupBy('payment_method')
@@ -309,21 +304,17 @@ class FinancialEntryController extends Controller
 
         // Only show entries (payments and manual entries), not withdrawals
         $baseQuery = FinancialEntry::confirmed()
-            ->whereIn('type', ['payment', 'manual'])
+            ->whereIn('source', ['work_order', 'manual'])
             ->byDateRange($startDate, $endDate);
 
         // Aplicar filtros se existirem
-        if ($request->filled('type')) {
-            $baseQuery->where('type', $request->type);
-        }
-
         if ($request->filled('status')) {
             $baseQuery->where('status', $request->status);
         }
 
         // Criar queries independentes para cada cálculo
-        $paymentAmount = (clone $baseQuery)->byType('payment')->sum('amount');
-        $manualAmount = (clone $baseQuery)->byType('manual')->sum('amount');
+        $paymentAmount = (clone $baseQuery)->bySource('work_order')->sum('amount');
+        $manualAmount = (clone $baseQuery)->bySource('manual')->sum('amount');
         $totalEntries = (clone $baseQuery)->count();
 
         // Total de entradas (pagamentos + manuais)
@@ -353,13 +344,8 @@ class FinancialEntryController extends Controller
         // Buscar todos os pagamentos no período
         $payments = FinancialEntry::confirmed()
             ->byDateRange($startDate, $endDate)
-            ->byType('payment')
+            ->bySource('work_order')
             ->get();
-
-        // Aplicar filtros se existirem
-        if ($request->filled('type') && $request->type !== 'payment') {
-            return 0;
-        }
 
         if ($request->filled('status') && $request->status !== 'confirmed') {
             return 0;
@@ -371,7 +357,7 @@ class FinancialEntryController extends Controller
             // Verificar se este pagamento foi compensado por uma retirada
             $hasWithdrawal = FinancialEntry::confirmed()
                 ->byDateRange($startDate, $endDate)
-                ->byType('withdrawal')
+                ->bySource('payment_reopen')
                 ->where('payment_detail_id', $payment->payment_detail_id)
                 ->where('created_at', '>', $payment->created_at) // Retirada deve ser posterior ao pagamento
                 ->exists();

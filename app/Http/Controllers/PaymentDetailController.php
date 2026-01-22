@@ -166,7 +166,7 @@ class PaymentDetailController extends Controller
 
             // Verificar se já existe uma saída financeira para este pagamento (indicando que foi reaberto)
             $existingWithdrawal = FinancialEntry::where('payment_detail_id', $paymentDetail->id)
-                ->where('type', 'withdrawal')
+                ->where('source', 'payment_reopen')
                 ->where('status', 'confirmed')
                 ->first();
 
@@ -381,7 +381,7 @@ class PaymentDetailController extends Controller
         try {
             // Buscar a entrada financeira relacionada ao pagamento
             $financialEntry = FinancialEntry::where('payment_detail_id', $paymentDetail->id)
-                ->where('type', 'payment')
+                ->where('source', 'work_order')
                 ->where('status', 'confirmed')
                 ->first();
 
@@ -394,7 +394,6 @@ class PaymentDetailController extends Controller
 
             // Criar uma retirada (withdrawal) para compensar a entrada anterior
             $withdrawalEntry = FinancialEntry::create([
-                'type' => 'withdrawal',
                 'source' => 'payment_reopen',
                 'amount' => $financialEntry->amount,
                 'description' => 'Retirada por reabertura de pagamento - OS #' . $paymentDetail->work_order_id,
@@ -414,7 +413,6 @@ class PaymentDetailController extends Controller
                 'amount' => $financialEntry->amount,
                 'original_entry_id' => $financialEntry->id,
                 'withdrawal_entry_id' => $withdrawalEntry->id,
-                'withdrawal_type' => $withdrawalEntry->type,
                 'withdrawal_status' => $withdrawalEntry->status,
                 'withdrawal_entry_date' => $withdrawalEntry->entry_date
             ]);
@@ -435,14 +433,14 @@ class PaymentDetailController extends Controller
         try {
             // Buscar a última entrada de pagamento para este payment_detail_id
             $lastPaymentEntry = FinancialEntry::where('payment_detail_id', $paymentDetail->id)
-                ->where('type', 'payment')
+                ->where('source', 'work_order')
                 ->where('status', 'confirmed')
                 ->orderBy('created_at', 'desc')
                 ->first();
 
             // Buscar a última retirada para este payment_detail_id
             $lastWithdrawalEntry = FinancialEntry::where('payment_detail_id', $paymentDetail->id)
-                ->where('type', 'withdrawal')
+                ->where('source', 'payment_reopen')
                 ->where('status', 'confirmed')
                 ->orderBy('created_at', 'desc')
                 ->first();
@@ -459,7 +457,6 @@ class PaymentDetailController extends Controller
 
             // Criar nova entrada financeira
             FinancialEntry::create([
-                'type' => 'payment',
                 'source' => 'work_order',
                 'amount' => $paymentDetail->amount_paid,
                 'description' => 'Pagamento recebido - OS #' . $paymentDetail->work_order_id,

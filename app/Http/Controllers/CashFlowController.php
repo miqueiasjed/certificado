@@ -25,10 +25,6 @@ class CashFlowController extends Controller
             $query->where('entry_date', '<=', $request->end_date);
         }
 
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
         if ($request->filled('payment_method')) {
             $query->where('payment_method', $request->payment_method);
         }
@@ -52,7 +48,7 @@ class CashFlowController extends Controller
         return inertia('CashFlow/Index', [
             'entries' => $entries,
             'stats' => $stats,
-            'filters' => $request->only(['start_date', 'end_date', 'type', 'payment_method', 'search'])
+            'filters' => $request->only(['start_date', 'end_date', 'payment_method', 'search'])
         ]);
     }
 
@@ -75,10 +71,6 @@ class CashFlowController extends Controller
         $baseQuery = FinancialEntry::confirmed()->byDateRange($startDate, $endDate);
 
         // Apply additional filters
-        if ($request->filled('type')) {
-            $baseQuery->where('type', $request->type);
-        }
-
         if ($request->filled('payment_method')) {
             $baseQuery->where('payment_method', $request->payment_method);
         }
@@ -93,9 +85,9 @@ class CashFlowController extends Controller
         }
 
         // Calculate different amounts
-        $paymentAmount = (clone $baseQuery)->byType('payment')->sum('amount');
-        $withdrawalAmount = (clone $baseQuery)->byType('withdrawal')->sum('amount');
-        $manualAmount = (clone $baseQuery)->byType('manual')->sum('amount');
+        $paymentAmount = (clone $baseQuery)->bySource('work_order')->sum('amount');
+        $withdrawalAmount = (clone $baseQuery)->whereIn('source', ['payment_reopen', 'manual_withdrawal'])->sum('amount');
+        $manualAmount = (clone $baseQuery)->bySource('manual')->sum('amount');
         $totalEntries = (clone $baseQuery)->count();
 
         // Calculate effective payments (payments not compensated by withdrawals)
@@ -106,9 +98,9 @@ class CashFlowController extends Controller
 
         // Group by type
         $byType = [
-            'payment' => (clone $baseQuery)->byType('payment')->sum('amount'),
-            'withdrawal' => (clone $baseQuery)->byType('withdrawal')->sum('amount'),
-            'manual' => (clone $baseQuery)->byType('manual')->sum('amount'),
+            'payment' => (clone $baseQuery)->bySource('work_order')->sum('amount'),
+            'withdrawal' => (clone $baseQuery)->whereIn('source', ['payment_reopen', 'manual_withdrawal'])->sum('amount'),
+            'manual' => (clone $baseQuery)->bySource('manual')->sum('amount'),
         ];
 
         // Group by payment method
@@ -145,7 +137,7 @@ class CashFlowController extends Controller
     {
         $payments = FinancialEntry::confirmed()
             ->byDateRange($startDate, $endDate)
-            ->byType('payment')
+            ->bySource('work_order')
             ->get();
 
         $effectiveAmount = 0;
@@ -154,7 +146,7 @@ class CashFlowController extends Controller
             // Check if this payment has a corresponding withdrawal
             $hasWithdrawal = FinancialEntry::confirmed()
                 ->byDateRange($startDate, $endDate)
-                ->byType('withdrawal')
+                ->bySource('payment_reopen')
                 ->where('payment_detail_id', $payment->payment_detail_id)
                 ->where('created_at', '>', $payment->created_at)
                 ->exists();
@@ -176,17 +168,13 @@ class CashFlowController extends Controller
             ->byDateRange($startDate, $endDate);
 
         // Apply additional filters
-        if ($request->filled('type')) {
-            $baseQuery->where('type', $request->type);
-        }
-
         if ($request->filled('payment_method')) {
             $baseQuery->where('payment_method', $request->payment_method);
         }
 
         $dailyData = (clone $baseQuery)
-            ->selectRaw('entry_date, type, SUM(amount) as total')
-            ->groupBy('entry_date', 'type')
+            ->selectRaw('entry_date, source, SUM(amount) as total')
+            ->groupBy('entry_date', 'source')
             ->orderBy('entry_date', 'desc')
             ->get()
             ->groupBy('entry_date')
@@ -200,7 +188,13 @@ class CashFlowController extends Controller
                 ];
 
                 foreach ($dayEntries as $entry) {
-                    $dayData[$entry->type] = $entry->total;
+                    if ($entry->source === 'work_order') {
+                        $dayData['payments'] += $entry->total;
+                    } elseif ($entry->source === 'manual') {
+                        $dayData['manual'] += $entry->total;
+                    } elseif (in_array($entry->source, ['payment_reopen', 'manual_withdrawal'], true)) {
+                        $dayData['withdrawals'] += $entry->total;
+                    }
                 }
 
                 $dayData['net'] = $dayData['payments'] + $dayData['manual'] - $dayData['withdrawals'];

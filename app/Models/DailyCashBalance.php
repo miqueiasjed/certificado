@@ -126,12 +126,12 @@ class DailyCashBalance extends Model
     public static function calculateBalanceFromBeginning($untilDate): float
     {
         $totalEntries = FinancialEntry::confirmed()
-            ->whereIn('type', ['payment', 'manual'])
+            ->whereIn('source', ['work_order', 'manual'])
             ->where('entry_date', '<=', $untilDate)
             ->sum('amount');
 
         $totalWithdrawals = FinancialEntry::confirmed()
-            ->where('type', 'withdrawal')
+            ->whereIn('source', ['payment_reopen', 'manual_withdrawal'])
             ->where('entry_date', '<=', $untilDate)
             ->sum('amount');
 
@@ -147,7 +147,7 @@ class DailyCashBalance extends Model
 
         // Calcular entradas do dia
         $entries = FinancialEntry::confirmed()
-            ->whereIn('type', ['payment', 'manual'])
+            ->whereIn('source', ['work_order', 'manual'])
             ->where('entry_date', $date)
             ->get();
 
@@ -156,7 +156,7 @@ class DailyCashBalance extends Model
 
         // Calcular saídas do dia
         $withdrawals = FinancialEntry::confirmed()
-            ->where('type', 'withdrawal')
+            ->whereIn('source', ['payment_reopen', 'manual_withdrawal'])
             ->where('entry_date', $date)
             ->get();
 

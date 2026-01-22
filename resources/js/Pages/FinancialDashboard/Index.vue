@@ -191,8 +191,8 @@
             <div class="flex items-center justify-between">
               <div class="flex items-center">
                 <div class="flex-shrink-0">
-                  <span :class="getTypeBadgeClass(entry.type)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                    {{ entry.type_text }}
+                  <span :class="getSourceBadgeClass(entry.source)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                    {{ entry.source_text }}
                   </span>
                 </div>
                 <div class="ml-4">
@@ -241,20 +241,6 @@
 
           <form @submit.prevent="submitForm">
             <div class="space-y-4">
-              <!-- Tipo -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
-                <select
-                  v-model="form.type"
-                  required
-                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                >
-                  <option value="">Selecione o tipo</option>
-                  <option value="payment">Pagamento</option>
-                  <option value="manual">Manual</option>
-                </select>
-              </div>
-
               <!-- Fonte -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Origem *</label>
@@ -389,7 +375,6 @@ const filters = reactive({
 })
 
 const form = reactive({
-  type: '',
   source: '',
   amount: '',
   description: '',
@@ -493,10 +478,10 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('pt-BR')
 }
 
-const getTypeBadgeClass = (type) => {
-  return type === 'payment'
-    ? 'bg-blue-100 text-blue-800'
-    : 'bg-orange-100 text-orange-800'
+const getSourceBadgeClass = (source) => {
+  if (source === 'work_order') return 'bg-blue-100 text-blue-800'
+  if (source === 'manual') return 'bg-green-100 text-green-800'
+  return 'bg-orange-100 text-orange-800'
 }
 
 const getStatusBadgeClass = (status) => {
