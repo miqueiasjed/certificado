@@ -539,7 +539,7 @@
                       :class="{ 'border-red-500': form.errors[`devices.${index}.id`] }"
                     >
                       <option value="">Selecione um dispositivo</option>
-                      <option v-for="dev in availableDevicesForWorkOrder" :key="dev.id" :value="dev.id">
+                      <option v-for="dev in availableDevices(index)" :key="dev.id" :value="dev.id">
                         {{ dev.display_name }}
                       </option>
                     </select>
@@ -1040,6 +1040,16 @@ const availableRooms = computed(() => {
       .map((r, index) => index !== currentRoomIndex ? r.id : null)
       .filter(id => id);
     return availableRoomsList.value.filter(room => !selectedIds.includes(room.id));
+  };
+});
+
+// Computed para dispositivos disponíveis (filtrar já selecionados, exceto o atual)
+const availableDevices = computed(() => {
+  return (currentDeviceIndex) => {
+    const selectedIds = form.devices
+      .map((d, index) => index !== currentDeviceIndex ? d.id : null)
+      .filter(id => id);
+    return availableDevicesForWorkOrder.value.filter(device => !selectedIds.includes(device.id));
   };
 });
 

@@ -188,6 +188,20 @@
               ></textarea>
             </div>
 
+            <!-- Cláusula Adicional -->
+            <div>
+              <label for="additional_clause" class="block text-sm font-medium text-gray-700 mb-2">
+                Cláusula Adicional (opcional)
+              </label>
+              <textarea
+                id="additional_clause"
+                v-model="form.additional_clause"
+                rows="4"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Escreva uma cláusula específica para este cliente, se necessário."
+              ></textarea>
+            </div>
+
 
             <!-- Botões -->
             <div class="flex justify-end gap-3 pt-4 border-t">
@@ -256,6 +270,7 @@ const form = useForm({
   pest_target: props.contract.pest_target || '',
   payment_method: props.contract.payment_method || '',
   payment_details: props.contract.payment_details || '',
+  additional_clause: props.contract.additional_clause || '',
 });
 
 const serviceValueDisplay = ref('');
@@ -378,4 +393,3 @@ onMounted(() => {
   }
 });
 </script>
-

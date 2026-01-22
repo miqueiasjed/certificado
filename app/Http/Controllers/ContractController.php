@@ -82,6 +82,7 @@ class ContractController extends Controller
             'pest_target' => 'nullable|string',
             'payment_method' => 'nullable|string',
             'payment_details' => 'nullable|string',
+            'additional_clause' => 'nullable|string',
         ];
 
         // Se não veio pela rota com endereço, exigir address_id
@@ -199,6 +200,7 @@ class ContractController extends Controller
             'pest_target' => 'nullable|string',
             'payment_method' => 'nullable|string',
             'payment_details' => 'nullable|string',
+            'additional_clause' => 'nullable|string',
         ]);
 
         $contract->update($validated);

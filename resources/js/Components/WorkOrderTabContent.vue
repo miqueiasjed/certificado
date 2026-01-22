@@ -4852,6 +4852,17 @@ const availableDevicesForWorkOrder = computed(() => {
       });
     }
 
+    const workOrderEvents = props.workOrder.workOrderDeviceEvents || props.workOrder.work_order_device_events || [];
+    if (workOrderEvents && (typeof workOrderEvents.length !== 'undefined') && workOrderEvents.length > 0) {
+      Array.from(workOrderEvents).forEach(event => {
+        if (event && event.device_id) {
+          devicesInWorkOrder.add(event.device_id);
+        } else if (event && event.device && event.device.id) {
+          devicesInWorkOrder.add(event.device.id);
+        }
+      });
+    }
+
     // Filtrar dispositivos que ainda não estão na OS (mostrar apenas ativos)
     return devicesArray.filter(device => {
       if (!device || !device.id) return false;

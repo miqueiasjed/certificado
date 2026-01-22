@@ -19,6 +19,7 @@ class Contract extends Model
         'pest_target',
         'payment_method',
         'payment_details',
+        'additional_clause',
     ];
 
     protected $casts = [

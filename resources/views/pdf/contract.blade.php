@@ -327,6 +327,13 @@
         questão, com renúncia de qualquer outro, por mais privilegiado que seja.</p>
     </div>
 
+    @if($contract->additional_clause)
+    <div class="section-title">CLÁUSULA 9ª – CLÁUSULA ADICIONAL</div>
+    <div class="clause">
+        <p><strong>9.1. Disposições Especiais:</strong> {!! nl2br(e($contract->additional_clause)) !!}</p>
+    </div>
+    @endif
+
     <div class="signature-section">
         <p style="text-align: center; margin-top: 50px;">
             E por estarem assim justos e contratados, firmam o presente instrumento em 2 (duas) vias de igual teor e
@@ -357,4 +364,3 @@
     </div>
 </body>
 </html>
-
