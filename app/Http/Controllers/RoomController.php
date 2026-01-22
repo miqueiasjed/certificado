@@ -99,10 +99,15 @@ class RoomController extends Controller
 
     public function destroy(Room $room)
     {
-        $this->roomService->deleteRoom($room);
+        try {
+            $this->roomService->deleteRoom($room);
 
-        return redirect()->route('rooms.index')
-            ->with('success', 'Cômodo excluído com sucesso!');
+            return redirect()->route('rooms.index')
+                ->with('success', 'Cômodo excluído com sucesso!');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', $e->getMessage());
+        }
     }
 
     public function getByAddress(Request $request, $addressId)

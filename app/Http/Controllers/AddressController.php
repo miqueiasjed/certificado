@@ -58,7 +58,16 @@ class AddressController extends Controller
 
     public function show(Address $address)
     {
-        $address->load(['client', 'rooms', 'devices.baitType', 'workOrders']);
+        $address->load([
+            'client',
+            'rooms' => function ($query) {
+                $query->withCount('workOrders');
+            },
+            'devices' => function ($query) {
+                $query->with('baitType')->withCount(['workOrders', 'workOrderEvents']);
+            },
+            'workOrders'
+        ]);
         
         $baitTypes = \App\Models\BaitType::orderBy('name')->limit(200)->get();
 
@@ -209,11 +218,12 @@ class AddressController extends Controller
         try {
             // Verificar se pode deletar (não está vinculado a eventos de OS)
             $hasWorkOrderEvents = $device->workOrderEvents()->exists();
+            $hasWorkOrders = $device->workOrders()->exists();
             
-            if ($hasWorkOrderEvents) {
+            if ($hasWorkOrderEvents || $hasWorkOrders) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Dispositivo não pode ser excluído pois está vinculado a eventos de ordens de serviço'
+                    'message' => 'Dispositivo não pode ser excluído pois está vinculado a ordens de serviço'
                 ], 422);
             }
 
@@ -227,6 +237,43 @@ class AddressController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Erro ao excluir dispositivo: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete a room from an address
+     */
+    public function deleteRoom(Address $address, \App\Models\Room $room)
+    {
+        // Verificar se o cômodo pertence ao endereço
+        if ($room->address_id !== $address->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cômodo não pertence a este endereço'
+            ], 403);
+        }
+
+        try {
+            $hasWorkOrders = $room->workOrders()->exists();
+
+            if ($hasWorkOrders) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cômodo não pode ser excluído pois está vinculado a ordens de serviço'
+                ], 422);
+            }
+
+            $room->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cômodo excluído com sucesso!'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao excluir cômodo: ' . $e->getMessage()
             ], 500);
         }
     }

@@ -103,6 +103,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/addresses/{address}/devices', [AddressController::class, 'storeDevice'])->name('addresses.devices.store');
     Route::put('/addresses/{address}/devices/{device}', [AddressController::class, 'updateDevice'])->name('addresses.devices.update');
     Route::delete('/addresses/{address}/devices/{device}', [AddressController::class, 'deleteDevice'])->name('addresses.devices.delete');
+    Route::delete('/addresses/{address}/rooms/{room}', [AddressController::class, 'deleteRoom'])->name('addresses.rooms.delete');
 
     // Rotas de Contratos
     Route::resource('contracts', ContractController::class);

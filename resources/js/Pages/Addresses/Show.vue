@@ -232,6 +232,13 @@
                   >
                     Editar
                   </Link>
+                  <button
+                    v-if="canDeleteRoom(room)"
+                    @click="deleteRoom(room.id)"
+                    class="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium"
+                  >
+                    Excluir
+                  </button>
                 </div>
               </div>
             </div>
@@ -317,6 +324,7 @@
                     Editar
                   </Link>
                   <button
+                    v-if="canDeleteDevice(device)"
                     @click="deleteDevice(device.id)"
                     class="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium"
                   >
@@ -572,6 +580,44 @@ const saveDevice = async () => {
 const refreshRooms = () => {
   // Recarregar a página para atualizar a lista de cômodos
   router.reload();
+};
+
+const canDeleteRoom = (room) => {
+  return !room.work_orders_count || room.work_orders_count === 0;
+};
+
+const deleteRoom = async (roomId) => {
+  if (!confirm('Tem certeza que deseja excluir este cômodo?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/addresses/${props.address.id}/rooms/${roomId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+        'Accept': 'application/json',
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      router.reload();
+    } else {
+      alert(data.message || 'Erro ao excluir cômodo');
+    }
+  } catch (error) {
+    console.error('Erro ao excluir cômodo:', error);
+    alert('Erro ao excluir cômodo');
+  }
+};
+
+const canDeleteDevice = (device) => {
+  const hasWorkOrders = device.work_orders_count && device.work_orders_count > 0;
+  const hasEvents = device.work_order_events_count && device.work_order_events_count > 0;
+  return !hasWorkOrders && !hasEvents;
 };
 
 const deleteDevice = async (deviceId) => {

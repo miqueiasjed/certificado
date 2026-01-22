@@ -42,6 +42,16 @@ class Device extends Model
     }
 
     /**
+     * Get the work orders linked to this device.
+     */
+    public function workOrders(): BelongsToMany
+    {
+        return $this->belongsToMany(WorkOrder::class, 'work_order_device', 'device_id', 'work_order_id')
+            ->withPivot('observation')
+            ->withTimestamps();
+    }
+
+    /**
      * Get the work order device events for this device.
      */
     public function workOrderEvents(): HasMany

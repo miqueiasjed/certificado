@@ -55,6 +55,10 @@ class RoomService
 
     public function deleteRoom(Room $room): bool
     {
+        if ($room->workOrders()->exists()) {
+            throw new \Exception('Não é possível excluir o cômodo pois ele está vinculado a ordens de serviço.');
+        }
+
         return $room->delete();
     }
 

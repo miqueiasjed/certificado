@@ -30,12 +30,11 @@ class DeviceService
         // Verificar se o dispositivo tem eventos vinculados
         $hasEvents = $device->deviceEvents()->exists();
 
-        // Verificar se o dispositivo está sendo usado em work orders
-        $hasWorkOrderUsage = \App\Models\WorkOrder::whereHas('rooms', function($query) use ($device) {
-            $query->where('device_id', $device->id);
-        })->exists();
+        // Verificar se o dispositivo está sendo usado em ordens de serviço ou eventos de OS
+        $hasWorkOrders = $device->workOrders()->exists();
+        $hasWorkOrderEvents = $device->workOrderEvents()->exists();
 
-        return !$hasEvents && !$hasWorkOrderUsage;
+        return !$hasEvents && !$hasWorkOrders && !$hasWorkOrderEvents;
     }
 
     /**
@@ -50,7 +49,6 @@ class DeviceService
         return $device->delete();
     }
 }
-
 
 
 
