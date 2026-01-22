@@ -2846,31 +2846,16 @@ const formatCurrencyField = (event, fieldName) => {
   const input = event.target;
   let value = input.value;
 
-  // Remove tudo exceto números e vírgula
-  let cleanValue = value.replace(/[^\d,]/g, '');
+  // Remove tudo que não é número
+  let numbers = value.replace(/\D/g, '');
 
-  if (cleanValue === '') {
+  if (numbers === '') {
     editFinancialForm[fieldName] = '';
     return;
   }
 
-  let amount;
-
-  // Se já tem vírgula, trata como valor decimal
-  if (cleanValue.includes(',')) {
-    // Substitui vírgula por ponto e converte
-    amount = parseFloat(cleanValue.replace(',', '.'));
-  } else {
-    // Se não tem vírgula, trata como centavos se tiver mais de 2 dígitos
-    const numbers = cleanValue.replace(/\D/g, '');
-    if (numbers.length <= 2) {
-      // Menos de 3 dígitos: trata como reais
-      amount = parseFloat(numbers);
-    } else {
-      // 3+ dígitos: trata como centavos
-      amount = parseFloat(numbers) / 100;
-    }
-  }
+  // Converte para centavos e depois para reais
+  let amount = parseFloat(numbers) / 100;
 
   // Formata o valor
   let formatted = amount.toLocaleString('pt-BR', {
@@ -4073,14 +4058,8 @@ const submitFinancialInfo = async () => {
     if (data.success) {
       showEditFinancialModal.value = false;
 
-      // Atualizar os dados do workOrder com os novos valores
-      if (data.work_order) {
-        // Atualizar propriedades específicas
-        props.workOrder.total_cost = data.work_order.total_cost;
-        props.workOrder.discount_amount = data.work_order.discount_amount;
-        props.workOrder.final_amount = data.work_order.final_amount;
-        props.workOrder.payment_due_date = data.work_order.payment_due_date;
-      }
+      // Recarregar para garantir atualização dos valores na tela
+      router.reload({ only: ["workOrder"] });
     } else {
       throw new Error(data.message || 'Erro ao atualizar informações financeiras');
     }
