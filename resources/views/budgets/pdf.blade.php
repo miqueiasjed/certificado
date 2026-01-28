@@ -1,94 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Orçamento #{{ $budget->id }}</title>
     <style>
+        @page {
+            size: A4 portrait;
+            margin: 10mm 15mm;
+        }
+
         body {
-            font-family: sans-serif;
-            font-size: 12px;
-            color: #333;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #ddd;
-            padding-bottom: 10px;
-        }
-
-        .header h1 {
+            font-family: Arial, sans-serif;
+            font-size: 11px;
             margin: 0;
-            font-size: 24px;
-            color: #2c3e50;
+            padding: 0;
+            line-height: 1.3;
+            color: #000;
+            background-color: #fff;
         }
 
-        .header p {
-            margin: 2px 0;
-            color: #666;
-        }
-
-        .section {
-            margin-bottom: 20px;
-        }
-
-        .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            background-color: #f3f4f6;
-            padding: 5px 10px;
+        .header-section {
+            text-align: center;
             margin-bottom: 10px;
-            border-left: 4px solid #10b981;
+            position: relative;
+            min-height: 120px;
+        }
+
+        .logo-container {
+            position: absolute;
+            top: -29px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .logo-container img {
+            height: 130px;
+            width: auto;
+        }
+
+        .document-title {
+            font-weight: bold;
+            font-size: 18px;
+            text-transform: uppercase;
+            background-color: #059669;
+            color: #fff;
+            padding: 10px;
+            border: 2px solid #000;
+            margin-top: 100px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
+            background-color: #fff;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #000;
         }
 
         th,
         td {
-            border: 1px solid #ddd;
-            padding: 8px;
+            padding: 5px 8px;
             text-align: left;
+            vertical-align: top;
+            font-size: 11px;
         }
 
         th {
-            background-color: #f9fafb;
+            background-color: #059669;
+            color: #fff;
             font-weight: bold;
+        }
+
+        .section-title {
+            background-color: #059669;
+            color: #fff;
+            font-weight: bold;
+            font-size: 11px;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        .col-30 {
+            width: 30%;
+        }
+
+        .col-33 {
+            width: 33.33%;
+        }
+
+        .col-50 {
+            width: 50%;
+        }
+
+        .col-70 {
+            width: 70%;
+        }
+
+        .text-center {
+            text-align: center;
         }
 
         .text-right {
             text-align: right;
         }
 
-        .total-row td {
-            font-weight: bold;
-            background-color: #f3f4f6;
-        }
-
-        .info-grid {
-            width: 100%;
-        }
-
-        .info-grid td {
-            border: none;
-            padding: 4px;
-        }
-
-        .label {
-            font-weight: bold;
-            color: #555;
-            width: 120px;
-        }
-
         .footer {
-            margin-top: 50px;
+            margin-top: 20px;
             text-align: center;
-            font-size: 10px;
-            color: #999;
+            font-size: 9px;
+            color: #666;
             border-top: 1px solid #ddd;
             padding-top: 10px;
         }
@@ -96,124 +123,163 @@
 </head>
 
 <body>
-    <div class="header">
-        <h1>ORÇAMENTO DE SERVIÇOS</h1>
-        <p>Proposta Nº {{ str_pad($budget->id, 6, '0', STR_PAD_LEFT) }}</p>
-        <p>Data: {{ \Carbon\Carbon::parse($budget->date)->format('d/m/Y') }}</p>
+    <!-- Cabeçalho -->
+    <div class="header-section">
+        <div class="logo-container">
+            <img src="{{ public_path('images/logo-nome.png') }}" alt="Logo">
+        </div>
+        <div class="document-title">
+            ORÇAMENTO DE SERVIÇOS
+        </div>
     </div>
 
-    <div class="section">
-        <div class="section-title">DADOS DO CLIENTE</div>
-        <table class="info-grid">
-            <tr>
-                <td class="label">Cliente:</td>
-                <td>{{ $budget->client ? $budget->client->name : $budget->prospect_name }}</td>
-            </tr>
-            <tr>
-                <td class="label">Telefone:</td>
-                <td>{{ $budget->client ? $budget->client->phone : $budget->prospect_phone }}</td>
-            </tr>
-            <tr>
-                <td class="label">Endereço:</td>
-                <td>{{ $budget->client ? $budget->client->address : $budget->prospect_address }}</td>
-            </tr>
-            @if($budget->client && $budget->client->cnpj)
-                <tr>
-                    <td class="label">CPF/CNPJ:</td>
-                    <td>{{ $budget->client->cnpj }}</td>
-                </tr>
-            @endif
-        </table>
-    </div>
+    <!-- Tabela: Dados do Orçamento -->
+    <table>
+        <tr>
+            <td class="col-33"><strong>N° do Orçamento: </strong>{{ str_pad($budget->id, 6, '0', STR_PAD_LEFT) }}</td>
+            <td class="col-33"><strong>Data: </strong>
+                {{ \Carbon\Carbon::parse($budget->date)->format('d/m/Y') }}
+            </td>
+            <td class="col-33"><strong>Validade: </strong>
+                {{ $budget->validity_date ? \Carbon\Carbon::parse($budget->validity_date)->format('d/m/Y') : '10 dias' }}
+            </td>
+        </tr>
+    </table>
 
-    <div class="section">
-        <div class="section-title">DETALHES TÉCNICOS</div>
-        <table class="info-grid">
-            <tr>
-                <td class="label">Ambiente:</td>
-                <td>{{ $budget->environment_type ? ucfirst($budget->environment_type) : '-' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Pragas Alvo:</td>
-                <td>{{ $budget->target_pests ? implode(', ', $budget->target_pests) : '-' }}</td>
-            </tr>
-            <tr>
-                <td class="label">Áreas a Tratar:</td>
-                <td>{{ $budget->areas_to_treat ? implode(', ', $budget->areas_to_treat) : '-' }}</td>
-            </tr>
-            @if($budget->observations)
-                <tr>
-                    <td class="label">Observações:</td>
-                    <td>{{ $budget->observations }}</td>
-                </tr>
-            @endif
-        </table>
-    </div>
+    <!-- Tabela: Dados da Empresa Contratada (Igual ao Certificado) -->
+    <table>
+        <tr>
+            <td colspan="2" class="section-title">DADOS DA EMPRESA</td>
+        </tr>
+        <tr>
+            <td class="col-70"><strong>Razão Social: </strong>MESQUITA DEDETIZACAO LTDA</td>
+            <td class="col-30"><strong>CNPJ: </strong>19.228.297/0001-75</td>
+        </tr>
+        <tr>
+            <td colspan="2"><strong>Endereço:</strong> Comunidade 2º Vila Córrego dos Furtados, 153, Bairro Córrego
+                Fundo, Município de Trairi-CE</td>
+        </tr>
+        <tr>
+            <td class="col-50"><strong>Telefone:</strong> (85) 99993-8745</td>
+            <td class="col-50">CRQ - Conselho Regional de Química 10º REGIÃO Nº 5.253</td>
+        </tr>
+    </table>
 
-    <div class="section">
-        <div class="section-title">SERVIÇOS PROPOSTOS</div>
-        <table>
-            <thead>
-                <tr>
-                    <th>Descrição</th>
-                    <th class="text-right" width="80">Qtd</th>
-                    <th class="text-right" width="100">Valor Unit.</th>
-                    <th class="text-right" width="100">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                @php $total = 0; @endphp
-                @foreach($budget->services as $service)
-                    <tr>
-                        <td>{{ $service->description }}</td>
-                        <td class="text-right">{{ number_format($service->pivot->quantity, 1, ',', '.') }}</td>
-                        <td class="text-right">R$ {{ number_format($service->pivot->unit_price, 2, ',', '.') }}</td>
-                        <td class="text-right">R$ {{ number_format($service->pivot->subtotal, 2, ',', '.') }}</td>
-                    </tr>
-                    @php $total += $service->pivot->subtotal; @endphp
-                @endforeach
-
-                @if($budget->discount > 0)
-                    <tr>
-                        <td colspan="3" class="text-right">Subtotal</td>
-                        <td class="text-right">R$ {{ number_format($total, 2, ',', '.') }}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="3" class="text-right">Desconto</td>
-                        <td class="text-right">- R$ {{ number_format($budget->discount, 2, ',', '.') }}</td>
-                    </tr>
-                @endif
-
-                <tr class="total-row">
-                    <td colspan="3" class="text-right">TOTAL</td>
-                    <td class="text-right">R$ {{ number_format($total - $budget->discount, 2, ',', '.') }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <div class="section">
-        <div class="section-title">CONDIÇÕES COMERCIAIS</div>
-        <table class="info-grid">
+    <!-- Tabela: Dados do Cliente -->
+    <table>
+        <tr>
+            <td colspan="2" class="section-title">DADOS DO CLIENTE</td>
+        </tr>
+        <tr>
+            <td class="col-50"><strong>Cliente:
+                </strong>{{ $budget->client ? $budget->client->name : $budget->prospect_name }}</td>
+            <td class="col-50"><strong>Telefone:
+                </strong>{{ $budget->client ? $budget->client->phone : $budget->prospect_phone }}</td>
+        </tr>
+        <tr>
+            <td colspan="2"><strong>Endereço:
+                </strong>{{ $budget->client ? $budget->client->address : $budget->prospect_address }}</td>
+        </tr>
+        @if($budget->client && $budget->client->cnpj)
             <tr>
-                <td class="label">Pagamento:</td>
-                <td>{{ $budget->payment_method }}
-                    {{ $budget->payment_conditions ? "({$budget->payment_conditions})" : '' }}</td>
+                <td colspan="2"><strong>CPF/CNPJ: </strong>{{ $budget->client->cnpj }}</td>
+            </tr>
+        @endif
+    </table>
+
+    <!-- Tabela: Detalhes Técnicos -->
+    <table>
+        <tr>
+            <td colspan="2" class="section-title">DETALHES TÉCNICOS</td>
+        </tr>
+        @php
+            $environments = [
+                'residential' => 'Residencial',
+                'commercial' => 'Comercial',
+                'industrial' => 'Industrial',
+                'food' => 'Alimentício',
+                'hospital' => 'Hospitalar',
+                'school' => 'Escola',
+                'condo' => 'Condomínio',
+                'other' => 'Outros',
+            ];
+            $envLabel = $budget->environment_type && isset($environments[$budget->environment_type]) 
+                ? $environments[$budget->environment_type] 
+                : ($budget->environment_type ? ucfirst($budget->environment_type) : '-');
+        @endphp
+        <tr>
+            <td class="col-50"><strong>Ambiente: </strong>{{ $envLabel }}</td>
+            <td class="col-50"><strong>Pragas Alvo:
+                </strong>{{ $budget->target_pests ? implode(', ', $budget->target_pests) : '-' }}</td>
+        </tr>
+        <tr>
+            <td colspan="2"><strong>Áreas a Tratar:
+                </strong>{{ $budget->areas_to_treat ? implode(', ', $budget->areas_to_treat) : '-' }}</td>
+        </tr>
+        @if($budget->observations)
+            <tr>
+                <td colspan="2"><strong>Observações: </strong>{{ $budget->observations }}</td>
+            </tr>
+        @endif
+    </table>
+
+    <!-- Tabela: Serviços Propostos -->
+    <table>
+        <tr>
+            <td colspan="4" class="section-title">SERVIÇOS PROPOSTOS</td>
+        </tr>
+        <tr>
+            <th>Descrição</th>
+            <th class="text-right" style="width: 80px;">Qtd</th>
+            <th class="text-right" style="width: 100px;">Valor Unit.</th>
+            <th class="text-right" style="width: 100px;">Subtotal</th>
+        </tr>
+
+        @php $total = 0; @endphp
+        @foreach($budget->services as $service)
+            <tr>
+                <td>{{ $service->description }}</td>
+                <td class="text-right">{{ number_format($service->pivot->quantity, 1, ',', '.') }}</td>
+                <td class="text-right">R$ {{ number_format($service->pivot->unit_price, 2, ',', '.') }}</td>
+                <td class="text-right">R$ {{ number_format($service->pivot->subtotal, 2, ',', '.') }}</td>
+            </tr>
+            @php $total += $service->pivot->subtotal; @endphp
+        @endforeach
+
+        @if($budget->discount > 0)
+            <tr>
+                <td colspan="3" class="text-right"><strong>Subtotal</strong></td>
+                <td class="text-right">R$ {{ number_format($total, 2, ',', '.') }}</td>
             </tr>
             <tr>
-                <td class="label">Validade:</td>
-                <td>{{ $budget->validity_date ? \Carbon\Carbon::parse($budget->validity_date)->format('d/m/Y') : '10 dias' }}
-                </td>
+                <td colspan="3" class="text-right"><strong>Desconto</strong></td>
+                <td class="text-right">- R$ {{ number_format($budget->discount, 2, ',', '.') }}</td>
             </tr>
-            <tr>
-                <td class="label">Execução:</td>
-                <td>{{ $budget->execution_deadline ?: 'A combinar' }}</td>
-            </tr>
-        </table>
-    </div>
+        @endif
+
+        <tr>
+            <td colspan="3" class="text-right" style="background-color: #f3f4f6;"><strong>TOTAL</strong></td>
+            <td class="text-right" style="background-color: #f3f4f6;"><strong>R$
+                    {{ number_format($total - $budget->discount, 2, ',', '.') }}</strong></td>
+        </tr>
+    </table>
+
+    <!-- Tabela: Condições Comerciais -->
+    <table>
+        <tr>
+            <td colspan="2" class="section-title">CONDIÇÕES COMERCIAIS</td>
+        </tr>
+        <tr>
+            <td class="col-50"><strong>Forma de Pagamento: </strong>{{ $budget->payment_method }}
+                {{ $budget->payment_conditions ? "({$budget->payment_conditions})" : '' }}</td>
+            <td class="col-50"><strong>Prazo de Execução: </strong>{{ $budget->execution_deadline ?: 'A combinar' }}
+            </td>
+        </tr>
+    </table>
 
     <div class="footer">
-        <p>Este orçamento é apenas uma estimativa e está sujeito a alteração.</p>
+        <p>Este orçamento é válido até a data de validade indicada acima e está sujeito a alteração sem aviso prévio
+            após este período.</p>
         <p>Gerado em {{ date('d/m/Y H:i') }}</p>
     </div>
 </body>
