@@ -76,11 +76,8 @@
 <body>
     <!-- Cabeçalho com Logo e Título -->
     <div style="text-align: center; margin-bottom: 20px;">
-        @php
-            $logoPath = $company->logo_path ? public_path('storage/' . $company->logo_path) : null;
-        @endphp
-        @if($logoPath)
-            <img src="{{ $logoPath }}" alt="Logo"
+        @if(isset($logoSrc) && $logoSrc)
+            <img src="{{ $logoSrc }}" alt="Logo"
                 style="height: 200px; width: auto; display: block; margin: 0 auto 0px auto;">
         @endif
         <div class="header" style="margin-top: 10px;">

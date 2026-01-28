@@ -173,4 +173,50 @@ class BudgetService
 
         return ['client_id' => $clientId];
     }
+
+    /**
+     * Prepare data for PDF generation, including Base64 images.
+     */
+    public function preparePdfData(Budget $budget): array
+    {
+        $budget->load(['services', 'products', 'client', 'user']);
+
+        $company = \App\Models\Company::current();
+
+        return [
+            'budget' => $budget,
+            'company' => $company,
+            'logoSrc' => $this->convertStorageFileToBase64($company->logo_path),
+        ];
+    }
+
+    /**
+     * Convert a stored image file to a Base64 string.
+     */
+    private function convertStorageFileToBase64(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+
+        $fullPath = storage_path('app/public/' . $path);
+
+        if (!file_exists($fullPath)) {
+            return null;
+        }
+
+        $extension = pathinfo($fullPath, PATHINFO_EXTENSION);
+        $data = file_get_contents($fullPath);
+
+        $mime = match (strtolower($extension)) {
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            'webp' => 'image/webp',
+            default => 'application/octet-stream',
+        };
+
+        return 'data:' . $mime . ';base64,' . base64_encode($data);
+    }
 }

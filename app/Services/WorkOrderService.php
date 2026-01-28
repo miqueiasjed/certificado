@@ -23,7 +23,7 @@ class WorkOrderService
 
         // Sincronizar técnicos
         if (!empty($technicians)) {
-            $technicians = array_filter($technicians, function($id) {
+            $technicians = array_filter($technicians, function ($id) {
                 return !empty($id);
             });
 
@@ -69,18 +69,18 @@ class WorkOrderService
             $syncData = [];
             foreach ($rooms as $room) {
                 if (!empty($room['id'])) {
-                   $syncData[$room['id']] = [
-                       'observation' => $room['observation'] ?? null,
-                       'event_type_id' => $room['event_type'] ?? null,
-                       'event_date' => $room['event_date'] ?? null,
-                       'event_description' => $room['event_description'] ?? null,
-                       'event_observations' => $room['event_observations'] ?? null,
-                       'pest_type' => $room['pest_type'] ?? null,
-                       'pest_sighting_date' => $room['pest_sighting_date'] ?? null,
-                       'pest_location' => $room['pest_location'] ?? null,
-                       'pest_quantity' => $room['pest_quantity'] ?? null,
-                       'pest_observation' => $room['pest_observation'] ?? null,
-                   ];
+                    $syncData[$room['id']] = [
+                        'observation' => $room['observation'] ?? null,
+                        'event_type_id' => $room['event_type'] ?? null,
+                        'event_date' => $room['event_date'] ?? null,
+                        'event_description' => $room['event_description'] ?? null,
+                        'event_observations' => $room['event_observations'] ?? null,
+                        'pest_type' => $room['pest_type'] ?? null,
+                        'pest_sighting_date' => $room['pest_sighting_date'] ?? null,
+                        'pest_location' => $room['pest_location'] ?? null,
+                        'pest_quantity' => $room['pest_quantity'] ?? null,
+                        'pest_observation' => $room['pest_observation'] ?? null,
+                    ];
                 }
             }
             $workOrder->rooms()->sync($syncData);
@@ -91,9 +91,11 @@ class WorkOrderService
             foreach ($devices as $deviceData) {
                 if (!empty($deviceData['id'])) {
                     // Salvar dispositivo na OS (mesmo sem eventos)
-                    $workOrder->devices()->syncWithoutDetaching([$deviceData['id'] => [
-                        'observation' => $deviceData['observation'] ?? null
-                    ]]);
+                    $workOrder->devices()->syncWithoutDetaching([
+                        $deviceData['id'] => [
+                            'observation' => $deviceData['observation'] ?? null
+                        ]
+                    ]);
 
                     // Salvar eventos do dispositivo (se houver)
                     if (!empty($deviceData['device_events']) && is_array($deviceData['device_events'])) {
@@ -134,7 +136,7 @@ class WorkOrderService
 
         // Sincronizar técnicos
         if (!empty($technicians)) {
-            $technicians = array_filter($technicians, function($id) {
+            $technicians = array_filter($technicians, function ($id) {
                 return !empty($id);
             });
 
@@ -180,18 +182,18 @@ class WorkOrderService
             $syncData = [];
             foreach ($rooms as $room) {
                 if (!empty($room['id'])) {
-                   $syncData[$room['id']] = [
-                       'observation' => $room['observation'] ?? null,
-                       'event_type_id' => $room['event_type'] ?? null,
-                       'event_date' => $room['event_date'] ?? null,
-                       'event_description' => $room['event_description'] ?? null,
-                       'event_observations' => $room['event_observations'] ?? null,
-                       'pest_type' => $room['pest_type'] ?? null,
-                       'pest_sighting_date' => $room['pest_sighting_date'] ?? null,
-                       'pest_location' => $room['pest_location'] ?? null,
-                       'pest_quantity' => $room['pest_quantity'] ?? null,
-                       'pest_observation' => $room['pest_observation'] ?? null,
-                   ];
+                    $syncData[$room['id']] = [
+                        'observation' => $room['observation'] ?? null,
+                        'event_type_id' => $room['event_type'] ?? null,
+                        'event_date' => $room['event_date'] ?? null,
+                        'event_description' => $room['event_description'] ?? null,
+                        'event_observations' => $room['event_observations'] ?? null,
+                        'pest_type' => $room['pest_type'] ?? null,
+                        'pest_sighting_date' => $room['pest_sighting_date'] ?? null,
+                        'pest_location' => $room['pest_location'] ?? null,
+                        'pest_quantity' => $room['pest_quantity'] ?? null,
+                        'pest_observation' => $room['pest_observation'] ?? null,
+                    ];
                 }
             }
             $workOrder->rooms()->sync($syncData);
@@ -409,11 +411,127 @@ class WorkOrderService
     /**
      * Mark work order as completed.
      */
+    /**
+     * Mark work order as completed.
+     */
     public function markAsCompleted(WorkOrder $workOrder, array $data = []): bool
     {
         $data['status'] = 'completed';
         $data['end_time'] = now();
 
         return $workOrder->update($data);
+    }
+
+    /**
+     * Prepare data for PDF generation, including Base64 images.
+     */
+    public function preparePdfData(WorkOrder $workOrder): array
+    {
+        // Load relationships
+        $workOrder->load([
+            'client',
+            'address.client',
+            'technician',
+            'technicians',
+            'products' => function ($query) {
+                $query->withPivot(['quantity', 'unit', 'observations']);
+            },
+            'service',
+            'rooms' => function ($query) {
+                $query->withPivot([
+                    'observation',
+                    'event_type_id',
+                    'event_date',
+                    'event_description',
+                    'event_observations',
+                    'pest_type',
+                    'pest_sighting_date',
+                    'pest_location',
+                    'pest_quantity',
+                    'pest_observation'
+                ]);
+            },
+            'devices' => function ($query) {
+                $query->with(['baitType'])->orderBy('label');
+            },
+            'workOrderDeviceEvents' => function ($query) {
+                $query->with([
+                    'device.address.client',
+                    'device.baitType',
+                    'eventType'
+                ])->orderBy('event_date', 'desc');
+            },
+            'pestSightings' => function ($query) {
+                $query->with(['address.client'])->orderBy('sighting_date', 'desc');
+            }
+        ]);
+
+        $company = \App\Models\Company::current();
+
+        return [
+            'workOrder' => $workOrder,
+            'company' => $company,
+            'currentDate' => now()->format('d/m/Y'),
+            'currentTime' => now()->format('H:i'),
+            'logoSrc' => $this->convertStorageFileToBase64($company->logo_path),
+            'chemSrc' => $this->convertStorageFileToBase64($company->signature_chemical_path),
+        ];
+    }
+
+    /**
+     * Prepare receipt data for PDF generation.
+     */
+    public function prepareReceiptData(WorkOrder $workOrder): array
+    {
+        $workOrder->load([
+            'client',
+            'address',
+            'paymentDetails' => function ($query) {
+                $query->whereNotNull('payment_date')->orderBy('payment_date', 'desc');
+            }
+        ]);
+
+        $totalPaid = $workOrder->paymentDetails->sum('amount_paid');
+        $receiptNumber = 'REC-' . str_pad($workOrder->id, 6, '0', STR_PAD_LEFT) . '-' . date('Ymd');
+        $company = \App\Models\Company::current();
+
+        return [
+            'workOrder' => $workOrder,
+            'payments' => $workOrder->paymentDetails,
+            'totalPaid' => $totalPaid,
+            'receiptNumber' => $receiptNumber,
+            'logoSrc' => $this->convertStorageFileToBase64($company->logo_path),
+            'company' => $company,
+        ];
+    }
+
+    /**
+     * Convert a stored image file to a Base64 string.
+     */
+    private function convertStorageFileToBase64(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+
+        $fullPath = storage_path('app/public/' . $path);
+
+        if (!file_exists($fullPath)) {
+            return null;
+        }
+
+        $extension = pathinfo($fullPath, PATHINFO_EXTENSION);
+        $data = file_get_contents($fullPath);
+
+        $mime = match (strtolower($extension)) {
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            'webp' => 'image/webp',
+            default => 'application/octet-stream',
+        };
+
+        return 'data:' . $mime . ';base64,' . base64_encode($data);
     }
 }

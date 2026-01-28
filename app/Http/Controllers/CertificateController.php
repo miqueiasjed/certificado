@@ -99,7 +99,7 @@ class CertificateController extends Controller
         $certificate->load([
             'client',
             'workOrder.address.client',
-            'products' => function($query) {
+            'products' => function ($query) {
                 $query->withPivot(['quantity', 'unit']);
             },
             'products.activeIngredient',
@@ -119,7 +119,7 @@ class CertificateController extends Controller
         // Carregar relacionamentos do certificado
         $certificate->load([
             'client',
-            'products' => function($query) {
+            'products' => function ($query) {
                 $query->withPivot(['quantity', 'unit']);
             },
             'service'
@@ -184,22 +184,12 @@ class CertificateController extends Controller
 
     public function exportPdf(Certificate $certificate)
     {
-        // Carregar as relações necessárias
-        $certificate->load([
-            'client',
-            'address', // Endereço do certificado (para certificados avulsos)
-            'workOrder.address.client', // Endereço da OS (para certificados gerados por OS)
-            'products.activeIngredient',
-            'products.chemicalGroup',
-            'products.antidote',
-            'products.organRegistration',
-            'service'
-        ]);
+        // Use service to prepare data
+        $data = $this->certificateService->preparePdfData($certificate);
 
         // Gerar o PDF com os dados fornecidos
-        $pdf = FacadePdf::loadView('pdf.certificate', [
-            'certificate' => $certificate,
-        ])->setPaper('a4', 'landscape'); // Definindo o tamanho do papel e o modo paisagem
+        $pdf = FacadePdf::loadView('pdf.certificate', $data)
+            ->setPaper('a4', 'landscape'); // Definindo o tamanho do papel e o modo paisagem
 
         // Retornar o PDF para download
         return $pdf->stream('certificate-' . $certificate->id . '.pdf');

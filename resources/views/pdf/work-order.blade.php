@@ -467,8 +467,8 @@
 
     <!-- Cabeçalho com Logo e Título -->
     <div style="text-align: center; margin-bottom: 20px;">
-        @if($company->logo_path)
-            <img src="{{ storage_path('app/public/' . $company->logo_path) }}" alt="Logo" style="height: 130px; width: auto; display: block; margin: 0 auto 10px auto;">
+        @if(isset($logoSrc) && $logoSrc)
+            <img src="{{ $logoSrc }}" alt="Logo" style="height: 130px; width: auto; display: block; margin: 0 auto 10px auto;">
         @else
             <!-- Fallback se não tiver logo, apenas o título -->
         @endif
@@ -845,7 +845,13 @@
     <div class="signature-section no-break">
         <div class="signature-box">
             <div class="signature-title">Assinatura do Engenheiro Químico</div>
-            <img src="{{ public_path('images/signature-quimico.png') }}" alt="Assinatura Químico" class="signature-image">
+            
+            @if(isset($chemSrc) && $chemSrc)
+                <img src="{{ $chemSrc }}" alt="Assinatura Químico" class="signature-image">
+            @else
+                <!-- Fallback opcional ou linha em branco -->
+                <div style="height: 50px;"></div>
+            @endif
             <div class="signature-text"><strong>Ass:</strong> Químico Industrial</div>
         </div>
         <div class="signature-box">

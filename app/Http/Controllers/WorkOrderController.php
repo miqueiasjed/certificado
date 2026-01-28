@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Http\Controllers;
-
 use App\Http\Requests\WorkOrderRequest;
 use App\Models\WorkOrder;
 use App\Models\Client;
@@ -74,12 +73,24 @@ class WorkOrderController extends Controller
             ->orderBy('nickname')
             ->limit(200)
             ->get();
-        $technicians = Technician::select('id', 'name', 'specialty')->where('is_active', true)->orderBy('name')->limit(100)->get();
+        $technicians = Technician::select('id', 'name', 'specialty')->where(
+            'is_active',
+            true
+        )->orderBy('name')->limit(100)->get();
         $services = Service::select('id', 'name')->where('is_active', true)->orderBy('name')->limit(100)->get();
 
         return Inertia::render('WorkOrders/Index', [
             'workOrders' => $workOrders,
-            'filters' => $request->only(['client_id', 'address_id', 'technician_id', 'status', 'priority_level', 'service_id', 'date_from', 'date_to']),
+            'filters' => $request->only([
+                'client_id',
+                'address_id',
+                'technician_id',
+                'status',
+                'priority_level',
+                'service_id',
+                'date_from',
+                'date_to'
+            ]),
             'clients' => $clients,
             'addresses' => $addresses,
             'technicians' => $technicians,
@@ -95,9 +106,15 @@ class WorkOrderController extends Controller
             ->orderBy('nickname')
             ->limit(200)
             ->get();
-        $technicians = Technician::select('id', 'name', 'specialty')->where('is_active', true)->orderBy('name')->limit(100)->get();
+        $technicians = Technician::select('id', 'name', 'specialty')->where(
+            'is_active',
+            true
+        )->orderBy('name')->limit(100)->get();
         $products = Product::select('id', 'name')->orderBy('name')->limit(100)->get();
-        $services = Service::select('id', 'name', 'description')->where('is_active', true)->orderBy('name')->limit(100)->get();
+        $services = Service::select('id', 'name', 'description')->where(
+            'is_active',
+            true
+        )->orderBy('name')->limit(100)->get();
 
         // Carregar tipos de eventos disponíveis
         $eventTypes = \App\Models\EventType::select('id', 'name', 'description', 'color')
@@ -247,9 +264,15 @@ class WorkOrderController extends Controller
             ->orderBy('nickname')
             ->limit(200)
             ->get();
-        $technicians = Technician::select('id', 'name', 'specialty')->where('is_active', true)->orderBy('name')->limit(100)->get();
+        $technicians = Technician::select('id', 'name', 'specialty')->where(
+            'is_active',
+            true
+        )->orderBy('name')->limit(100)->get();
         $products = Product::select('id', 'name')->orderBy('name')->limit(100)->get();
-        $services = Service::select('id', 'name', 'description')->where('is_active', true)->orderBy('name')->limit(100)->get();
+        $services = Service::select('id', 'name', 'description')->where(
+            'is_active',
+            true
+        )->orderBy('name')->limit(100)->get();
 
         // Buscar todos os cômodos do cliente da work order
         $rooms = collect();
@@ -421,36 +444,18 @@ class WorkOrderController extends Controller
         }
 
         try {
-            // Carregar as relações necessárias
-            $workOrder->load([
-                'client',
-                'address',
-                'paymentDetails' => function ($query) {
-                    $query->whereNotNull('payment_date')->orderBy('payment_date', 'desc');
-                }
-            ]);
-
-            // Calcular total pago
-            $totalPaid = $workOrder->paymentDetails->sum('amount_paid');
-
-            // Gerar número do recibo (baseado no ID da work order + timestamp)
-            $receiptNumber = 'REC-' . str_pad($workOrder->id, 6, '0', STR_PAD_LEFT) . '-' . date('Ymd');
+            // Preparar dados usando o service
+            $data = $this->workOrderService->prepareReceiptData($workOrder);
 
             Log::info('Generating PDF', [
                 'work_order_id' => $workOrder->id,
-                'total_paid' => $totalPaid,
-                'receipt_number' => $receiptNumber
+                'receipt_number' => $data['receiptNumber']
             ]);
 
-            // Gerar o PDF com os dados fornecidos
-            $pdf = FacadePdf::loadView('pdf.receipt', [
-                'workOrder' => $workOrder,
-                'payments' => $workOrder->paymentDetails,
-                'totalPaid' => $totalPaid,
-                'receiptNumber' => $receiptNumber,
-            ])->setPaper('a4', 'landscape'); // Definindo o tamanho do papel e o modo paisagem
+            // Gerar o PDF
+            $pdf = FacadePdf::loadView('pdf.receipt', $data)
+                ->setPaper('a4', 'landscape');
 
-            // Retornar o PDF para download
             return $pdf->stream('recibo-pagamento-' . $workOrder->id . '.pdf');
         } catch (\Exception $e) {
             Log::error('Error generating receipt', [
@@ -469,55 +474,8 @@ class WorkOrderController extends Controller
     public function generatePDF(WorkOrder $workOrder)
     {
         try {
-            // Carregar todos os dados necessários
-            $workOrder->load([
-                'client',
-                'address.client',
-                'technician',
-                'technicians',
-                'products' => function ($query) {
-                    $query->withPivot(['quantity', 'unit', 'observations']);
-                },
-                'service',
-                'rooms' => function ($query) {
-                    $query->withPivot([
-                        'observation',
-                        'event_type_id',
-                        'event_date',
-                        'event_description',
-                        'event_observations',
-                        'pest_type',
-                        'pest_sighting_date',
-                        'pest_location',
-                        'pest_quantity',
-                        'pest_observation'
-                    ]);
-                },
-                'devices' => function ($query) {
-                    $query->with(['baitType'])->orderBy('label');
-                },
-                'workOrderDeviceEvents' => function ($query) {
-                    $query->with([
-                        'device.address.client',
-                        'device.baitType',
-                        'eventType'
-                    ])->orderBy('event_date', 'desc');
-                },
-                'pestSightings' => function ($query) {
-                    $query->with(['address.client'])->orderBy('sighting_date', 'desc');
-                }
-            ]);
-
-            // Dados da empresa
-            $company = Company::current();
-
-            // Preparar dados para o PDF
-            $data = [
-                'workOrder' => $workOrder,
-                'company' => $company,
-                'currentDate' => now()->format('d/m/Y'),
-                'currentTime' => now()->format('H:i'),
-            ];
+            // Preparar dados usando o service
+            $data = $this->workOrderService->preparePdfData($workOrder);
 
             // Gerar PDF
             $pdf = FacadePdf::loadView('pdf.work-order', $data);
@@ -711,7 +669,10 @@ class WorkOrderController extends Controller
 
             // Se está marcando como principal, remover principal de outros técnicos
             if ($request->boolean('is_primary')) {
-                $workOrder->technicians()->updateExistingPivot($workOrder->technicians->pluck('id')->toArray(), ['is_primary' => false]);
+                $workOrder->technicians()->updateExistingPivot($workOrder->technicians->pluck('id')->toArray(), [
+                    'is_primary' =>
+                        false
+                ]);
             }
 
             $workOrder->technicians()->attach($technician->id, [
@@ -1437,4 +1398,6 @@ class WorkOrderController extends Controller
             return back()->withErrors(['message' => 'Erro ao remover evento: ' . $e->getMessage()]);
         }
     }
+
+
 }

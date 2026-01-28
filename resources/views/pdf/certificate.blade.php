@@ -160,15 +160,12 @@
 <body>
     @php
         $company = \App\Models\Company::current();
-        $logoPath = $company->logo_path ? public_path('storage/' . $company->logo_path) : null;
-        $sigOpPath = $company->signature_operational_path ? public_path('storage/' . $company->signature_operational_path) : null;
-        $sigChemPath = $company->signature_chemical_path ? public_path('storage/' . $company->signature_chemical_path) : null;
     @endphp
     <!-- Cabeçalho -->
     <div class="header-section">
         <div class="logo-container">
-            @if($logoPath)
-                <img src="{{ $logoPath }}" alt="Logo">
+            @if($logoSrc)
+                <img src="{{ $logoSrc }}" alt="Logo">
             @endif
         </div>
         <div class="document-title">
@@ -330,20 +327,20 @@
     @endif
 
     <!-- Tabela: Assinaturas -->
-    @if($sigOpPath || $sigChemPath)
+    @if($sigOpSrc || $sigChemSrc)
         <table class="signature-table">
             <tr>
                 <td style="width: 50%;">
-                    @if($sigOpPath)
-                        <img src="{{ $sigOpPath }}" alt="Assinatura Gerente" class="signature-img">
+                    @if($sigOpSrc)
+                        <img src="{{ $sigOpSrc }}" alt="Assinatura Gerente" class="signature-img">
                         <div class="signature-line">
                             <strong>Gerente de Operações</strong>
                         </div>
                     @endif
                 </td>
                 <td style="width: 50%;">
-                    @if($sigChemPath)
-                        <img src="{{ $sigChemPath }}" alt="Assinatura Químico" class="signature-img">
+                    @if($sigChemSrc)
+                        <img src="{{ $sigChemSrc }}" alt="Assinatura Químico" class="signature-img">
                         <div class="signature-line">
                             <strong>Químico Industrial</strong><br>
                             @if($company->crq)

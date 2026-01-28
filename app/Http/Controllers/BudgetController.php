@@ -105,8 +105,10 @@ class BudgetController extends Controller
 
     public function pdf(Budget $budget)
     {
-        $budget->load(['services', 'products', 'client', 'user']);
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('budgets.pdf', ['budget' => $budget]);
+        // Use service to prepare data
+        $data = $this->budgetService->preparePdfData($budget);
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('budgets.pdf', $data);
         return $pdf->stream("orcamento-{$budget->id}.pdf");
     }
 }

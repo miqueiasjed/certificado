@@ -51,7 +51,7 @@ class CertificateService
             if ($workOrder) {
                 // Se não há produtos selecionados, usar os da OS
                 if (empty($products) && $workOrder->products->isNotEmpty()) {
-                    $products = $workOrder->products->map(function($product) {
+                    $products = $workOrder->products->map(function ($product) {
                         return [
                             'product_id' => $product->id,
                             'quantity' => $product->pivot->quantity ?? null,
@@ -140,17 +140,17 @@ class CertificateService
     public function searchCertificates(string $search): LengthAwarePaginator
     {
         $certificates = Certificate::with(['client', 'workOrder.address', 'products', 'service'])
-            ->where(function($query) use ($search) {
+            ->where(function ($query) use ($search) {
                 $query->where('id', 'like', "%{$search}%")
-                      ->orWhere('certificate_number', 'like', "%{$search}%")
-                      ->orWhere('status', 'like', "%{$search}%")
-                      ->orWhere('notes', 'like', "%{$search}%")
-                      ->orWhere('execution_date', 'like', "%{$search}%")
-                      ->orWhere('warranty', 'like', "%{$search}%")
-                      ->orWhereHas('client', function($q) use ($search) {
-                          $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('certificate_number', 'like', "%{$search}%")
+                    ->orWhere('status', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%")
+                    ->orWhere('execution_date', 'like', "%{$search}%")
+                    ->orWhere('warranty', 'like', "%{$search}%")
+                    ->orWhereHas('client', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
                             ->orWhere('cnpj', 'like', "%{$search}%");
-                      });
+                    });
             })
             ->orderBy('created_at', 'desc')
             ->paginate(15);
@@ -192,5 +192,64 @@ class CertificateService
         $timestamp = time();
         $random = strtoupper(substr(md5(uniqid()), 0, 5));
         return 'CERT-' . substr($timestamp, -6) . '-' . $random;
+    }
+
+    /**
+     * Prepare data for PDF generation, including Base64 images.
+     */
+    public function preparePdfData(Certificate $certificate): array
+    {
+        // Load relationships
+        $certificate->load([
+            'client',
+            'workOrder.address.client',
+            'products' => function ($query) {
+                $query->withPivot(['quantity', 'unit']);
+            },
+            'products.activeIngredient',
+            'products.chemicalGroup',
+            'products.antidote',
+            'products.organRegistration',
+            'service'
+        ]);
+
+        $company = \App\Models\Company::current();
+
+        return [
+            'certificate' => $certificate,
+            'logoSrc' => $this->convertStorageFileToBase64($company->logo_path),
+            'sigOpSrc' => $this->convertStorageFileToBase64($company->signature_operational_path),
+            'sigChemSrc' => $this->convertStorageFileToBase64($company->signature_chemical_path),
+        ];
+    }
+
+    /**
+     * Convert a stored image file to a Base64 string.
+     */
+    private function convertStorageFileToBase64(?string $path): ?string
+    {
+        if (!$path) {
+            return null;
+        }
+
+        $fullPath = storage_path('app/public/' . $path);
+
+        if (!file_exists($fullPath)) {
+            return null;
+        }
+
+        $extension = pathinfo($fullPath, PATHINFO_EXTENSION);
+        $data = file_get_contents($fullPath);
+
+        $mime = match (strtolower($extension)) {
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            'webp' => 'image/webp',
+            default => 'application/octet-stream',
+        };
+
+        return 'data:' . $mime . ';base64,' . base64_encode($data);
     }
 }

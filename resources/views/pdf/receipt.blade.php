@@ -211,15 +211,23 @@
 <body>
     @php
         $company = \App\Models\Company::current();
-        $logoPath = $company->logo_path ? public_path('storage/' . $company->logo_path) : null;
+
+        $path = $company->logo_path ? storage_path('app/public/' . $company->logo_path) : null;
+        $logoSrc = null;
+        if ($path && file_exists($path)) {
+            $type = pathinfo($path, PATHINFO_EXTENSION);
+            $data = file_get_contents($path);
+            $base64 = base64_encode($data);
+            $logoSrc = 'data:image/' . $type . ';base64,' . $base64;
+        }
     @endphp
 
     <!-- Header simples -->
     <div class="header">
-        @if($logoPath)
-            <img src="{{ $logoPath }}" alt="Logo" style="height: 50px; width: auto; display: block; margin-bottom: 5px;">
+        @if(isset($logoSrc) && $logoSrc)
+            <img src="{{ $logoSrc }}" alt="Logo" style="height: 50px; width: auto; display: block; margin-bottom: 5px;">
         @else
-            @if($company->name)
+            @if(isset($company->name))
                 <div class="logo">{{ $company->name }}</div>
             @endif
         @endif
