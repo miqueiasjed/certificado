@@ -36,8 +36,8 @@ class FinancialWithdrawalController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
-                  ->orWhere('reference_number', 'like', "%{$search}%")
-                  ->orWhere('notes', 'like', "%{$search}%");
+                    ->orWhere('reference_number', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%");
             });
         }
 
@@ -73,8 +73,8 @@ class FinancialWithdrawalController extends Controller
             $search = $request->search;
             $baseQuery->where(function ($q) use ($search) {
                 $q->where('description', 'like', "%{$search}%")
-                  ->orWhere('reference_number', 'like', "%{$search}%")
-                  ->orWhere('notes', 'like', "%{$search}%");
+                    ->orWhere('reference_number', 'like', "%{$search}%")
+                    ->orWhere('notes', 'like', "%{$search}%");
             });
         }
 
@@ -105,7 +105,7 @@ class FinancialWithdrawalController extends Controller
     /**
      * Store a newly created withdrawal.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request)
     {
         $request->validate([
             'amount' => 'required|numeric|min:0.01',
@@ -135,24 +135,18 @@ class FinancialWithdrawalController extends Controller
             'created_by' => Auth::id()
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Saída financeira registrada com sucesso!',
-            'withdrawal' => $withdrawal
-        ]);
+        return redirect()->route('financial-withdrawals.index')
+            ->with('success', 'Saída financeira registrada com sucesso!');
     }
 
     /**
      * Update the specified withdrawal.
      */
-    public function update(Request $request, FinancialEntry $financialEntry): JsonResponse
+    public function update(Request $request, FinancialEntry $financialEntry)
     {
         // Only allow editing manual withdrawals
         if ($financialEntry->source !== 'manual_withdrawal') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Não é possível editar saídas financeiras geradas automaticamente por ordens de serviço.'
-            ], 422);
+            return back()->withErrors(['error' => 'Não é possível editar saídas financeiras geradas automaticamente por ordens de serviço.']);
         }
 
         $request->validate([
@@ -173,24 +167,18 @@ class FinancialWithdrawalController extends Controller
             'updated_by' => Auth::id()
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Saída financeira atualizada com sucesso!',
-            'withdrawal' => $financialEntry
-        ]);
+        return redirect()->route('financial-withdrawals.index')
+            ->with('success', 'Saída financeira atualizada com sucesso!');
     }
 
     /**
      * Remove the specified withdrawal.
      */
-    public function destroy(FinancialEntry $financialEntry): JsonResponse
+    public function destroy(FinancialEntry $financialEntry)
     {
         // Only allow deleting manual withdrawals
         if ($financialEntry->source !== 'manual_withdrawal') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Não é possível excluir saídas financeiras geradas automaticamente por ordens de serviço.'
-            ], 422);
+            return back()->withErrors(['error' => 'Não é possível excluir saídas financeiras geradas automaticamente por ordens de serviço.']);
         }
 
         Log::info('Saída financeira excluída', [
@@ -202,9 +190,7 @@ class FinancialWithdrawalController extends Controller
 
         $financialEntry->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Saída financeira excluída com sucesso!'
-        ]);
+        return redirect()->route('financial-withdrawals.index')
+            ->with('success', 'Saída financeira excluída com sucesso!');
     }
 }

@@ -139,7 +139,7 @@
                     <svg class="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    {{ formatDate(withdrawal.withdrawal_date) }}
+                    {{ formatDate(withdrawal.entry_date) }}
                     <span v-if="withdrawal.payment_method" class="ml-2">
                       • {{ withdrawal.payment_method_text }}
                     </span>
@@ -283,7 +283,7 @@
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Data *</label>
                 <input
-                  v-model="form.withdrawal_date"
+                  v-model="form.entry_date"
                   type="date"
                   required
                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
@@ -404,7 +404,7 @@ const filters = reactive({
 const form = reactive({
   amount: '',
   description: '',
-  withdrawal_date: '',
+  entry_date: '',
   payment_method: '',
   reference_number: '',
   notes: '',
@@ -507,7 +507,7 @@ const deleteEntry = async (id) => {
 
   try {
     // Usar router.delete do Inertia
-    router.delete(`/financial-entries/${id}`, {
+    router.delete(`/financial-withdrawals/${id}`, {
       preserveScroll: true,
       onSuccess: () => {
         router.reload({ only: ['entries', 'summary'] })
@@ -531,8 +531,8 @@ const submitForm = async () => {
     }
 
     const url = showEditModal.value
-      ? `/financial-entries/${editingEntry.value.id}`
-      : '/financial-entries'
+      ? `/financial-withdrawals/${editingEntry.value.id}`
+      : '/financial-withdrawals'
 
     const method = showEditModal.value ? 'PUT' : 'POST'
 
@@ -586,6 +586,6 @@ const closeModal = () => {
 onMounted(() => {
   // Set default date to today
   const today = new Date().toISOString().split('T')[0]
-  form.withdrawal_date = today
+  form.entry_date = today
 })
 </script>
