@@ -216,7 +216,7 @@
                 <input v-model="form.execution_deadline" type="text" placeholder="Ex: D+2 após aprovação" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
             </div>
             
-            <div v-if="form.status && form.status !== 'draft'">
+            <div v-if="isEditing">
                  <label class="block text-sm font-medium text-gray-700">Status</label>
                   <select v-model="form.status" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
                     <option value="draft">Rascunho</option>
@@ -260,8 +260,9 @@ const form = useForm({
   prospect_name: props.budget?.prospect_name || '',
   prospect_phone: props.budget?.prospect_phone || '',
   prospect_address: props.budget?.prospect_address || '',
-  date: props.budget?.date || new Date().toISOString().substr(0, 10),
-  validity_date: props.budget?.validity_date || '',
+  prospect_address: props.budget?.prospect_address || '',
+  date: props.budget?.date ? props.budget.date.substring(0, 10) : new Date().toISOString().substring(0, 10),
+  validity_date: props.budget?.validity_date ? props.budget.validity_date.substring(0, 10) : '',
   priority: props.budget?.priority || 'normal',
   channel: props.budget?.channel || '',
   target_pests: props.budget?.target_pests || [],

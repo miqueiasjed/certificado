@@ -41,6 +41,7 @@ class UpdateBudgetRequest extends FormRequest
             'payment_conditions' => 'nullable|string',
             'execution_deadline' => 'nullable|string',
             'validity_date' => 'nullable|date',
+            'observations' => 'nullable|string',
             'status' => 'required|in:draft,sent,negotiating,approved,refused,expired,converted',
             'loss_reason' => 'nullable|string',
         ];

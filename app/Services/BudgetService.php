@@ -35,6 +35,7 @@ class BudgetService
                 'payment_conditions' => $data['payment_conditions'] ?? null,
                 'execution_deadline' => $data['execution_deadline'] ?? null,
                 'validity_date' => $data['validity_date'] ?? null,
+                'observations' => $data['observations'] ?? null,
                 'status' => 'draft',
             ]);
 
@@ -86,6 +87,7 @@ class BudgetService
                 'payment_conditions' => $data['payment_conditions'] ?? null,
                 'execution_deadline' => $data['execution_deadline'] ?? null,
                 'validity_date' => $data['validity_date'] ?? null,
+                'observations' => $data['observations'] ?? null,
                 'status' => $data['status'],
                 'loss_reason' => $data['loss_reason'] ?? null,
             ]);
