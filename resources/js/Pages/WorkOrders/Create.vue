@@ -7,7 +7,7 @@
 
     <div class="max-w-6xl mx-auto">
       <Card>
-        <form @submit.prevent="submit" class="p-6 space-y-6">
+        <form @submit.prevent="submit" class="p-4 sm:p-6 space-y-6">
           <!-- Alerta de Validação para Cômodos -->
           <div
             v-if="hasValidationErrors"
@@ -52,7 +52,7 @@
                 v-model="form.client_id"
                 required
                 @change="onClientChange"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 :class="{ 'border-red-500': form.errors.client_id }"
               >
                 <option value="">Selecione um cliente</option>
@@ -79,7 +79,7 @@
                 v-model="form.address_id"
                 required
                 :disabled="!form.client_id"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 :class="{ 'border-red-500': form.errors.address_id }"
               >
                 <option value="">Selecione um endereço</option>
@@ -101,7 +101,7 @@
                 <div v-for="(technicianId, index) in form.technicians" :key="index" class="flex gap-2 items-center">
                   <select
                     v-model="form.technicians[index]"
-                    class="flex-1 h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    class="flex-1 min-w-0 h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     :class="{ 'border-red-500': form.errors.technicians }"
                     required
                   >
@@ -420,7 +420,7 @@
                   <select
                     v-model="room.id"
                     required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     :class="{ 'border-red-500': form.errors[`rooms.${index}.id`] }"
                   >
                     <option value="">Selecione um cômodo</option>
@@ -535,7 +535,7 @@
                     </label>
                     <select
                       v-model="device.id"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       :class="{ 'border-red-500': form.errors[`devices.${index}.id`] }"
                     >
                       <option value="">Selecione um dispositivo</option>

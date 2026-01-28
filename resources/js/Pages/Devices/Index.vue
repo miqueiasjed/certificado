@@ -108,9 +108,9 @@
             :key="device.id"
             class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
           >
-            <div class="flex items-center justify-between">
-              <div class="flex-1">
-                <div class="flex items-center space-x-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div class="flex-1 w-full">
+                <div class="flex items-start space-x-3">
                   <!-- Ícone do dispositivo -->
                   <div class="flex-shrink-0">
                     <div class="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center">
@@ -141,7 +141,7 @@
               </div>
 
               <!-- Ações -->
-              <div class="flex items-center space-x-2">
+              <div class="flex items-center space-x-2 w-full sm:w-auto justify-end mt-2 sm:mt-0">
                 <Link
                   :href="route('devices.show', device.id)"
                   class="text-green-600 hover:text-green-900 text-sm font-medium"

@@ -26,7 +26,7 @@
     <div class="max-w-2xl mx-auto">
       <form @submit.prevent="submitForm" class="space-y-6">
         <Card>
-          <div class="p-6 space-y-4">
+          <div class="p-4 sm:p-6 space-y-4">
             <div>
               <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
                 Nome do Produto *
@@ -49,7 +49,7 @@
                 <select
                   id="active_ingredient_id"
                   v-model="form.active_ingredient_id"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-500': errors.active_ingredient_id }">
                   <option value="">Selecione um princípio ativo</option>
                   <option v-for="ingredient in activeIngredients" :key="ingredient.id" :value="ingredient.id">
@@ -76,7 +76,7 @@
                 <select
                   id="chemical_group_id"
                   v-model="form.chemical_group_id"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-500': errors.chemical_group_id }">
                   <option value="">Selecione um grupo químico</option>
                   <option v-for="group in chemicalGroups" :key="group.id" :value="group.id">
@@ -103,7 +103,7 @@
                 <select
                   id="antidote_id"
                   v-model="form.antidote_id"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-500': errors.antidote_id }">
                   <option value="">Selecione um antídoto</option>
                   <option v-for="antidote in antidotes" :key="antidote.id" :value="antidote.id">
@@ -130,7 +130,7 @@
                 <select
                   id="organ_registration_id"
                   v-model="form.organ_registration_id"
-                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   :class="{ 'border-red-500': errors.organ_registration_id }">
                   <option value="">Selecione um registro (opcional)</option>
                   <option v-for="registration in organRegistrations" :key="registration.id" :value="registration.id">

@@ -63,8 +63,8 @@
               :key="contract.id"
               class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
             >
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
+              <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div class="flex-1 w-full">
                   <div class="flex items-center gap-3 mb-2">
                     <h3 class="text-lg font-semibold text-gray-900">
                       {{ contract.contract_number || `Contrato #${contract.id}` }}
@@ -86,7 +86,7 @@
                     <p class="mt-1">Cliente: {{ contract.address?.client?.name }}</p>
                   </div>
 
-                  <div class="flex items-center gap-4 text-sm text-gray-500">
+                  <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                     <div class="flex items-center gap-1">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -108,7 +108,7 @@
                   </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 w-full sm:w-auto justify-end mt-2 sm:mt-0">
                   <button
                     @click="generateContractPDF(contract.address_id)"
                     class="px-3 py-1 text-sm text-purple-600 hover:text-purple-800 font-medium"
