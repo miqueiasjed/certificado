@@ -69,6 +69,33 @@ export function useMasks() {
     return value;
   };
 
+  // Máscara para Moeda (R$)
+  const currencyMask = (value) => {
+    if (value === undefined || value === null || value === '') return '';
+
+    // Converte para string para manipulação
+    let stringValue = value.toString();
+
+    // Remove tudo que não é número
+    const numbers = stringValue.replace(/\D/g, '');
+
+    if (numbers === '') return '';
+
+    // Converte para centavos e depois para formato brasileiro
+    const numericValue = parseInt(numbers) / 100;
+    return numericValue.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
+  const parseCurrency = (value) => {
+    if (!value) return 0;
+    if (typeof value === 'number') return value;
+    const cleanValue = value.replace(/[^\d,]/g, '').replace(',', '.');
+    return parseFloat(cleanValue) || 0;
+  };
+
   // Função para aplicar máscara em tempo real
   const applyMask = (value, maskType) => {
     switch (maskType) {
@@ -87,6 +114,8 @@ export function useMasks() {
     phoneMask,
     cpfCnpjMask,
     cepMask,
-    applyMask
+    applyMask,
+    currencyMask,
+    parseCurrency
   };
 }

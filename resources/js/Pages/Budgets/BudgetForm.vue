@@ -117,7 +117,7 @@
                     <label class="block text-xs font-medium text-gray-500">Serviço</label>
                     <select v-model="item.service_id" @change="onServiceSelect(item)" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
                         <option :value="null">Selecione...</option>
-                        <option v-for="s in services" :key="s.id" :value="s.id">{{ s.description }}</option>
+                        <option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }}</option>
                     </select>
                  </div>
                  <div class="w-24">
@@ -126,11 +126,11 @@
                  </div>
                  <div class="w-32">
                     <label class="block text-xs font-medium text-gray-500">Valor Unit.</label>
-                    <input type="number" step="0.01" v-model="item.unit_price" @input="calcSubtotal(item)" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
+                    <input type="text" v-model="item.unit_price" @input="onUnitPriceInput($event, item)" @focus="selectAll" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm" placeholder="R$ 0,00">
                  </div>
                  <div class="w-32">
                     <label class="block text-xs font-medium text-gray-500">Subtotal</label>
-                    <input type="number" disabled :value="item.subtotal" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md sm:text-sm">
+                    <input type="text" disabled :value="formatCurrency(item.subtotal)" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md sm:text-sm">
                  </div>
                  <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -147,7 +147,7 @@
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="font-medium text-gray-500 text-sm">Desconto:</span>
-                    <input type="number" step="0.01" v-model="form.discount" class="w-24 text-right border-gray-300 rounded-md text-sm p-1">
+                    <input type="text" v-model="form.discount" @input="onDiscountInput" @focus="selectAll" class="w-24 text-right border-gray-300 rounded-md text-sm p-1" placeholder="R$ 0,00">
                 </div>
                  <div class="flex justify-between text-lg font-bold text-gray-900 border-t pt-2">
                     <span>Total:</span>
@@ -243,7 +243,7 @@
 import { computed, watch } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
 import Card from '@/Components/Card.vue';
-import ClientSearch from '@/Components/ClientSearch.vue';
+import { useMasks } from '@/Composables/useMasks';
 
 const props = defineProps({
   budget: Object,
@@ -252,6 +252,8 @@ const props = defineProps({
   products: Array,
   isEditing: Boolean,
 });
+
+const { currencyMask, parseCurrency } = useMasks();
 
 const form = useForm({
   client_id: props.budget?.client_id || null,
@@ -266,14 +268,18 @@ const form = useForm({
   environment_type: props.budget?.environment_type || '',
   areas_to_treat: props.budget?.areas_to_treat || [],
   observations: props.budget?.observations || '',
-  discount: props.budget?.discount || 0,
+  discount: props.budget?.discount ? currencyMask(props.budget.discount * 100) : '', // Assuming backend sends float, mask expects input-like typing or we adapt
+  // Actually currencyMask expects a string or number and treats as cents if integer string, 
+  // but if we pass float 150.00, mask might not work as expected if it just does replace(/\D/).
+  // Our mask logic: replace \D -> integer -> /100.
+  // So 150.00 -> 15000 -> 150,00. Correct.
   
   // Arrays
   items: props.budget?.services?.map(s => ({
       service_id: s.id,
       quantity: s.pivot.quantity,
-      unit_price: s.pivot.unit_price,
-      subtotal: s.pivot.subtotal
+      unit_price: currencyMask(Math.round(s.pivot.unit_price * 100)), // Convert to cents integer for mask
+      subtotal: s.pivot.quantity * s.pivot.unit_price // Recalculate based on values, don't trust DB subtotal which might be corrupted
   })) || [],
   
   products: props.budget?.products?.map(p => ({
@@ -292,10 +298,21 @@ const form = useForm({
 });
 
 const submit = () => {
+  // Transform masked values back to numbers
+  const transformedForm = form.transform((data) => ({
+      ...data,
+      discount: parseCurrency(data.discount),
+      items: data.items.map(item => ({
+          ...item,
+          unit_price: parseCurrency(item.unit_price),
+          subtotal: parseCurrency(item.subtotal) // ensure subtotal is number (it might be number already but let's be safe)
+      }))
+  }));
+
   if (props.isEditing) {
-    form.put(`/budgets/${props.budget.id}`);
+    transformedForm.put(`/budgets/${props.budget.id}`);
   } else {
-    form.post('/budgets');
+    transformedForm.post('/budgets');
   }
 };
 
@@ -305,7 +322,7 @@ const areasList = ['Interna', 'Externa', 'Jardim', 'Forro', 'Caixa de Gordura', 
 
 // Logics
 const addItem = () => {
-    form.items.push({ service_id: null, quantity: 1, unit_price: 0, subtotal: 0 });
+    form.items.push({ service_id: null, quantity: 1, unit_price: '', subtotal: 0 });
 };
 const removeItem = (index) => form.items.splice(index, 1);
 
@@ -315,18 +332,26 @@ const addProduct = () => {
 const removeProduct = (index) => form.products.splice(index, 1);
 
 const onServiceSelect = (item) => {
-    const s = props.services.find(s => s.id === item.service_id);
-    if (s) {
-        // Assume service has a base price? If not, leave 0. 
-        // Currently Service table just has description. Assuming manual price input or we add price to Service table later.
-        // For now, let's just keep manual or 0.
-        // item.unit_price = s.price || 0; 
-        // calcSubtotal(item);
-    }
+    // const s = props.services.find(s => s.id === item.service_id);
+    // if (s) {
+       // Optional: set default price if available
+    // }
+};
+
+const onUnitPriceInput = (event, item) => {
+    const newVal = currencyMask(event.target.value);
+    item.unit_price = newVal;
+    calcSubtotal(item);
+};
+
+const onDiscountInput = (event) => {
+    form.discount = currencyMask(event.target.value);
 };
 
 const calcSubtotal = (item) => {
-    item.subtotal = (parseFloat(item.quantity) || 0) * (parseFloat(item.unit_price) || 0);
+    const qty = parseFloat(item.quantity) || 0;
+    const price = parseCurrency(item.unit_price);
+    item.subtotal = qty * price;
 };
 
 const servicesTotal = computed(() => {
@@ -334,12 +359,16 @@ const servicesTotal = computed(() => {
 });
 
 const finalTotal = computed(() => {
-    const discount = parseFloat(form.discount) || 0;
+    const discount = parseCurrency(form.discount);
     return servicesTotal.value - discount;
 });
 
 const formatCurrency = (val) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+};
+
+const selectAll = (event) => {
+    event.target.select();
 };
 
 // Watch for client changes to auto-fill prospect fields if needed? 

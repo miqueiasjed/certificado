@@ -35,7 +35,7 @@ class BudgetController extends Controller
     {
         return Inertia::render('Budgets/Create', [
             'clients' => Client::orderBy('name')->get(),
-            'services' => Service::orderBy('description')->get(),
+            'services' => Service::orderBy('name')->get(),
             'products' => Product::orderBy('name')->get(),
         ]);
     }
@@ -54,7 +54,7 @@ class BudgetController extends Controller
         return Inertia::render('Budgets/Edit', [
             'budget' => $budget,
             'clients' => Client::orderBy('name')->get(),
-            'services' => Service::orderBy('description')->get(),
+            'services' => Service::orderBy('name')->get(),
             'products' => Product::orderBy('name')->get(),
         ]);
     }
