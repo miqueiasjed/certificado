@@ -59,7 +59,7 @@
                 <button
                   type="button"
                   @click="showActiveIngredientModal = true"
-                  class="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                  class="hidden sm:block p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                   </svg>
@@ -86,7 +86,7 @@
                 <button
                   type="button"
                   @click="showChemicalGroupModal = true"
-                  class="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                  class="hidden sm:block p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                   </svg>
@@ -113,7 +113,7 @@
                 <button
                   type="button"
                   @click="showAntidoteModal = true"
-                  class="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                  class="hidden sm:block p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                   </svg>
@@ -140,7 +140,7 @@
                 <button
                   type="button"
                   @click="showOrganRegistrationModal = true"
-                  class="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                  class="hidden sm:block p-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                   </svg>
