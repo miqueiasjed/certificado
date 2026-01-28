@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -41,7 +40,7 @@ return new class extends Migration
 
             // Remover a foreign key existente se ela existir
             foreach ($foreignKeys as $foreignKey) {
-                $table->dropForeign([$foreignKey->CONSTRAINT_NAME]);
+                $table->dropForeign($foreignKey->CONSTRAINT_NAME);
             }
 
             // Tornar work_order_id obrigatório

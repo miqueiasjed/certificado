@@ -13,6 +13,7 @@ use App\Models\ServiceType;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\WorkOrderDeviceEvent;
+use App\Models\Company;
 use App\Services\WorkOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -140,11 +141,11 @@ class WorkOrderController extends Controller
             'address.devices.baitType',
             'technician',
             'technicians',
-            'products' => function($query) {
+            'products' => function ($query) {
                 $query->withPivot(['quantity', 'unit', 'observations']);
             },
             'service',
-            'rooms' => function($query) {
+            'rooms' => function ($query) {
                 $query->withPivot([
                     'observation',
                     'event_type_id',
@@ -221,11 +222,11 @@ class WorkOrderController extends Controller
             'address.client',
             'technician',
             'technicians',
-            'products' => function($query) {
+            'products' => function ($query) {
                 $query->withPivot(['quantity', 'unit', 'observations']);
             },
             'service',
-            'rooms' => function($query) {
+            'rooms' => function ($query) {
                 $query->withPivot('observation');
             },
             'paymentDetails' => function ($query) {
@@ -253,20 +254,22 @@ class WorkOrderController extends Controller
         // Buscar todos os cômodos do cliente da work order
         $rooms = collect();
         if ($workOrder->client) {
-            $workOrder->client->load(['addresses.rooms' => function($query) {
-                $query->where('active', true);
-            }]);
+            $workOrder->client->load([
+                'addresses.rooms' => function ($query) {
+                    $query->where('active', true);
+                }
+            ]);
 
-               foreach ($workOrder->client->addresses as $address) {
-                   foreach ($address->rooms as $room) {
-                       $rooms->push([
-                           'id' => $room->id,
-                           'name' => $room->name,
-                           'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
-                           'address' => $address->nickname ?? $address->short_address,
-                       ]);
-                   }
-               }
+            foreach ($workOrder->client->addresses as $address) {
+                foreach ($address->rooms as $room) {
+                    $rooms->push([
+                        'id' => $room->id,
+                        'name' => $room->name,
+                        'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
+                        'address' => $address->nickname ?? $address->short_address,
+                    ]);
+                }
+            }
         }
 
         return Inertia::render('WorkOrders/Edit', [
@@ -422,7 +425,7 @@ class WorkOrderController extends Controller
             $workOrder->load([
                 'client',
                 'address',
-                'paymentDetails' => function($query) {
+                'paymentDetails' => function ($query) {
                     $query->whereNotNull('payment_date')->orderBy('payment_date', 'desc');
                 }
             ]);
@@ -472,11 +475,11 @@ class WorkOrderController extends Controller
                 'address.client',
                 'technician',
                 'technicians',
-                'products' => function($query) {
+                'products' => function ($query) {
                     $query->withPivot(['quantity', 'unit', 'observations']);
                 },
                 'service',
-                'rooms' => function($query) {
+                'rooms' => function ($query) {
                     $query->withPivot([
                         'observation',
                         'event_type_id',
@@ -490,7 +493,7 @@ class WorkOrderController extends Controller
                         'pest_observation'
                     ]);
                 },
-                'devices' => function($query) {
+                'devices' => function ($query) {
                     $query->with(['baitType'])->orderBy('label');
                 },
                 'workOrderDeviceEvents' => function ($query) {
@@ -505,9 +508,13 @@ class WorkOrderController extends Controller
                 }
             ]);
 
+            // Dados da empresa
+            $company = Company::current();
+
             // Preparar dados para o PDF
             $data = [
                 'workOrder' => $workOrder,
+                'company' => $company,
                 'currentDate' => now()->format('d/m/Y'),
                 'currentTime' => now()->format('H:i'),
             ];
@@ -869,9 +876,11 @@ class WorkOrderController extends Controller
                 return response()->json(['rooms' => []]);
             }
 
-            $client->load(['addresses.rooms' => function($query) {
-                $query->where('active', true);
-            }]);
+            $client->load([
+                'addresses.rooms' => function ($query) {
+                    $query->where('active', true);
+                }
+            ]);
 
             $rooms = [];
             $selectedRoomIds = $workOrder->rooms->pluck('id')->toArray();
@@ -907,9 +916,11 @@ class WorkOrderController extends Controller
             return response()->json(['rooms' => []]);
         }
 
-        $client = Client::with(['addresses.rooms' => function($query) {
-            $query->where('active', true);
-        }])->find($clientId);
+        $client = Client::with([
+            'addresses.rooms' => function ($query) {
+                $query->where('active', true);
+            }
+        ])->find($clientId);
 
         if (!$client) {
             return response()->json(['rooms' => []]);
@@ -952,15 +963,15 @@ class WorkOrderController extends Controller
             ->with('baitType')
             ->orderBy('label')
             ->get()
-            ->map(function($device) {
-                        return [
-                            'id' => $device->id,
-                            'label' => $device->label,
-                            'number' => $device->number,
+            ->map(function ($device) {
+                return [
+                    'id' => $device->id,
+                    'label' => $device->label,
+                    'number' => $device->number,
                     'display_name' => $device->label . ' (' . $device->number . ')',
                     'bait_type' => $device->baitType ? $device->baitType->name : null,
                     'default_location_note' => $device->default_location_note,
-                        ];
+                ];
             });
 
         return response()->json(['devices' => $devices]);
@@ -1308,7 +1319,7 @@ class WorkOrderController extends Controller
 
             // Verificar se o dispositivo existe e pertence ao endereço da OS
             $device = Device::findOrFail($deviceId);
-            
+
             if ($device->address_id !== $workOrder->address_id) {
                 return back()->withErrors(['message' => 'Dispositivo não pertence ao endereço desta ordem de serviço']);
             }
@@ -1353,7 +1364,7 @@ class WorkOrderController extends Controller
 
             // Verificar se o dispositivo existe e pertence ao endereço da OS
             $device = Device::findOrFail($deviceId);
-            
+
             if ($device->address_id !== $workOrder->address_id) {
                 return back()->withErrors(['message' => 'Dispositivo não pertence ao endereço desta ordem de serviço']);
             }
@@ -1397,7 +1408,7 @@ class WorkOrderController extends Controller
         try {
             // Verificar se o dispositivo existe e pertence ao endereço da OS
             $device = Device::findOrFail($deviceId);
-            
+
             if ($device->address_id !== $workOrder->address_id) {
                 return back()->withErrors(['message' => 'Dispositivo não pertence ao endereço desta ordem de serviço']);
             }

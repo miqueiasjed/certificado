@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -195,7 +196,8 @@
                 font-size: 10px;
             }
 
-            .section, .payment-section {
+            .section,
+            .payment-section {
                 page-break-inside: avoid;
             }
 
@@ -207,17 +209,36 @@
 </head>
 
 <body>
+    @php
+        $company = \App\Models\Company::current();
+        $logoPath = $company->logo_path ? public_path('storage/' . $company->logo_path) : null;
+    @endphp
+
     <!-- Header simples -->
     <div class="header">
-        <div class="logo">ARI<br>DEDETIZAÇÃO</div>
+        @if($logoPath)
+            <img src="{{ $logoPath }}" alt="Logo" style="height: 50px; width: auto; display: block; margin-bottom: 5px;">
+        @else
+            @if($company->name)
+                <div class="logo">{{ $company->name }}</div>
+            @endif
+        @endif
     </div>
 
     <!-- Informações da empresa -->
-    <div class="company-info">
-        <p><strong>CNPJ:</strong> 19.228.297/0001-75</p>
-        <p>Comunidade 2º Vila Córrego dos Furtados, 153 - Bairro Córrego Fundo, Município de Trairi-CE</p>
-        <p><strong>Fone:</strong> (85) 99993-8745</p>
-    </div>
+    @if($company->cnpj || $company->full_address || $company->phone)
+        <div class="company-info">
+            @if($company->cnpj)
+                <p><strong>CNPJ:</strong> {{ $company->cnpj }}</p>
+            @endif
+            @if($company->full_address)
+                <p>{{ $company->full_address }}</p>
+            @endif
+            @if($company->phone)
+                <p><strong>Fone:</strong> {{ $company->phone }}</p>
+            @endif
+        </div>
+    @endif
 
     <!-- Layout em duas colunas -->
     <div class="two-column-layout">
@@ -255,7 +276,8 @@
                     <div class="field-row">
                         @php($address = $workOrder->address ?? null)
                         @if($address)
-                            {{ $address->street }}, {{ $address->number }} - {{ $address->district }}, {{ $address->city }}/{{ $address->state }} - CEP: {{ $address->zip }}
+                            {{ $address->street }}, {{ $address->number }} - {{ $address->district }},
+                            {{ $address->city }}/{{ $address->state }} - CEP: {{ $address->zip }}
                         @else
                             Não informado
                         @endif
@@ -273,7 +295,8 @@
                         <span class="field-label">Ordem de Serviço:</span> #{{ $workOrder->id }}
                     </div>
                     <div class="field-row">
-                        <span class="field-label">Data do Serviço:</span> {{ $workOrder->scheduled_date ? $workOrder->scheduled_date->format('d/m/Y') : 'Não informada' }}
+                        <span class="field-label">Data do Serviço:</span>
+                        {{ $workOrder->scheduled_date ? $workOrder->scheduled_date->format('d/m/Y') : 'Não informada' }}
                     </div>
                     <div class="field-row">
                         <span class="field-label">Descrição do Serviço:</span>
@@ -290,42 +313,43 @@
             <div class="section-title">💰 Detalhes do Pagamento</div>
 
             @if($workOrder->total_cost)
-            <div class="value-row">
-                <span class="value-label">Custo Total:</span>
-                <span class="value-amount">R$ {{ number_format($workOrder->total_cost, 2, ',', '.') }}</span>
-            </div>
+                <div class="value-row">
+                    <span class="value-label">Custo Total:</span>
+                    <span class="value-amount">R$ {{ number_format($workOrder->total_cost, 2, ',', '.') }}</span>
+                </div>
             @endif
 
             @if($workOrder->discount_amount && $workOrder->discount_amount > 0)
-            <div class="value-row">
-                <span class="value-label">Desconto:</span>
-                <span class="value-amount discount">- R$ {{ number_format($workOrder->discount_amount, 2, ',', '.') }}</span>
-            </div>
+                <div class="value-row">
+                    <span class="value-label">Desconto:</span>
+                    <span class="value-amount discount">- R$
+                        {{ number_format($workOrder->discount_amount, 2, ',', '.') }}</span>
+                </div>
             @endif
 
             @if($workOrder->final_amount)
-            <div class="value-row">
-                <span class="value-label">Valor Final:</span>
-                <span class="value-amount">R$ {{ number_format($workOrder->final_amount, 2, ',', '.') }}</span>
-            </div>
+                <div class="value-row">
+                    <span class="value-label">Valor Final:</span>
+                    <span class="value-amount">R$ {{ number_format($workOrder->final_amount, 2, ',', '.') }}</span>
+                </div>
             @endif
 
             <!-- Histórico de pagamentos -->
             @if($payments && $payments->count() > 0)
-            <div class="payment-history">
-                <div class="payment-history-title">Histórico de Pagamentos</div>
-                @foreach($payments as $payment)
-                <div class="payment-item">
-                    <span class="payment-item-left">
-                        {{ $payment->payment_date ? $payment->payment_date->format('d/m/Y') : 'Data não informada' }}
-                        @if($payment->payment_method_text)
-                            - {{ $payment->payment_method_text }}
-                        @endif
-                    </span>
-                    <span class="payment-item-right">R$ {{ number_format($payment->amount_paid, 2, ',', '.') }}</span>
+                <div class="payment-history">
+                    <div class="payment-history-title">Histórico de Pagamentos</div>
+                    @foreach($payments as $payment)
+                        <div class="payment-item">
+                            <span class="payment-item-left">
+                                {{ $payment->payment_date ? $payment->payment_date->format('d/m/Y') : 'Data não informada' }}
+                                @if($payment->payment_method_text)
+                                    - {{ $payment->payment_method_text }}
+                                @endif
+                            </span>
+                            <span class="payment-item-right">R$ {{ number_format($payment->amount_paid, 2, ',', '.') }}</span>
+                        </div>
+                    @endforeach
                 </div>
-                @endforeach
-            </div>
             @endif
 
             <!-- Separador e totais -->
@@ -343,4 +367,5 @@
     </div>
 
 </body>
+
 </html>

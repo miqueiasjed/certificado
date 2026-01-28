@@ -207,6 +207,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/budgets/{budget}/pdf', [BudgetController::class, 'pdf'])->name('budgets.pdf');
     Route::post('/budgets/{budget}/convert', [BudgetController::class, 'convert'])->name('budgets.convert');
 
+    // Configurações da Empresa
+    Route::get('/settings/company', [\App\Http\Controllers\CompanyController::class, 'edit'])->name('settings.company.edit');
+    Route::post('/settings/company', [\App\Http\Controllers\CompanyController::class, 'update'])->name('settings.company.update');
+
     // Logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 });

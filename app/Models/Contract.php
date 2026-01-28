@@ -20,6 +20,7 @@ class Contract extends Model
         'payment_method',
         'payment_details',
         'additional_clause',
+        'jurisdiction',
     ];
 
     protected $casts = [

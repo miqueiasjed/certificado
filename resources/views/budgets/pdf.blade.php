@@ -124,9 +124,15 @@
 
 <body>
     <!-- Cabeçalho -->
+    @php
+        $company = \App\Models\Company::current();
+        $logoPath = $company->logo_path ? public_path('storage/' . $company->logo_path) : null;
+    @endphp
     <div class="header-section">
         <div class="logo-container">
-            <img src="{{ public_path('images/logo-nome.png') }}" alt="Logo">
+            @if($logoPath)
+                <img src="{{ $logoPath }}" alt="Logo">
+            @endif
         </div>
         <div class="document-title">
             ORÇAMENTO DE SERVIÇOS
@@ -146,24 +152,29 @@
         </tr>
     </table>
 
-    <!-- Tabela: Dados da Empresa Contratada (Igual ao Certificado) -->
-    <table>
-        <tr>
-            <td colspan="2" class="section-title">DADOS DA EMPRESA</td>
-        </tr>
-        <tr>
-            <td class="col-70"><strong>Razão Social: </strong>MESQUITA DEDETIZACAO LTDA</td>
-            <td class="col-30"><strong>CNPJ: </strong>19.228.297/0001-75</td>
-        </tr>
-        <tr>
-            <td colspan="2"><strong>Endereço:</strong> Comunidade 2º Vila Córrego dos Furtados, 153, Bairro Córrego
-                Fundo, Município de Trairi-CE</td>
-        </tr>
-        <tr>
-            <td class="col-50"><strong>Telefone:</strong> (85) 99993-8745</td>
-            <td class="col-50">CRQ - Conselho Regional de Química 10º REGIÃO Nº 5.253</td>
-        </tr>
-    </table>
+    <!-- Tabela: Dados da Empresa Contratada -->
+    @if($company->name || $company->cnpj || $company->full_address || $company->phone || $company->crq)
+        <table>
+            <tr>
+                <td colspan="2" class="section-title">DADOS DA EMPRESA</td>
+            </tr>
+            <tr>
+                <td class="col-70"><strong>Razão Social: </strong>{{ $company->name }}</td>
+                <td class="col-30"><strong>CNPJ: </strong>{{ $company->cnpj }}</td>
+            </tr>
+            <tr>
+                <td colspan="2"><strong>Endereço:</strong> {{ $company->full_address }}</td>
+            </tr>
+            <tr>
+                <td class="col-50"><strong>Telefone:</strong> {{ $company->phone }}</td>
+                <td class="col-50">
+                    @if($company->crq)
+                        CRQ - {{ $company->crq }}
+                    @endif
+                </td>
+            </tr>
+        </table>
+    @endif
 
     <!-- Tabela: Dados do Cliente -->
     <table>
@@ -203,8 +214,8 @@
                 'condo' => 'Condomínio',
                 'other' => 'Outros',
             ];
-            $envLabel = $budget->environment_type && isset($environments[$budget->environment_type]) 
-                ? $environments[$budget->environment_type] 
+            $envLabel = $budget->environment_type && isset($environments[$budget->environment_type])
+                ? $environments[$budget->environment_type]
                 : ($budget->environment_type ? ucfirst($budget->environment_type) : '-');
         @endphp
         <tr>
@@ -271,7 +282,8 @@
         </tr>
         <tr>
             <td class="col-50"><strong>Forma de Pagamento: </strong>{{ $budget->payment_method }}
-                {{ $budget->payment_conditions ? "({$budget->payment_conditions})" : '' }}</td>
+                {{ $budget->payment_conditions ? "({$budget->payment_conditions})" : '' }}
+            </td>
             <td class="col-50"><strong>Prazo de Execução: </strong>{{ $budget->execution_deadline ?: 'A combinar' }}
             </td>
         </tr>

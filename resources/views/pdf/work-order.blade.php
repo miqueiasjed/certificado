@@ -467,16 +467,35 @@
 
     <!-- Cabeçalho com Logo e Título -->
     <div style="text-align: center; margin-bottom: 20px;">
-        <img src="{{ public_path('images/logo-nome.png') }}" alt="Logo" style="height: 130px; width: auto; display: block; margin: 0 auto 10px auto;">
+        @if($company->logo_path)
+            <img src="{{ storage_path('app/public/' . $company->logo_path) }}" alt="Logo" style="height: 130px; width: auto; display: block; margin: 0 auto 10px auto;">
+        @else
+            <!-- Fallback se não tiver logo, apenas o título -->
+        @endif
         <h1 style="color: #059669; font-size: 24px; margin: 10px 0 0 0; font-weight: bold;">ORDEM DE SERVIÇO</h1>
     </div>
 
     <!-- Informações da empresa -->
     <div class="company-info">
-        <p><strong>CNPJ:</strong> 19.228.297/0001-75</p>
-        <p>Comunidade 2º Vila Córrego dos Furtados, 153</p>
-        <p>Bairro Córrego Fundo, Município de Trairi-CE</p>
-        <p><strong>Fone:</strong> (85) 99993-8745</p>
+        @if($company->name)
+        <p><strong>{{ $company->name }}</strong></p>
+        @endif
+
+        @if($company->cnpj)
+        <p><strong>CNPJ:</strong> {{ $company->cnpj }}</p>
+        @endif
+
+        @if($company->full_address)
+        <p>{{ $company->full_address }}</p>
+        @endif
+
+        @if($company->phone)
+        <p><strong>Fone:</strong> {{ $company->phone }}</p>
+        @endif
+
+        @if($company->email)
+        <p><strong>E-mail:</strong> {{ $company->email }}</p>
+        @endif
     </div>
 
     <!-- Informações do cabeçalho -->

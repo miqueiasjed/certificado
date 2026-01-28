@@ -83,6 +83,7 @@ class ContractController extends Controller
             'payment_method' => 'nullable|string',
             'payment_details' => 'nullable|string',
             'additional_clause' => 'nullable|string',
+            'jurisdiction' => 'nullable|string',
         ];
 
         // Se não veio pela rota com endereço, exigir address_id
@@ -131,24 +132,14 @@ class ContractController extends Controller
 
             $contract = $address->contract;
 
-            // Dados da empresa (hardcoded conforme outros PDFs)
-            $companyData = [
-                'name' => 'Ari Dedetização', // TODO: configurar em arquivo de configuração
-                'cnpj' => '19.228.297/0001-75',
-                'address' => 'Comunidade 2º Vila Córrego dos Furtados, 153',
-                'city' => 'Bairro Córrego Fundo, Município de Trairi-CE',
-                'phone' => '(85) 99993-8745',
-                'legal_representative' => 'Miqueías Rodrigues Mesquita', // TODO: configurar
-                'legal_representative_cpf' => '06331235361', // TODO: configurar
-                'legal_representative_rg' => '20071166003', // TODO: configurar
-            ];
+            $company = \App\Models\Company::current();
 
             // Preparar dados para o PDF
             $data = [
                 'address' => $address,
                 'client' => $address->client,
                 'contract' => $contract,
-                'company' => $companyData,
+                'company' => $company,
                 'currentDate' => now()->format('d/m/Y'),
                 'currentTime' => now()->format('H:i'),
             ];
@@ -201,6 +192,7 @@ class ContractController extends Controller
             'payment_method' => 'nullable|string',
             'payment_details' => 'nullable|string',
             'additional_clause' => 'nullable|string',
+            'jurisdiction' => 'nullable|string',
         ]);
 
         $contract->update($validated);
