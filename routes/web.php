@@ -35,6 +35,7 @@ use App\Models\Technician;
 use App\Models\Service;
 use App\Models\ServiceOrder;
 use App\Models\Certificate;
+use App\Http\Controllers\BudgetController;
 
 // Rota de recibo (fora de qualquer middleware)
 Route::get('/service-orders/{workOrder}/receipt', [WorkOrderController::class, 'generateReceipt'])->name('service-orders.receipt');
@@ -97,7 +98,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/addresses/city/{city}', [AddressController::class, 'getByCity'])->name('addresses.by-city');
     Route::get('/addresses/state/{state}', [AddressController::class, 'getByState'])->name('addresses.by-state');
     Route::get('/addresses/{address}/contract/pdf', [ContractController::class, 'generatePDF'])->name('addresses.contract.pdf');
-    
+
     // Rotas para gerenciar dispositivos em endereços
     Route::get('/addresses/{address}/devices', [AddressController::class, 'getDevices'])->name('addresses.devices.index');
     Route::post('/addresses/{address}/devices', [AddressController::class, 'storeDevice'])->name('addresses.devices.store');
@@ -173,10 +174,10 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('event-types', EventTypeController::class);
 
     // Rotas de Detalhes de Pagamento
-Route::resource('payment-details', PaymentDetailController::class);
-Route::get('/work-orders/{workOrder}/payment-details', [PaymentDetailController::class, 'getByWorkOrder'])->name('payment-details.by-work-order');
-Route::post('/payment-details/{paymentDetail}/reopen', [PaymentDetailController::class, 'reopen'])->name('payment-details.reopen');
-Route::put('/work-orders/{workOrder}/financial-info', [WorkOrderFinancialController::class, 'updateFinancialInfo'])->name('work-orders.financial-info.update');
+    Route::resource('payment-details', PaymentDetailController::class);
+    Route::get('/work-orders/{workOrder}/payment-details', [PaymentDetailController::class, 'getByWorkOrder'])->name('payment-details.by-work-order');
+    Route::post('/payment-details/{paymentDetail}/reopen', [PaymentDetailController::class, 'reopen'])->name('payment-details.reopen');
+    Route::put('/work-orders/{workOrder}/financial-info', [WorkOrderFinancialController::class, 'updateFinancialInfo'])->name('work-orders.financial-info.update');
 
     // Rotas de Entradas Financeiras
     Route::resource('financial-entries', FinancialEntryController::class);
@@ -200,6 +201,11 @@ Route::put('/work-orders/{workOrder}/financial-info', [WorkOrderFinancialControl
     Route::post('/chemical-groups', [ChemicalGroupController::class, 'store']);
     Route::post('/antidotes', [AntidoteController::class, 'store']);
     Route::post('/organ-registrations', [OrganRegistrationController::class, 'store']);
+
+    // Rotas de Orçamentos
+    Route::resource('budgets', BudgetController::class);
+    Route::get('/budgets/{budget}/pdf', [BudgetController::class, 'pdf'])->name('budgets.pdf');
+    Route::post('/budgets/{budget}/convert', [BudgetController::class, 'convert'])->name('budgets.convert');
 
     // Logout
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
