@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,6 +12,12 @@
     <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
     <link rel="shortcut icon" type="image/png" href="{{ asset('images/logo.png') }}">
 
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="{{ asset('favicon.ico') }}">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:image" content="{{ asset('favicon.ico') }}">
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
@@ -19,7 +26,9 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @routes
 </head>
+
 <body class="font-sans antialiased bg-gray-50">
     @inertia
 </body>
+
 </html>
