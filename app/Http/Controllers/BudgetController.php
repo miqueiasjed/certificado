@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
 use App\Models\Budget;
 use App\Models\Client;
 use App\Models\Service;
@@ -20,14 +21,30 @@ class BudgetController extends Controller
         $this->budgetService = $budgetService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $budgets = Budget::with('client')
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
+        $query = Budget::with('client')
+            ->orderBy('created_at', 'desc');
+
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                // Search in prospect name
+                $q->where('prospect_name', 'like', "%{$search}%")
+                    // Or search in related client fields
+                    ->orWhereHas('client', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('cnpj', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $budgets = $query->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('Budgets/Index', [
             'budgets' => $budgets,
+            'filters' => $request->only(['search']),
         ]);
     }
 
