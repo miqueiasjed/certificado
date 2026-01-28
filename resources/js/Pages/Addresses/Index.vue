@@ -106,9 +106,9 @@
               :key="address.id"
               class="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow"
             >
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-2">
+              <div class="flex flex-col sm:flex-row items-start justify-between gap-4">
+                <div class="flex-1 w-full">
+                  <div class="flex flex-wrap items-center gap-3 mb-2">
                     <h3 class="text-lg font-semibold text-gray-900">
                       {{ address.nickname }}
                     </h3>
@@ -131,7 +131,7 @@
                     </p>
                   </div>
 
-                  <div class="flex items-center gap-4 text-sm text-gray-500">
+                  <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                     <div class="flex items-center gap-1">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -147,31 +147,31 @@
                   </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto mt-4 sm:mt-0">
                   <Link
                     :href="`/addresses/${address.id}`"
-                    class="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    class="flex-1 sm:flex-none text-center px-3 py-1 text-sm text-blue-600 hover:text-blue-800 font-medium border sm:border-0 rounded"
                   >
                     Ver
                   </Link>
                   <Link
                     :href="`/addresses/${address.id}/edit`"
-                    class="px-3 py-1 text-sm text-green-600 hover:text-green-800 font-medium"
+                    class="flex-1 sm:flex-none text-center px-3 py-1 text-sm text-green-600 hover:text-green-800 font-medium border sm:border-0 rounded"
                   >
                     Editar
                   </Link>
                   <Link
                     :href="`/addresses/${address.id}/contracts/create`"
-                    class="px-3 py-1 text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    class="flex-1 sm:flex-none text-center px-3 py-1 text-sm text-purple-600 hover:text-purple-800 font-medium border sm:border-0 rounded whitespace-nowrap"
                   >
-                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                     </svg>
                     Contrato
                   </Link>
                   <button
                     @click="deleteAddress(address.id)"
-                    class="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium"
+                    class="flex-1 sm:flex-none text-center px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium border sm:border-0 rounded"
                   >
                     Excluir
                   </button>

@@ -14,17 +14,17 @@
 
         <template v-if="!form.client_id">
           <div>
-            <label class="block text-sm font-medium text-gray-700">Nome do Prospecto *</label>
-            <input v-model="form.prospect_name" type="text" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm" />
+            <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Prospecto *</label>
+            <input v-model="form.prospect_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm" />
             <div v-if="form.errors.prospect_name" class="text-red-500 text-xs mt-1">{{ form.errors.prospect_name }}</div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700">Telefone</label>
-            <input v-model="form.prospect_phone" type="text" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm" />
+            <label class="block text-sm font-medium text-gray-700 mb-2">Telefone</label>
+            <input v-model="form.prospect_phone" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm" />
           </div>
           <div class="col-span-2">
-            <label class="block text-sm font-medium text-gray-700">Endereço</label>
-            <input v-model="form.prospect_address" type="text" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm" />
+            <label class="block text-sm font-medium text-gray-700 mb-2">Endereço</label>
+            <input v-model="form.prospect_address" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm" />
           </div>
         </template>
       </div>
@@ -34,24 +34,24 @@
     <Card title="Detalhes do Serviço">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div>
-          <label class="block text-sm font-medium text-gray-700">Data *</label>
-          <input v-model="form.date" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm" />
+          <label class="block text-sm font-medium text-gray-700 mb-2">Data *</label>
+          <input v-model="form.date" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700">Validade</label>
-          <input v-model="form.validity_date" type="date" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm" />
+          <label class="block text-sm font-medium text-gray-700 mb-2">Validade</label>
+          <input v-model="form.validity_date" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700">Prioridade *</label>
-          <select v-model="form.priority" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Prioridade *</label>
+          <select v-model="form.priority" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
             <option value="normal">Normal</option>
             <option value="urgent">Urgente</option>
           </select>
         </div>
 
         <div>
-          <label class="block text-sm font-medium text-gray-700">Canais</label>
-          <select v-model="form.channel" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Canais</label>
+          <select v-model="form.channel" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
             <option value="WhatsApp">WhatsApp</option>
             <option value="Phone">Telefone</option>
             <option value="Site">Site</option>
@@ -62,8 +62,8 @@
         </div>
         
          <div>
-          <label class="block text-sm font-medium text-gray-700">Tipo de Ambiente</label>
-          <select v-model="form.environment_type" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Ambiente</label>
+          <select v-model="form.environment_type" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
             <option value="residential">Residencial</option>
             <option value="commercial">Comercial</option>
             <option value="industrial">Industrial</option>
@@ -78,7 +78,7 @@
       
       <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-           <label class="block text-sm font-medium text-gray-700">Pragas Alvo</label>
+           <label class="block text-sm font-medium text-gray-700 mb-2">Pragas Alvo</label>
            <!-- Simple multi-select via checkboxes for now, or just json text input? Let's do checkboxes -->
            <div class="mt-2 space-y-2 max-h-40 overflow-y-auto border p-2 rounded">
              <div v-for="pest in pestsList" :key="pest">
@@ -91,7 +91,7 @@
         </div>
         
          <div>
-           <label class="block text-sm font-medium text-gray-700">Áreas a Tratar</label>
+           <label class="block text-sm font-medium text-gray-700 mb-2">Áreas a Tratar</label>
            <div class="mt-2 space-y-2 max-h-40 overflow-y-auto border p-2 rounded">
              <div v-for="area in areasList" :key="area">
                 <label class="inline-flex items-center">
@@ -104,8 +104,8 @@
       </div>
       
       <div class="mt-4">
-        <label class="block text-sm font-medium text-gray-700">Observações</label>
-        <textarea v-model="form.observations" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"></textarea>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Observações</label>
+        <textarea v-model="form.observations" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm"></textarea>
       </div>
     </Card>
 
@@ -115,22 +115,22 @@
             <div v-for="(item, index) in form.items" :key="index" class="flex items-end gap-4 border-b pb-4">
                  <div class="flex-1">
                     <label class="block text-xs font-medium text-gray-500">Serviço</label>
-                    <select v-model="item.service_id" @change="onServiceSelect(item)" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
+                    <select v-model="item.service_id" @change="onServiceSelect(item)" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
                         <option :value="null">Selecione...</option>
                         <option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }}</option>
                     </select>
                  </div>
                  <div class="w-24">
                     <label class="block text-xs font-medium text-gray-500">Qtd</label>
-                    <input type="number" step="0.1" v-model="item.quantity" @input="calcSubtotal(item)" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
+                    <input type="number" step="0.1" v-model="item.quantity" @input="calcSubtotal(item)" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
                  </div>
                  <div class="w-32">
                     <label class="block text-xs font-medium text-gray-500">Valor Unit.</label>
-                    <input type="text" v-model="item.unit_price" @input="onUnitPriceInput($event, item)" @focus="selectAll" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm" placeholder="R$ 0,00">
+                    <input type="text" v-model="item.unit_price" @input="onUnitPriceInput($event, item)" @focus="selectAll" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm" placeholder="R$ 0,00">
                  </div>
                  <div class="w-32">
                     <label class="block text-xs font-medium text-gray-500">Subtotal</label>
-                    <input type="text" disabled :value="formatCurrency(item.subtotal)" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md sm:text-sm">
+                    <input type="text" disabled :value="formatCurrency(item.subtotal)" class="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-md shadow-sm sm:text-sm">
                  </div>
                  <button type="button" @click="removeItem(index)" class="text-red-500 hover:text-red-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -147,7 +147,7 @@
                 </div>
                 <div class="flex justify-between items-center">
                     <span class="font-medium text-gray-500 text-sm">Desconto:</span>
-                    <input type="text" v-model="form.discount" @input="onDiscountInput" @focus="selectAll" class="w-24 text-right border-gray-300 rounded-md text-sm p-1" placeholder="R$ 0,00">
+                    <input type="text" v-model="form.discount" @input="onDiscountInput" @focus="selectAll" class="w-32 px-3 py-2 text-right border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm" placeholder="R$ 0,00">
                 </div>
                  <div class="flex justify-between text-lg font-bold text-gray-900 border-t pt-2">
                     <span>Total:</span>
@@ -163,14 +163,14 @@
              <div v-for="(prod, index) in form.products" :key="index" class="flex items-end gap-4 border-b pb-4">
                  <div class="flex-1">
                      <label class="block text-xs font-medium text-gray-500">Produto</label>
-                     <select v-model="prod.product_id" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
+                     <select v-model="prod.product_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
                          <option :value="null">Selecione...</option>
                          <option v-for="p in products" :key="p.id" :value="p.id">{{ p.name }}</option>
                      </select>
                  </div>
                  <div class="w-24">
                      <label class="block text-xs font-medium text-gray-500">Qtd</label>
-                     <input type="number" step="0.1" v-model="prod.quantity" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
+                     <input type="number" step="0.1" v-model="prod.quantity" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
                  </div>
                  <button type="button" @click="removeProduct(index)" class="text-red-500 hover:text-red-700">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
@@ -184,21 +184,21 @@
     <Card title="Condições Comerciais e Execução">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                 <label class="block text-sm font-medium text-gray-700">Estimativa Técnica</label>
+                 <label class="block text-sm font-medium text-gray-700 mb-2">Estimativa Técnica</label>
                  <div class="flex space-x-2 mt-1">
-                     <input v-model="form.labor_technicians" type="number" placeholder="Nº Técnicos" class="block w-1/2 border-gray-300 rounded-md sm:text-sm">
-                     <input v-model="form.labor_hours" type="text" placeholder="Horas (ex: 2h30)" class="block w-1/2 border-gray-300 rounded-md sm:text-sm">
+                     <input v-model="form.labor_technicians" type="number" placeholder="Nº Técnicos" class="w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                     <input v-model="form.labor_hours" type="text" placeholder="Horas (ex: 2h30)" class="w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
                  </div>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700">Custo Total (Interno)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Custo Total (Interno)</label>
                 <!-- Maybe calculate based on technicians * hours * rate? For now manual or hidden -->
                 <p class="text-xs text-gray-500 mt-2">Pode ser usado para calcular margem.</p>
             </div>
             
             <div>
-                <label class="block text-sm font-medium text-gray-700">Forma de Pagamento</label>
-                <select v-model="form.payment_method" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Forma de Pagamento</label>
+                <select v-model="form.payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
                     <option value="Pix">Pix</option>
                     <option value="Cartão">Cartão de Crédito/Débito</option>
                     <option value="Boleto">Boleto</option>
@@ -207,18 +207,18 @@
                 </select>
             </div>
              <div>
-                <label class="block text-sm font-medium text-gray-700">Condições de Pagamento</label>
-                <input v-model="form.payment_conditions" type="text" placeholder="Ex: Entrada + 2x" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Condições de Pagamento</label>
+                <input v-model="form.payment_conditions" type="text" placeholder="Ex: Entrada + 2x" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
             </div>
             
              <div>
-                <label class="block text-sm font-medium text-gray-700">Prazo de Execução</label>
-                <input v-model="form.execution_deadline" type="text" placeholder="Ex: D+2 após aprovação" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Prazo de Execução</label>
+                <input v-model="form.execution_deadline" type="text" placeholder="Ex: D+2 após aprovação" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
             </div>
             
             <div v-if="isEditing">
-                 <label class="block text-sm font-medium text-gray-700">Status</label>
-                  <select v-model="form.status" class="mt-1 block w-full border-gray-300 rounded-md sm:text-sm">
+                 <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select v-model="form.status" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
                     <option value="draft">Rascunho</option>
                     <option value="sent">Enviado</option>
                     <option value="negotiating">Negociando</option>
@@ -243,6 +243,7 @@
 import { computed, watch } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
 import Card from '@/Components/Card.vue';
+import ClientSearch from '@/Components/ClientSearch.vue';
 import { useMasks } from '@/Composables/useMasks';
 
 const props = defineProps({
