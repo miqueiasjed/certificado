@@ -860,7 +860,7 @@
                 <!-- Fallback opcional ou linha em branco -->
                 <div style="height: 50px;"></div>
             @endif
-            <div class="signature-text"><strong>Ass:</strong> Químico Industrial</div>
+            <div class="signature-text"><strong>Ass:</strong> Responsável Técnico</div>
         </div>
         <div class="signature-box">
             <div class="signature-title">Assinatura do Responsável pelo Local</div>

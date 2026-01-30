@@ -359,7 +359,7 @@
                     @if($sigChemSrc)
                         <img src="{{ $sigChemSrc }}" alt="Assinatura Químico" class="signature-img">
                         <div class="signature-line">
-                            <strong>Químico Industrial</strong><br>
+                            <strong>Responsável Técnico</strong><br>
 
                         </div>
                     @endif
