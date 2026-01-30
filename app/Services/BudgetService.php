@@ -187,6 +187,7 @@ class BudgetService
             'budget' => $budget,
             'company' => $company,
             'logoSrc' => $this->convertStorageFileToBase64($company->logo_path),
+            'sigResponsibleSrc' => $this->convertStorageFileToBase64($company->signature_responsible_path),
         ];
     }
 

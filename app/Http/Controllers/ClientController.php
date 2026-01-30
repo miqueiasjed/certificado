@@ -12,7 +12,8 @@ class ClientController extends Controller
 {
     public function __construct(
         private ClientService $clientService
-    ) {}
+    ) {
+    }
 
     public function index(Request $request): Response
     {
@@ -44,6 +45,7 @@ class ClientController extends Controller
             return redirect()->route('clients.index')
                 ->with('success', 'Cliente criado com sucesso!');
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Erro ao criar cliente: ' . $e->getMessage());
             return back()->withInput()
                 ->with('error', 'Erro ao criar cliente: ' . $e->getMessage());
         }

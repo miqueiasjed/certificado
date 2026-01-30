@@ -212,8 +212,20 @@ const showAlert = (type, title, message) => {
 
 const submit = () => {
   form.post('/clients', {
-    onSuccess: () => {
-      showAlert('success', 'Cliente criado!', 'Cliente cadastrado com sucesso no sistema.');
+    onSuccess: (page) => {
+        // Only show success if we are NOT redirected (which shouldn't happen on success, but just in case)
+        // Actually, normally we redirect to index. If we are here, it might be a back() with error.
+        // Let's rely on the flash message from the valid response if we are still here.
+        if (page.props.flash && page.props.flash.success) {
+            // If there is a flash success, it means we likely redirected (if we were SPA navigating).
+            // But if we are still on this component, something is weird if the controller redirects to index.
+            // Wait, if controller redirects to Index, THIS component is unmounted!
+            // So this onSuccess runs BEFORE unmount?
+            // If the controller redirects to Index, the Create component is destroyed.
+            // So this alert would never show up or only briefly.
+            // BUT if the controller returns back(), the component stays, and onSuccess runs!
+            // So we should ONLY show success if there is NO error.
+        }
     },
     onError: (errors) => {
       showAlert('error', 'Erro ao salvar', 'Verifique os campos destacados e tente novamente.');

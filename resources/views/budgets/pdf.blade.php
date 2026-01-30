@@ -124,14 +124,11 @@
 
 <body>
     <!-- Cabeçalho -->
-    @php
-        $company = \App\Models\Company::current();
-        $logoPath = $company->logo_path ? storage_path('app/public/' . $company->logo_path) : null;
-    @endphp
+
     <div class="header-section">
         <div class="logo-container">
-            @if($logoPath)
-                <img src="{{ $logoPath }}" alt="Logo">
+            @if($logoSrc)
+                <img src="{{ $logoSrc }}" alt="Logo">
             @endif
         </div>
         <div class="document-title">
@@ -291,10 +288,9 @@
 
 
 
-    @if($company->signature_responsible_path)
+    @if($sigResponsibleSrc)
         <div style="margin-top: 30px; text-align: center;">
-            <img src="{{ storage_path('app/public/' . $company->signature_responsible_path) }}"
-                style="height: 60px; width: auto;" alt="Assinatura Responsável"><br>
+            <img src="{{ $sigResponsibleSrc }}" style="height: 60px; width: auto;" alt="Assinatura Responsável"><br>
             <div
                 style="font-size: 10px; margin-top: 5px; border-top: 1px solid #000; display: inline-block; padding-top: 5px; min-width: 200px;">
                 Responsável pelo Orçamento
