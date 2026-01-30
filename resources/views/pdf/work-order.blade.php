@@ -496,6 +496,14 @@
         @if($company->email)
         <p><strong>E-mail:</strong> {{ $company->email }}</p>
         @endif
+
+        @if($company->register_visa)
+        <p><strong>Registro VISA:</strong> {{ $company->register_visa }}</p>
+        @endif
+
+        @if($company->register_crea)
+        <p><strong>Registro CREA:</strong> {{ $company->register_crea }}</p>
+        @endif
     </div>
 
     <!-- Informações do cabeçalho -->

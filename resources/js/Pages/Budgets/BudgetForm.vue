@@ -12,6 +12,19 @@
            />
         </div>
 
+        <div v-if="form.client_id" class="col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Endereço do Local *</label>
+            <select v-model="form.address_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm">
+                <option :value="null">Selecione o endereço...</option>
+                <option v-for="addr in clientAddresses" :key="addr.id" :value="addr.id">
+                    {{ addr.street }}, {{ addr.number }} - {{ addr.city }}/{{ addr.state }} ({{ addr.nickname || 'Principal' }})
+                </option>
+            </select>
+            <div v-if="!clientAddresses.length && !isLoadingAddresses" class="text-xs text-yellow-600 mt-1">
+                Este cliente não possui endereços cadastrados.
+            </div>
+        </div>
+
         <template v-if="!form.client_id">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Prospecto *</label>
@@ -240,11 +253,12 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useForm, Link } from '@inertiajs/vue3';
 import Card from '@/Components/Card.vue';
 import ClientSearch from '@/Components/ClientSearch.vue';
 import { useMasks } from '@/Composables/useMasks';
+import axios from 'axios';
 
 const props = defineProps({
   budget: Object,
@@ -258,6 +272,7 @@ const { currencyMask, parseCurrency } = useMasks();
 
 const form = useForm({
   client_id: props.budget?.client_id || null,
+  address_id: props.budget?.address_id || null,
   prospect_name: props.budget?.prospect_name || '',
   prospect_phone: props.budget?.prospect_phone || '',
   prospect_address: props.budget?.prospect_address || '',
@@ -373,6 +388,45 @@ const selectAll = (event) => {
     event.target.select();
 };
 
-// Watch for client changes to auto-fill prospect fields if needed? 
-// No, prospect fields are valid only for NEW clients. If existing client selected, we ignore prospect fields in backend.
+// Address Logic
+const clientAddresses = ref([]);
+const isLoadingAddresses = ref(false);
+
+const fetchClientAddresses = async (clientId) => {
+    if (!clientId) {
+        clientAddresses.value = [];
+        return;
+    }
+    
+    isLoadingAddresses.value = true;
+    try {
+        const response = await axios.get(`/api/clients/${clientId}/addresses`);
+        clientAddresses.value = response.data.addresses || [];
+        
+        // Auto-select if only one address and none selected
+        if (clientAddresses.value.length === 1 && !form.address_id) {
+            form.address_id = clientAddresses.value[0].id;
+        }
+    } catch (error) {
+        console.error('Erro ao buscar endereços:', error);
+        clientAddresses.value = [];
+    } finally {
+        isLoadingAddresses.value = false;
+    }
+};
+
+const onClientChange = (client) => {
+    form.address_id = null; // Reset address when client changes
+    if (client) {
+        fetchClientAddresses(client.id);
+    } else {
+        clientAddresses.value = [];
+    }
+};
+
+onMounted(() => {
+    if (form.client_id) {
+        fetchClientAddresses(form.client_id);
+    }
+});
 </script>

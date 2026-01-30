@@ -150,7 +150,7 @@
     </table>
 
     <!-- Tabela: Dados da Empresa Contratada -->
-    @if($company->name || $company->cnpj || $company->full_address || $company->phone || $company->crq)
+    @if($company->name || $company->cnpj || $company->full_address || $company->phone)
         <table>
             <tr>
                 <td colspan="2" class="section-title">DADOS DA EMPRESA</td>
@@ -165,9 +165,6 @@
             <tr>
                 <td class="col-50"><strong>Telefone:</strong> {{ $company->phone }}</td>
                 <td class="col-50">
-                    @if($company->crq)
-                        CRQ - {{ $company->crq }}
-                    @endif
                 </td>
             </tr>
         </table>
@@ -186,7 +183,8 @@
         </tr>
         <tr>
             <td colspan="2"><strong>Endereço:
-                </strong>{{ $budget->client ? $budget->client->address : $budget->prospect_address }}</td>
+                </strong>{{ $budget->address ? $budget->address->full_address : ($budget->client && $budget->client->addresses->isNotEmpty() ? $budget->client->addresses->first()->full_address : $budget->prospect_address) }}
+            </td>
         </tr>
         @if($budget->client && $budget->client->cnpj)
             <tr>
@@ -285,6 +283,54 @@
             </td>
         </tr>
     </table>
+
+    <!-- Tabela: Informações Legais -->
+    @if($company->license_environmental || $company->license_sanitary || $company->license_business || $company->register_visa || $company->register_crea || $company->ceatox_info)
+        <table style="margin-top: 10px;">
+            <tr>
+                <td colspan="3" class="section-title">INFORMAÇÕES LEGAIS E DE SEGURANÇA</td>
+            </tr>
+            <tr>
+                <td class="col-33 text-center">
+                    @if($company->license_environmental)
+                        <strong>N° Licença Ambiental: </strong>{{ $company->license_environmental }}
+                    @endif
+                </td>
+                <td class="col-33 text-center">
+                    @if($company->license_sanitary)
+                        <strong>N° Alvará Sanitário: </strong>{{ $company->license_sanitary }}
+                    @endif
+                </td>
+                <td class="col-33 text-center">
+                    @if($company->license_business)
+                        <strong>N° Alvará de Funcionamento: </strong>{{ $company->license_business }}
+                    @endif
+                </td>
+            </tr>
+            @if($company->register_visa || $company->register_crea)
+                <tr>
+                    <td class="col-33 text-center">
+                        @if($company->register_visa)
+                            <strong>Registro VISA: </strong>{{ $company->register_visa }}
+                        @endif
+                    </td>
+                    <td class="col-33 text-center">
+                        @if($company->register_crea)
+                            <strong>Registro CREA: </strong>{{ $company->register_crea }}
+                        @endif
+                    </td>
+                    <td class="col-33 text-center"></td>
+                </tr>
+            @endif
+            @if($company->ceatox_info)
+                <tr>
+                    <td colspan="3" style="padding: 6px; font-size: 9px; text-align: center;">
+                        {{ $company->ceatox_info }}
+                    </td>
+                </tr>
+            @endif
+        </table>
+    @endif
 
 
 

@@ -89,10 +89,7 @@
         <!-- Informações Legais -->
         <Card title="Informações Legais e Técnicas">
            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-             <div>
-               <label class="block text-sm font-medium text-gray-700 mb-2">Registro CRQ (Conselho Regional de Química)</label>
-               <input v-model="form.crq" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500" placeholder="Ex: 10º REGIÃO Nº 5.253" />
-             </div>
+
 
              <div>
                <label class="block text-sm font-medium text-gray-700 mb-2">Licença Ambiental</label>
@@ -109,8 +106,19 @@
                <input v-model="form.license_business" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500" placeholder="Ex: 12345/2025" />
              </div>
              
+
+             <div>
+               <label class="block text-sm font-medium text-gray-700 mb-2">Registro VISA</label>
+               <input v-model="form.register_visa" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500" placeholder="Ex: 12345" />
+             </div>
+
+             <div>
+               <label class="block text-sm font-medium text-gray-700 mb-2">Registro no CREA</label>
+               <input v-model="form.register_crea" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500" placeholder="Ex: 56789" />
+             </div>
+             
              <div class="col-span-1 md:col-span-2">
-               <label class="block text-sm font-medium text-gray-700 mb-2">Informações CEATOX (Rodapé)</label>
+               <label class="block text-sm font-medium text-gray-700 mb-2">Informações (Rodapé)</label>
                <textarea v-model="form.ceatox_info" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500" placeholder="Mensagem padrão de emergência toxicológica..."></textarea>
              </div>
            </div>
@@ -136,7 +144,12 @@
 
              <!-- Assinatura Gerente -->
              <div class="border p-4 rounded-lg bg-gray-50 flex flex-col items-center">
-                <label class="block text-sm font-medium text-gray-700 mb-4">Assinatura Gerente Operacional</label>
+                <label class="block text-sm font-medium text-gray-700 mb-4">Gerente Operacional</label>
+                
+                <div class="w-full mb-4">
+                   <label class="block text-xs font-medium text-gray-500 mb-1">Nome Completo</label>
+                   <input v-model="form.operational_manager_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Nome do Gerente">
+                </div>
                 
                 <div v-if="sigOpPreview || (company && company.signature_operational_path)" class="mb-4">
                   <img :src="sigOpPreview || (company ? '/storage/' + company.signature_operational_path : '')" class="h-32 object-contain mx-auto" alt="Signature Preview">
@@ -148,9 +161,14 @@
                 <input type="file" @change="handleSigOpChange" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" accept="image/*" />
              </div>
 
-             <!-- Assinatura Químico -->
+             <!-- Assinatura Responsável Técnico -->
              <div class="border p-4 rounded-lg bg-gray-50 flex flex-col items-center">
-                <label class="block text-sm font-medium text-gray-700 mb-4">Assinatura Químico Responsável</label>
+                <label class="block text-sm font-medium text-gray-700 mb-4">Responsável Técnico</label>
+
+                <div class="w-full mb-4">
+                   <label class="block text-xs font-medium text-gray-500 mb-1">Nome Completo</label>
+                   <input v-model="form.technical_responsible_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Nome do Responsável">
+                </div>
                 
                 <div v-if="sigChemPreview || (company && company.signature_chemical_path)" class="mb-4">
                   <img :src="sigChemPreview || (company ? '/storage/' + company.signature_chemical_path : '')" class="h-32 object-contain mx-auto" alt="Signature Preview">
@@ -218,10 +236,18 @@ const form = useForm({
   city: props.company?.city || '',
   state: props.company?.state || '',
   zip: props.company?.zip || '',
-  crq: props.company?.crq || '',
+
   license_environmental: props.company?.license_environmental || '',
   license_sanitary: props.company?.license_sanitary || '',
   license_business: props.company?.license_business || '',
+  register_visa: props.company?.register_visa || '',
+  register_crea: props.company?.register_crea || '',
+  operational_manager_name: props.company?.operational_manager_name || '',
+  technical_responsible_name: props.company?.technical_responsible_name || '',
+  register_visa: props.company?.register_visa || '',
+  register_crea: props.company?.register_crea || '',
+  operational_manager_name: props.company?.operational_manager_name || '',
+  technical_responsible_name: props.company?.technical_responsible_name || '',
   ceatox_info: props.company?.ceatox_info || '',
   logo_path: null,
   signature_operational_path: null,

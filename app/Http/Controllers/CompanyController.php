@@ -39,16 +39,27 @@ class CompanyController extends Controller
             'city' => 'nullable|string|max:100',
             'state' => 'nullable|string|max:2',
             'zip' => 'nullable|string|max:10',
-            'crq' => 'nullable|string|max:50',
+
             'license_environmental' => 'nullable|string|max:50',
             'license_business' => 'nullable|string|max:50',
+            'register_visa' => 'nullable|string|max:50',
+            'register_crea' => 'nullable|string|max:50',
             'license_sanitary' => 'nullable|string|max:50',
             'ceatox_info' => 'nullable|string|max:500',
+            'operational_manager_name' => 'nullable|string|max:255',
+            'technical_responsible_name' => 'nullable|string|max:255',
             'logo_path' => 'nullable|image|max:2048', // 2MB Max
             'signature_operational_path' => 'nullable|image|max:2048',
             'signature_chemical_path' => 'nullable|image|max:2048',
             'signature_responsible_path' => 'nullable|image|max:2048',
         ]);
+
+        // Remove file fields from validated array to prevent overwriting with null
+        // We only want to update them if a new file is uploaded
+        unset($validated['logo_path']);
+        unset($validated['signature_operational_path']);
+        unset($validated['signature_chemical_path']);
+        unset($validated['signature_responsible_path']);
 
         // Handle File Uploads
         if ($request->hasFile('logo_path')) {

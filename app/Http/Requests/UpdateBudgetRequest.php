@@ -23,6 +23,7 @@ class UpdateBudgetRequest extends FormRequest
     {
         return [
             'client_id' => 'nullable|exists:clients,id',
+            'address_id' => 'nullable|exists:addresses,id',
             'prospect_name' => 'nullable|required_without:client_id|string|max:255',
             'prospect_phone' => 'nullable|string|max:20',
             'prospect_address' => 'nullable|string|max:255',

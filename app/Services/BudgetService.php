@@ -18,6 +18,7 @@ class BudgetService
         return DB::transaction(function () use ($data) {
             $budget = Budget::create([
                 'client_id' => $data['client_id'] ?? null,
+                'address_id' => $data['address_id'] ?? null,
                 'prospect_name' => $data['prospect_name'] ?? null,
                 'prospect_phone' => $data['prospect_phone'] ?? null,
                 'prospect_address' => $data['prospect_address'] ?? null,
@@ -71,6 +72,7 @@ class BudgetService
         return DB::transaction(function () use ($budget, $data) {
             $budget->update([
                 'client_id' => $data['client_id'] ?? null,
+                'address_id' => $data['address_id'] ?? null,
                 'prospect_name' => $data['prospect_name'] ?? null,
                 'prospect_phone' => $data['prospect_phone'] ?? null,
                 'prospect_address' => $data['prospect_address'] ?? null,
@@ -179,7 +181,7 @@ class BudgetService
      */
     public function preparePdfData(Budget $budget): array
     {
-        $budget->load(['services', 'products', 'client', 'user']);
+        $budget->load(['services', 'products', 'client', 'user', 'address']);
 
         $company = \App\Models\Company::current();
 

@@ -21,6 +21,11 @@ class Budget extends Model
         return $this->belongsTo(Client::class);
     }
 
+    public function address()
+    {
+        return $this->belongsTo(Address::class);
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

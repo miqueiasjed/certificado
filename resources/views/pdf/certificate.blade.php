@@ -186,7 +186,7 @@
     </table>
 
     <!-- Tabela: Dados da Empresa Contratada -->
-    @if($company->name || $company->cnpj || $company->full_address || $company->phone || $company->crq)
+    @if($company->name || $company->cnpj || $company->full_address || $company->phone)
         <table>
             <tr>
                 <td colspan="2" class="section-title">DADOS DA EMPRESA CONTRATADA</td>
@@ -201,9 +201,6 @@
             <tr>
                 <td class="col-50"><strong>Telefone</strong> {{ $company->phone }}</td>
                 <td class="col-50">
-                    @if($company->crq)
-                        CRQ - {{ $company->crq }}
-                    @endif
                 </td>
             </tr>
         </table>
@@ -298,7 +295,7 @@
     @endif
 
     <!-- Tabela: Informações Legais -->
-    @if($company->license_environmental || $company->license_sanitary || $company->license_business || $company->ceatox_info)
+    @if($company->license_environmental || $company->license_sanitary || $company->license_business || $company->register_visa || $company->register_crea || $company->ceatox_info)
         <table>
             <tr>
                 <td colspan="3" class="section-title">INFORMAÇÕES LEGAIS E DE SEGURANÇA</td>
@@ -320,10 +317,25 @@
                     @endif
                 </td>
             </tr>
+            @if($company->register_visa || $company->register_crea)
+                <tr>
+                    <td class="col-33 text-center">
+                        @if($company->register_visa)
+                            <strong>Registro VISA: </strong>{{ $company->register_visa }}
+                        @endif
+                    </td>
+                    <td class="col-33 text-center">
+                        @if($company->register_crea)
+                            <strong>Registro CREA: </strong>{{ $company->register_crea }}
+                        @endif
+                    </td>
+                    <td class="col-33 text-center"></td>
+                </tr>
+            @endif
             <tr>
                 <td colspan="3" style="padding: 6px; font-size: 9px;">
                     @if($company->ceatox_info)
-                        <strong>CEATOX:</strong> {{ $company->ceatox_info }}<br>
+                        <strong>Mais Informações:</strong> {{ $company->ceatox_info }}<br>
                     @endif
                     <strong>Obs.:</strong> Este certificado garante a eficácia do serviço até a data de validade indicada.
                 </td>
@@ -348,9 +360,7 @@
                         <img src="{{ $sigChemSrc }}" alt="Assinatura Químico" class="signature-img">
                         <div class="signature-line">
                             <strong>Químico Industrial</strong><br>
-                            @if($company->crq)
-                                <span style="font-size: 9px;">CRQ {{ $company->crq }}</span>
-                            @endif
+
                         </div>
                     @endif
                 </td>
