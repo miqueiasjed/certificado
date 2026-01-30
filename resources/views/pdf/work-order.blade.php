@@ -852,8 +852,6 @@
     <!-- Assinaturas -->
     <div class="signature-section no-break">
         <div class="signature-box">
-            <div class="signature-title">Assinatura do Gerente de Operações</div>
-            
             @if(isset($opSrc) && $opSrc)
                 <img src="{{ $opSrc }}" alt="Assinatura Gerente" class="signature-image">
             @else
@@ -861,12 +859,10 @@
             @endif
             <div class="signature-text">
                 <strong>Ass:</strong> Gerente de Operações<br>
-                <span>{{ $company->operational_manager_name }}</span>
+                <div class="signature-box">{{ $company->operational_manager_name }}</div>
             </div>
         </div>
         <div class="signature-box">
-            <div class="signature-title">Assinatura do Engenheiro Químico</div>
-            
             @if(isset($chemSrc) && $chemSrc)
                 <img src="{{ $chemSrc }}" alt="Assinatura Químico" class="signature-image">
             @else
@@ -875,7 +871,7 @@
             @endif
             <div class="signature-text">
                 <strong>Ass:</strong> Responsável Técnico<br>
-                <span>{{ $company->technical_responsible_name }}</span>
+                <div class="signature-box">{{ $company->technical_responsible_name }}</div>
             </div>
         </div>
         <div class="signature-box">
