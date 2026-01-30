@@ -857,10 +857,9 @@
             @else
                 <div style="height: 50px;"></div>
             @endif
-            <div class="signature-text">
-                <strong>Ass:</strong> Gerente de Operações<br>
-                <div class="signature-box">{{ $company->operational_manager_name }}</div>
-            </div>
+            
+            <strong>Ass:</strong> Gerente de Operações<br>
+            <div class="signature-box">{{ $company->operational_manager_name }}</div>
         </div>
         <div class="signature-box">
             @if(isset($chemSrc) && $chemSrc)
@@ -869,10 +868,8 @@
                 <!-- Fallback opcional ou linha em branco -->
                 <div style="height: 50px;"></div>
             @endif
-            <div class="signature-text">
-                <strong>Ass:</strong> Responsável Técnico<br>
-                <div class="signature-box">{{ $company->technical_responsible_name }}</div>
-            </div>
+            <strong>Ass:</strong> Responsável Técnico<br>
+            <div class="signature-box">{{ $company->technical_responsible_name }}</div>
         </div>
         <div class="signature-box">
             <div class="signature-title">Assinatura do Responsável pelo Local</div>
