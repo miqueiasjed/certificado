@@ -475,6 +475,7 @@ class WorkOrderService
             'currentTime' => now()->format('H:i'),
             'logoSrc' => $this->convertStorageFileToBase64($company->logo_path),
             'chemSrc' => $this->convertStorageFileToBase64($company->signature_chemical_path),
+            'opSrc' => $this->convertStorageFileToBase64($company->signature_operational_path),
         ];
     }
 

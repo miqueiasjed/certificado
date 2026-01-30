@@ -360,8 +360,8 @@
         .signature-section {
             margin-top: 40px;
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
             z-index: 2;
             page-break-inside: avoid;
             break-inside: avoid;
@@ -852,6 +852,19 @@
     <!-- Assinaturas -->
     <div class="signature-section no-break">
         <div class="signature-box">
+            <div class="signature-title">Assinatura do Gerente de Operações</div>
+            
+            @if(isset($opSrc) && $opSrc)
+                <img src="{{ $opSrc }}" alt="Assinatura Gerente" class="signature-image">
+            @else
+                <div style="height: 50px;"></div>
+            @endif
+            <div class="signature-text">
+                <strong>Ass:</strong> Gerente de Operações<br>
+                <span>{{ $company->operational_manager_name }}</span>
+            </div>
+        </div>
+        <div class="signature-box">
             <div class="signature-title">Assinatura do Engenheiro Químico</div>
             
             @if(isset($chemSrc) && $chemSrc)
@@ -860,7 +873,10 @@
                 <!-- Fallback opcional ou linha em branco -->
                 <div style="height: 50px;"></div>
             @endif
-            <div class="signature-text"><strong>Ass:</strong> Responsável Técnico</div>
+            <div class="signature-text">
+                <strong>Ass:</strong> Responsável Técnico<br>
+                <span>{{ $company->technical_responsible_name }}</span>
+            </div>
         </div>
         <div class="signature-box">
             <div class="signature-title">Assinatura do Responsável pelo Local</div>
