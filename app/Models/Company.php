@@ -21,10 +21,12 @@ class Company extends Model
         'crq',
         'license_environmental',
         'license_sanitary',
+        'license_business',
         'ceatox_info',
         'logo_path',
         'signature_operational_path',
         'signature_chemical_path',
+        'signature_responsible_path',
     ];
 
     /**

@@ -298,25 +298,30 @@
     @endif
 
     <!-- Tabela: Informações Legais -->
-    @if($company->license_environmental || $company->license_sanitary || $company->ceatox_info)
+    @if($company->license_environmental || $company->license_sanitary || $company->license_business || $company->ceatox_info)
         <table>
             <tr>
-                <td colspan="2" class="section-title">INFORMAÇÕES LEGAIS E DE SEGURANÇA</td>
+                <td colspan="3" class="section-title">INFORMAÇÕES LEGAIS E DE SEGURANÇA</td>
             </tr>
             <tr>
-                <td class="col-50 text-center">
+                <td class="col-33 text-center">
                     @if($company->license_environmental)
                         <strong>N° Licença Ambiental: </strong>{{ $company->license_environmental }}
                     @endif
                 </td>
-                <td class="col-50 text-center">
+                <td class="col-33 text-center">
                     @if($company->license_sanitary)
                         <strong>N° Alvará Sanitário: </strong>{{ $company->license_sanitary }}
                     @endif
                 </td>
+                <td class="col-33 text-center">
+                    @if($company->license_business)
+                        <strong>N° Alvará de Funcionamento: </strong>{{ $company->license_business }}
+                    @endif
+                </td>
             </tr>
             <tr>
-                <td colspan="2" style="padding: 6px; font-size: 9px;">
+                <td colspan="3" style="padding: 6px; font-size: 9px;">
                     @if($company->ceatox_info)
                         <strong>CEATOX:</strong> {{ $company->ceatox_info }}<br>
                     @endif

@@ -41,11 +41,13 @@ class CompanyController extends Controller
             'zip' => 'nullable|string|max:10',
             'crq' => 'nullable|string|max:50',
             'license_environmental' => 'nullable|string|max:50',
+            'license_business' => 'nullable|string|max:50',
             'license_sanitary' => 'nullable|string|max:50',
             'ceatox_info' => 'nullable|string|max:500',
             'logo_path' => 'nullable|image|max:2048', // 2MB Max
             'signature_operational_path' => 'nullable|image|max:2048',
             'signature_chemical_path' => 'nullable|image|max:2048',
+            'signature_responsible_path' => 'nullable|image|max:2048',
         ]);
 
         // Handle File Uploads
@@ -65,6 +67,12 @@ class CompanyController extends Controller
             if ($company->signature_chemical_path)
                 Storage::disk('public')->delete($company->signature_chemical_path);
             $validated['signature_chemical_path'] = $request->file('signature_chemical_path')->store('company', 'public');
+        }
+
+        if ($request->hasFile('signature_responsible_path')) {
+            if ($company->signature_responsible_path)
+                Storage::disk('public')->delete($company->signature_responsible_path);
+            $validated['signature_responsible_path'] = $request->file('signature_responsible_path')->store('company', 'public');
         }
 
         $company->update($validated);

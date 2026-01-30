@@ -103,6 +103,11 @@
                <label class="block text-sm font-medium text-gray-700 mb-2">Alvará Sanitário</label>
                <input v-model="form.license_sanitary" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500" placeholder="Ex: 062/2025" />
              </div>
+
+             <div>
+               <label class="block text-sm font-medium text-gray-700 mb-2">Alvará de Funcionamento</label>
+               <input v-model="form.license_business" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500" placeholder="Ex: 12345/2025" />
+             </div>
              
              <div class="col-span-1 md:col-span-2">
                <label class="block text-sm font-medium text-gray-700 mb-2">Informações CEATOX (Rodapé)</label>
@@ -157,6 +162,22 @@
                 <input type="file" @change="handleSigChemChange" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" accept="image/*" />
              </div>
 
+             </div>
+
+             <!-- Assinatura Responsável Orçamento -->
+             <div class="border p-4 rounded-lg bg-gray-50 flex flex-col items-center">
+                <label class="block text-sm font-medium text-gray-700 mb-4 text-center">Assinatura Responsável Orçamento</label>
+                
+                <div v-if="sigResponsiblePreview || (company && company.signature_responsible_path)" class="mb-4">
+                  <img :src="sigResponsiblePreview || (company ? '/storage/' + company.signature_responsible_path : '')" class="h-32 object-contain mx-auto" alt="Signature Preview">
+                </div>
+                <div v-else class="h-32 w-full bg-gray-200 flex items-center justify-center text-gray-400 mb-4 rounded">
+                   Sem assinatura
+                </div>
+
+                <input type="file" @change="handleSigResponsibleChange" class="text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" accept="image/*" />
+             </div>
+
            </div>
         </Card>
 
@@ -200,16 +221,19 @@ const form = useForm({
   crq: props.company?.crq || '',
   license_environmental: props.company?.license_environmental || '',
   license_sanitary: props.company?.license_sanitary || '',
+  license_business: props.company?.license_business || '',
   ceatox_info: props.company?.ceatox_info || '',
   logo_path: null,
   signature_operational_path: null,
   signature_chemical_path: null,
+  signature_responsible_path: null,
 });
 
 // Previews
 const logoPreview = ref(props.company?.logo_path ? `/storage/${props.company.logo_path}` : null);
 const sigOpPreview = ref(props.company?.signature_operational_path ? `/storage/${props.company.signature_operational_path}` : null);
 const sigChemPreview = ref(props.company?.signature_chemical_path ? `/storage/${props.company.signature_chemical_path}` : null);
+const sigResponsiblePreview = ref(props.company?.signature_responsible_path ? `/storage/${props.company.signature_responsible_path}` : null);
 
 const handleLogoChange = (e) => {
     const file = e.target.files[0];
@@ -232,6 +256,14 @@ const handleSigChemChange = (e) => {
     if (file) {
         form.signature_chemical_path = file;
         sigChemPreview.value = URL.createObjectURL(file);
+    }
+};
+
+const handleSigResponsibleChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        form.signature_responsible_path = file;
+        sigResponsiblePreview.value = URL.createObjectURL(file);
     }
 };
 

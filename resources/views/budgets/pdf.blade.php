@@ -289,6 +289,19 @@
         </tr>
     </table>
 
+
+
+    @if($company->signature_responsible_path)
+        <div style="margin-top: 30px; text-align: center;">
+            <img src="{{ public_path('storage/' . $company->signature_responsible_path) }}"
+                style="height: 60px; width: auto;" alt="Assinatura Responsável"><br>
+            <div
+                style="font-size: 10px; margin-top: 5px; border-top: 1px solid #000; display: inline-block; padding-top: 5px; min-width: 200px;">
+                Responsável pelo Orçamento
+            </div>
+        </div>
+    @endif
+
     <div class="footer">
         <p>Este orçamento é válido até a data de validade indicada acima e está sujeito a alteração sem aviso prévio
             após este período.</p>
