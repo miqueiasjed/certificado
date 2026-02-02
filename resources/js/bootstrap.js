@@ -21,9 +21,18 @@ window.axios.interceptors.response.use(
             try {
                 await window.axios.get('/csrf-token');
 
-                // Atualiza o token no header padrão do axios para requisições futuras
-                // O Laravel atualiza o cookie XSRF-TOKEN automaticamente na resposta da rota acima
-                // O axios lê esse cookie automaticamente, mas podemos forçar a atualização se necessário
+                // Atualiza o header X-XSRF-TOKEN com o novo cookie
+                const xsrfToken = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+
+                if (xsrfToken) {
+                    // O valor do cookie pode estar encoded
+                    error.config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken[1]);
+
+                    // Remove o header X-CSRF-TOKEN antigo para garantir que o Laravel use o X-XSRF-TOKEN
+                    // O Laravel verifica o X-CSRF-TOKEN primeiro, e se ele existir (mesmo inválido), usa ele.
+                    delete error.config.headers['X-CSRF-TOKEN'];
+                    delete error.config.headers['x-csrf-token'];
+                }
 
                 // Retenta a requisição original
                 return window.axios(error.config);
