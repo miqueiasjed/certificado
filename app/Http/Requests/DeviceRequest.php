@@ -20,7 +20,7 @@ class DeviceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'room_id' => 'required|exists:rooms,id',
+            'address_id' => 'required|exists:addresses,id',
             'label' => 'required|string|max:255',
             'number' => 'required|string|max:255',
             'bait_type_id' => 'nullable|exists:bait_types,id',
@@ -35,8 +35,8 @@ class DeviceRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'room_id.required' => 'O cômodo é obrigatório.',
-            'room_id.exists' => 'O cômodo selecionado não existe.',
+            'address_id.required' => 'O endereço é obrigatório.',
+            'address_id.exists' => 'O endereço selecionado não existe.',
             'label.required' => 'O nome do dispositivo é obrigatório.',
             'label.max' => 'O nome não pode ter mais de 255 caracteres.',
             'number.required' => 'O número/código do dispositivo é obrigatório.',
