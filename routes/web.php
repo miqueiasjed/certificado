@@ -45,6 +45,10 @@ Route::get('/login', function () {
     return inertia('Auth/Login');
 })->name('login');
 
+Route::get('/csrf-token', function () {
+    return response()->json(['message' => 'CSRF token refreshed']);
+})->name('csrf-token');
+
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
 // Rotas protegidas
