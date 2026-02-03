@@ -35,6 +35,14 @@ class BaitTypeController extends Controller
 
         $baitType = \App\Models\BaitType::create($validated);
 
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'bait_type' => $baitType,
+                'message' => 'Tipo de isca criado com sucesso!'
+            ]);
+        }
+
         return back()->with('success', 'Tipo de isca criado com sucesso!');
     }
 

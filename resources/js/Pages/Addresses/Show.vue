@@ -454,19 +454,31 @@
               <label class="block text-sm font-medium text-gray-700 mb-1">
                 Tipo de Isca
               </label>
-              <select
-                v-model="deviceForm.bait_type_id"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              >
-                <option value="">Selecione um tipo de isca...</option>
-                <option
-                  v-for="baitType in baitTypes"
-                  :key="baitType.id"
-                  :value="baitType.id"
+              <div class="flex gap-2">
+                <select
+                  v-model="deviceForm.bait_type_id"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 >
-                  {{ baitType.name }}
-                </option>
-              </select>
+                  <option value="">Selecione um tipo de isca...</option>
+                  <option
+                    v-for="baitType in baitTypesList"
+                    :key="baitType.id"
+                    :value="baitType.id"
+                  >
+                    {{ baitType.name }}
+                  </option>
+                </select>
+                <button
+                  type="button"
+                  @click="showBaitTypeModal = true"
+                  class="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  title="Novo Tipo de Isca"
+                >
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div>
@@ -515,6 +527,67 @@
         </div>
       </div>
     </div>
+    <!-- Modal para Criar Tipo de Isca -->
+    <div v-if="showBaitTypeModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[60] flex items-center justify-center p-4">
+      <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 transform transition-all">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-semibold text-gray-900">Novo Tipo de Isca</h3>
+            <button @click="showBaitTypeModal = false" class="text-gray-400 hover:text-gray-600 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            </button>
+          </div>
+
+          <form @submit.prevent="saveBaitType" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Nome *
+              </label>
+              <input
+                v-model="baitTypeForm.name"
+                type="text"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Ex: Isca Parafinada"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                Marca (Opcional)
+              </label>
+              <input
+                v-model="baitTypeForm.brand"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Ex: Bayer"
+              />
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                @click="showBaitTypeModal = false"
+                class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                :disabled="isSavingBaitType"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="isSavingBaitType"
+              >
+                <span v-if="isSavingBaitType">Salvando...</span>
+                <span v-else>Salvar</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </AuthenticatedLayout>
 </template>
 
@@ -537,7 +610,16 @@ const props = defineProps({
 const activeTab = ref('rooms');
 const showRoomModal = ref(false);
 const showDeviceModal = ref(false);
+const showBaitTypeModal = ref(false);
 const isSavingDevice = ref(false);
+const isSavingBaitType = ref(false);
+
+const baitTypesList = ref([...props.baitTypes]);
+
+const baitTypeForm = useForm({
+  name: '',
+  brand: '',
+});
 
 const deviceForm = useForm({
   label: '',
@@ -574,6 +656,43 @@ const saveDevice = async () => {
     alert('Erro ao criar dispositivo');
   } finally {
     isSavingDevice.value = false;
+  }
+};
+
+const saveBaitType = async () => {
+  isSavingBaitType.value = true;
+  try {
+    const response = await fetch('/bait-types', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(baitTypeForm.data()),
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      // Adicionar à lista e selecionar
+      baitTypesList.value.push(data.bait_type);
+      
+      // Reordenar alfa pela nome
+      baitTypesList.value.sort((a, b) => a.name.localeCompare(b.name));
+      
+      deviceForm.bait_type_id = data.bait_type.id;
+      
+      showBaitTypeModal.value = false;
+      baitTypeForm.reset();
+    } else {
+      alert(data.message || 'Erro ao criar tipo de isca');
+    }
+  } catch (error) {
+    console.error('Erro ao criar tipo de isca:', error);
+    alert('Erro ao criar tipo de isca');
+  } finally {
+    isSavingBaitType.value = false;
   }
 };
 
