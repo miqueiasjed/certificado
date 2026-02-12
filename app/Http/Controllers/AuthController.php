@@ -23,7 +23,6 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
-            $request->session()->regenerateToken();
 
             return redirect()->intended('/');
         }
