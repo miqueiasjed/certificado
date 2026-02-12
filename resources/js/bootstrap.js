@@ -33,6 +33,41 @@ if (initialToken) {
     console.error('CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token');
 }
 
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (input, init = {}) => {
+    const requestUrl = typeof input === 'string' || input instanceof URL
+        ? String(input)
+        : input?.url;
+
+    const url = requestUrl ? new URL(requestUrl, window.location.origin) : null;
+    const isSameOrigin = url && url.origin === window.location.origin;
+
+    if (isSameOrigin) {
+        const token = getCookieToken() || getMetaToken()?.getAttribute('content');
+        syncCsrfToken(token);
+
+        const requestMethod = (
+            init.method
+            || (input instanceof Request ? input.method : 'GET')
+        ).toUpperCase();
+
+        if (!['GET', 'HEAD', 'OPTIONS'].includes(requestMethod) && token) {
+            const headers = new Headers(
+                init.headers || (input instanceof Request ? input.headers : undefined)
+            );
+
+            headers.set('X-CSRF-TOKEN', token);
+            init = { ...init, headers };
+        }
+
+        if (init.credentials === undefined) {
+            init = { ...init, credentials: 'same-origin' };
+        }
+    }
+
+    return nativeFetch(input, init);
+};
+
 window.axios.interceptors.request.use((config) => {
     syncCsrfToken(getCookieToken() || getMetaToken()?.getAttribute('content'));
     return config;
