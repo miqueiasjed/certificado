@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ActiveIngredientController;
@@ -45,8 +46,13 @@ Route::get('/login', function () {
     return inertia('Auth/Login');
 })->name('login');
 
-Route::get('/csrf-token', function () {
-    return response()->json(['message' => 'CSRF token refreshed']);
+Route::get('/csrf-token', function (Request $request) {
+    $request->session()->regenerateToken();
+
+    return response()->json([
+        'csrf_token' => csrf_token(),
+        'message' => 'CSRF token refreshed',
+    ]);
 })->name('csrf-token');
 
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');

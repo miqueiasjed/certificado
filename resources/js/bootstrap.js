@@ -3,44 +3,85 @@ window.axios = axios;
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
-// Configurar token CSRF
-let token = document.head.querySelector('meta[name="csrf-token"]');
+window.axios.defaults.xsrfCookieName = 'XSRF-TOKEN';
+window.axios.defaults.xsrfHeaderName = 'X-XSRF-TOKEN';
 
-if (token) {
-    window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token.content;
+const getMetaToken = () => document.head.querySelector('meta[name="csrf-token"]');
+
+const getCookieToken = () => {
+    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+};
+
+const syncCsrfToken = (token) => {
+    if (!token) {
+        return;
+    }
+
+    const meta = getMetaToken();
+    if (meta) {
+        meta.setAttribute('content', token);
+    }
+
+    window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
+};
+
+const initialToken = getMetaToken()?.getAttribute('content');
+if (initialToken) {
+    syncCsrfToken(initialToken);
 } else {
     console.error('CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token');
 }
 
-// Interceptor para tratar erro 419 (CSRF Token Mismatch) automaticamente
+window.axios.interceptors.request.use((config) => {
+    syncCsrfToken(getCookieToken() || getMetaToken()?.getAttribute('content'));
+    return config;
+});
+
+let refreshingTokenPromise = null;
+
+const refreshCsrfToken = async () => {
+    if (!refreshingTokenPromise) {
+        refreshingTokenPromise = window.axios
+            .get('/csrf-token')
+            .then((response) => {
+                const token = response?.data?.csrf_token || getCookieToken();
+                syncCsrfToken(token);
+                return token;
+            })
+            .finally(() => {
+                refreshingTokenPromise = null;
+            });
+    }
+
+    return refreshingTokenPromise;
+};
+
 window.axios.interceptors.response.use(
     (response) => response,
     async (error) => {
-        if (error.response && error.response.status === 419) {
-            // Tenta renovar o token CSRF
+        const originalRequest = error?.config;
+        const isCsrfRefreshRequest = originalRequest?.url?.includes('/csrf-token');
+
+        if (error?.response?.status === 419 && originalRequest && !originalRequest._csrfRetried && !isCsrfRefreshRequest) {
+            originalRequest._csrfRetried = true;
+
             try {
-                await window.axios.get('/csrf-token');
+                const refreshedToken = await refreshCsrfToken();
 
-                // Atualiza o header X-XSRF-TOKEN com o novo cookie
-                const xsrfToken = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-
-                if (xsrfToken) {
-                    // O valor do cookie pode estar encoded
-                    error.config.headers['X-XSRF-TOKEN'] = decodeURIComponent(xsrfToken[1]);
-
-                    // Remove o header X-CSRF-TOKEN antigo para garantir que o Laravel use o X-XSRF-TOKEN
-                    // O Laravel verifica o X-CSRF-TOKEN primeiro, e se ele existir (mesmo inválido), usa ele.
-                    delete error.config.headers['X-CSRF-TOKEN'];
-                    delete error.config.headers['x-csrf-token'];
+                if (refreshedToken) {
+                    originalRequest.headers = {
+                        ...(originalRequest.headers || {}),
+                        'X-CSRF-TOKEN': refreshedToken,
+                    };
                 }
 
-                // Retenta a requisição original
-                return window.axios(error.config);
-            } catch (refreshError) {
-                // Se falhar a renovação, deixa o erro propagar (provavelmente redirecionará para login)
+                return window.axios(originalRequest);
+            } catch {
                 return Promise.reject(error);
             }
         }
+
         return Promise.reject(error);
     }
 );
