@@ -26,52 +26,8 @@ const syncCsrfToken = (token) => {
     window.axios.defaults.headers.common['X-CSRF-TOKEN'] = token;
 };
 
-const initialToken = getMetaToken()?.getAttribute('content');
-if (initialToken) {
-    syncCsrfToken(initialToken);
-} else {
-    console.error('CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token');
-}
-
-const nativeFetch = window.fetch.bind(window);
-window.fetch = (input, init = {}) => {
-    const requestUrl = typeof input === 'string' || input instanceof URL
-        ? String(input)
-        : input?.url;
-
-    const url = requestUrl ? new URL(requestUrl, window.location.origin) : null;
-    const isSameOrigin = url && url.origin === window.location.origin;
-
-    if (isSameOrigin) {
-        const token = getCookieToken() || getMetaToken()?.getAttribute('content');
-        syncCsrfToken(token);
-
-        const requestMethod = (
-            init.method
-            || (input instanceof Request ? input.method : 'GET')
-        ).toUpperCase();
-
-        if (!['GET', 'HEAD', 'OPTIONS'].includes(requestMethod) && token) {
-            const headers = new Headers(
-                init.headers || (input instanceof Request ? input.headers : undefined)
-            );
-
-            headers.set('X-CSRF-TOKEN', token);
-            init = { ...init, headers };
-        }
-
-        if (init.credentials === undefined) {
-            init = { ...init, credentials: 'same-origin' };
-        }
-    }
-
-    return nativeFetch(input, init);
-};
-
-window.axios.interceptors.request.use((config) => {
-    syncCsrfToken(getCookieToken() || getMetaToken()?.getAttribute('content'));
-    return config;
-});
+const isReadOnlyMethod = (method) => ['GET', 'HEAD', 'OPTIONS'].includes((method || 'GET').toUpperCase());
+const getRequestMethod = (input, init) => (init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
 
 let refreshingTokenPromise = null;
 
@@ -91,6 +47,75 @@ const refreshCsrfToken = async () => {
 
     return refreshingTokenPromise;
 };
+
+const initialToken = getMetaToken()?.getAttribute('content');
+if (initialToken) {
+    syncCsrfToken(initialToken);
+} else {
+    console.error('CSRF token not found: https://laravel.com/docs/csrf#csrf-x-csrf-token');
+}
+
+const nativeFetch = window.fetch.bind(window);
+window.fetch = async (input, init = {}) => {
+    const requestUrl = typeof input === 'string' || input instanceof URL
+        ? String(input)
+        : input?.url;
+
+    const url = requestUrl ? new URL(requestUrl, window.location.origin) : null;
+    const isSameOrigin = !!(url && url.origin === window.location.origin);
+    const requestMethod = getRequestMethod(input, init);
+    const isCsrfRefreshRequest = url?.pathname === '/csrf-token';
+    const requestFactory = () => (input instanceof Request ? input.clone() : input);
+
+    if (isSameOrigin) {
+        const token = getCookieToken() || getMetaToken()?.getAttribute('content');
+        syncCsrfToken(token);
+
+        if (!isReadOnlyMethod(requestMethod) && token) {
+            const headers = new Headers(
+                init.headers || (input instanceof Request ? input.headers : undefined)
+            );
+
+            headers.set('X-CSRF-TOKEN', token);
+            init = { ...init, headers };
+        }
+
+        if (init.credentials === undefined) {
+            init = { ...init, credentials: 'same-origin' };
+        }
+    }
+
+    let response = await nativeFetch(requestFactory(), init);
+
+    if (
+        isSameOrigin
+        && !isReadOnlyMethod(requestMethod)
+        && response.status === 419
+        && !isCsrfRefreshRequest
+    ) {
+        const refreshedToken = await refreshCsrfToken();
+
+        if (refreshedToken) {
+            const retryHeaders = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
+            retryHeaders.set('X-CSRF-TOKEN', refreshedToken);
+
+            const retryInit = {
+                ...init,
+                headers: retryHeaders,
+                credentials: init.credentials ?? 'same-origin',
+            };
+
+            response = await nativeFetch(requestFactory(), retryInit);
+        }
+    }
+
+    return response;
+};
+
+window.axios.interceptors.request.use((config) => {
+    syncCsrfToken(getCookieToken() || getMetaToken()?.getAttribute('content'));
+    return config;
+});
 
 window.axios.interceptors.response.use(
     (response) => response,

@@ -46,6 +46,8 @@ Route::get('/login', function () {
 })->name('login');
 
 Route::get('/csrf-token', function () {
+    session()->regenerateToken();
+
     return response()->json([
         'csrf_token' => csrf_token(),
         'message' => 'CSRF token refreshed',
