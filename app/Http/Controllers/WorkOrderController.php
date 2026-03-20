@@ -743,9 +743,6 @@ class WorkOrderController extends Controller
             $data = $request->all();
 
             // Converter campos opcionais vazios para null
-            if (empty($data['device_id']) || $data['device_id'] === '') {
-                $data['device_id'] = null;
-            }
             if (empty($data['pest_quantity']) || $data['pest_quantity'] === '') {
                 $data['pest_quantity'] = null;
             }
@@ -766,11 +763,6 @@ class WorkOrderController extends Controller
                 'pest_observation' => 'nullable|string|max:1000'
             ];
 
-            // Só validar device_id se não for null
-            if ($request->device_id !== null) {
-                $validationRules['device_id'] = 'exists:devices,id';
-            }
-
             // Só validar pest_quantity se não for null
             if ($request->pest_quantity !== null) {
                 $validationRules['pest_quantity'] = 'integer|min:1';
@@ -788,7 +780,6 @@ class WorkOrderController extends Controller
                 'event_date' => $request->event_date,
                 'event_description' => $request->event_description ?: null,
                 'event_observations' => $request->event_observations ?: null,
-                'device_id' => $request->device_id ?: null,
                 // Campos de avistamento (opcionais)
                 'pest_type' => $request->pest_type ?: null,
                 'pest_sighting_date' => $request->pest_sighting_date ?: null,
@@ -947,11 +938,6 @@ class WorkOrderController extends Controller
             // Preparar dados para validação
             $data = $request->all();
 
-            // Converter device_id vazio para null
-            if (empty($data['device_id']) || $data['device_id'] === '') {
-                $data['device_id'] = null;
-            }
-
             $request->merge($data);
 
             $validationRules = [
@@ -960,11 +946,6 @@ class WorkOrderController extends Controller
                 'event_description' => 'nullable|string|max:1000',
                 'event_observations' => 'nullable|string|max:1000',
             ];
-
-            // Só validar device_id se não for null
-            if ($request->device_id !== null) {
-                $validationRules['device_id'] = 'exists:devices,id';
-            }
 
             $request->validate($validationRules);
 
@@ -984,7 +965,6 @@ class WorkOrderController extends Controller
                 'event_date' => $request->event_date,
                 'event_description' => $request->event_description ?: null,
                 'event_observations' => $request->event_observations ?: null,
-                'device_id' => $request->device_id ?: null
             ]);
 
             return back()->with('success', 'Evento adicionado com sucesso');
@@ -1010,11 +990,6 @@ class WorkOrderController extends Controller
             $data = $request->all();
 
 
-            // Converter device_id vazio para null
-            if (empty($data['device_id']) || $data['device_id'] === '') {
-                $data['device_id'] = null;
-            }
-
             $request->merge($data);
 
             $validationRules = [
@@ -1023,11 +998,6 @@ class WorkOrderController extends Controller
                 'event_description' => 'nullable|string|max:1000',
                 'event_observations' => 'nullable|string|max:1000',
             ];
-
-            // Só validar device_id se não for null
-            if ($request->device_id !== null) {
-                $validationRules['device_id'] = 'exists:devices,id';
-            }
 
             $request->validate($validationRules);
 
@@ -1047,7 +1017,6 @@ class WorkOrderController extends Controller
                 'event_date' => $request->event_date,
                 'event_description' => $request->event_description ?: null,
                 'event_observations' => $request->event_observations ?: null,
-                'device_id' => $request->device_id ?: null
             ]);
 
             return back()->with('success', 'Evento atualizado com sucesso');
@@ -1085,7 +1054,6 @@ class WorkOrderController extends Controller
                 'event_date' => null,
                 'event_description' => null,
                 'event_observations' => null,
-                'device_id' => null
             ]);
 
             return back()->with('success', 'Evento removido com sucesso');
