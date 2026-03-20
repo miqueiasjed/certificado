@@ -49,7 +49,7 @@ class WorkOrderRequest extends FormRequest
             'priority_level' => 'required|in:low,medium,high,urgent,emergency',
             'scheduled_date' => 'required|date',
             'start_time' => 'nullable|date_format:Y-m-d\TH:i',
-            'end_time' => 'nullable|date|after:start_time',
+            'end_time' => 'nullable|date_format:Y-m-d\TH:i|after:start_time',
             'status' => 'required|in:pending,scheduled,in_progress,completed,cancelled,on_hold',
             'description' => 'nullable|string|max:1000',
             'observations' => 'nullable|string|max:1000',
