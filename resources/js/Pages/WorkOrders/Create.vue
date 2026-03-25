@@ -189,6 +189,22 @@
               <p v-if="form.errors.start_time" class="mt-1 text-sm text-red-600">
                 {{ form.errors.start_time }}
               </p>
+
+              <div class="mt-4">
+                <label for="end_time" class="block text-sm font-medium text-gray-700 mb-2">
+                  Horário de Término
+                </label>
+                <input
+                  id="end_time"
+                  v-model="form.end_time"
+                  type="datetime-local"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  :class="{ 'border-red-500': form.errors.end_time }"
+                />
+                <p v-if="form.errors.end_time" class="mt-1 text-sm text-red-600">
+                  {{ form.errors.end_time }}
+                </p>
+              </div>
             </div>
 
             <!-- Serviço -->
@@ -968,6 +984,7 @@ const form = useForm({
   priority_level: '',
   scheduled_date: new Date().toISOString().slice(0, 10),
   start_time: '',
+  end_time: '',
   status: 'pending',
   description: '',
   observations: '',
