@@ -1,5 +1,5 @@
 <template>
-  <div class="relative">
+  <div ref="containerRef" class="relative">
     <label v-if="label" class="block text-sm font-medium text-gray-700 mb-1">{{ label }}</label>
     
     <!-- Selected State -->
@@ -16,11 +16,12 @@
     <!-- Search Input -->
     <div v-else class="relative">
          <div class="relative">
-            <input 
-                type="text" 
-                v-model="searchQuery" 
+            <input
+                type="text"
+                v-model="searchQuery"
                 @input="onInput"
-                placeholder="Buscar por nome, CPF ou CNPJ..." 
+                @focus="onFocus"
+                placeholder="Buscar por nome, CPF ou CNPJ..."
                 class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 sm:text-sm pl-10"
             />
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -53,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({
   modelValue: [String, Number],
@@ -71,34 +72,50 @@ const emit = defineEmits(['update:modelValue', 'change']);
 
 const searchQuery = ref('');
 const isOpen = ref(false);
+const containerRef = ref(null);
 
-const selectedClientName = computed(() => {
-    const client = props.clients.find(c => c.id === props.modelValue);
-    return client ? client.name : '';
-});
+const normalizeId = (value) => value === '' || value === null || value === undefined
+  ? null
+  : String(value);
+
+const getClientDocument = (client) => client.cnpj || client.cpf || client.document || '';
+
+const selectedClient = computed(() =>
+  props.clients.find(client => normalizeId(client.id) === normalizeId(props.modelValue)) || null
+);
+
+const selectedClientName = computed(() => selectedClient.value?.name || '');
 
 const selectedClientDetail = computed(() => {
-    const client = props.clients.find(c => c.id === props.modelValue);
+    const client = selectedClient.value;
     if (!client) return '';
-    return formatDocument(client.cnpj) || client.phone || client.email || 'Sem detalhes';
+    return formatDocument(getClientDocument(client)) || client.phone || client.email || 'Sem detalhes';
 });
 
 const filteredClients = computed(() => {
     if (!searchQuery.value) return [];
     
-    const query = searchQuery.value.toLowerCase();
+    const query = searchQuery.value.toLowerCase().trim();
+    const rawQuery = query.replace(/\D/g, '');
+
     return props.clients.filter(client => {
         const name = client.name ? client.name.toLowerCase() : '';
-        const doc = client.cnpj ? client.cnpj.replace(/\D/g, '') : ''; // Search raw numbers
-        // Also allow searching by formatted document if user typed formatting
-        const docFormatted = client.cnpj || ''; 
-        
-        return name.includes(query) || doc.includes(query) || docFormatted.includes(query);
+        const document = getClientDocument(client);
+        const rawDocument = document ? document.replace(/\D/g, '') : '';
+        const formattedDocument = document.toLowerCase();
+
+        return name.includes(query) ||
+          (rawQuery && rawDocument.includes(rawQuery)) ||
+          formattedDocument.includes(query);
     }).slice(0, 10); // Limit results
 });
 
 const onInput = () => {
     isOpen.value = true;
+};
+
+const onFocus = () => {
+    isOpen.value = !!searchQuery.value;
 };
 
 const selectClient = (client) => {
@@ -121,7 +138,7 @@ const formatDocument = (doc) => {
 
 // Close dropdown when clicking outside
 const handleClickOutside = (event) => {
-  if (!event.target.closest('.relative')) {
+  if (containerRef.value && !containerRef.value.contains(event.target)) {
      if (isOpen.value) isOpen.value = false;
   }
 };
