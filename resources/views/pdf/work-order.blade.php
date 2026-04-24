@@ -670,6 +670,26 @@
                             <td colspan="4"><strong>Observações:</strong> {{ $room->pivot->event_observations }}</td>
                         </tr>
                         @endif
+                        @php $roomPhotos = $roomEventPhotosByRoomId[$room->id] ?? collect(); @endphp
+                        @if($roomPhotos->count() > 0)
+                        <tr>
+                            <td colspan="4" style="padding: 6px 4px;">
+                                <p style="font-size: 9px; font-weight: bold; color: #6b7280; margin: 0 0 4px 0;">Fotos do evento ({{ $roomPhotos->count() }}):</p>
+                                <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                    @foreach($roomPhotos as $photo)
+                                    @if($photo->base64)
+                                    <div style="text-align: center;">
+                                        <img src="{{ $photo->base64 }}" style="max-height: 100px; max-width: 130px; border: 1px solid #e5e7eb; border-radius: 4px; display: block;">
+                                        @if($photo->caption)
+                                        <p style="font-size: 8px; color: #6b7280; margin: 2px 0 0 0; max-width: 130px;">{{ $photo->caption }}</p>
+                                        @endif
+                                    </div>
+                                    @endif
+                                    @endforeach
+                                </div>
+                            </td>
+                        </tr>
+                        @endif
                     </table>
                     @endif
 
@@ -784,6 +804,25 @@
                             <tr>
                                 <td colspan="3" style="background-color: #fafafa; padding: 4px; font-size: 9px;">
                                     <strong>Observações:</strong> {{ $event->event_observations }}
+                                </td>
+                            </tr>
+                            @endif
+                            @if($event->photos && $event->photos->count() > 0)
+                            <tr>
+                                <td colspan="3" style="padding: 6px 4px;">
+                                    <p style="font-size: 9px; font-weight: bold; color: #6b7280; margin: 0 0 4px 0;">Fotos do evento ({{ $event->photos->count() }}):</p>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                        @foreach($event->photos as $photo)
+                                        @if($photo->base64)
+                                        <div style="text-align: center;">
+                                            <img src="{{ $photo->base64 }}" style="max-height: 100px; max-width: 130px; border: 1px solid #e5e7eb; border-radius: 4px; display: block;">
+                                            @if($photo->caption)
+                                            <p style="font-size: 8px; color: #6b7280; margin: 2px 0 0 0; max-width: 130px;">{{ $photo->caption }}</p>
+                                            @endif
+                                        </div>
+                                        @endif
+                                        @endforeach
+                                    </div>
                                 </td>
                             </tr>
                             @endif
@@ -914,6 +953,23 @@
                     @endif
                 </div>
                 <p style="margin: 0; font-size: 11px; color: #374151;">{{ $adequation->description }}</p>
+                @if($adequation->photos && $adequation->photos->count() > 0)
+                <div style="margin-top: 8px;">
+                    <p style="font-size: 10px; font-weight: bold; color: #6b7280; margin: 0 0 4px 0;">Fotos ({{ $adequation->photos->count() }}):</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        @foreach($adequation->photos as $photo)
+                        @if($photo->base64)
+                        <div style="text-align: center;">
+                            <img src="{{ $photo->base64 }}" style="max-height: 110px; max-width: 140px; border: 1px solid #e5e7eb; border-radius: 4px; display: block;">
+                            @if($photo->caption)
+                            <p style="font-size: 8px; color: #6b7280; margin: 2px 0 0 0; max-width: 140px; word-break: break-word;">{{ $photo->caption }}</p>
+                            @endif
+                        </div>
+                        @endif
+                        @endforeach
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
         @endforeach

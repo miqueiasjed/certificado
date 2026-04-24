@@ -19,6 +19,7 @@ use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\DeviceEventController;
 use App\Http\Controllers\WorkOrderAdequationController;
+use App\Http\Controllers\WorkOrderPhotoController;
 use App\Http\Controllers\PestSightingController;
 use App\Http\Controllers\PaymentDetailController;
 use App\Http\Controllers\ContractController;
@@ -178,6 +179,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/work-orders/{workOrder}/adequations', [WorkOrderAdequationController::class, 'store'])->name('work-orders.adequations.store');
     Route::put('/work-orders/{workOrder}/adequations/{adequation}', [WorkOrderAdequationController::class, 'update'])->name('work-orders.adequations.update');
     Route::delete('/work-orders/{workOrder}/adequations/{adequation}', [WorkOrderAdequationController::class, 'destroy'])->name('work-orders.adequations.destroy');
+
+    // Rotas de Fotos da OS
+    Route::post('/work-orders/{workOrder}/photos', [WorkOrderPhotoController::class, 'store'])->name('work-orders.photos.store');
+    Route::delete('/work-orders/{workOrder}/photos/{photo}', [WorkOrderPhotoController::class, 'destroy'])->name('work-orders.photos.destroy');
 
     // Rotas de Eventos de Dispositivos
     Route::resource('device-events', DeviceEventController::class);

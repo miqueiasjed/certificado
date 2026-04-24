@@ -183,7 +183,8 @@ class WorkOrderController extends Controller
                 $query->with([
                     'device.address.client',
                     'device.baitType',
-                    'eventType'
+                    'eventType',
+                    'photos',
                 ])->orderBy('event_date', 'desc');
             },
             'paymentDetails' => function ($query) {
@@ -195,9 +196,17 @@ class WorkOrderController extends Controller
                 ])->orderBy('sighting_date', 'desc');
             },
             'adequations' => function ($query) {
-                $query->orderByRaw("FIELD(priority, 'alta', 'media', 'baixa')")->orderBy('status');
-            }
+                $query->with('photos')->orderByRaw("FIELD(priority, 'alta', 'media', 'baixa')")->orderBy('status');
+            },
         ]);
+
+        // Room event photos grouped by room_id
+        $roomEventPhotos = $workOrder->photos()
+            ->where('entity_type', 'room_event')
+            ->get()
+            ->groupBy('room_id')
+            ->map(fn ($group) => $group->values())
+            ->toArray();
 
 
         // Accessors já estão incluídos automaticamente via $appends no modelo
@@ -227,6 +236,7 @@ class WorkOrderController extends Controller
 
         return Inertia::render('WorkOrders/Show', [
             'workOrder' => $workOrder,
+            'roomEventPhotos' => $roomEventPhotos,
             'availableAddresses' => $availableAddresses,
             'availableProducts' => $availableProducts,
             'availableServices' => $availableServices,

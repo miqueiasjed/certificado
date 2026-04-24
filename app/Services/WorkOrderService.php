@@ -458,21 +458,47 @@ class WorkOrderService
                 $query->with([
                     'device.address.client',
                     'device.baitType',
-                    'eventType'
+                    'eventType',
+                    'photos',
                 ])->orderBy('event_date', 'desc');
             },
             'pestSightings' => function ($query) {
                 $query->with(['address.client'])->orderBy('sighting_date', 'desc');
             },
             'adequations' => function ($query) {
-                $query->orderByRaw("FIELD(priority, 'alta', 'media', 'baixa')")->orderBy('status');
-            }
+                $query->with('photos')->orderByRaw("FIELD(priority, 'alta', 'media', 'baixa')")->orderBy('status');
+            },
         ]);
 
         $company = \App\Models\Company::current();
 
+        // Convert adequation photos to base64
+        foreach ($workOrder->adequations as $adequation) {
+            foreach ($adequation->photos as $photo) {
+                $photo->base64 = $this->convertStorageFileToBase64($photo->path);
+            }
+        }
+
+        // Convert device event photos to base64
+        foreach ($workOrder->workOrderDeviceEvents as $event) {
+            foreach ($event->photos as $photo) {
+                $photo->base64 = $this->convertStorageFileToBase64($photo->path);
+            }
+        }
+
+        // Load and convert room event photos to base64
+        $roomEventPhotos = \App\Models\WorkOrderPhoto::where('work_order_id', $workOrder->id)
+            ->where('entity_type', 'room_event')
+            ->orderBy('sort_order')
+            ->get();
+        foreach ($roomEventPhotos as $photo) {
+            $photo->base64 = $this->convertStorageFileToBase64($photo->path);
+        }
+        $roomEventPhotosByRoomId = $roomEventPhotos->groupBy('room_id');
+
         return [
             'workOrder' => $workOrder,
+            'roomEventPhotosByRoomId' => $roomEventPhotosByRoomId,
             'company' => $company,
             'currentDate' => now()->format('d/m/Y'),
             'currentTime' => now()->format('H:i'),

@@ -692,6 +692,47 @@
               <label class="block text-sm font-medium text-gray-500 mb-1">Observações do Evento</label>
               <p class="text-sm text-gray-900">{{ room.pivot.event_observations }}</p>
         </div>
+
+            <!-- Fotos do Evento de Cômodo -->
+            <div v-if="room.pivot?.event_type_id" class="mt-3 pt-3 border-t border-gray-200">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-gray-500">Fotos ({{ getPhotosForRoom(room.id).length }})</span>
+                <button
+                  v-if="props.workOrder.status !== 'cancelled'"
+                  @click="openPhotoUpload('room_event', null, room.id)"
+                  :disabled="isUploadingPhoto"
+                  class="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
+                >
+                  <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  </svg>
+                  Adicionar Foto
+                </button>
+              </div>
+              <div v-if="getPhotosForRoom(room.id).length > 0" class="flex flex-wrap gap-2">
+                <div
+                  v-for="photo in getPhotosForRoom(room.id)"
+                  :key="photo.id"
+                  class="relative group"
+                >
+                  <img :src="photo.url" :alt="photo.caption || 'Foto'" class="h-20 w-20 object-cover rounded-lg border border-gray-200">
+                  <div v-if="photo.caption" class="text-xs text-gray-500 text-center mt-1 max-w-[80px] truncate">{{ photo.caption }}</div>
+                  <button
+                    v-if="props.workOrder.status !== 'cancelled'"
+                    @click="deletePhoto(photo.id)"
+                    class="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Remover foto"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <p v-else class="text-xs text-gray-400 italic">Nenhuma foto adicionada.</p>
+            </div>
+
             <div v-if="!room.pivot?.event_type_id" class="text-sm text-gray-500 italic">
               Nenhum evento registrado para este cômodo.
       </div>
@@ -856,6 +897,46 @@
                     <div v-if="event.event_observations" class="mt-4">
                       <label class="block text-sm font-medium text-gray-500 mb-1">Observações</label>
                       <p class="text-sm text-gray-900">{{ event.event_observations }}</p>
+                    </div>
+
+                    <!-- Fotos do Evento -->
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                      <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-gray-500">Fotos ({{ getPhotosForDeviceEvent(event).length }})</span>
+                        <button
+                          v-if="props.workOrder.status !== 'cancelled'"
+                          @click="openPhotoUpload('device_event', event.id)"
+                          :disabled="isUploadingPhoto"
+                          class="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
+                        >
+                          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                          </svg>
+                          Adicionar Foto
+                        </button>
+                      </div>
+                      <div v-if="getPhotosForDeviceEvent(event).length > 0" class="flex flex-wrap gap-2">
+                        <div
+                          v-for="photo in getPhotosForDeviceEvent(event)"
+                          :key="photo.id"
+                          class="relative group"
+                        >
+                          <img :src="photo.url" :alt="photo.caption || 'Foto'" class="h-20 w-20 object-cover rounded-lg border border-gray-200">
+                          <div v-if="photo.caption" class="text-xs text-gray-500 text-center mt-1 max-w-[80px] truncate">{{ photo.caption }}</div>
+                          <button
+                            v-if="props.workOrder.status !== 'cancelled'"
+                            @click="deletePhoto(photo.id)"
+                            class="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remover foto"
+                          >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <p v-else class="text-xs text-gray-400 italic">Nenhuma foto adicionada.</p>
                     </div>
                   </div>
                   <div class="flex space-x-2 ml-4">
@@ -1624,6 +1705,46 @@
               <label class="block text-sm font-medium text-gray-500">Prazo</label>
               <p class="mt-1 text-sm text-gray-900">{{ formatDate(adequation.deadline) }}</p>
             </div>
+          </div>
+
+          <!-- Fotos da Adequação -->
+          <div class="mt-4 border-t pt-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-medium text-gray-500">Fotos ({{ getPhotosForAdequation(adequation).length }})</span>
+              <button
+                v-if="props.workOrder.status !== 'cancelled'"
+                @click="openPhotoUpload('adequation', adequation.id)"
+                :disabled="isUploadingPhoto"
+                class="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-purple-600 bg-purple-50 hover:bg-purple-100 transition-colors"
+              >
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Adicionar Foto
+              </button>
+            </div>
+            <div v-if="getPhotosForAdequation(adequation).length > 0" class="flex flex-wrap gap-2">
+              <div
+                v-for="photo in getPhotosForAdequation(adequation)"
+                :key="photo.id"
+                class="relative group"
+              >
+                <img :src="photo.url" :alt="photo.caption || 'Foto'" class="h-20 w-20 object-cover rounded-lg border border-gray-200">
+                <div v-if="photo.caption" class="text-xs text-gray-500 text-center mt-1 max-w-[80px] truncate">{{ photo.caption }}</div>
+                <button
+                  v-if="props.workOrder.status !== 'cancelled'"
+                  @click="deletePhoto(photo.id)"
+                  class="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Remover foto"
+                >
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <p v-else class="text-xs text-gray-400 italic">Nenhuma foto adicionada.</p>
           </div>
         </div>
       </div>
@@ -2679,6 +2800,10 @@ const props = defineProps({
   eventTypes: {
     type: Array,
     default: () => []
+  },
+  roomEventPhotos: {
+    type: Object,
+    default: () => ({})
   }
 });
 
@@ -5208,6 +5333,88 @@ const adequationTypeLabel = (type) => ({
   quimico:    'Químico',
   outros:     'Outros',
 }[type] || type);
+
+// ─── Fotos ───────────────────────────────────────────────────────────────────
+
+const isUploadingPhoto = ref(false);
+const photoFileInputRef = ref(null);
+const pendingPhotoContext = ref(null); // { entityType, entityId, roomId }
+
+const getPhotosForAdequation = (adequation) => adequation?.photos || [];
+
+const getPhotosForDeviceEvent = (event) => event?.photos || [];
+
+const getPhotosForRoom = (roomId) => {
+  const photos = props.roomEventPhotos?.[roomId];
+  if (!photos) return [];
+  return Array.isArray(photos) ? photos : Object.values(photos);
+};
+
+const openPhotoUpload = (entityType, entityId = null, roomId = null) => {
+  pendingPhotoContext.value = { entityType, entityId, roomId };
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.onchange = (e) => handlePhotoFiles(e.target.files);
+  input.click();
+};
+
+const handlePhotoFiles = async (files) => {
+  if (!files || files.length === 0) return;
+  const ctx = pendingPhotoContext.value;
+  if (!ctx) return;
+
+  isUploadingPhoto.value = true;
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+  try {
+    for (const file of Array.from(files)) {
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('entity_type', ctx.entityType);
+      if (ctx.entityId) formData.append('entity_id', ctx.entityId);
+      if (ctx.roomId) formData.append('room_id', ctx.roomId);
+      formData.append('_token', csrfToken);
+
+      const resp = await fetch(`/work-orders/${props.workOrder.id}/photos`, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': csrfToken },
+        body: formData,
+      });
+
+      if (!resp.ok) throw new Error('Falha ao enviar foto');
+    }
+
+    router.reload({ only: ['workOrder', 'roomEventPhotos'] });
+    displayToast(`${files.length > 1 ? files.length + ' fotos adicionadas' : 'Foto adicionada'} com sucesso.`, 'success');
+  } catch (err) {
+    displayToast('Erro ao enviar foto: ' + (err.message || 'Erro desconhecido'), 'error');
+  } finally {
+    isUploadingPhoto.value = false;
+    pendingPhotoContext.value = null;
+  }
+};
+
+const deletePhoto = async (photoId) => {
+  if (!confirm('Remover esta foto?')) return;
+  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+  try {
+    const resp = await fetch(`/work-orders/${props.workOrder.id}/photos/${photoId}`, {
+      method: 'DELETE',
+      headers: {
+        'X-CSRF-TOKEN': csrfToken,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!resp.ok) throw new Error('Falha ao remover foto');
+    router.reload({ only: ['workOrder', 'roomEventPhotos'] });
+    displayToast('Foto removida.', 'success');
+  } catch (err) {
+    displayToast('Erro ao remover foto.', 'error');
+  }
+};
 
 // Em <script setup>, todas as variáveis e funções são automaticamente exportadas
 // Não é necessário export explícito

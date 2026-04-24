@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkOrderDeviceEvent extends Model
 {
@@ -45,5 +46,12 @@ class WorkOrderDeviceEvent extends Model
     public function eventType(): BelongsTo
     {
         return $this->belongsTo(EventType::class);
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(WorkOrderPhoto::class, 'entity_id')
+            ->where('entity_type', 'device_event')
+            ->orderBy('sort_order');
     }
 }

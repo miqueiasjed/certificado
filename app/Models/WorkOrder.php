@@ -194,6 +194,11 @@ class WorkOrder extends Model
         return $this->hasMany(WorkOrderAdequation::class);
     }
 
+    public function photos(): HasMany
+    {
+        return $this->hasMany(WorkOrderPhoto::class);
+    }
+
 
     /**
      * Get the order type as a readable string.

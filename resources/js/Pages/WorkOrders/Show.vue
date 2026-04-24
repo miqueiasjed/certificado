@@ -155,6 +155,7 @@
             <WorkOrderTabContent
               :work-order="workOrder"
               :active-tab="activeTab"
+              :room-event-photos="roomEventPhotos"
               :available-addresses="availableAddresses"
               :available-products="availableProducts"
               :available-services="availableServices"
@@ -444,6 +445,7 @@ import Alert from '@/Components/Alert.vue';
 
   const props = defineProps({
     workOrder: Object,
+    roomEventPhotos: { type: Object, default: () => ({}) },
     availableAddresses: Array,
     availableProducts: Array,
     availableServices: Array,
