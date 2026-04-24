@@ -47,7 +47,9 @@ class CompanyController extends Controller
             'license_sanitary' => 'nullable|string|max:50',
             'ceatox_info' => 'nullable|string|max:500',
             'operational_manager_name' => 'nullable|string|max:255',
+            'operational_manager_title' => 'nullable|string|max:100',
             'technical_responsible_name' => 'nullable|string|max:255',
+            'technical_responsible_title' => 'nullable|string|max:100',
             'logo_path' => 'nullable|image|max:2048', // 2MB Max
             'signature_operational_path' => 'nullable|image|max:2048',
             'signature_chemical_path' => 'nullable|image|max:2048',

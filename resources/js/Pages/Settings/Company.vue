@@ -145,7 +145,12 @@
              <!-- Assinatura Gerente -->
              <div class="border p-4 rounded-lg bg-gray-50 flex flex-col items-center">
                 <label class="block text-sm font-medium text-gray-700 mb-4">Gerente Operacional</label>
-                
+
+                <div class="w-full mb-3">
+                   <label class="block text-xs font-medium text-gray-500 mb-1">Cargo / Título</label>
+                   <input v-model="form.operational_manager_title" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Ex: Gerente Operacional">
+                </div>
+
                 <div class="w-full mb-4">
                    <label class="block text-xs font-medium text-gray-500 mb-1">Nome Completo</label>
                    <input v-model="form.operational_manager_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Nome do Gerente">
@@ -164,6 +169,11 @@
              <!-- Assinatura Responsável Técnico -->
              <div class="border p-4 rounded-lg bg-gray-50 flex flex-col items-center">
                 <label class="block text-sm font-medium text-gray-700 mb-4">Responsável Técnico</label>
+
+                <div class="w-full mb-3">
+                   <label class="block text-xs font-medium text-gray-500 mb-1">Cargo / Título</label>
+                   <input v-model="form.technical_responsible_title" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Ex: Responsável Técnico">
+                </div>
 
                 <div class="w-full mb-4">
                    <label class="block text-xs font-medium text-gray-500 mb-1">Nome Completo</label>
@@ -243,11 +253,9 @@ const form = useForm({
   register_visa: props.company?.register_visa || '',
   register_crea: props.company?.register_crea || '',
   operational_manager_name: props.company?.operational_manager_name || '',
+  operational_manager_title: props.company?.operational_manager_title || 'Gerente Operacional',
   technical_responsible_name: props.company?.technical_responsible_name || '',
-  register_visa: props.company?.register_visa || '',
-  register_crea: props.company?.register_crea || '',
-  operational_manager_name: props.company?.operational_manager_name || '',
-  technical_responsible_name: props.company?.technical_responsible_name || '',
+  technical_responsible_title: props.company?.technical_responsible_title || 'Responsável Técnico',
   ceatox_info: props.company?.ceatox_info || '',
   logo_path: null,
   signature_operational_path: null,

@@ -858,7 +858,7 @@
                 <div style="height: 50px;"></div>
             @endif
             
-            <strong>Ass:</strong> Gerente de Operações<br>
+            <strong>Ass:</strong> {{ $company->operational_manager_title ?? 'Gerente Operacional' }}<br>
             <div class="signature-box">{{ $company->operational_manager_name }}</div>
         </div>
         <div class="signature-box">
@@ -868,7 +868,7 @@
                 <!-- Fallback opcional ou linha em branco -->
                 <div style="height: 50px;"></div>
             @endif
-            <strong>Ass:</strong> Responsável Técnico<br>
+            <strong>Ass:</strong> {{ $company->technical_responsible_title ?? 'Responsável Técnico' }}<br>
             <div class="signature-box">{{ $company->technical_responsible_name }}</div>
         </div>
         <div class="signature-box">

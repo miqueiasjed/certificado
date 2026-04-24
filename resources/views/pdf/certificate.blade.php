@@ -351,7 +351,7 @@
                     @if($sigOpSrc)
                         <img src="{{ $sigOpSrc }}" alt="Assinatura Gerente" class="signature-img">
                         <div class="signature-line">
-                            <strong>Gerente de Operações</strong><br>
+                            <strong>{{ $company->operational_manager_title ?? 'Gerente Operacional' }}</strong><br>
                             <span style="font-size: 10px;">{{ $company->operational_manager_name }}</span>
                         </div>
                     @endif
@@ -360,7 +360,7 @@
                     @if($sigChemSrc)
                         <img src="{{ $sigChemSrc }}" alt="Assinatura Químico" class="signature-img">
                         <div class="signature-line">
-                            <strong>Responsável Técnico</strong><br>
+                            <strong>{{ $company->technical_responsible_title ?? 'Responsável Técnico' }}</strong><br>
                             <span style="font-size: 10px;">{{ $company->technical_responsible_name }}</span>
                         </div>
                     @endif
