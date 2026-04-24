@@ -302,8 +302,36 @@
 
         .signature-box {
             text-align: center;
-            border-top: 1px solid #333;
-            padding-top: 10px;
+            padding: 0 10px;
+        }
+
+        .sig-image-area {
+            height: 65px;
+            text-align: center;
+            vertical-align: bottom;
+        }
+
+        .sig-line {
+            border-top: 1.5px solid #555;
+            margin: 6px 0;
+        }
+
+        .sig-role {
+            font-weight: bold;
+            font-size: 11px;
+            color: #059669;
+            margin-bottom: 3px;
+        }
+
+        .sig-name {
+            font-size: 11px;
+            color: #333;
+        }
+
+        .sig-hint {
+            font-size: 10px;
+            color: #888;
+            margin-top: 3px;
         }
 
         .signature-title {
@@ -316,7 +344,7 @@
         .signature-image {
             width: 80px;
             height: auto;
-            margin-bottom: 5px;
+            margin-bottom: 0;
         }
 
         .signature-text {
@@ -405,7 +433,19 @@
         }
 
         body.compact-mode .signature-box {
-            padding-top: 5px;
+            padding: 0 6px;
+        }
+
+        body.compact-mode .sig-image-area {
+            height: 50px;
+        }
+
+        body.compact-mode .sig-role {
+            font-size: 10px;
+        }
+
+        body.compact-mode .sig-name {
+            font-size: 10px;
         }
 
         body.compact-mode .signature-title {
@@ -852,29 +892,30 @@
     <!-- Assinaturas -->
     <div class="signature-section no-break">
         <div class="signature-box">
-            @if(isset($opSrc) && $opSrc)
-                <img src="{{ $opSrc }}" alt="Assinatura Gerente" class="signature-image">
-            @else
-                <div style="height: 50px;"></div>
-            @endif
-            
-            <strong>Ass:</strong> {{ $company->operational_manager_title ?? 'Gerente Operacional' }}<br>
-            <div class="signature-box">{{ $company->operational_manager_name }}</div>
+            <div class="sig-image-area">
+                @if(isset($opSrc) && $opSrc)
+                    <img src="{{ $opSrc }}" alt="Assinatura" class="signature-image">
+                @endif
+            </div>
+            <div class="sig-line"></div>
+            <div class="sig-role">{{ $company->operational_manager_title ?? 'Gerente Operacional' }}</div>
+            <div class="sig-name">{{ $company->operational_manager_name }}</div>
         </div>
         <div class="signature-box">
-            @if(isset($chemSrc) && $chemSrc)
-                <img src="{{ $chemSrc }}" alt="Assinatura Químico" class="signature-image">
-            @else
-                <!-- Fallback opcional ou linha em branco -->
-                <div style="height: 50px;"></div>
-            @endif
-            <strong>Ass:</strong> {{ $company->technical_responsible_title ?? 'Responsável Técnico' }}<br>
-            <div class="signature-box">{{ $company->technical_responsible_name }}</div>
+            <div class="sig-image-area">
+                @if(isset($chemSrc) && $chemSrc)
+                    <img src="{{ $chemSrc }}" alt="Assinatura" class="signature-image">
+                @endif
+            </div>
+            <div class="sig-line"></div>
+            <div class="sig-role">{{ $company->technical_responsible_title ?? 'Responsável Técnico' }}</div>
+            <div class="sig-name">{{ $company->technical_responsible_name }}</div>
         </div>
         <div class="signature-box">
-            <div class="signature-title">Assinatura do Responsável pelo Local</div>
-            <div class="signature-line"></div>
-            <div class="signature-text">Nome e CPF</div>
+            <div class="sig-image-area"></div>
+            <div class="sig-line"></div>
+            <div class="sig-role">Responsável pelo Local</div>
+            <div class="sig-hint">Nome e CPF</div>
         </div>
     </div>
 
