@@ -1553,35 +1553,36 @@
 
     <!-- Aba: Adequações -->
     <div v-if="activeTab === 'adequations'">
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center justify-between mb-4">
         <h3 class="text-lg font-medium text-gray-900">Adequações</h3>
         <button
           v-if="props.workOrder.status !== 'cancelled'"
           @click="openAdequationModal()"
-          class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+          class="inline-flex items-center px-3 py-2 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 rounded-lg transition-colors"
         >
-          <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
           </svg>
           Adicionar Adequação
         </button>
       </div>
 
-      <div v-if="adequations.length === 0" class="text-center py-12 text-gray-500">
-        <svg class="mx-auto h-12 w-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-if="adequations.length === 0" class="text-center py-8 text-gray-500">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
         </svg>
-        <p class="text-sm">Nenhuma adequação registrada.</p>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhuma adequação registrada</h3>
+        <p class="mt-1 text-sm text-gray-500">Registre as adequações identificadas durante a visita.</p>
       </div>
 
-      <div v-else class="space-y-3">
+      <div v-else class="space-y-4">
         <div
           v-for="adequation in adequations"
           :key="adequation.id"
-          class="flex items-start justify-between bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+          class="bg-gray-50 rounded-lg p-4"
         >
-          <div class="flex-1 min-w-0">
-            <div class="flex flex-wrap items-center gap-2 mb-2">
+          <div class="flex justify-between items-start mb-3">
+            <div class="flex flex-wrap items-center gap-2">
               <span :class="adequationPriorityClass(adequation.priority)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold">
                 {{ adequationPriorityLabel(adequation.priority) }}
               </span>
@@ -1591,89 +1592,117 @@
               <span :class="adequation.status === 'concluido' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
                 {{ adequation.status === 'concluido' ? 'Concluído' : 'Pendente' }}
               </span>
-              <span v-if="adequation.deadline" class="text-xs text-gray-500">
-                Prazo: {{ formatDate(adequation.deadline) }}
-              </span>
             </div>
-            <p class="text-sm text-gray-800">{{ adequation.description }}</p>
+            <div v-if="props.workOrder.status !== 'cancelled'" class="flex space-x-2">
+              <button
+                @click="openAdequationModal(adequation)"
+                class="inline-flex items-center px-3 py-1 border border-blue-300 text-xs font-medium rounded text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+                Editar
+              </button>
+              <button
+                @click="deleteAdequation(adequation)"
+                class="inline-flex items-center px-3 py-1 border border-red-300 text-xs font-medium rounded text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              >
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+                Remover
+              </button>
+            </div>
           </div>
-          <div v-if="props.workOrder.status !== 'cancelled'" class="flex items-center gap-2 ml-4 shrink-0">
-            <button
-              @click="openAdequationModal(adequation)"
-              class="text-blue-600 hover:text-blue-800 text-xs font-medium"
-            >Editar</button>
-            <button
-              @click="deleteAdequation(adequation)"
-              class="text-red-600 hover:text-red-800 text-xs font-medium"
-            >Excluir</button>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-500">Descrição</label>
+              <p class="mt-1 text-sm text-gray-900">{{ adequation.description }}</p>
+            </div>
+            <div v-if="adequation.deadline">
+              <label class="block text-sm font-medium text-gray-500">Prazo</label>
+              <p class="mt-1 text-sm text-gray-900">{{ formatDate(adequation.deadline) }}</p>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Modal Adequação -->
-      <div v-if="showAdequationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-        <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">
-            {{ editingAdequation ? 'Editar Adequação' : 'Nova Adequação' }}
-          </h3>
-          <form @submit.prevent="saveAdequation" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
-                <select v-model="adequationForm.type" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
-                  <option value="">Selecione</option>
-                  <option value="estrutural">Estrutural</option>
-                  <option value="sanitario">Sanitário</option>
-                  <option value="higienico">Higiênico</option>
-                  <option value="quimico">Químico</option>
-                  <option value="outros">Outros</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Prioridade *</label>
-                <select v-model="adequationForm.priority" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
-                  <option value="alta">Alta</option>
-                  <option value="media">Média</option>
-                  <option value="baixa">Baixa</option>
-                </select>
-              </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
-                <select v-model="adequationForm.status" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
-                  <option value="pendente">Pendente</option>
-                  <option value="concluido">Concluído</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Prazo</label>
-                <input
-                  v-model="adequationForm.deadline"
-                  type="date"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                />
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Descrição *</label>
-              <textarea
-                v-model="adequationForm.description"
-                rows="3"
-                required
-                placeholder="Descreva a adequação necessária..."
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-              ></textarea>
-            </div>
-            <div class="flex justify-end gap-3">
-              <button type="button" @click="closeAdequationModal" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
-                Cancelar
-              </button>
-              <button type="submit" :disabled="isSavingAdequation" class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50">
-                {{ isSavingAdequation ? 'Salvando...' : (editingAdequation ? 'Atualizar' : 'Adicionar') }}
+      <div v-if="showAdequationModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+        <div class="relative bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 transform transition-all">
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-xl font-semibold text-gray-900">
+                {{ editingAdequation ? 'Editar Adequação' : 'Nova Adequação' }}
+              </h3>
+              <button @click="closeAdequationModal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
               </button>
             </div>
-          </form>
+
+            <form @submit.prevent="saveAdequation" class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Tipo *</label>
+                  <select v-model="adequationForm.type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
+                    <option value="">Selecione...</option>
+                    <option value="estrutural">Estrutural</option>
+                    <option value="sanitario">Sanitário</option>
+                    <option value="higienico">Higiênico</option>
+                    <option value="quimico">Químico</option>
+                    <option value="outros">Outros</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Prioridade *</label>
+                  <select v-model="adequationForm.priority" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
+                    <option value="alta">Alta</option>
+                    <option value="media">Média</option>
+                    <option value="baixa">Baixa</option>
+                  </select>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Status *</label>
+                  <select v-model="adequationForm.status" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
+                    <option value="pendente">Pendente</option>
+                    <option value="concluido">Concluído</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Prazo</label>
+                  <input
+                    v-model="adequationForm.deadline"
+                    type="date"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Descrição *</label>
+                <textarea
+                  v-model="adequationForm.description"
+                  rows="3"
+                  required
+                  placeholder="Descreva a adequação necessária..."
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                ></textarea>
+              </div>
+              <div class="flex justify-end space-x-4 pt-2">
+                <button type="button" @click="closeAdequationModal" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" :disabled="isSavingAdequation" class="px-6 py-2 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors">
+                  <span v-if="isSavingAdequation">Salvando...</span>
+                  <span v-else>{{ editingAdequation ? 'Atualizar' : 'Adicionar' }}</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>
