@@ -494,6 +494,7 @@ import Alert from '@/Components/Alert.vue';
     { name: 'technician', label: 'Técnicos' },
     { name: 'rooms', label: 'Cômodos Atendidos', count: props.workOrder?.rooms?.length || 0 },
     { name: 'devices', label: 'Dispositivos', count: deviceCount.value },
+    { name: 'adequations', label: 'Adequações', count: props.workOrder?.adequations?.length || 0 },
   ];
 
   const formatDate = (date) => {

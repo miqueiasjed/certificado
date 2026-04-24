@@ -193,6 +193,9 @@ class WorkOrderController extends Controller
                 $query->with([
                     'address.client'
                 ])->orderBy('sighting_date', 'desc');
+            },
+            'adequations' => function ($query) {
+                $query->orderByRaw("FIELD(priority, 'alta', 'media', 'baixa')")->orderBy('status');
             }
         ]);
 

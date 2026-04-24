@@ -1551,6 +1551,133 @@
       </div>
     </div>
 
+    <!-- Aba: Adequações -->
+    <div v-if="activeTab === 'adequations'">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-medium text-gray-900">Adequações</h3>
+        <button
+          v-if="props.workOrder.status !== 'cancelled'"
+          @click="openAdequationModal()"
+          class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+        >
+          <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Adicionar Adequação
+        </button>
+      </div>
+
+      <div v-if="adequations.length === 0" class="text-center py-12 text-gray-500">
+        <svg class="mx-auto h-12 w-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        <p class="text-sm">Nenhuma adequação registrada.</p>
+      </div>
+
+      <div v-else class="space-y-3">
+        <div
+          v-for="adequation in adequations"
+          :key="adequation.id"
+          class="flex items-start justify-between bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+        >
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <span :class="adequationPriorityClass(adequation.priority)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                {{ adequationPriorityLabel(adequation.priority) }}
+              </span>
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {{ adequationTypeLabel(adequation.type) }}
+              </span>
+              <span :class="adequation.status === 'concluido' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
+                {{ adequation.status === 'concluido' ? 'Concluído' : 'Pendente' }}
+              </span>
+              <span v-if="adequation.deadline" class="text-xs text-gray-500">
+                Prazo: {{ formatDate(adequation.deadline) }}
+              </span>
+            </div>
+            <p class="text-sm text-gray-800">{{ adequation.description }}</p>
+          </div>
+          <div v-if="props.workOrder.status !== 'cancelled'" class="flex items-center gap-2 ml-4 shrink-0">
+            <button
+              @click="openAdequationModal(adequation)"
+              class="text-blue-600 hover:text-blue-800 text-xs font-medium"
+            >Editar</button>
+            <button
+              @click="deleteAdequation(adequation)"
+              class="text-red-600 hover:text-red-800 text-xs font-medium"
+            >Excluir</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Adequação -->
+      <div v-if="showAdequationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">
+            {{ editingAdequation ? 'Editar Adequação' : 'Nova Adequação' }}
+          </h3>
+          <form @submit.prevent="saveAdequation" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo *</label>
+                <select v-model="adequationForm.type" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
+                  <option value="">Selecione</option>
+                  <option value="estrutural">Estrutural</option>
+                  <option value="sanitario">Sanitário</option>
+                  <option value="higienico">Higiênico</option>
+                  <option value="quimico">Químico</option>
+                  <option value="outros">Outros</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prioridade *</label>
+                <select v-model="adequationForm.priority" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
+                  <option value="alta">Alta</option>
+                  <option value="media">Média</option>
+                  <option value="baixa">Baixa</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status *</label>
+                <select v-model="adequationForm.status" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500">
+                  <option value="pendente">Pendente</option>
+                  <option value="concluido">Concluído</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Prazo</label>
+                <input
+                  v-model="adequationForm.deadline"
+                  type="date"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Descrição *</label>
+              <textarea
+                v-model="adequationForm.description"
+                rows="3"
+                required
+                placeholder="Descreva a adequação necessária..."
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+              ></textarea>
+            </div>
+            <div class="flex justify-end gap-3">
+              <button type="button" @click="closeAdequationModal" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
+                Cancelar
+              </button>
+              <button type="submit" :disabled="isSavingAdequation" class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 disabled:opacity-50">
+                {{ isSavingAdequation ? 'Salvando...' : (editingAdequation ? 'Atualizar' : 'Adicionar') }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <!-- Aba: Informações Financeiras -->
     <div v-if="activeTab === 'financial'">
       <div class="flex items-center justify-between mb-6">
@@ -4969,6 +5096,89 @@ watch(() => props.activeTab, (newVal, oldVal) => {
     console.log('WorkOrderTabContent: workOrder.address.devices.length =', props.workOrder?.address?.devices?.length || 0);
   }
 }, { immediate: true });
+
+// ─── Adequações ──────────────────────────────────────────────────────────────
+
+const showAdequationModal = ref(false);
+const isSavingAdequation = ref(false);
+const editingAdequation = ref(null);
+
+const adequationForm = ref({
+  type: '',
+  description: '',
+  priority: 'media',
+  status: 'pendente',
+  deadline: '',
+});
+
+const adequations = computed(() => props.workOrder?.adequations || []);
+
+const openAdequationModal = (adequation = null) => {
+  editingAdequation.value = adequation;
+  adequationForm.value = adequation
+    ? { type: adequation.type, description: adequation.description, priority: adequation.priority, status: adequation.status, deadline: adequation.deadline || '' }
+    : { type: '', description: '', priority: 'media', status: 'pendente', deadline: '' };
+  showAdequationModal.value = true;
+};
+
+const closeAdequationModal = () => {
+  showAdequationModal.value = false;
+  editingAdequation.value = null;
+};
+
+const saveAdequation = () => {
+  isSavingAdequation.value = true;
+  const data = { ...adequationForm.value };
+  if (!data.deadline) delete data.deadline;
+
+  const isEdit = !!editingAdequation.value;
+  const url = isEdit
+    ? `/work-orders/${props.workOrder.id}/adequations/${editingAdequation.value.id}`
+    : `/work-orders/${props.workOrder.id}/adequations`;
+
+  const method = isEdit ? router.put : router.post;
+
+  method(url, data, {
+    preserveScroll: true,
+    onSuccess: () => {
+      closeAdequationModal();
+      router.reload({ only: ['workOrder'] });
+      displayToast(isEdit ? 'Adequação atualizada com sucesso.' : 'Adequação adicionada com sucesso.', 'success');
+    },
+    onError: (errors) => {
+      displayToast('Erro ao salvar adequação: ' + (Object.values(errors)[0] || 'Erro desconhecido'), 'error');
+    },
+    onFinish: () => { isSavingAdequation.value = false; }
+  });
+};
+
+const deleteAdequation = (adequation) => {
+  if (!confirm('Deseja remover esta adequação?')) return;
+  router.delete(`/work-orders/${props.workOrder.id}/adequations/${adequation.id}`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      router.reload({ only: ['workOrder'] });
+      displayToast('Adequação removida.', 'success');
+    },
+    onError: () => displayToast('Erro ao remover adequação.', 'error'),
+  });
+};
+
+const adequationPriorityLabel = (priority) => ({ alta: 'Alta', media: 'Média', baixa: 'Baixa' }[priority] || priority);
+
+const adequationPriorityClass = (priority) => ({
+  alta:  'bg-red-100 text-red-800',
+  media: 'bg-yellow-100 text-yellow-800',
+  baixa: 'bg-green-100 text-green-800',
+}[priority] || 'bg-gray-100 text-gray-800');
+
+const adequationTypeLabel = (type) => ({
+  estrutural: 'Estrutural',
+  sanitario:  'Sanitário',
+  higienico:  'Higiênico',
+  quimico:    'Químico',
+  outros:     'Outros',
+}[type] || type);
 
 // Em <script setup>, todas as variáveis e funções são automaticamente exportadas
 // Não é necessário export explícito

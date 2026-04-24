@@ -189,6 +189,11 @@ class WorkOrder extends Model
         return $this->hasMany(WorkOrderDeviceEvent::class);
     }
 
+    public function adequations(): HasMany
+    {
+        return $this->hasMany(WorkOrderAdequation::class);
+    }
+
 
     /**
      * Get the order type as a readable string.

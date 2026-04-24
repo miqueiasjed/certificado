@@ -286,18 +286,29 @@
             font-weight: bold;
         }
 
-        .adequation-section {
-            background: #fff3cd;
-            border-left-color: #ffc107;
-            border: 1px solid #ffeaa7;
+        .adequation-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
         }
+        .adequation-item:last-child { border-bottom: none; }
 
-        .adequation-content {
-            background: white;
-            padding: 15px;
-            border-radius: 6px;
-            border: 1px solid #ffeaa7;
+        .adequation-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: bold;
+            white-space: nowrap;
         }
+        .priority-alta    { background: #fee2e2; color: #991b1b; }
+        .priority-media   { background: #fef9c3; color: #854d0e; }
+        .priority-baixa   { background: #dcfce7; color: #166534; }
+        .status-pendente  { background: #fef3c7; color: #92400e; }
+        .status-concluido { background: #d1fae5; color: #065f46; }
+        .type-badge       { background: #dbeafe; color: #1e40af; }
 
 
         .signature-box {
@@ -876,18 +887,38 @@
     </div>
 
     <!-- Adequação -->
-    <div class="section-header">Adequação</div>
-    <div class="info-section">
-        @if($workOrder->adequation_notes)
-            <table class="info-table">
-                <tr>
-                    <td style="padding: 15px;">{{ $workOrder->adequation_notes }}</td>
-                </tr>
-            </table>
-        @else
-            <p>Nenhuma adequação registrada</p>
-        @endif
+    @if($workOrder->adequations && $workOrder->adequations->count() > 0)
+    <div class="section-header">Adequações</div>
+    <div class="info-section" style="padding: 0;">
+        @php
+            $typeLabels     = ['estrutural' => 'Estrutural', 'sanitario' => 'Sanitário', 'higienico' => 'Higiênico', 'quimico' => 'Químico', 'outros' => 'Outros'];
+            $priorityLabels = ['alta' => 'Alta', 'media' => 'Média', 'baixa' => 'Baixa'];
+        @endphp
+        @foreach($workOrder->adequations as $adequation)
+        <div class="adequation-item">
+            <div style="flex: 1;">
+                <div style="margin-bottom: 4px; display: flex; gap: 6px; flex-wrap: wrap;">
+                    <span class="adequation-badge priority-{{ $adequation->priority }}">
+                        {{ $priorityLabels[$adequation->priority] ?? $adequation->priority }}
+                    </span>
+                    <span class="adequation-badge type-badge">
+                        {{ $typeLabels[$adequation->type] ?? $adequation->type }}
+                    </span>
+                    <span class="adequation-badge status-{{ $adequation->status }}">
+                        {{ $adequation->status === 'concluido' ? 'Concluído' : 'Pendente' }}
+                    </span>
+                    @if($adequation->deadline)
+                    <span style="font-size: 10px; color: #6b7280;">
+                        Prazo: {{ $adequation->deadline->format('d/m/Y') }}
+                    </span>
+                    @endif
+                </div>
+                <p style="margin: 0; font-size: 11px; color: #374151;">{{ $adequation->description }}</p>
+            </div>
+        </div>
+        @endforeach
     </div>
+    @endif
 
     <!-- Assinaturas -->
     <div class="signature-section no-break">
