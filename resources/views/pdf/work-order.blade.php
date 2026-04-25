@@ -310,6 +310,43 @@
         .status-concluido { background: #d1fae5; color: #065f46; }
         .type-badge       { background: #dbeafe; color: #1e40af; }
 
+        .photo-grid {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 4px;
+        }
+
+        .photo-cell {
+            width: 33.333%;
+            padding: 3px;
+            text-align: center;
+            vertical-align: top;
+        }
+
+        .photo-box {
+            display: inline-block;
+            width: 150px;
+            min-height: 112px;
+            text-align: center;
+        }
+
+        .photo-box img {
+            max-width: 145px;
+            max-height: 105px;
+            width: auto;
+            height: auto;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+        }
+
+        .photo-caption {
+            font-size: 8px;
+            color: #6b7280;
+            margin: 2px 0 0 0;
+            max-width: 145px;
+            word-break: break-word;
+        }
+
 
         .signature-box {
             text-align: center;
@@ -675,18 +712,25 @@
                         <tr>
                             <td colspan="4" style="padding: 6px 4px;">
                                 <p style="font-size: 9px; font-weight: bold; color: #6b7280; margin: 0 0 4px 0;">Fotos do evento ({{ $roomPhotos->count() }}):</p>
-                                <div style="display: flex; flex-wrap: wrap; gap: 5px;">
-                                    @foreach($roomPhotos as $photo)
-                                    @if($photo->base64)
-                                    <div style="text-align: center;">
-                                        <img src="{{ $photo->base64 }}" style="max-height: 100px; max-width: 130px; border: 1px solid #e5e7eb; border-radius: 4px; display: block;">
-                                        @if($photo->caption)
-                                        <p style="font-size: 8px; color: #6b7280; margin: 2px 0 0 0; max-width: 130px;">{{ $photo->caption }}</p>
-                                        @endif
-                                    </div>
-                                    @endif
+                                <table class="photo-grid">
+                                    @foreach($roomPhotos->filter(fn ($photo) => $photo->base64)->chunk(3) as $photoRow)
+                                    <tr>
+                                        @foreach($photoRow as $photo)
+                                        <td class="photo-cell">
+                                            <div class="photo-box">
+                                                <img src="{{ $photo->base64 }}">
+                                                @if($photo->caption)
+                                                <p class="photo-caption">{{ $photo->caption }}</p>
+                                                @endif
+                                            </div>
+                                        </td>
+                                        @endforeach
+                                        @for($i = $photoRow->count(); $i < 3; $i++)
+                                        <td class="photo-cell">&nbsp;</td>
+                                        @endfor
+                                    </tr>
                                     @endforeach
-                                </div>
+                                </table>
                             </td>
                         </tr>
                         @endif
@@ -811,18 +855,25 @@
                             <tr>
                                 <td colspan="3" style="padding: 6px 4px;">
                                     <p style="font-size: 9px; font-weight: bold; color: #6b7280; margin: 0 0 4px 0;">Fotos do evento ({{ $event->photos->count() }}):</p>
-                                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
-                                        @foreach($event->photos as $photo)
-                                        @if($photo->base64)
-                                        <div style="text-align: center;">
-                                            <img src="{{ $photo->base64 }}" style="max-height: 100px; max-width: 130px; border: 1px solid #e5e7eb; border-radius: 4px; display: block;">
-                                            @if($photo->caption)
-                                            <p style="font-size: 8px; color: #6b7280; margin: 2px 0 0 0; max-width: 130px;">{{ $photo->caption }}</p>
-                                            @endif
-                                        </div>
-                                        @endif
+                                    <table class="photo-grid">
+                                        @foreach($event->photos->filter(fn ($photo) => $photo->base64)->chunk(3) as $photoRow)
+                                        <tr>
+                                            @foreach($photoRow as $photo)
+                                            <td class="photo-cell">
+                                                <div class="photo-box">
+                                                    <img src="{{ $photo->base64 }}">
+                                                    @if($photo->caption)
+                                                    <p class="photo-caption">{{ $photo->caption }}</p>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                            @endforeach
+                                            @for($i = $photoRow->count(); $i < 3; $i++)
+                                            <td class="photo-cell">&nbsp;</td>
+                                            @endfor
+                                        </tr>
                                         @endforeach
-                                    </div>
+                                    </table>
                                 </td>
                             </tr>
                             @endif
@@ -956,18 +1007,25 @@
                 @if($adequation->photos && $adequation->photos->count() > 0)
                 <div style="margin-top: 8px;">
                     <p style="font-size: 10px; font-weight: bold; color: #6b7280; margin: 0 0 4px 0;">Fotos ({{ $adequation->photos->count() }}):</p>
-                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                        @foreach($adequation->photos as $photo)
-                        @if($photo->base64)
-                        <div style="text-align: center;">
-                            <img src="{{ $photo->base64 }}" style="max-height: 110px; max-width: 140px; border: 1px solid #e5e7eb; border-radius: 4px; display: block;">
-                            @if($photo->caption)
-                            <p style="font-size: 8px; color: #6b7280; margin: 2px 0 0 0; max-width: 140px; word-break: break-word;">{{ $photo->caption }}</p>
-                            @endif
-                        </div>
-                        @endif
+                    <table class="photo-grid">
+                        @foreach($adequation->photos->filter(fn ($photo) => $photo->base64)->chunk(3) as $photoRow)
+                        <tr>
+                            @foreach($photoRow as $photo)
+                            <td class="photo-cell">
+                                <div class="photo-box">
+                                    <img src="{{ $photo->base64 }}">
+                                    @if($photo->caption)
+                                    <p class="photo-caption">{{ $photo->caption }}</p>
+                                    @endif
+                                </div>
+                            </td>
+                            @endforeach
+                            @for($i = $photoRow->count(); $i < 3; $i++)
+                            <td class="photo-cell">&nbsp;</td>
+                            @endfor
+                        </tr>
                         @endforeach
-                    </div>
+                    </table>
                 </div>
                 @endif
             </div>
