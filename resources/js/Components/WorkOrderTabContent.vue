@@ -5383,7 +5383,14 @@ const handlePhotoFiles = async (files) => {
         body: formData,
       });
 
-      if (!resp.ok) throw new Error('Falha ao enviar foto');
+      if (!resp.ok) {
+        let detail = `HTTP ${resp.status}`;
+        try {
+          const body = await resp.text();
+          detail += ': ' + body.substring(0, 200);
+        } catch (_) {}
+        throw new Error(detail);
+      }
     }
 
     router.reload({ only: ['workOrder', 'roomEventPhotos'] });
