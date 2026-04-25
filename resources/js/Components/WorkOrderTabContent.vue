@@ -5290,9 +5290,9 @@ const saveAdequation = () => {
     ? `/work-orders/${props.workOrder.id}/adequations/${editingAdequation.value.id}`
     : `/work-orders/${props.workOrder.id}/adequations`;
 
-  const method = isEdit ? router.put : router.post;
+  const method = isEdit ? 'put' : 'post';
 
-  method(url, data, {
+  router[method](url, data, {
     preserveScroll: true,
     onSuccess: () => {
       closeAdequationModal();
