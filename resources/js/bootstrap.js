@@ -68,7 +68,7 @@ window.fetch = async (input, init = {}) => {
     const requestFactory = () => (input instanceof Request ? input.clone() : input);
 
     if (isSameOrigin) {
-        const token = getCookieToken() || getMetaToken()?.getAttribute('content');
+        const token = getMetaToken()?.getAttribute('content') || getCookieToken();
         syncCsrfToken(token);
 
         if (!isReadOnlyMethod(requestMethod) && token) {
@@ -113,7 +113,7 @@ window.fetch = async (input, init = {}) => {
 };
 
 window.axios.interceptors.request.use((config) => {
-    syncCsrfToken(getCookieToken() || getMetaToken()?.getAttribute('content'));
+    syncCsrfToken(getMetaToken()?.getAttribute('content') || getCookieToken());
     return config;
 });
 

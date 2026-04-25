@@ -5350,6 +5350,106 @@ const getPhotosForRoom = (roomId) => {
   return Array.isArray(photos) ? photos : Object.values(photos);
 };
 
+const PHOTO_UPLOAD_MAX_BYTES = 850 * 1024;
+const PHOTO_UPLOAD_MAX_DIMENSION = 1600;
+
+const getCsrfToken = () => document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+const refreshCsrfToken = async () => {
+  const resp = await fetch('/csrf-token', {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    credentials: 'same-origin',
+  });
+
+  if (!resp.ok) return getCsrfToken();
+
+  const data = await resp.json();
+  const token = data?.csrf_token || getCsrfToken();
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  if (meta && token) meta.setAttribute('content', token);
+
+  return token;
+};
+
+const getUploadErrorMessage = async (resp) => {
+  if (resp.status === 419) {
+    return 'Sua sessão expirou. Atualize a página e tente enviar a foto novamente.';
+  }
+
+  if (resp.status === 413) {
+    return 'A foto é muito grande para o servidor. Tente escolher uma imagem menor.';
+  }
+
+  try {
+    const contentType = resp.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const body = await resp.json();
+      return body.message || Object.values(body.errors || {}).flat().join(' ') || `HTTP ${resp.status}`;
+    }
+  } catch (_) {}
+
+  return `HTTP ${resp.status}`;
+};
+
+const canvasToBlob = (canvas, quality) => new Promise((resolve) => {
+  canvas.toBlob(resolve, 'image/jpeg', quality);
+});
+
+const loadImageFromFile = (file) => new Promise((resolve, reject) => {
+  const image = new Image();
+  const objectUrl = URL.createObjectURL(file);
+
+  image.onload = () => {
+    URL.revokeObjectURL(objectUrl);
+    resolve(image);
+  };
+
+  image.onerror = () => {
+    URL.revokeObjectURL(objectUrl);
+    reject(new Error('Não foi possível processar a imagem selecionada.'));
+  };
+
+  image.src = objectUrl;
+});
+
+const resizePhotoForUpload = async (file) => {
+  if (!file.type.startsWith('image/') || file.size <= PHOTO_UPLOAD_MAX_BYTES) {
+    return file;
+  }
+
+  const image = await loadImageFromFile(file);
+  const scale = Math.min(
+    1,
+    PHOTO_UPLOAD_MAX_DIMENSION / Math.max(image.width, image.height)
+  );
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+
+  const context = canvas.getContext('2d');
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  let quality = 0.82;
+  let blob = await canvasToBlob(canvas, quality);
+
+  while (blob && blob.size > PHOTO_UPLOAD_MAX_BYTES && quality > 0.45) {
+    quality -= 0.08;
+    blob = await canvasToBlob(canvas, quality);
+  }
+
+  if (!blob) {
+    return file;
+  }
+
+  const filename = file.name.replace(/\.[^.]+$/, '') || 'foto';
+  return new File([blob], `${filename}.jpg`, {
+    type: 'image/jpeg',
+    lastModified: Date.now(),
+  });
+};
+
 const openPhotoUpload = (entityType, entityId = null, roomId = null) => {
   pendingPhotoContext.value = { entityType, entityId, roomId };
   const input = document.createElement('input');
@@ -5366,12 +5466,14 @@ const handlePhotoFiles = async (files) => {
   if (!ctx) return;
 
   isUploadingPhoto.value = true;
-  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
   try {
+    const csrfToken = await refreshCsrfToken();
+
     for (const file of Array.from(files)) {
+      const uploadFile = await resizePhotoForUpload(file);
       const formData = new FormData();
-      formData.append('photo', file);
+      formData.append('photo', uploadFile);
       formData.append('entity_type', ctx.entityType);
       if (ctx.entityId) formData.append('entity_id', ctx.entityId);
       if (ctx.roomId) formData.append('room_id', ctx.roomId);
@@ -5379,17 +5481,16 @@ const handlePhotoFiles = async (files) => {
 
       const resp = await fetch(`/work-orders/${props.workOrder.id}/photos`, {
         method: 'POST',
-        headers: { 'X-CSRF-TOKEN': csrfToken },
+        headers: {
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': csrfToken,
+        },
+        credentials: 'same-origin',
         body: formData,
       });
 
       if (!resp.ok) {
-        let detail = `HTTP ${resp.status}`;
-        try {
-          const body = await resp.text();
-          detail += ': ' + body.substring(0, 200);
-        } catch (_) {}
-        throw new Error(detail);
+        throw new Error(await getUploadErrorMessage(resp));
       }
     }
 
