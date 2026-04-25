@@ -475,14 +475,14 @@ class WorkOrderService
         // Convert adequation photos to base64
         foreach ($workOrder->adequations as $adequation) {
             foreach ($adequation->photos as $photo) {
-                $photo->base64 = $this->convertStorageFileToBase64($photo->path);
+                $photo->base64 = $this->convertStorageFileToPdfPhotoBase64($photo->path);
             }
         }
 
         // Convert device event photos to base64
         foreach ($workOrder->workOrderDeviceEvents as $event) {
             foreach ($event->photos as $photo) {
-                $photo->base64 = $this->convertStorageFileToBase64($photo->path);
+                $photo->base64 = $this->convertStorageFileToPdfPhotoBase64($photo->path);
             }
         }
 
@@ -492,7 +492,7 @@ class WorkOrderService
             ->orderBy('sort_order')
             ->get();
         foreach ($roomEventPhotos as $photo) {
-            $photo->base64 = $this->convertStorageFileToBase64($photo->path);
+            $photo->base64 = $this->convertStorageFileToPdfPhotoBase64($photo->path);
         }
         $roomEventPhotosByRoomId = $roomEventPhotos->groupBy('room_id');
 
@@ -563,5 +563,96 @@ class WorkOrderService
         };
 
         return 'data:' . $mime . ';base64,' . base64_encode($data);
+    }
+
+    /**
+     * Convert a stored image into a consistent portrait thumbnail for PDF galleries.
+     */
+    private function convertStorageFileToPdfPhotoBase64(?string $path): ?string
+    {
+        if (!$path || !extension_loaded('gd')) {
+            return $this->convertStorageFileToBase64($path);
+        }
+
+        $fullPath = storage_path('app/public/' . $path);
+
+        if (!file_exists($fullPath)) {
+            return null;
+        }
+
+        $extension = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+        $source = match ($extension) {
+            'jpg', 'jpeg' => @imagecreatefromjpeg($fullPath),
+            'png' => @imagecreatefrompng($fullPath),
+            'webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($fullPath) : false,
+            default => false,
+        };
+
+        if (!$source) {
+            return $this->convertStorageFileToBase64($path);
+        }
+
+        if (in_array($extension, ['jpg', 'jpeg'], true) && function_exists('exif_read_data')) {
+            $source = $this->applyImageOrientation($source, $fullPath);
+        }
+
+        $targetWidth = 360;
+        $targetHeight = 480;
+        $sourceWidth = imagesx($source);
+        $sourceHeight = imagesy($source);
+        $sourceRatio = $sourceWidth / $sourceHeight;
+        $targetRatio = $targetWidth / $targetHeight;
+
+        if ($sourceRatio > $targetRatio) {
+            $cropHeight = $sourceHeight;
+            $cropWidth = (int) round($sourceHeight * $targetRatio);
+            $cropX = (int) round(($sourceWidth - $cropWidth) / 2);
+            $cropY = 0;
+        } else {
+            $cropWidth = $sourceWidth;
+            $cropHeight = (int) round($sourceWidth / $targetRatio);
+            $cropX = 0;
+            $cropY = (int) round(($sourceHeight - $cropHeight) / 2);
+        }
+
+        $thumb = imagecreatetruecolor($targetWidth, $targetHeight);
+        $white = imagecolorallocate($thumb, 255, 255, 255);
+        imagefill($thumb, 0, 0, $white);
+        imagecopyresampled(
+            $thumb,
+            $source,
+            0,
+            0,
+            $cropX,
+            $cropY,
+            $targetWidth,
+            $targetHeight,
+            $cropWidth,
+            $cropHeight
+        );
+
+        ob_start();
+        imagejpeg($thumb, null, 82);
+        $data = ob_get_clean();
+
+        imagedestroy($source);
+        imagedestroy($thumb);
+
+        return $data ? 'data:image/jpeg;base64,' . base64_encode($data) : null;
+    }
+
+    private function applyImageOrientation(\GdImage $image, string $path): \GdImage
+    {
+        $exif = @exif_read_data($path);
+        $orientation = $exif['Orientation'] ?? null;
+
+        $rotated = match ($orientation) {
+            3 => imagerotate($image, 180, 0),
+            6 => imagerotate($image, -90, 0),
+            8 => imagerotate($image, 90, 0),
+            default => $image,
+        };
+
+        return $rotated ?: $image;
     }
 }

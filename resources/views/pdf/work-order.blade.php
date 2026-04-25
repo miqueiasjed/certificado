@@ -317,24 +317,22 @@
         }
 
         .photo-cell {
-            width: 128px;
-            padding: 2px 6px 2px 0;
+            width: 92px;
+            padding: 2px 8px 2px 0;
             text-align: center;
             vertical-align: top;
         }
 
         .photo-box {
             display: inline-block;
-            width: 122px;
-            min-height: 106px;
+            width: 86px;
+            min-height: 116px;
             text-align: center;
         }
 
         .photo-box img {
-            max-width: 120px;
-            max-height: 100px;
-            width: auto;
-            height: auto;
+            width: 82px;
+            height: 110px;
             border: 1px solid #e5e7eb;
             border-radius: 4px;
         }
@@ -343,7 +341,7 @@
             font-size: 8px;
             color: #6b7280;
             margin: 2px 0 0 0;
-            max-width: 120px;
+            max-width: 82px;
             word-break: break-word;
         }
 
