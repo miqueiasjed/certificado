@@ -311,28 +311,28 @@
         .type-badge       { background: #dbeafe; color: #1e40af; }
 
         .photo-grid {
-            width: 100%;
+            width: auto;
             border-collapse: collapse;
             margin-top: 4px;
         }
 
         .photo-cell {
-            width: 33.333%;
-            padding: 3px;
+            width: 128px;
+            padding: 2px 6px 2px 0;
             text-align: center;
             vertical-align: top;
         }
 
         .photo-box {
             display: inline-block;
-            width: 150px;
-            min-height: 112px;
+            width: 122px;
+            min-height: 106px;
             text-align: center;
         }
 
         .photo-box img {
-            max-width: 145px;
-            max-height: 105px;
+            max-width: 120px;
+            max-height: 100px;
             width: auto;
             height: auto;
             border: 1px solid #e5e7eb;
@@ -343,7 +343,7 @@
             font-size: 8px;
             color: #6b7280;
             margin: 2px 0 0 0;
-            max-width: 145px;
+            max-width: 120px;
             word-break: break-word;
         }
 
