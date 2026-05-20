@@ -198,9 +198,9 @@
               :key="room.id"
               class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
             >
-              <div class="flex items-start justify-between">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div class="flex-1">
-                  <div class="flex items-center gap-3 mb-2">
+                  <div class="flex flex-wrap items-center gap-2 mb-2">
                     <h4 class="text-md font-semibold text-gray-900">
                       {{ room.name }}
                     </h4>
@@ -219,30 +219,30 @@
                   </div>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1 sm:flex-shrink-0">
                   <Link
                     :href="`/rooms/${room.id}`"
-                    class="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                    class="px-3 py-2 text-sm text-blue-600 hover:text-blue-800 font-medium rounded-md hover:bg-blue-50 transition-colors"
                   >
                     Ver
                   </Link>
                   <Link
                     :href="`/rooms/${room.id}/edit`"
-                    class="px-3 py-1 text-sm text-green-600 hover:text-green-800 font-medium"
+                    class="px-3 py-2 text-sm text-green-600 hover:text-green-800 font-medium rounded-md hover:bg-green-50 transition-colors"
                   >
                     Editar
                   </Link>
                   <button
                     v-if="canDeleteRoom(room)"
                     @click="confirmDeleteRoom(room)"
-                    class="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium"
+                    class="px-3 py-2 text-sm text-red-600 hover:text-red-800 font-medium rounded-md hover:bg-red-50 transition-colors"
                   >
                     Excluir
                   </button>
                   <span
                     v-else
                     title="Cômodo vinculado a ordens de serviço e não pode ser excluído"
-                    class="px-3 py-1 text-sm text-gray-400 cursor-not-allowed"
+                    class="px-3 py-2 text-sm text-gray-400 cursor-not-allowed"
                   >
                     Excluir
                   </span>
