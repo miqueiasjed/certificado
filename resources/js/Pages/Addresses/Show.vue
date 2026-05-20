@@ -234,11 +234,18 @@
                   </Link>
                   <button
                     v-if="canDeleteRoom(room)"
-                    @click="deleteRoom(room.id)"
+                    @click="confirmDeleteRoom(room)"
                     class="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium"
                   >
                     Excluir
                   </button>
+                  <span
+                    v-else
+                    title="Cômodo vinculado a ordens de serviço e não pode ser excluído"
+                    class="px-3 py-1 text-sm text-gray-400 cursor-not-allowed"
+                  >
+                    Excluir
+                  </span>
                 </div>
               </div>
             </div>
@@ -409,6 +416,50 @@
       @close="showRoomModal = false"
       @room-created="refreshRooms"
     />
+
+    <!-- Modal de Confirmação de Exclusão de Cômodo -->
+    <div v-if="showDeleteRoomModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
+      <div class="relative bg-white rounded-xl shadow-xl max-w-md w-full mx-4 transform transition-all">
+        <div class="p-6">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+              <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Excluir Cômodo</h3>
+              <p class="text-sm text-gray-500">Esta ação não pode ser desfeita.</p>
+            </div>
+          </div>
+
+          <p class="text-sm text-gray-700 mb-6">
+            Tem certeza que deseja excluir o cômodo
+            <strong class="text-gray-900">"{{ roomToDelete?.name }}"</strong>?
+          </p>
+
+          <div class="flex justify-end gap-3">
+            <button
+              type="button"
+              @click="cancelDeleteRoom"
+              :disabled="isDeletingRoom"
+              class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              @click="executeDeleteRoom"
+              :disabled="isDeletingRoom"
+              class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="isDeletingRoom">Excluindo...</span>
+              <span v-else>Sim, excluir</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Modal para Criar Dispositivo -->
     <div v-if="showDeviceModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
@@ -614,6 +665,10 @@ const showBaitTypeModal = ref(false);
 const isSavingDevice = ref(false);
 const isSavingBaitType = ref(false);
 
+const showDeleteRoomModal = ref(false);
+const roomToDelete = ref(null);
+const isDeletingRoom = ref(false);
+
 const baitTypesList = ref([...props.baitTypes]);
 
 const baitTypeForm = useForm({
@@ -705,13 +760,22 @@ const canDeleteRoom = (room) => {
   return !room.work_orders_count || room.work_orders_count === 0;
 };
 
-const deleteRoom = async (roomId) => {
-  if (!confirm('Tem certeza que deseja excluir este cômodo?')) {
-    return;
-  }
+const confirmDeleteRoom = (room) => {
+  roomToDelete.value = room;
+  showDeleteRoomModal.value = true;
+};
 
+const cancelDeleteRoom = () => {
+  roomToDelete.value = null;
+  showDeleteRoomModal.value = false;
+};
+
+const executeDeleteRoom = async () => {
+  if (!roomToDelete.value) return;
+
+  isDeletingRoom.value = true;
   try {
-    const response = await fetch(`/addresses/${props.address.id}/rooms/${roomId}`, {
+    const response = await fetch(`/addresses/${props.address.id}/rooms/${roomToDelete.value.id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -723,6 +787,8 @@ const deleteRoom = async (roomId) => {
     const data = await response.json();
 
     if (response.ok) {
+      showDeleteRoomModal.value = false;
+      roomToDelete.value = null;
       router.reload();
     } else {
       alert(data.message || 'Erro ao excluir cômodo');
@@ -730,6 +796,8 @@ const deleteRoom = async (roomId) => {
   } catch (error) {
     console.error('Erro ao excluir cômodo:', error);
     alert('Erro ao excluir cômodo');
+  } finally {
+    isDeletingRoom.value = false;
   }
 };
 
