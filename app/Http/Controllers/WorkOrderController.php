@@ -100,11 +100,9 @@ class WorkOrderController extends Controller
 
     public function create(Request $request)
     {
-        // Otimizar carregamento para evitar timeout
-        $clients = Client::select('id', 'name')->orderBy('name')->limit(200)->get();
+        $clients = Client::select('id', 'name', 'cnpj', 'phone')->orderBy('name')->get();
         $addresses = Address::select('id', 'client_id', 'nickname', 'street', 'number', 'city', 'state')
             ->orderBy('nickname')
-            ->limit(200)
             ->get();
         $technicians = Technician::select('id', 'name', 'specialty')->where(
             'is_active',
@@ -271,11 +269,9 @@ class WorkOrderController extends Controller
 
         // Accessors já estão incluídos automaticamente via $appends no modelo
 
-        // Otimizar carregamento para evitar timeout
-        $clients = Client::select('id', 'name')->orderBy('name')->limit(200)->get();
+        $clients = Client::select('id', 'name', 'cnpj', 'phone')->orderBy('name')->get();
         $addresses = Address::select('id', 'client_id', 'nickname', 'street', 'number', 'city', 'state')
             ->orderBy('nickname')
-            ->limit(200)
             ->get();
         $technicians = Technician::select('id', 'name', 'specialty')->where(
             'is_active',
