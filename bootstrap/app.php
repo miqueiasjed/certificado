@@ -2,6 +2,7 @@
 
 use App\Listeners\RegistraExecucaoAgendada;
 use App\Support\RotinasAgendadas;
+use Illuminate\Console\Scheduling\Event as TarefaAgendada;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -31,21 +32,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {
-        // Sem `schedule:run` no cron nada disto executa. A linha de cron está
-        // documentada na seção "Rotinas agendadas" do README.
-        foreach (RotinasAgendadas::DIARIAS as $comando => $horario) {
-            $rotina = $schedule->command($comando)
-                ->dailyAt($horario)
-                // Sem isto, 00:10 seria 00:10 em UTC, ou seja, 21:10 do dia
-                // anterior em Brasília, e a rotina viraria o dia errado.
-                ->timezone(config('app.business_timezone'))
-                ->withoutOverlapping(RotinasAgendadas::MINUTOS_DE_TRAVA)
-                // Guarda a saída em arquivo para que ela caia na coluna output.
-                ->storeOutput();
-
-            // Rodada curta e o registro depende do resultado, por isso sem
-            // runInBackground: em background o exitCode só chega em outro
-            // processo, via schedule:finish.
+        // Pendura em uma rodada os ganchos que gravam a linha de
+        // scheduled_task_runs.
+        //
+        // Rodada curta e o registro depende do resultado, por isso sem
+        // runInBackground: em background o exitCode só chega em outro
+        // processo, via schedule:finish.
+        $auditar = function (TarefaAgendada $rotina): void {
             $rotina->before(function (RegistraExecucaoAgendada $auditoria) use ($rotina) {
                 $auditoria->registrarInicio($rotina);
             });
@@ -53,6 +46,34 @@ return Application::configure(basePath: dirname(__DIR__))
             $rotina->then(function (RegistraExecucaoAgendada $auditoria) use ($rotina) {
                 $auditoria->registrarFim($rotina);
             });
+        };
+
+        // Sem `schedule:run` no cron nada disto executa. A linha de cron está
+        // documentada na seção "Rotinas agendadas" do README.
+        foreach (RotinasAgendadas::DIARIAS as $comando => $horario) {
+            $auditar($schedule->command($comando)
+                ->dailyAt($horario)
+                // Sem isto, 00:10 seria 00:10 em UTC, ou seja, 21:10 do dia
+                // anterior em Brasília, e a rotina viraria o dia errado.
+                ->timezone(config('app.business_timezone'))
+                ->withoutOverlapping(RotinasAgendadas::MINUTOS_DE_TRAVA)
+                // Guarda a saída em arquivo para que ela caia na coluna output.
+                ->storeOutput());
+        }
+
+        // Rotinas por intervalo (Plano 14): o despacho da fila de notificações,
+        // de 5 em 5 minutos, e a verificação de rotina parada, de hora em hora.
+        // Sem `timezone()` aqui de propósito: a expressão só tem minutos, então
+        // não existe hora para cair no fuso errado, e declarar um fuso sugeriria
+        // uma janela do dia que estas rotinas não têm. A trava é a curta: com a
+        // rotina rodando de 5 em 5 minutos, os 30 minutos das diárias
+        // bloqueariam seis passadas seguidas se um processo morresse sem
+        // liberar o mutex.
+        foreach (RotinasAgendadas::POR_INTERVALO as $comando => $minutos) {
+            $auditar($schedule->command($comando)
+                ->cron("*/{$minutos} * * * *")
+                ->withoutOverlapping(RotinasAgendadas::MINUTOS_DE_TRAVA_CURTA)
+                ->storeOutput());
         }
     })
     ->withExceptions(function (Exceptions $exceptions) {

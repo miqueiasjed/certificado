@@ -8,15 +8,15 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 14.1 | Migrations e models da central de notificações | backend-estrutura | ⏳ | média |
-| 14.2 | Service de enfileiramento com template e idempotência | backend-logica | ⏳ | alta |
-| 14.3 | Driver de e-mail, despachante e retentativa | backend-logica | ⏳ | alta |
-| 14.4 | Disparo dos eventos do sistema | backend-logica | ⏳ | alta |
-| 14.5 | Aviso à empresa quando uma rotina agendada falha | backend-logica | ⏳ | média |
-| 14.6 | Endpoints de template, fila e preferência | backend-endpoint | ⏳ | média |
-| 14.7 | Telas de templates e histórico de notificações | frontend-pagina | ⏳ | alta |
-| 14.8 | Preferência do cliente e atalho de WhatsApp | frontend-pagina | ⏳ | média |
-| 14.9 | Testes de idempotência, preferência e retentativa | teste | ⏳ | alta |
+| 14.1 | Migrations e models da central de notificações | backend-estrutura | ✅ | média |
+| 14.2 | Service de enfileiramento com template e idempotência | backend-logica | ✅ | alta |
+| 14.3 | Driver de e-mail, despachante e retentativa | backend-logica | ✅ | alta |
+| 14.4 | Disparo dos eventos do sistema | backend-logica | ✅ | alta |
+| 14.5 | Aviso à empresa quando uma rotina agendada falha | backend-logica | ✅ | média |
+| 14.6 | Endpoints de template, fila e preferência | backend-endpoint | ✅ | média |
+| 14.7 | Telas de templates e histórico de notificações | frontend-pagina | ✅ | alta |
+| 14.8 | Preferência do cliente e atalho de WhatsApp | frontend-pagina | ✅ | média |
+| 14.9 | Testes de idempotência, preferência e retentativa | teste | ✅ | alta |
 
 ## Ordem de execução
 

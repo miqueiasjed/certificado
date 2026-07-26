@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ClientRequest;
+use App\Models\NotificationQueue;
 use App\Services\ClientService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -59,8 +60,15 @@ class ClientController extends Controller
             abort(404);
         }
 
+        $notificacoes = NotificationQueue::where('destinatario_tipo', NotificationQueue::DESTINATARIO_CLIENTE)
+            ->where('destinatario_id', $id)
+            ->orderByDesc('agendada_para')
+            ->limit(10)
+            ->get(['id', 'evento', 'canal', 'situacao', 'agendada_para']);
+
         return Inertia::render('Clients/Show', [
             'client' => $client,
+            'notificacoes' => $notificacoes,
         ]);
     }
 

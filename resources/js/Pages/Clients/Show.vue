@@ -69,9 +69,13 @@
                 Obrigatório
               </span>
             </div>
-            <div class="space-y-2">
+            <div class="space-y-3">
               <p class="text-sm text-gray-900 font-medium">{{ client.phone }}</p>
               <p class="text-xs text-gray-500">Telefone para contato</p>
+              <BotaoWhatsapp
+                :telefone="client.aceita_whatsapp ? client.phone : null"
+                :mensagem="mensagemWhatsapp"
+              />
             </div>
           </div>
         </Card>
@@ -162,6 +166,47 @@
                 Adicionar Endereço
               </button>
             </div>
+          </div>
+        </div>
+      </Card>
+
+      <!-- Notificações -->
+      <Card>
+        <div class="p-6">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+            <h3 class="text-lg font-medium text-gray-900">Notificações</h3>
+            <Link
+              :href="`/notificacoes?client_id=${client.id}`"
+              class="text-sm font-medium text-green-600 hover:text-green-700"
+            >
+              Ver histórico completo
+            </Link>
+          </div>
+
+          <div v-if="notificacoes && notificacoes.length > 0" class="space-y-3">
+            <div
+              v-for="notificacao in notificacoes"
+              :key="notificacao.id"
+              class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border border-gray-200 rounded-lg p-3"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-900">{{ rotuloEvento(notificacao.evento) }}</p>
+                <p class="text-xs text-gray-500">{{ formatarDataHora(notificacao.agendada_para) }}</p>
+              </div>
+              <span
+                :class="['inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium self-start sm:self-auto', situacaoClasses(notificacao.situacao)]"
+              >
+                {{ situacaoLabel(notificacao.situacao) }}
+              </span>
+            </div>
+          </div>
+
+          <div v-else class="text-center py-8">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">Nenhuma notificação registrada</h3>
+            <p class="mt-1 text-sm text-gray-500">Os avisos automáticos enviados a este cliente aparecerão aqui.</p>
           </div>
         </div>
       </Card>
@@ -425,16 +470,73 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useForm, Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import BotaoWhatsapp from '@/Components/BotaoWhatsapp.vue';
 import { formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   client: Object,
+  notificacoes: {
+    type: Array,
+    default: () => [],
+  },
 });
+
+// Mesmos rótulos do catálogo de eventos do backend (App\Support\EventosDeNotificacao),
+// repetidos aqui porque o controller manda só a chave do evento, sem o rótulo.
+const ROTULOS_DE_EVENTO = {
+  visita_agendada: 'Visita agendada',
+  lembrete_vespera: 'Lembrete na véspera da visita',
+  tecnico_a_caminho: 'Técnico a caminho',
+  os_concluida: 'Ordem de serviço concluída',
+  certificado_a_vencer: 'Certificado próximo do vencimento',
+  contrato_a_vencer: 'Contrato próximo do vencimento',
+  pagamento_vencido: 'Pagamento vencido',
+  orcamento_a_expirar: 'Orçamento perto de expirar sem resposta',
+  visita_periodica_nao_gerada: 'Visita periódica prevista e não gerada',
+  rotina_agendada_falhou: 'Rotina automática com problema',
+};
+
+function rotuloEvento(evento) {
+  return ROTULOS_DE_EVENTO[evento] || evento;
+}
+
+const ROTULOS_DE_SITUACAO = {
+  pendente: 'Pendente',
+  enviando: 'Enviando',
+  enviada: 'Enviada',
+  falha: 'Falha',
+  cancelada: 'Cancelada',
+  recusada: 'Recusada',
+};
+
+function situacaoLabel(situacao) {
+  return ROTULOS_DE_SITUACAO[situacao] || situacao;
+}
+
+// Mesma paleta de status da skill de design: verde para sucesso, vermelho para
+// falha/recusa, amarelo para o que ainda está em andamento, cinza para o resto.
+function situacaoClasses(situacao) {
+  switch (situacao) {
+    case 'enviada':
+      return 'bg-green-100 text-green-800';
+    case 'falha':
+    case 'recusada':
+      return 'bg-red-100 text-red-800';
+    case 'pendente':
+    case 'enviando':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'cancelada':
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+}
+
+const mensagemWhatsapp = computed(() => `Olá, ${props.client.name}! Tudo bem?`);
 
 // Estado do modal
 const showAddressModal = ref(false);

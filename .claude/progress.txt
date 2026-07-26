@@ -402,6 +402,121 @@ lista escrita à mão. Rota nova entra na varredura sozinha.
    cria data no passado, por desenho, então o contrato pode continuar no painel
    depois do clique. Falta decidir qual é a remediação real dessa pendência.
 5. Contrato sem `end_date` gera calendário de até 10 anos. Com periodicidade
+
+## Plano 14 - Central de notificações (26/07/2026)
+
+Nove tasks, todas em `worktree-agent-a75ec1600856403d3`, em seis lotes. As duas
+mudanças de agrupamento em relação ao `INDEX.md` original: 14.6 rodou junto com
+14.3 (arquivo nenhum em comum, dependia só de 14.2, que já tinha terminado), e
+14.7/14.8 rodaram junto com 14.5 (frontend não toca nada que 14.5 toca). Deu
+para cortar dois lotes sequenciais do cronograma original só com essa
+reordenação.
+
+### Coordenação de arquivo disputado funcionou, mas por sequenciamento estrito
+
+`bootstrap/app.php` e `RotinasAgendadas.php` são tocados por 14.3, 14.4 e 14.5.
+O `INDEX.md` do plano listava 14.3 e 14.4 no mesmo lote paralelo; separei os
+dois em lotes sequenciais só por causa desse conflito de arquivo (a
+dependência funcional entre eles não existia, os dois só dependiam de 14.2).
+Duas trilhas escrevendo no mesmo arquivo na mesma working tree não é git
+merge, é corrida de escrita de verdade: quem salvar por último apaga o que a
+outra gravou. Regra para a próxima vez: antes de aceitar o agrupamento
+"paralelo" sugerido pelo `INDEX.md` de tasks, cruzar com a tabela "Arquivos
+disputados" do mesmo arquivo — ela vale mais que o desenho do lote.
+
+### `chave_idempotencia` como unique global, não composto com `company_id`
+
+Decisão da Task 14.1, testada na prática pela 14.9: como a chave já embute
+`destinatario_id` e `referencia_id` (ambos de uma tabela de domínio, já
+únicos por empresa), compor com `company_id` não isolaria tenant nenhum e só
+enfraqueceria a garantia. Ficou registrado em
+`DominioMultiempresa::UNIQUES_GLOBAIS_MANTIDOS`, porque o teste que varre
+unique de domínio (`EscopoDeEmpresaTest`) acusa toda unique global não
+declarada.
+
+### SMTP e HTTP leem o mesmo código de status ao contrário
+
+A Task 14.3 encontrou isto sozinha, verificando o próprio trabalho: 4xx é
+transitório em SMTP e permanente em HTTP; 5xx é o oposto. Aplicar a regra da
+especificação ("4xx permanente, 5xx temporário") direto ao código SMTP faria o
+sistema repetir quatro vezes um "550 user unknown", que é exatamente o que a
+regra de retentativa existe para impedir. `ClassificadorDeFalhaDeEnvio` decide
+por protocolo antes de olhar o número. Vale conferir de novo quando o driver
+de WhatsApp entrar: provedor de WhatsApp tem a própria tabela de código, não
+necessariamente SMTP nem HTTP puro.
+
+### Lembrete de véspera: a data do envio não é a data do evento
+
+Erro meu como orquestrador, corrigido pelo subagente da Task 14.4: instruí
+"lembrete_vespera agendado para amanhã", mas isso entrega o lembrete no dia da
+visita, não na véspera. O texto do template ("sua visita é amanhã") já
+denunciava o erro: `agendada_para` precisa ser **hoje**, sobre uma visita que
+é amanhã. Rotina roda de manhã, cedo o suficiente para o item já estar na
+fila antes do despachante passar. Fica de exemplo de que instrução do
+orquestrador também erra, e o subagente que lê a regra de negócio por trás do
+texto do template pega esse tipo de erro melhor do que quem só executa a
+instrução ao pé da letra.
+
+### `NotificationTemplate` não tem dimensão de destinatário
+
+Unique é `[company_id, evento, canal]`, sem `destinatario_tipo`. Dois eventos
+do PRD avisam cliente e empresa ao mesmo tempo (`certificado_a_vencer`,
+`pagamento_vencido`), e mandar o texto editado para o cliente também para a
+caixa da própria empresa soaria errado ("Agende a renovação pelo telefone
+{{empresa_telefone}}" endereçado à própria empresa). Resolvido sem tocar a
+migration: `NotificationService::enfileirar()` ganhou `opcoes['corpo']` /
+`opcoes['assunto']`, que pulam a busca de template quando informados. A cópia
+à empresa usa texto fixo em português, não editável pelo tenant. Se um dia
+precisar editar esse texto interno também, precisa de coluna nova
+(`destinatario_tipo` na unique de `notification_templates`) e migration em
+tabela com dado existente — etapas, não um deploy só.
+
+### Rotina de plataforma sem tenant: gancho pronto, sem uso ainda
+
+A task previa "rotina de plataforma avisa o super admin" como caminho
+distinto de "rotina de tenant avisa o administrador". Nenhuma das nove
+rotinas hoje é assim — todas processam dado de múltiplas empresas na mesma
+execução. `RotinasAgendadas::DE_PLATAFORMA` ficou como lista vazia,
+documentada, com teste fixando que está vazia hoje (para a primeira rotina
+verdadeiramente de plataforma exigir decisão consciente, não herdar o
+caminho errado por omissão). Não existe conceito de super admin implementado
+nesta worktree ainda (Plano 5 deve trazer isso).
+
+### `scheduled_task_runs` é por rotina, não por tenant
+
+Achado ao planejar a Task 14.5: a tabela tem uma linha por execução do
+comando agendado, sem `company_id` (está em `TABELAS_FORA_DO_ESCOPO`, "roda
+fora de tenant"). Rotina que processa nove empresas numa passada só grava uma
+linha. Então "a rotina falhou" é sempre um fato de processo, nunca um fato
+por empresa; o que muda por empresa é só para quem o aviso é mandado (todo
+administrador de toda empresa, hoje). Serve de lembrete para quem for medir
+"saúde da rotina por tenant" no futuro: não dá para tirar isso de
+`scheduled_task_runs` sem mudar o schema.
+
+### Correções encontradas em código que já existia, fora do escopo literal das tasks
+
+- `ShowRoutineStatus` usava limiar fixo de 48 horas para "atrasada". A Task
+  14.5 criou `RotinasAgendadas::janelaDeToleranciaEmMinutos()` para o próprio
+  aviso automático, e usou a mesma função ali: antes, uma diária parada há 30
+  horas gerava e-mail ao administrador e aparecia como "não atrasada" no
+  comando de diagnóstico, ou seja, o comando que existe para tirar a dúvida
+  virava a fonte da dúvida.
+- `Carbon::setTestNow()` empresta o fuso da instância mockada para toda data
+  que o Eloquent monta sem fuso explícito ao ler uma coluna `datetime`.
+  Fixar o relógio com fuso `America/Sao_Paulo` faz o cast do model devolver o
+  valor gravado em UTC como se já fosse hora de Brasília. Os testes de
+  fuso da Task 14.9 fixam o instante em UTC, igual ao padrão já usado em
+  `GeracaoDeVisitasTest` e `AvisoDeRotinaFalhaTest`.
+- Duas correções de texto no plano de tasks, ambas aplicadas sem alterar o
+  significado: as permissões do catálogo usam `notificacao-ver` /
+  `notificacao-gerenciar` (hífen, singular), não `notificacoes.ver` como o
+  arquivo da Task 14.6 escrevia — todo o resto do catálogo já segue esse
+  padrão. E não existe papel "coordenador" neste projeto (os cinco são
+  `administrador`, `financeiro`, `comercial`, `tecnico`, `leitura`); a
+  permissão de gerenciar notificação ficou só com `administrador`
+  (automático, ele recebe tudo) e `notificacao-ver` entrou em `leitura` pelo
+  filtro genérico de permissão terminada em `-ver` que já existia lá, sem
+  precisar tocar no seeder.
    semanal, são ~520 linhas sem paginação na tela do contrato.
 
 ================================================================================

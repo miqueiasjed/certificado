@@ -159,6 +159,10 @@ class SyncPermissions extends Command
                 'auditoria-ver',
                 'acesso-log-ver',
             ],
+            'notificacoes' => [
+                'notificacao-ver',
+                'notificacao-gerenciar',
+            ],
         ];
     }
 
