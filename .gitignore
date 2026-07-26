@@ -22,3 +22,4 @@ yarn-error.log
 /.zed
 .DS_Store
 >>>>>>> ce53ae2 (First commit)
+.claude/worktrees/
