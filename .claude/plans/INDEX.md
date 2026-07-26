@@ -33,7 +33,7 @@ bloqueio.
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
 | 4 | Fundação multiempresa | ✅ | 1, 2 | 12 |
-| 5 | Painel do super admin | ⏳ | 3, 4 | 12 |
+| 5 | Painel do super admin | ✅ | 3, 4 | 12 |
 | 6 | Liberação de módulos por plano | ⏳ | 5 | 9 |
 | 7 | Assinaturas e cobrança dos tenants (PagBank) | ⏳ | 6 | 11 |
 | 8 | Onboarding e provisionamento de tenant | ⏳ | 7 | 10 |

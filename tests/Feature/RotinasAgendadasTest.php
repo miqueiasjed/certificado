@@ -469,7 +469,7 @@ class RotinasAgendadasTest extends TestCase
     // Agendamento e registro das rodadas
     // -----------------------------------------------------------------
 
-    public function test_as_seis_rotinas_estao_agendadas_no_fuso_do_negocio(): void
+    public function test_as_rotinas_estao_agendadas_no_fuso_do_negocio(): void
     {
         // O agendamento de bootstrap/app.php é aplicado quando o console sobe,
         // e não no boot da aplicação. Rodar schedule:list é o que popula o
@@ -478,7 +478,7 @@ class RotinasAgendadasTest extends TestCase
 
         $eventos = collect($this->app->make(Schedule::class)->events());
 
-        $this->assertCount(6, RotinasAgendadas::DIARIAS, 'a lista de rotinas diárias mudou de tamanho');
+        $this->assertCount(7, RotinasAgendadas::DIARIAS, 'a lista de rotinas diárias mudou de tamanho');
 
         foreach (RotinasAgendadas::DIARIAS as $assinatura => $horario) {
             $agendados = $eventos->filter(

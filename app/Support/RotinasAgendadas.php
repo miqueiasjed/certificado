@@ -33,6 +33,11 @@ final class RotinasAgendadas
         // 02:00, fora da janela das outras: é a rotina mais pesada, porque
         // percorre e apaga em lotes as tabelas de auditoria inteiras.
         'auditoria:purge' => '02:00',
+        // 03:00, depois da purga de auditoria (02:00), para não competir com
+        // ela: apuração de uso é leitura pura (inclusive um `stat` de disco
+        // por foto), mas ainda assim custa I/O, e a purga é a rotina mais
+        // pesada da janela.
+        'plataforma:apurar-uso' => '03:00',
     ];
 
     /**

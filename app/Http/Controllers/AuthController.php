@@ -29,6 +29,15 @@ class AuthController extends Controller
         if (Auth::attempt($credentials + ['is_active' => true])) {
             $request->session()->regenerate();
 
+            // Super admin entra direto na área da plataforma, sem passar pelo
+            // `intended()`: a URL guardada na sessão é sempre de uma tela de
+            // empresa, e mandar quem administra a plataforma para lá logo no
+            // login inverte o destino esperado. Para operar dentro de uma
+            // empresa ele assume o tenant explicitamente (Task 5.5).
+            if (Auth::user()->is_platform_admin) {
+                return redirect('/plataforma');
+            }
+
             return redirect()->intended('/');
         }
 
