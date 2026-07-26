@@ -18,6 +18,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
+
+        // Aliases dos middlewares do Spatie Permission. O pacote não os
+        // registra sozinho no Laravel 11, e sem isto "permission:financeiro-ver"
+        // na rota estoura como classe inexistente em vez de barrar o acesso.
+        $middleware->alias([
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+        ]);
     })
     ->withSchedule(function (Schedule $schedule) {
         // Sem `schedule:run` no cron nada disto executa. A linha de cron está

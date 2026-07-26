@@ -3,16 +3,38 @@
 namespace App\Http\Controllers;
 
 use App\Models\WorkOrder;
+use App\Services\WorkOrderAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class WorkOrderFinancialController extends Controller
 {
+    public function __construct(
+        private WorkOrderAccessService $workOrderAccessService
+    ) {}
+
+    /**
+     * Bloqueia o técnico que não está atribuído a esta ordem de serviço.
+     */
+    private function garantirAcesso(WorkOrder $workOrder): void
+    {
+        $usuario = Auth::user();
+
+        if (! $usuario) {
+            return;
+        }
+
+        $this->workOrderAccessService->garantirAcesso($workOrder, $usuario);
+    }
+
     /**
      * Update financial information for a work order.
      */
     public function updateFinancialInfo(Request $request, WorkOrder $workOrder): JsonResponse
     {
+        $this->garantirAcesso($workOrder);
+
         $validated = $request->validate([
             'total_cost' => 'required|numeric|min:0|max:999999.99',
             'discount_amount' => 'nullable|numeric|min:0|max:999999.99',

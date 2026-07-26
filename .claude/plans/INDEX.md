@@ -25,25 +25,25 @@ bloqueio.
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
 | 1 | Rotinas agendadas, datas e correções de base | ✅ | - | 18 |
-| 2 | Papéis e permissões | ⏳ | - | ~7 |
-| 3 | Auditoria e histórico de alterações | ⏳ | 2 | ~5 |
+| 2 | Papéis e permissões | ✅ | - | 20 |
+| 3 | Auditoria e histórico de alterações | ⏳ | 2 | 9 |
 
 ### SaaS multiempresa
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 4 | Fundação multiempresa | ⏳ | 1, 2 | ~8 |
-| 5 | Painel do super admin | ⏳ | 3, 4 | ~7 |
-| 6 | Liberação de módulos por plano | ⏳ | 5 | ~6 |
-| 7 | Assinaturas e cobrança dos tenants (PagBank) | ⏳ | 6 | ~8 |
-| 8 | Onboarding e provisionamento de tenant | ⏳ | 7 | ~7 |
+| 4 | Fundação multiempresa | ⏳ | 1, 2 | 12 |
+| 5 | Painel do super admin | ⏳ | 3, 4 | 12 |
+| 6 | Liberação de módulos por plano | ⏳ | 5 | 9 |
+| 7 | Assinaturas e cobrança dos tenants (PagBank) | ⏳ | 6 | 11 |
+| 8 | Onboarding e provisionamento de tenant | ⏳ | 7 | 10 |
 
 ### Operação de campo
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 9 | Geração automática de visitas do contrato | ⏳ | 1 | ~7 |
-| 10 | Agenda em calendário | ⏳ | 2, 9 | ~6 |
+| 9 | Geração automática de visitas do contrato | ⏳ | 1 | 9 |
+| 10 | Agenda em calendário | ⏳ | 2, 9 | 8 |
 | 11 | QR code e identificação de dispositivos | ⏳ | 4 | ~6 |
 | 12 | App do técnico: fundação offline | ⏳ | 2, 4, 10 | ~8 |
 | 13 | App do técnico: execução e assinatura em campo | ⏳ | 3, 11, 12 | ~8 |
@@ -82,7 +82,13 @@ bloqueio.
 | 26 | Assinatura eletrônica de contratos | ⏳ | 14, 15 | ~6 |
 | 27 | Frota e veículos | ⏳ | 17, 22 | ~5 |
 
-Total estimado: ~185 tasks.
+Total: 114 tasks decompostas (planos 1 a 10) mais ~95 estimadas (planos 11 a 27).
+
+A decomposição real dos planos 2 a 10 ficou ~45% acima da estimativa inicial. O
+motivo é o limite de dimensionamento das tasks: nenhuma mistura backend com
+frontend, e cada etapa de migração em produção vira task própria porque é um
+deploy próprio. As estimativas dos planos 11 a 27 carregam o mesmo viés e devem
+ser lidas com essa correção.
 
 ## Ordem de execução recomendada
 

@@ -206,17 +206,12 @@ const props = defineProps({
     })
   },
   financialStats: {
-    type: Object,
-    default: () => ({
-      monthly_entries: 0,
-      monthly_withdrawals: 0,
-      monthly_net: 0,
-      current_balance: 0,
-    })
+    type: [Object, null],
+    default: null,
   },
   recentEntries: {
-    type: Array,
-    default: () => []
+    type: [Array, null],
+    default: null,
   },
   recentServiceOrders: {
     type: Array,

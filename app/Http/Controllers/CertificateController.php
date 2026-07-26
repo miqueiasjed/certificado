@@ -74,6 +74,12 @@ class CertificateController extends Controller
     // Criar certificado diretamente a partir de uma OS
     public function storeFromWorkOrder(Request $request, WorkOrder $workOrder)
     {
+        $usuario = \Illuminate\Support\Facades\Auth::user();
+
+        if ($usuario) {
+            app(\App\Services\WorkOrderAccessService::class)->garantirAcesso($workOrder, $usuario);
+        }
+
         $data = $request->validate([
             'execution_date' => 'required|date',
             'warranty' => 'nullable|date',

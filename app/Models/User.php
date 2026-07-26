@@ -5,13 +5,15 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -22,11 +24,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'is_technician',
         'phone',
         'cpf',
         'address',
         'specialty',
+        'is_active',
     ];
 
     /**
@@ -49,12 +51,22 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'is_technician' => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 
     public function serviceOrders(): HasMany
     {
         return $this->hasMany(ServiceOrder::class, 'technician_id');
+    }
+
+    public function technician(): HasOne
+    {
+        return $this->hasOne(Technician::class, 'user_id');
+    }
+
+    public function ehTecnico(): bool
+    {
+        return $this->hasRole('tecnico');
     }
 }

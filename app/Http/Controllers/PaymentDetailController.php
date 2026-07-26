@@ -290,6 +290,12 @@ class PaymentDetailController extends Controller
      */
     public function getByWorkOrder(WorkOrder $workOrder): JsonResponse
     {
+        $usuario = Auth::user();
+
+        if ($usuario) {
+            app(\App\Services\WorkOrderAccessService::class)->garantirAcesso($workOrder, $usuario);
+        }
+
         $paymentDetails = $workOrder->paymentDetails()
             ->orderBy('payment_date', 'desc')
             ->orderBy('created_at', 'desc')

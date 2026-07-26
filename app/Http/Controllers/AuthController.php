@@ -22,6 +22,19 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt($credentials)) {
+            $usuario = Auth::user();
+
+            if (! $usuario->is_active) {
+                Auth::logout();
+
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                return back()->withErrors([
+                    'email' => 'Este usuário está desativado. Procure um administrador do sistema.',
+                ])->onlyInput('email');
+            }
+
             $request->session()->regenerate();
 
             return redirect()->intended('/');

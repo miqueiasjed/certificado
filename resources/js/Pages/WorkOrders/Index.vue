@@ -5,7 +5,7 @@
       subtitle="Gerencie todas as ordens de serviço do sistema"
     >
       <template #actions>
-        <Link :href="route('work-orders.create')" class="btn-primary">
+        <Link v-if="pode('ordem-servico-criar')" :href="route('work-orders.create')" class="btn-primary">
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
           </svg>
@@ -258,12 +258,14 @@
                   Ver Detalhes
                 </Link>
                 <Link
+                  v-if="pode('ordem-servico-editar')"
                   :href="route('work-orders.edit', workOrder.id)"
                   class="text-blue-600 hover:text-blue-900 text-sm font-medium"
                 >
                   Editar
                 </Link>
                 <button
+                  v-if="pode('ordem-servico-excluir')"
                   @click="deleteWorkOrder(workOrder)"
                   class="inline-flex items-center text-red-600 hover:text-red-900 text-sm font-medium"
                   title="Excluir ordem de serviço"
@@ -307,6 +309,7 @@ import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
+import { usePermissoes } from '@/Composables/usePermissoes';
 
 const props = defineProps({
   workOrders: Object,
@@ -316,6 +319,8 @@ const props = defineProps({
   technicians: Array,
   services: Array,
 });
+
+const { pode } = usePermissoes();
 
 const filters = ref({
   client_id: props.filters?.client_id || '',

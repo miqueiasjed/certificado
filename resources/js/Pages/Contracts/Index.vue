@@ -3,7 +3,7 @@
     <template #header>
       <PageHeader title="Contratos" description="Gerenciar contratos de dedetização">
         <template #actions>
-          <Link href="/contracts/create" class="btn-primary">
+          <Link v-if="pode('contrato-criar')" href="/contracts/create" class="btn-primary">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
@@ -119,12 +119,14 @@
                     PDF
                   </button>
                   <Link
+                    v-if="pode('contrato-editar')"
                     :href="`/contracts/${contract.id}/edit`"
                     class="px-3 py-1 text-sm text-green-600 hover:text-green-800 font-medium"
                   >
                     Editar
                   </Link>
                   <button
+                    v-if="pode('contrato-excluir')"
                     @click="deleteContract(contract.id)"
                     class="px-3 py-1 text-sm text-red-600 hover:text-red-800 font-medium"
                   >
@@ -165,11 +167,14 @@ import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
+import { usePermissoes } from '@/Composables/usePermissoes';
 
 const props = defineProps({
   contracts: Object,
   search: String,
 });
+
+const { pode } = usePermissoes();
 
 const searchQuery = ref(props.search || '');
 

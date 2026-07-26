@@ -4,14 +4,36 @@ namespace App\Http\Controllers;
 
 use App\Models\WorkOrder;
 use App\Models\WorkOrderPhoto;
+use App\Services\WorkOrderAccessService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class WorkOrderPhotoController extends Controller
 {
+    public function __construct(
+        private WorkOrderAccessService $workOrderAccessService
+    ) {}
+
+    /**
+     * Bloqueia o técnico que não está atribuído a esta ordem de serviço.
+     */
+    private function garantirAcesso(WorkOrder $workOrder): void
+    {
+        $usuario = Auth::user();
+
+        if (! $usuario) {
+            return;
+        }
+
+        $this->workOrderAccessService->garantirAcesso($workOrder, $usuario);
+    }
+
     public function store(Request $request, WorkOrder $workOrder)
     {
+        $this->garantirAcesso($workOrder);
+
         $logContext = [
             'work_order_id' => $workOrder->id,
             'user_id'       => $request->user()?->id,
@@ -92,6 +114,8 @@ class WorkOrderPhotoController extends Controller
 
     public function destroy(WorkOrder $workOrder, WorkOrderPhoto $photo)
     {
+        $this->garantirAcesso($workOrder);
+
         abort_if($photo->work_order_id !== $workOrder->id, 403);
 
         Storage::disk('public')->delete($photo->path);

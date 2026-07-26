@@ -39,10 +39,10 @@
         </li>
 
         <!-- Gestão de Clientes -->
-        <li v-if="!collapsed" class="mt-4">
+        <li v-if="!collapsed && mostrarBlocoClientes" class="mt-4">
           <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Gestão de Clientes</div>
         </li>
-        <li>
+        <li v-if="podeVerClientes">
           <Link
             :href="'/clients'"
             :class="[
@@ -60,7 +60,7 @@
             <span v-if="!collapsed">Clientes</span>
           </Link>
         </li>
-        <li>
+        <li v-if="podeVerEnderecos">
           <Link
             :href="'/addresses'"
             :class="[
@@ -78,7 +78,7 @@
             <span v-if="!collapsed">Endereços</span>
           </Link>
         </li>
-        <li>
+        <li v-if="podeVerOrcamentos">
           <Link
             :href="'/budgets'"
             :class="[
@@ -98,10 +98,10 @@
         </li>
 
         <!-- Gestão Operacional -->
-        <li v-if="!collapsed" class="mt-4">
+        <li v-if="!collapsed && mostrarBlocoOperacional" class="mt-4">
           <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Gestão Operacional</div>
         </li>
-        <li>
+        <li v-if="podeVerCadastros">
           <Link
             :href="'/cadastros'"
             :class="[
@@ -119,7 +119,7 @@
             <span v-if="!collapsed">Cadastros</span>
           </Link>
         </li>
-        <li>
+        <li v-if="podeVerOrdensServico">
           <Link
             :href="'/work-orders'"
             :class="[
@@ -137,7 +137,7 @@
             <span v-if="!collapsed">Ordens de Serviço</span>
           </Link>
         </li>
-        <li>
+        <li v-if="podeVerCertificados">
           <Link
             :href="'/certificates'"
             :class="[
@@ -155,7 +155,7 @@
             <span v-if="!collapsed">Certificados</span>
           </Link>
         </li>
-        <li>
+        <li v-if="podeVerContratos">
           <Link
             :href="'/contracts'"
             :class="[
@@ -175,10 +175,10 @@
         </li>
 
         <!-- Gestão Financeira -->
-        <li v-if="!collapsed" class="mt-4">
+        <li v-if="!collapsed && podeVerFinanceiro" class="mt-4">
           <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Gestão Financeira</div>
         </li>
-        <li>
+        <li v-if="podeVerFinanceiro">
           <Link
             :href="'/financial-dashboard'"
             :class="[
@@ -196,7 +196,7 @@
             <span v-if="!collapsed">Dashboard Financeiro</span>
           </Link>
         </li>
-        <li>
+        <li v-if="podeVerFinanceiro">
           <Link
             :href="'/financial-entries'"
             :class="[
@@ -214,7 +214,7 @@
             <span v-if="!collapsed">Entradas Financeiras</span>
           </Link>
         </li>
-        <li>
+        <li v-if="podeVerFinanceiro">
           <Link
             :href="'/financial-withdrawals'"
             :class="[
@@ -232,7 +232,7 @@
             <span v-if="!collapsed">Saídas Financeiras</span>
           </Link>
         </li>
-        <li>
+        <li v-if="podeVerFinanceiro">
           <Link
             :href="'/cash-flow'"
             :class="[
@@ -288,6 +288,7 @@
                   </div>
                   <div class="py-1">
                     <Link
+                      v-if="podeConfigurarEmpresa"
                       :href="route('settings.company.edit')"
                       class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                       <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -295,6 +296,15 @@
                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
                       </svg>
                       Configurações
+                    </Link>
+                    <Link
+                      v-if="podeVerUsuarios"
+                      :href="route('settings.users.index')"
+                      class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                      <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                      </svg>
+                      Usuários
                     </Link>
                     <form @submit.prevent="logout">
                       <button
@@ -331,6 +341,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
+import { usePermissoes } from '@/Composables/usePermissoes';
 
 const emit = defineEmits(['toggle-collapse']);
 
@@ -343,6 +354,32 @@ const props = defineProps({
 
 const $page = usePage();
 const userMenuOpen = ref(false);
+
+const { pode } = usePermissoes();
+
+// Gestão de Clientes
+const podeVerClientes = computed(() => pode('cliente-ver'));
+const podeVerEnderecos = computed(() => pode('endereco-ver'));
+const podeVerOrcamentos = computed(() => pode('orcamento-ver'));
+const mostrarBlocoClientes = computed(() =>
+  podeVerClientes.value || podeVerEnderecos.value || podeVerOrcamentos.value
+);
+
+// Gestão Operacional
+const podeVerCadastros = computed(() => pode('cadastro-ver'));
+const podeVerOrdensServico = computed(() => pode('ordem-servico-ver'));
+const podeVerCertificados = computed(() => pode('certificado-ver'));
+const podeVerContratos = computed(() => pode('contrato-ver'));
+const mostrarBlocoOperacional = computed(() =>
+  podeVerCadastros.value || podeVerOrdensServico.value || podeVerCertificados.value || podeVerContratos.value
+);
+
+// Gestão Financeira
+const podeVerFinanceiro = computed(() => pode('financeiro-ver'));
+
+// Configurações da empresa
+const podeConfigurarEmpresa = computed(() => pode('empresa-configurar'));
+const podeVerUsuarios = computed(() => pode('usuario-ver'));
 
 // Função para verificar se a rota atual corresponde ao link
 const isCurrentRoute = (href) => {

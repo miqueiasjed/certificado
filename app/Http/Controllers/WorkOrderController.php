@@ -14,7 +14,9 @@ use App\Models\Service;
 use App\Models\WorkOrderDeviceEvent;
 use App\Models\Company;
 use App\Services\WorkOrderService;
+use App\Services\WorkOrderAccessService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf as FacadePdf;
@@ -23,14 +25,49 @@ class WorkOrderController extends Controller
 {
     protected $workOrderService;
 
-    public function __construct(WorkOrderService $workOrderService)
-    {
+    protected $workOrderAccessService;
+
+    public function __construct(
+        WorkOrderService $workOrderService,
+        WorkOrderAccessService $workOrderAccessService
+    ) {
         $this->workOrderService = $workOrderService;
+        $this->workOrderAccessService = $workOrderAccessService;
+    }
+
+    /**
+     * Restringe a consulta às ordens de serviço visíveis ao usuário autenticado.
+     */
+    private function escoparPorUsuario($query)
+    {
+        $usuario = Auth::user();
+
+        if (! $usuario) {
+            return $query;
+        }
+
+        return $this->workOrderAccessService->aplicarEscopoDoUsuario($query, $usuario);
+    }
+
+    /**
+     * Bloqueia o técnico que não está atribuído a esta ordem de serviço.
+     */
+    private function garantirAcesso(WorkOrder $workOrder): void
+    {
+        $usuario = Auth::user();
+
+        if (! $usuario) {
+            return;
+        }
+
+        $this->workOrderAccessService->garantirAcesso($workOrder, $usuario);
     }
 
     public function index(Request $request)
     {
         $query = WorkOrder::with(['client', 'address', 'technician']);
+
+        $query = $this->escoparPorUsuario($query);
 
         // Filtros
         if ($request->filled('client_id')) {
@@ -150,6 +187,8 @@ class WorkOrderController extends Controller
 
     public function show(WorkOrder $workOrder)
     {
+        $this->garantirAcesso($workOrder);
+
         $workOrder->load([
             'client',
             'address.client',
@@ -245,6 +284,8 @@ class WorkOrderController extends Controller
 
     public function edit(WorkOrder $workOrder)
     {
+        $this->garantirAcesso($workOrder);
+
         $workOrder->load([
             'client',
             'address.client',
@@ -317,6 +358,8 @@ class WorkOrderController extends Controller
 
     public function update(WorkOrderRequest $request, WorkOrder $workOrder)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
 
             $this->workOrderService->updateWorkOrder($workOrder, $request->validated());
@@ -335,6 +378,8 @@ class WorkOrderController extends Controller
 
     public function destroy(WorkOrder $workOrder)
     {
+        $this->garantirAcesso($workOrder);
+
         $this->workOrderService->deleteWorkOrder($workOrder);
 
         return redirect()->route('work-orders.index')
@@ -343,8 +388,10 @@ class WorkOrderController extends Controller
 
     public function getByClient($clientId)
     {
-        $workOrders = WorkOrder::where('client_id', $clientId)
-            ->with(['address', 'technician'])
+        $query = WorkOrder::where('client_id', $clientId)
+            ->with(['address', 'technician']);
+
+        $workOrders = $this->escoparPorUsuario($query)
             ->orderBy('scheduled_date', 'desc')
             ->get();
 
@@ -353,8 +400,10 @@ class WorkOrderController extends Controller
 
     public function getByAddress($addressId)
     {
-        $workOrders = WorkOrder::where('address_id', $addressId)
-            ->with(['client', 'technician'])
+        $query = WorkOrder::where('address_id', $addressId)
+            ->with(['client', 'technician']);
+
+        $workOrders = $this->escoparPorUsuario($query)
             ->orderBy('scheduled_date', 'desc')
             ->get();
 
@@ -363,8 +412,10 @@ class WorkOrderController extends Controller
 
     public function getByTechnician($technicianId)
     {
-        $workOrders = WorkOrder::where('technician_id', $technicianId)
-            ->with(['client', 'address'])
+        $query = WorkOrder::where('technician_id', $technicianId)
+            ->with(['client', 'address']);
+
+        $workOrders = $this->escoparPorUsuario($query)
             ->orderBy('scheduled_date', 'desc')
             ->get();
 
@@ -373,8 +424,10 @@ class WorkOrderController extends Controller
 
     public function getByStatus($status)
     {
-        $workOrders = WorkOrder::where('status', $status)
-            ->with(['client', 'address', 'technician'])
+        $query = WorkOrder::where('status', $status)
+            ->with(['client', 'address', 'technician']);
+
+        $workOrders = $this->escoparPorUsuario($query)
             ->orderBy('scheduled_date', 'desc')
             ->get();
 
@@ -383,8 +436,10 @@ class WorkOrderController extends Controller
 
     public function getPending()
     {
-        $workOrders = WorkOrder::pending()
-            ->with(['client', 'address', 'technician'])
+        $query = WorkOrder::pending()
+            ->with(['client', 'address', 'technician']);
+
+        $workOrders = $this->escoparPorUsuario($query)
             ->orderBy('scheduled_date', 'asc')
             ->get();
 
@@ -393,8 +448,10 @@ class WorkOrderController extends Controller
 
     public function getOverdue()
     {
-        $workOrders = WorkOrder::overdue()
-            ->with(['client', 'address', 'technician'])
+        $query = WorkOrder::overdue()
+            ->with(['client', 'address', 'technician']);
+
+        $workOrders = $this->escoparPorUsuario($query)
             ->orderBy('scheduled_date', 'asc')
             ->get();
 
@@ -403,8 +460,10 @@ class WorkOrderController extends Controller
 
     public function getToday()
     {
-        $workOrders = WorkOrder::today()
-            ->with(['client', 'address', 'technician'])
+        $query = WorkOrder::today()
+            ->with(['client', 'address', 'technician']);
+
+        $workOrders = $this->escoparPorUsuario($query)
             ->orderBy('scheduled_date', 'asc')
             ->get();
 
@@ -413,8 +472,10 @@ class WorkOrderController extends Controller
 
     public function getThisWeek()
     {
-        $workOrders = WorkOrder::thisWeek()
-            ->with(['client', 'address', 'technician'])
+        $query = WorkOrder::thisWeek()
+            ->with(['client', 'address', 'technician']);
+
+        $workOrders = $this->escoparPorUsuario($query)
             ->orderBy('scheduled_date', 'asc')
             ->get();
 
@@ -423,8 +484,10 @@ class WorkOrderController extends Controller
 
     public function getThisMonth()
     {
-        $workOrders = WorkOrder::thisMonth()
-            ->with(['client', 'address', 'technician'])
+        $query = WorkOrder::thisMonth()
+            ->with(['client', 'address', 'technician']);
+
+        $workOrders = $this->escoparPorUsuario($query)
             ->orderBy('scheduled_date', 'asc')
             ->get();
 
@@ -436,6 +499,8 @@ class WorkOrderController extends Controller
      */
     public function generateReceipt(WorkOrder $workOrder)
     {
+        $this->garantirAcesso($workOrder);
+
         // Log para debug
         Log::info('GenerateReceipt called', [
             'work_order_id' => $workOrder->id,
@@ -482,6 +547,8 @@ class WorkOrderController extends Controller
      */
     public function generatePDF(WorkOrder $workOrder)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             // Preparar dados usando o service
             $data = $this->workOrderService->preparePdfData($workOrder);
@@ -509,6 +576,8 @@ class WorkOrderController extends Controller
      */
     public function addProduct(Request $request, WorkOrder $workOrder, Product $product)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             $request->validate([
                 'quantity' => 'nullable|numeric|min:0',
@@ -539,6 +608,8 @@ class WorkOrderController extends Controller
 
     public function updateProduct(Request $request, WorkOrder $workOrder, Product $product)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             $request->validate([
                 'quantity' => 'nullable|numeric|min:0',
@@ -571,6 +642,8 @@ class WorkOrderController extends Controller
      */
     public function removeProduct(Request $request, WorkOrder $workOrder, Product $product)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             // Verificar se o produto está vinculado à OS
             if (!$workOrder->products()->where('product_id', $product->id)->exists()) {
@@ -592,6 +665,8 @@ class WorkOrderController extends Controller
      */
     public function addService(Request $request, WorkOrder $workOrder, Service $service)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             $request->validate([
                 'observations' => 'nullable|string|max:500'
@@ -618,6 +693,8 @@ class WorkOrderController extends Controller
 
     public function updateService(Request $request, WorkOrder $workOrder, Service $service)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             $request->validate([
                 'observations' => 'nullable|string|max:500'
@@ -646,6 +723,8 @@ class WorkOrderController extends Controller
      */
     public function removeService(Request $request, WorkOrder $workOrder, Service $service)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             // Verificar se o serviço está vinculado à OS
             if (!$workOrder->services()->where('service_id', $service->id)->exists()) {
@@ -667,6 +746,8 @@ class WorkOrderController extends Controller
      */
     public function addTechnician(Request $request, WorkOrder $workOrder, Technician $technician)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             $request->validate([
                 'is_primary' => 'nullable|boolean'
@@ -702,6 +783,8 @@ class WorkOrderController extends Controller
      */
     public function removeTechnician(Request $request, WorkOrder $workOrder, Technician $technician)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             if (!$workOrder->technicians()->where('technician_id', $technician->id)->exists()) {
                 return back()->withErrors(['message' => 'Técnico não encontrado nesta ordem de serviço']);
@@ -721,6 +804,8 @@ class WorkOrderController extends Controller
      */
     public function updateRoomObservation(Request $request, WorkOrder $workOrder, $roomId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             $request->validate([
                 'observation' => 'nullable|string|max:500'
@@ -747,6 +832,8 @@ class WorkOrderController extends Controller
      */
     public function addRoom(Request $request, WorkOrder $workOrder)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             // Preparar dados para validação
             $data = $request->all();
@@ -811,6 +898,8 @@ class WorkOrderController extends Controller
      */
     public function removeRoom(Request $request, WorkOrder $workOrder, $roomId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
@@ -830,6 +919,8 @@ class WorkOrderController extends Controller
      */
     public function getAvailableRooms(WorkOrder $workOrder)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             $client = $workOrder->client;
 
@@ -943,6 +1034,8 @@ class WorkOrderController extends Controller
      */
     public function addRoomEvent(Request $request, WorkOrder $workOrder, $roomId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             // Preparar dados para validação
             $data = $request->all();
@@ -994,6 +1087,8 @@ class WorkOrderController extends Controller
      */
     public function updateRoomEvent(Request $request, WorkOrder $workOrder, $roomId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             // Preparar dados para validação
             $data = $request->all();
@@ -1046,6 +1141,8 @@ class WorkOrderController extends Controller
      */
     public function removeRoomEvent(Request $request, WorkOrder $workOrder, $roomId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
@@ -1083,6 +1180,8 @@ class WorkOrderController extends Controller
      */
     public function addRoomPestSighting(Request $request, WorkOrder $workOrder, $roomId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             // Preparar dados para validação
             $data = $request->all();
@@ -1145,6 +1244,8 @@ class WorkOrderController extends Controller
      */
     public function updateRoomPestSighting(Request $request, WorkOrder $workOrder, $roomId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             // Preparar dados para validação
             $data = $request->all();
@@ -1207,6 +1308,8 @@ class WorkOrderController extends Controller
      */
     public function removeRoomPestSighting(Request $request, WorkOrder $workOrder, $roomId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
@@ -1245,6 +1348,8 @@ class WorkOrderController extends Controller
      */
     public function addDeviceEvent(Request $request, WorkOrder $workOrder, $deviceId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             $validationRules = [
                 'event_type' => 'required|integer|exists:event_types,id',
@@ -1290,6 +1395,8 @@ class WorkOrderController extends Controller
      */
     public function updateDeviceEvent(Request $request, WorkOrder $workOrder, $deviceId, $eventId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             $validationRules = [
                 'event_type' => 'required|integer|exists:event_types,id',
@@ -1343,6 +1450,8 @@ class WorkOrderController extends Controller
      */
     public function deleteDeviceEvent(Request $request, WorkOrder $workOrder, $deviceId, $eventId)
     {
+        $this->garantirAcesso($workOrder);
+
         try {
             // Verificar se o dispositivo existe e pertence ao endereço da OS
             $device = Device::findOrFail($deviceId);

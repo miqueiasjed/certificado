@@ -3,7 +3,7 @@
     <template #header>
       <PageHeader title="Clientes" description="Gerencie todos os clientes cadastrados no sistema">
         <template #actions>
-          <Link href="/clients/create" class="btn-primary">
+          <Link v-if="pode('cliente-criar')" href="/clients/create" class="btn-primary">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
             </svg>
@@ -117,6 +117,7 @@
                       </svg>
                     </Link>
                     <Link
+                      v-if="pode('cliente-editar')"
                       :href="`/clients/${client.id}/edit`"
                       class="text-blue-600 hover:text-blue-900 transition-colors"
                       title="Editar"
@@ -126,6 +127,7 @@
                       </svg>
                     </Link>
                     <button
+                      v-if="pode('cliente-excluir')"
                       @click="deleteClient(client.id)"
                       class="text-red-600 hover:text-red-900 transition-colors"
                       title="Excluir"
@@ -151,7 +153,7 @@
             </p>
             <div class="mt-6">
               <Link
-                v-if="!search"
+                v-if="!search && pode('cliente-criar')"
                 href="/clients/create"
                 class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
               >
@@ -190,11 +192,14 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
+import { usePermissoes } from '@/Composables/usePermissoes';
 
 const props = defineProps({
   clients: Object,
   search: String,
 });
+
+const { pode } = usePermissoes();
 
 const search = ref(props.search || '');
 let searchTimeout = null;

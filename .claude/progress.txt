@@ -149,3 +149,99 @@ executado. O procedimento:
    desenvolvimento: trocar pelo caminho de produção).
 5. Conferir `CACHE_STORE=database` no `.env` de produção.
 6. Validar com `php artisan routines:status` no dia seguinte.
+
+## Plano 2 - Papéis e permissões (26/07/2026)
+
+Concluído. Decomposto em 16 tasks, fechou com 20: quatro nasceram de achados
+durante a execução (2.17 a 2.20). Suíte foi de 41 para 58 testes.
+
+### O aprendizado central
+
+Proteger a rota não protege o dado. As rotas financeiras foram fechadas na Task
+2.6, mas o `DashboardController` continuava entregando faturamento do mês,
+entradas recentes e nove campos monetários das OS para qualquer autenticado, via
+prop do Inertia. Um técnico via o dado só olhando a resposta da rede. Pior: o
+`Dashboard.vue` nunca consumiu essas props, então nada aparecia na tela e o
+vazamento era invisível por inspeção visual.
+
+**Regra que fica:** ao fechar acesso por rota, auditar também o que cada
+controller serializa. Prop que o front não usa continua trafegando.
+
+### Decisões de arquitetura
+
+- Catálogo único de permissões em `SyncPermissions::catalogo()`, método público
+  estático. Seeder e testes consomem dele; ninguém redeclara permissão.
+  70 permissões em 14 módulos.
+- Papéis: `administrador` deriva do catálogo inteiro (recebe permissão nova de
+  graça). Os outros quatro são listas explícitas.
+- `leitura` não recebe `usuario-ver`, ainda que termine em `-ver`: a tela de
+  usuários é administração da empresa, não consulta de dado.
+- Escopo do técnico vive em `WorkOrderAccessService`, não em middleware, porque a
+  regra é de domínio e continua valendo depois do multiempresa.
+- Regra do último administrador vive no `UserService`. O id de quem pede a
+  operação é parâmetro do método: o Service não consulta `Auth::` sozinho.
+
+### Armadilhas encontradas
+
+- **Spatie 6 não registra os aliases de middleware no Laravel 11.** Sem
+  `$middleware->alias([...])` em `bootstrap/app.php`, `permission:financeiro-ver`
+  estoura como classe inexistente e a rota devolve 500 em vez de 403. Registrar
+  em `routes/web.php` não serve: com `route:cache` o arquivo não é lido em runtime.
+- **`Route::resource(...)->middleware(['index' => '...'])` não funciona.** O array
+  inteiro vira middleware de todas as ações e as chaves são ignoradas, então a
+  listagem passaria a exigir a permissão de excluir. A API correta no Laravel
+  11.45 é `middlewareFor($acoes, $middleware)`.
+- **`create` e `edit` dos resources ficam abertos se ninguém citar.** Amarrar
+  `create` com `store` e `edit` com `update`.
+- **Prop `null` não dispara o `default` do Vue.** `default` só cobre `undefined`.
+  Controller que passa a mandar `null` por falta de permissão quebra a tela se o
+  componente confiar no default.
+- **`PHPUnit\Framework\AssertionFailedError` estende `\RuntimeException`.** Um
+  `catch (\RuntimeException)` em volta de `$this->fail()` recaptura a própria
+  falha do teste e mascara o resultado. Isolar a captura num helper.
+- **`User::factory()->create()` sem `is_active` deixa o atributo ausente em
+  memória,** e o cast booleano resolve ausência como `false`, mesmo com default
+  `true` no banco. Objeto passado direto ao Service (sem route-model binding)
+  carregava o valor errado e mascarava a regra do administrador restante.
+- **Três resources financeiros apontavam para métodos que não existem** no
+  controller (`payment-details` sem `index`/`create`/`edit`, entre outros).
+  Respondiam 500. Removidos na Task 2.20.
+- Um agente caiu por erro de API no meio da Task 2.7, depois de ter terminado a
+  edição e antes de validar. O trabalho estava íntegro; a validação foi refeita
+  pelo orquestrador. **Ao retomar agente caído, conferir o estado do arquivo antes
+  de redespachar:** redespachar cegamente teria duplicado middleware.
+
+### Estado final verificado
+
+- 221 rotas com middleware de permissão. Três sem, por decisão: `/`, `/dashboard`
+  e `/logout`.
+- 18 de 18 cenários de acesso por papel conferidos por requisição real.
+- 58 testes passando, incluindo asserção estrutural que falha se alguém
+  acrescentar rota financeira sem middleware.
+
+### Dívida que continua em aberto
+
+1. **`GET /service-orders/{workOrder}/receipt` segue fora de qualquer
+   middleware,** inclusive `auth`, e expõe recibo por ID sequencial. Não foi
+   tocada porque corrigir quebra links de recibo já enviados a clientes. Decisão
+   do usuário: URL assinada, token no registro, ou manter como está.
+2. **Backfill não executado em produção.** `php artisan acesso:backfill` rodou só
+   no banco local. Sem ele, todo usuário fica sem papel e recebe 403 em tudo.
+3. **Quatro técnicos sem usuário vinculado** no banco local (e-mails `@empresa.com`
+   sem usuário correspondente). Vínculo é manual, pela tela de usuários.
+4. **`resources/js/ziggy.js` está desatualizado** em relação às rotas atuais.
+   Parece gerado à mão em algum momento e não regenerado desde então.
+5. **Outros controllers que listam OS** (financeiro, certificados) não passam pelo
+   `WorkOrderAccessService`. Não foram inspecionados.
+
+### Aplicação em produção
+
+Os passos 2 e 3 rodam no MESMO deploy: entre um e outro, ninguém entra.
+
+1. Deploy do código e `php artisan migrate` (tabelas do Spatie, `users.is_active`,
+   `technicians.user_id`).
+2. `php artisan permissions:sync` e
+   `php artisan db:seed --class=RolesAndPermissionsSeeder`.
+3. `php artisan acesso:backfill --dry-run`, conferir a saída, depois sem a flag.
+4. Conferir na tela de usuários se cada pessoa ficou com o papel certo. O backfill
+   dá `administrador` a todo mundo que estava sem papel.

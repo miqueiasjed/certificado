@@ -31,6 +31,7 @@ class DatabaseSeeder extends Seeder
 
         // Executar seeders específicos
         $this->call([
+            RolesAndPermissionsSeeder::class,
             TechnicianSeeder::class,
             ServiceSeeder::class,
             ClientSeeder::class,
