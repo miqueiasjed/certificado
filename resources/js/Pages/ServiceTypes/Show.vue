@@ -149,14 +149,26 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDeleteModal
+      :show="mostrarModalExclusao"
+      message="Tem certeza que deseja excluir o tipo"
+      :item-name="serviceType.name"
+      :processing="excluindoServiceType"
+      @confirm="confirmarExclusaoServiceType"
+      @cancel="cancelarExclusaoServiceType"
+    />
   </AuthenticatedLayout>
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -168,14 +180,30 @@ const goBack = () => {
   window.history.back();
 };
 
+// Estado do modal de confirmação de exclusão
+const mostrarModalExclusao = ref(false);
+const excluindoServiceType = ref(false);
+
 const deleteServiceType = () => {
-  if (confirm(`Tem certeza que deseja excluir o tipo "${props.serviceType.name}"?`)) {
-    router.delete(`/service-types/${props.serviceType.id}`, {
-      onSuccess: () => {
-        router.visit('/service-types');
-      }
-    });
-  }
+  mostrarModalExclusao.value = true;
+};
+
+const confirmarExclusaoServiceType = () => {
+  excluindoServiceType.value = true;
+
+  router.delete(`/service-types/${props.serviceType.id}`, {
+    onSuccess: () => {
+      router.visit('/service-types');
+    },
+    onFinish: () => {
+      excluindoServiceType.value = false;
+      mostrarModalExclusao.value = false;
+    }
+  });
+};
+
+const cancelarExclusaoServiceType = () => {
+  mostrarModalExclusao.value = false;
 };
 
 </script>

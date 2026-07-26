@@ -170,6 +170,15 @@
         <Pagination :links="clients.links" />
       </div>
     </div>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <ConfirmDeleteModal
+      :show="!!clientIdParaExcluir"
+      message="Tem certeza que deseja excluir este cliente?"
+      :processing="excluindoClient"
+      @confirm="confirmarExclusaoClient"
+      @cancel="clientIdParaExcluir = null"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -180,6 +189,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 
 const props = defineProps({
   clients: Object,
@@ -217,13 +227,23 @@ const clearSearch = () => {
   searchClients();
 };
 
+const clientIdParaExcluir = ref(null);
+const excluindoClient = ref(false);
+
 const deleteClient = (clientId) => {
-  if (confirm('Tem certeza que deseja excluir este cliente?')) {
-    router.delete(`/clients/${clientId}`, {
-      onSuccess: () => {
-        // Success message will be shown via flash
-      },
-    });
-  }
+  clientIdParaExcluir.value = clientId;
+};
+
+const confirmarExclusaoClient = () => {
+  excluindoClient.value = true;
+  router.delete(`/clients/${clientIdParaExcluir.value}`, {
+    onSuccess: () => {
+      // Success message will be shown via flash
+    },
+    onFinish: () => {
+      excluindoClient.value = false;
+      clientIdParaExcluir.value = null;
+    },
+  });
 };
 </script>

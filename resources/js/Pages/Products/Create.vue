@@ -339,16 +339,13 @@ const newAntidote = ref('');
 const newOrganRegistration = ref('');
 
 const submitForm = () => {
-  console.log('Enviando formulário:', form.data()); // Debug
   isSubmitting.value = true;
 
   form.post('/products', {
     onSuccess: () => {
-      console.log('Sucesso!'); // Debug
       isSubmitting.value = false;
     },
     onError: (errors) => {
-      console.log('Erro:', errors); // Debug
       isSubmitting.value = false;
     },
   });
@@ -364,7 +361,6 @@ const createActiveIngredient = () => {
       router.reload();
     },
     onError: (errors) => {
-      console.log('Erro ao criar princípio ativo:', errors);
       // Em caso de erro, manter o modal aberto
     },
   });
@@ -379,7 +375,6 @@ const createChemicalGroup = () => {
       router.reload();
     },
     onError: (errors) => {
-      console.log('Erro ao criar grupo químico:', errors);
       // Em caso de erro, manter o modal aberto
     },
   });
@@ -394,7 +389,6 @@ const createAntidote = () => {
       router.reload();
     },
     onError: (errors) => {
-      console.log('Erro ao criar antídoto:', errors);
       // Em caso de erro, manter o modal aberto
     },
   });
@@ -409,7 +403,6 @@ const createOrganRegistration = () => {
       router.reload();
     },
     onError: (errors) => {
-      console.log('Erro ao criar registro ministerial:', errors);
       // Em caso de erro, manter o modal aberto
     },
   });

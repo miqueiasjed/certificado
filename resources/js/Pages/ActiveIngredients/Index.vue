@@ -142,6 +142,16 @@
         :links="activeIngredients.links"
       />
     </Card>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <ConfirmDeleteModal
+      :show="!!activeIngredientParaExcluir"
+      message="Tem certeza que deseja excluir o princípio ativo"
+      :item-name="activeIngredientParaExcluir?.name"
+      :processing="excluindoActiveIngredient"
+      @confirm="confirmarExclusaoActiveIngredient"
+      @cancel="activeIngredientParaExcluir = null"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -151,6 +161,7 @@ import { router, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Card from '@/Components/Card.vue'
 import Pagination from '@/Components/Pagination.vue'
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue'
 import { formatarData } from '@/utils/formatDate'
 
 const props = defineProps({
@@ -190,19 +201,29 @@ const loadActiveIngredients = () => {
   })
 }
 
+const activeIngredientParaExcluir = ref(null)
+const excluindoActiveIngredient = ref(false)
+
 const deleteActiveIngredient = (activeIngredient) => {
   if (activeIngredient.products_count > 0) {
     alert(`Não é possível excluir o princípio ativo "${activeIngredient.name}" pois existem ${activeIngredient.products_count} produto(s) vinculado(s) a ele.`);
     return;
   }
 
-  if (confirm(`Tem certeza que deseja excluir o princípio ativo "${activeIngredient.name}"?`)) {
-    router.delete(`/active-ingredients/${activeIngredient.id}`, {
-      onSuccess: () => {
-        loadActiveIngredients()
-      }
-    })
-  }
+  activeIngredientParaExcluir.value = activeIngredient
+}
+
+const confirmarExclusaoActiveIngredient = () => {
+  excluindoActiveIngredient.value = true
+  router.delete(`/active-ingredients/${activeIngredientParaExcluir.value.id}`, {
+    onSuccess: () => {
+      loadActiveIngredients()
+    },
+    onFinish: () => {
+      excluindoActiveIngredient.value = false
+      activeIngredientParaExcluir.value = null
+    }
+  })
 }
 
 </script>

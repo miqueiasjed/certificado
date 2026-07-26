@@ -363,6 +363,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDeleteModal
+      :show="!!entryIdParaExcluir"
+      message="Tem certeza que deseja excluir esta entrada?"
+      :processing="excluindoEntry"
+      @confirm="confirmarExclusaoEntry"
+      @cancel="cancelarExclusaoEntry"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -371,6 +380,7 @@ import { ref, onMounted, reactive } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PageHeader from '@/Components/PageHeader.vue'
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue'
 import { formatarData, hojeISO } from '@/utils/formatDate'
 
 // Props
@@ -497,23 +507,34 @@ const isFromWorkOrder = (withdrawal) => {
   return withdrawal.source === 'payment_reopen'
 }
 
-const deleteEntry = async (id) => {
-  if (!confirm('Tem certeza que deseja excluir esta entrada?')) return
+// Estado do modal de confirmação de exclusão
+const entryIdParaExcluir = ref(null)
+const excluindoEntry = ref(false)
 
-  try {
-    // Usar router.delete do Inertia
-    router.delete(`/financial-withdrawals/${id}`, {
-      preserveScroll: true,
-      onSuccess: () => {
-        router.reload({ only: ['entries', 'summary'] })
-      },
-      onError: (errors) => {
-        alert('Erro ao excluir entrada: ' + (errors.message || 'Erro desconhecido'))
-      }
-    })
-  } catch (error) {
-    alert('Erro ao excluir entrada: ' + error.message)
-  }
+const deleteEntry = (id) => {
+  entryIdParaExcluir.value = id
+}
+
+const confirmarExclusaoEntry = () => {
+  excluindoEntry.value = true
+
+  router.delete(`/financial-withdrawals/${entryIdParaExcluir.value}`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      router.reload({ only: ['entries', 'summary'] })
+    },
+    onError: (errors) => {
+      alert('Erro ao excluir entrada: ' + (errors.message || 'Erro desconhecido'))
+    },
+    onFinish: () => {
+      excluindoEntry.value = false
+      entryIdParaExcluir.value = null
+    }
+  })
+}
+
+const cancelarExclusaoEntry = () => {
+  entryIdParaExcluir.value = null
 }
 
 const submitForm = async () => {

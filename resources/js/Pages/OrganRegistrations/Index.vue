@@ -142,6 +142,16 @@
         :links="organRegistrations.links"
       />
     </Card>
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDeleteModal
+      :show="!!organRegistrationParaExcluir"
+      message="Tem certeza que deseja excluir o registro"
+      :item-name="organRegistrationParaExcluir?.record"
+      :processing="excluindoOrganRegistration"
+      @confirm="confirmarExclusaoOrganRegistration"
+      @cancel="cancelarExclusaoOrganRegistration"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -151,6 +161,7 @@ import { router, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Card from '@/Components/Card.vue'
 import Pagination from '@/Components/Pagination.vue'
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue'
 import { formatarData } from '@/utils/formatDate'
 
 const props = defineProps({
@@ -190,19 +201,35 @@ const loadOrganRegistrations = () => {
   })
 }
 
+// Estado do modal de confirmação de exclusão
+const organRegistrationParaExcluir = ref(null)
+const excluindoOrganRegistration = ref(false)
+
 const deleteOrganRegistration = (organRegistration) => {
   if (organRegistration.products_count > 0) {
     alert(`Não é possível excluir o registro "${organRegistration.record}" pois existem ${organRegistration.products_count} produto(s) vinculado(s) a ele.`);
     return;
   }
 
-  if (confirm(`Tem certeza que deseja excluir o registro "${organRegistration.record}"?`)) {
-    router.delete(`/organ-registrations/${organRegistration.id}`, {
-      onSuccess: () => {
-        loadOrganRegistrations()
-      }
-    })
-  }
+  organRegistrationParaExcluir.value = organRegistration
+}
+
+const confirmarExclusaoOrganRegistration = () => {
+  excluindoOrganRegistration.value = true
+
+  router.delete(`/organ-registrations/${organRegistrationParaExcluir.value.id}`, {
+    onSuccess: () => {
+      loadOrganRegistrations()
+    },
+    onFinish: () => {
+      excluindoOrganRegistration.value = false
+      organRegistrationParaExcluir.value = null
+    }
+  })
+}
+
+const cancelarExclusaoOrganRegistration = () => {
+  organRegistrationParaExcluir.value = null
 }
 
 </script>

@@ -97,15 +97,30 @@
           </div>
       </Card>
     </div>
+
+    <!-- Modal de Confirmação de Conversão em OS -->
+    <ConfirmDeleteModal
+      :show="mostrarConfirmacaoConversao"
+      title="Converter em OS"
+      message="Deseja converter este orçamento em Ordem de Serviço? Se o cliente não estiver cadastrado, um cadastro provisório será criado."
+      confirm-text="Converter"
+      variant="warning"
+      subtitle=""
+      processing-text="Convertendo..."
+      :processing="convertendo"
+      @confirm="confirmarConversao"
+      @cancel="mostrarConfirmacaoConversao = false"
+    />
   </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -137,9 +152,20 @@ const totalValue = computed(() => {
     return subtotal - Number(props.budget.discount || 0);
 });
 
+const mostrarConfirmacaoConversao = ref(false);
+const convertendo = ref(false);
+
 const convertToOs = () => {
-    if (confirm('Deseja converter este orçamento em Ordem de Serviço? Se o cliente não estiver cadastrado, um cadastro provisório será criado.')) {
-        router.post(`/budgets/${props.budget.id}/convert`);
-    }
+    mostrarConfirmacaoConversao.value = true;
+};
+
+const confirmarConversao = () => {
+    convertendo.value = true;
+    router.post(`/budgets/${props.budget.id}/convert`, {}, {
+        onFinish: () => {
+            convertendo.value = false;
+            mostrarConfirmacaoConversao.value = false;
+        },
+    });
 };
 </script>

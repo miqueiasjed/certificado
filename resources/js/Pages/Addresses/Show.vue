@@ -639,6 +639,15 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal de Confirmação de Exclusão de Dispositivo -->
+    <ConfirmDeleteModal
+      :show="!!deviceParaExcluir"
+      message="Tem certeza que deseja excluir este dispositivo?"
+      :processing="excluindoDevice"
+      @confirm="confirmarExclusaoDevice"
+      @cancel="deviceParaExcluir = null"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -649,6 +658,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import RoomModal from '@/Components/RoomModal.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 
 const props = defineProps({
   address: Object,
@@ -807,13 +817,17 @@ const canDeleteDevice = (device) => {
   return !hasWorkOrders && !hasEvents;
 };
 
-const deleteDevice = async (deviceId) => {
-  if (!confirm('Tem certeza que deseja excluir este dispositivo?')) {
-    return;
-  }
+const deviceParaExcluir = ref(null);
+const excluindoDevice = ref(false);
 
+const deleteDevice = (deviceId) => {
+  deviceParaExcluir.value = deviceId;
+};
+
+const confirmarExclusaoDevice = async () => {
+  excluindoDevice.value = true;
   try {
-    const response = await fetch(`/addresses/${props.address.id}/devices/${deviceId}`, {
+    const response = await fetch(`/addresses/${props.address.id}/devices/${deviceParaExcluir.value}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -832,6 +846,9 @@ const deleteDevice = async (deviceId) => {
   } catch (error) {
     console.error('Erro ao excluir dispositivo:', error);
     alert('Erro ao excluir dispositivo');
+  } finally {
+    excluindoDevice.value = false;
+    deviceParaExcluir.value = null;
   }
 };
 

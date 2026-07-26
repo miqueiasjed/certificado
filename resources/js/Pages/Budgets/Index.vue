@@ -146,6 +146,15 @@
         <Pagination :links="budgets.links" />
       </div>
     </div>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <ConfirmDeleteModal
+      :show="!!budgetIdParaExcluir"
+      message="Tem certeza que deseja excluir este orçamento?"
+      :processing="excluindoBudget"
+      @confirm="confirmarExclusaoBudget"
+      @cancel="budgetIdParaExcluir = null"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -156,6 +165,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { watchDebounced } from '@vueuse/core';
 import { formatarData } from '@/utils/formatDate';
 
@@ -203,9 +213,20 @@ const statusClass = (status) => {
   return map[status] || 'bg-gray-100 text-gray-800';
 };
 
+const budgetIdParaExcluir = ref(null);
+const excluindoBudget = ref(false);
+
 const deleteBudget = (id) => {
-  if (confirm('Tem certeza que deseja excluir este orçamento?')) {
-    router.delete(`/budgets/${id}`);
-  }
+  budgetIdParaExcluir.value = id;
+};
+
+const confirmarExclusaoBudget = () => {
+  excluindoBudget.value = true;
+  router.delete(`/budgets/${budgetIdParaExcluir.value}`, {
+    onFinish: () => {
+      excluindoBudget.value = false;
+      budgetIdParaExcluir.value = null;
+    },
+  });
 };
 </script>

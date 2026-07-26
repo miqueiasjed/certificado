@@ -132,38 +132,6 @@
                 </span>
               </div>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-500">Prioridade</label>
-              <div class="mt-1">
-                <span v-if="serviceOrder.priority === 'low'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                  Baixa
-                </span>
-                <span v-else-if="serviceOrder.priority === 'medium'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                  Média
-                </span>
-                <span v-else-if="serviceOrder.priority === 'high'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
-                  Alta
-                </span>
-                <span v-else-if="serviceOrder.priority === 'urgent'" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                  Urgente
-                </span>
-                <span v-else class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                  Não definida
-                </span>
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-500">Data de Início</label>
-              <div class="mt-1 text-sm text-gray-900">
-                {{ formatarDataHora(serviceOrder.start_date) }}
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-500">Data de Conclusão Prevista</label>
-              <div class="mt-1 text-sm text-gray-900">
-                {{ formatarDataHora(serviceOrder.due_date) }}
-              </div>
-            </div>
           </div>
         </div>
       </Card>
@@ -189,16 +157,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </Card>
-
-      <!-- Observações -->
-      <Card v-if="serviceOrder.notes">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h3 class="text-lg font-medium text-gray-900">Observações</h3>
-        </div>
-        <div class="p-6">
-          <p class="text-sm text-gray-700">{{ serviceOrder.notes }}</p>
         </div>
       </Card>
 

@@ -142,6 +142,16 @@
         :links="chemicalGroups.links"
       />
     </Card>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <ConfirmDeleteModal
+      :show="!!chemicalGroupParaExcluir"
+      message="Tem certeza que deseja excluir o grupo químico"
+      :item-name="chemicalGroupParaExcluir?.name"
+      :processing="excluindoChemicalGroup"
+      @confirm="confirmarExclusaoChemicalGroup"
+      @cancel="chemicalGroupParaExcluir = null"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -151,6 +161,7 @@ import { router, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Card from '@/Components/Card.vue'
 import Pagination from '@/Components/Pagination.vue'
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue'
 import { formatarData } from '@/utils/formatDate'
 
 const props = defineProps({
@@ -190,19 +201,29 @@ const loadChemicalGroups = () => {
   })
 }
 
+const chemicalGroupParaExcluir = ref(null)
+const excluindoChemicalGroup = ref(false)
+
 const deleteChemicalGroup = (chemicalGroup) => {
   if (chemicalGroup.products_count > 0) {
     alert(`Não é possível excluir o grupo químico "${chemicalGroup.name}" pois existem ${chemicalGroup.products_count} produto(s) vinculado(s) a ele.`);
     return;
   }
 
-  if (confirm(`Tem certeza que deseja excluir o grupo químico "${chemicalGroup.name}"?`)) {
-    router.delete(`/chemical-groups/${chemicalGroup.id}`, {
-      onSuccess: () => {
-        loadChemicalGroups()
-      }
-    })
-  }
+  chemicalGroupParaExcluir.value = chemicalGroup
+}
+
+const confirmarExclusaoChemicalGroup = () => {
+  excluindoChemicalGroup.value = true
+  router.delete(`/chemical-groups/${chemicalGroupParaExcluir.value.id}`, {
+    onSuccess: () => {
+      loadChemicalGroups()
+    },
+    onFinish: () => {
+      excluindoChemicalGroup.value = false
+      chemicalGroupParaExcluir.value = null
+    }
+  })
 }
 
 </script>

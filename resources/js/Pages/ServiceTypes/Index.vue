@@ -167,6 +167,16 @@
         </div>
       </Card>
     </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDeleteModal
+      :show="!!serviceTypeParaExcluir"
+      message="Tem certeza que deseja excluir o tipo"
+      :item-name="serviceTypeParaExcluir?.name"
+      :processing="excluindoServiceType"
+      @confirm="confirmarExclusaoServiceType"
+      @cancel="cancelarExclusaoServiceType"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -178,6 +188,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import StatCard from '@/Components/StatCard.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -224,19 +235,35 @@ const clearFilters = () => {
   loadServiceTypes();
 };
 
+// Estado do modal de confirmação de exclusão
+const serviceTypeParaExcluir = ref(null);
+const excluindoServiceType = ref(false);
+
 const deleteServiceType = (serviceType) => {
   if (serviceType.service_orders_count > 0) {
     alert(`Não é possível excluir o tipo "${serviceType.name}" pois existem ${serviceType.service_orders_count} ordem(ns) de serviço vinculada(s) a ele.`);
     return;
   }
 
-  if (confirm(`Tem certeza que deseja excluir o tipo "${serviceType.name}"?`)) {
-    router.delete(`/service-types/${serviceType.id}`, {
-      onSuccess: () => {
-        loadServiceTypes();
-      }
-    });
-  }
+  serviceTypeParaExcluir.value = serviceType;
+};
+
+const confirmarExclusaoServiceType = () => {
+  excluindoServiceType.value = true;
+
+  router.delete(`/service-types/${serviceTypeParaExcluir.value.id}`, {
+    onSuccess: () => {
+      loadServiceTypes();
+    },
+    onFinish: () => {
+      excluindoServiceType.value = false;
+      serviceTypeParaExcluir.value = null;
+    }
+  });
+};
+
+const cancelarExclusaoServiceType = () => {
+  serviceTypeParaExcluir.value = null;
 };
 
 // Computed para estatísticas

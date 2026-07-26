@@ -190,6 +190,15 @@
         <Pagination :links="certificates.links" />
       </div>
     </div>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <ConfirmDeleteModal
+      :show="!!certificateIdParaExcluir"
+      message="Tem certeza que deseja excluir este certificado?"
+      :processing="excluindoCertificate"
+      @confirm="confirmarExclusaoCertificate"
+      @cancel="certificateIdParaExcluir = null"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -200,6 +209,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -231,14 +241,24 @@ const clearSearch = () => {
   searchCertificates();
 };
 
+const certificateIdParaExcluir = ref(null);
+const excluindoCertificate = ref(false);
+
 const deleteCertificate = (id) => {
-  if (confirm('Tem certeza que deseja excluir este certificado?')) {
-    router.delete(`/certificates/${id}`, {
-      onSuccess: () => {
-        // Sucesso
-      },
-    });
-  }
+  certificateIdParaExcluir.value = id;
+};
+
+const confirmarExclusaoCertificate = () => {
+  excluindoCertificate.value = true;
+  router.delete(`/certificates/${certificateIdParaExcluir.value}`, {
+    onSuccess: () => {
+      // Sucesso
+    },
+    onFinish: () => {
+      excluindoCertificate.value = false;
+      certificateIdParaExcluir.value = null;
+    },
+  });
 };
 
 const getStatusClasses = (certificate) => {

@@ -127,7 +127,6 @@ const submit = () => {
     onError: (errors) => {
       // Erros são tratados automaticamente pelo Inertia
       // O modal permanece aberto para correção
-      console.log('Erros de validação:', errors);
     },
     // Evitar redirecionamento - permanecer na mesma página
     preserveScroll: true,

@@ -186,6 +186,15 @@
         <Pagination :links="technicians.links" />
       </div>
     </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDeleteModal
+      :show="!!technicianIdParaExcluir"
+      message="Tem certeza que deseja excluir este técnico?"
+      :processing="excluindoTechnician"
+      @confirm="confirmarExclusaoTechnician"
+      @cancel="cancelarExclusaoTechnician"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -196,6 +205,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -227,13 +237,29 @@ const clearSearch = () => {
   searchTechnicians();
 };
 
+// Estado do modal de confirmação de exclusão
+const technicianIdParaExcluir = ref(null);
+const excluindoTechnician = ref(false);
+
 const deleteTechnician = (id) => {
-  if (confirm('Tem certeza que deseja excluir este técnico?')) {
-    router.delete(`/technicians/${id}`, {
-      onSuccess: () => {
-        // Sucesso
-      },
-    });
-  }
+  technicianIdParaExcluir.value = id;
+};
+
+const confirmarExclusaoTechnician = () => {
+  excluindoTechnician.value = true;
+
+  router.delete(`/technicians/${technicianIdParaExcluir.value}`, {
+    onSuccess: () => {
+      // Sucesso
+    },
+    onFinish: () => {
+      excluindoTechnician.value = false;
+      technicianIdParaExcluir.value = null;
+    },
+  });
+};
+
+const cancelarExclusaoTechnician = () => {
+  technicianIdParaExcluir.value = null;
 };
 </script>

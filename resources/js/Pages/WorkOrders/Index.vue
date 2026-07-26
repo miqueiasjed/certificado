@@ -286,16 +286,26 @@
         />
       </div>
     </Card>
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDeleteModal
+      :show="!!workOrderParaExcluir"
+      :message="mensagemExclusaoWorkOrder"
+      :processing="excluindoWorkOrder"
+      @confirm="confirmarExclusaoWorkOrder"
+      @cancel="cancelarExclusaoWorkOrder"
+    />
   </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -339,17 +349,44 @@ const clearFilters = () => {
   router.get(route('work-orders.index'));
 };
 
+// Estado do modal de confirmação de exclusão
+const workOrderParaExcluir = ref(null);
+const excluindoWorkOrder = ref(false);
+
+// A mensagem original tinha quebras de linha com dados do cliente e da data;
+// o modal renderiza texto simples, então mantemos tudo em uma única string
+// (a linha "Esta ação não pode ser desfeita" já aparece fixa no modal, então
+// não é repetida aqui).
+const mensagemExclusaoWorkOrder = computed(() => {
+  const workOrder = workOrderParaExcluir.value;
+  if (!workOrder) return '';
+
+  return `Tem certeza que deseja excluir a ordem de serviço ${workOrder.order_number}?\n\nCliente: ${workOrder.client?.name}\nData: ${formatarData(workOrder.scheduled_date)}`;
+});
+
 const deleteWorkOrder = (workOrder) => {
-  if (confirm(`Tem certeza que deseja excluir a ordem de serviço ${workOrder.order_number}?\n\nCliente: ${workOrder.client?.name}\nData: ${formatarData(workOrder.scheduled_date)}\n\nEsta ação não pode ser desfeita.`)) {
-    router.delete(route('work-orders.destroy', workOrder.id), {
-      preserveScroll: true,
-      onSuccess: () => {
-        // Sucesso - a página será recarregada automaticamente
-      },
-      onError: (errors) => {
-        alert('Erro ao excluir ordem de serviço: ' + (errors.message || 'Erro desconhecido'));
-      }
-    });
-  }
+  workOrderParaExcluir.value = workOrder;
+};
+
+const confirmarExclusaoWorkOrder = () => {
+  excluindoWorkOrder.value = true;
+
+  router.delete(route('work-orders.destroy', workOrderParaExcluir.value.id), {
+    preserveScroll: true,
+    onSuccess: () => {
+      // Sucesso - a página será recarregada automaticamente
+    },
+    onError: (errors) => {
+      alert('Erro ao excluir ordem de serviço: ' + (errors.message || 'Erro desconhecido'));
+    },
+    onFinish: () => {
+      excluindoWorkOrder.value = false;
+      workOrderParaExcluir.value = null;
+    }
+  });
+};
+
+const cancelarExclusaoWorkOrder = () => {
+  workOrderParaExcluir.value = null;
 };
 </script>

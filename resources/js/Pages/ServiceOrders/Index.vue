@@ -195,6 +195,15 @@
         <Pagination :links="serviceOrders.links" />
       </div>
     </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDeleteModal
+      :show="!!serviceOrderIdParaExcluir"
+      message="Tem certeza que deseja excluir esta ordem de serviço?"
+      :processing="excluindoServiceOrder"
+      @confirm="confirmarExclusaoServiceOrder"
+      @cancel="cancelarExclusaoServiceOrder"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -205,6 +214,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -236,13 +246,29 @@ const clearSearch = () => {
   searchServiceOrders();
 };
 
+// Estado do modal de confirmação de exclusão
+const serviceOrderIdParaExcluir = ref(null);
+const excluindoServiceOrder = ref(false);
+
 const deleteServiceOrder = (id) => {
-  if (confirm('Tem certeza que deseja excluir esta ordem de serviço?')) {
-    router.delete(`/service-orders/${id}`, {
-      onSuccess: () => {
-        // Sucesso
-      },
-    });
-  }
+  serviceOrderIdParaExcluir.value = id;
+};
+
+const confirmarExclusaoServiceOrder = () => {
+  excluindoServiceOrder.value = true;
+
+  router.delete(`/service-orders/${serviceOrderIdParaExcluir.value}`, {
+    onSuccess: () => {
+      // Sucesso
+    },
+    onFinish: () => {
+      excluindoServiceOrder.value = false;
+      serviceOrderIdParaExcluir.value = null;
+    },
+  });
+};
+
+const cancelarExclusaoServiceOrder = () => {
+  serviceOrderIdParaExcluir.value = null;
 };
 </script>

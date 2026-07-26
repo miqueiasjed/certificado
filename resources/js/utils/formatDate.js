@@ -159,7 +159,12 @@ function deInstante(data) {
 
 // Devolve { ano, mes, dia, hora, minuto } prontos para exibição, ou null se a entrada
 // não representar uma data. Nenhum caminho aqui lança exceção.
-function analisar(valor) {
+//
+// `diaPuroNaMeiaNoite` liga a heurística que lê meia-noite UTC exata como dia, e não
+// como instante. Ela protege campo `date`, que o Laravel serializa assim, mas erra
+// para um instante real das 21:00 de Brasília. Por isso só quem exibe apenas o dia a
+// usa: quem pede data com hora já declarou que o campo é instante.
+function analisar(valor, diaPuroNaMeiaNoite = true) {
     if (valor === null || valor === undefined) {
         return null;
     }
@@ -207,7 +212,8 @@ function analisar(valor) {
         // O Laravel serializa campo `date` como meia-noite UTC. Nesse caso o valor
         // representa um dia, não um instante, e converter é o que rouba um dia.
         const meiaNoiteUtc =
-            ehUtc(deslocamento) && hora === '00' && minuto === '00' && (!segundo || segundo === '00');
+            diaPuroNaMeiaNoite
+            && ehUtc(deslocamento) && hora === '00' && minuto === '00' && (!segundo || segundo === '00');
 
         if (meiaNoiteUtc) {
             return { ano, mes, dia, hora: '00', minuto: '00' };
@@ -234,7 +240,9 @@ export function formatarData(valor) {
  * Formata um instante como dd/MM/yyyy HH:mm no fuso do negócio.
  */
 export function formatarDataHora(valor) {
-    const partes = analisar(valor);
+    // Sem a heurística de meia-noite: quem pede hora está lendo um instante, e um
+    // instante das 21:00 de Brasília chega como meia-noite UTC do dia seguinte.
+    const partes = analisar(valor, false);
 
     return partes
         ? `${partes.dia}/${partes.mes}/${partes.ano} ${partes.hora}:${partes.minuto}`
@@ -270,7 +278,8 @@ export function formatarHora(valor) {
         }
     }
 
-    const partes = analisar(valor);
+    // Mesma razão de formatarDataHora: aqui só a hora importa, então é instante.
+    const partes = analisar(valor, false);
 
     return partes ? `${partes.hora}:${partes.minuto}` : '';
 }

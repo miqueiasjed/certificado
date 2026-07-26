@@ -250,6 +250,7 @@ import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { paraInputDateTime, inputDateTimeParaUtc } from '@/utils/formatDate';
 
 const props = defineProps({
   workOrder: Object,
@@ -263,33 +264,6 @@ const props = defineProps({
 
 
 
-
-// Função para formatar data para datetime-local (sem conversão de fuso horário)
-const formatDateForInput = (dateString) => {
-  if (!dateString) return '';
-  try {
-    // Usar regex para extrair data e hora sem conversão de fuso
-    const match = dateString.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2}):\d{2}/);
-    if (match) {
-      return `${match[1]}T${match[2]}`;
-    }
-
-    // Fallback para formato ISO
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return '';
-
-    // Usar getFullYear, getMonth, etc. para evitar conversão de fuso
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  } catch (error) {
-    return '';
-  }
-};
 
 // Função para formatar data para date input (sem conversão de fuso horário)
 const formatDateForDateInput = (dateString) => {
@@ -320,8 +294,8 @@ const formatDateForDateInput = (dateString) => {
 const form = useForm({
   priority_level: props.workOrder.priority_level || '',
   scheduled_date: formatDateForDateInput(props.workOrder.scheduled_date),
-  start_time: formatDateForInput(props.workOrder.start_time),
-  end_time: formatDateForInput(props.workOrder.end_time),
+  start_time: paraInputDateTime(props.workOrder.start_time),
+  end_time: paraInputDateTime(props.workOrder.end_time),
   status: props.workOrder.status || '',
   service_id: props.workOrder.service_id || '',
   description: props.workOrder.description || '',
@@ -357,6 +331,13 @@ const getAddressDisplayText = () => {
 };
 
 const submit = () => {
+  // Os campos mostram hora de Brasília; o backend grava os instantes em UTC.
+  form.transform((dados) => ({
+    ...dados,
+    start_time: inputDateTimeParaUtc(dados.start_time),
+    end_time: inputDateTimeParaUtc(dados.end_time),
+  }));
+
   form.put(`/work-orders/${props.workOrder.id}`, {
     onSuccess: () => {
       // Ordem de serviço atualizada com sucesso

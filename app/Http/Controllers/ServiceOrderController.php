@@ -64,7 +64,7 @@ class ServiceOrderController extends Controller
 
     public function show(ServiceOrder $serviceOrder)
     {
-        $serviceOrder->load(['client', 'technician', 'rooms']);
+        $serviceOrder->load(['client', 'technician', 'rooms', 'service']);
 
         return Inertia::render('ServiceOrders/Show', [
             'serviceOrder' => $serviceOrder,

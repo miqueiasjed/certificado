@@ -174,6 +174,16 @@
         />
       </div>
     </Card>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <ConfirmDeleteModal
+      :show="!!deviceParaExcluir"
+      message="Tem certeza que deseja excluir o dispositivo"
+      :item-name="deviceParaExcluir ? `${deviceParaExcluir.label} (${deviceParaExcluir.number})` : ''"
+      :processing="isCheckingDelete"
+      @confirm="confirmarExclusaoDevice"
+      @cancel="deviceParaExcluir = null"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -184,6 +194,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 
 const props = defineProps({
   devices: Object,
@@ -228,12 +239,17 @@ const clearFilters = () => {
 
 // Estado para verificação de exclusão
 const isCheckingDelete = ref(false);
+const deviceParaExcluir = ref(null);
 
-// Função para verificar e excluir dispositivo
-const checkAndDeleteDevice = async (device) => {
-  if (!confirm(`Tem certeza que deseja excluir o dispositivo "${device.label} (${device.number})"?`)) {
-    return;
-  }
+// Abre o modal de confirmação
+const checkAndDeleteDevice = (device) => {
+  deviceParaExcluir.value = device;
+};
+
+// Confirma: verifica se pode excluir e, se puder, prossegue com a exclusão
+const confirmarExclusaoDevice = async () => {
+  const device = deviceParaExcluir.value;
+  if (!device) return;
 
   isCheckingDelete.value = true;
 
@@ -269,6 +285,7 @@ const checkAndDeleteDevice = async (device) => {
     alert('Erro ao verificar se o dispositivo pode ser excluído');
   } finally {
     isCheckingDelete.value = false;
+    deviceParaExcluir.value = null;
   }
 };
 </script>

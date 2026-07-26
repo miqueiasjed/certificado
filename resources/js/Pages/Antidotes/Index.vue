@@ -142,6 +142,16 @@
         :links="antidotes.links"
       />
     </Card>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <ConfirmDeleteModal
+      :show="!!antidoteParaExcluir"
+      message="Tem certeza que deseja excluir o antídoto"
+      :item-name="antidoteParaExcluir?.name"
+      :processing="excluindoAntidote"
+      @confirm="confirmarExclusaoAntidote"
+      @cancel="antidoteParaExcluir = null"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -151,6 +161,7 @@ import { router, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Card from '@/Components/Card.vue'
 import Pagination from '@/Components/Pagination.vue'
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue'
 import { formatarData } from '@/utils/formatDate'
 
 const props = defineProps({
@@ -190,19 +201,29 @@ const loadAntidotes = () => {
   })
 }
 
+const antidoteParaExcluir = ref(null)
+const excluindoAntidote = ref(false)
+
 const deleteAntidote = (antidote) => {
   if (antidote.products_count > 0) {
     alert(`Não é possível excluir o antídoto "${antidote.name}" pois existem ${antidote.products_count} produto(s) vinculado(s) a ele.`);
     return;
   }
 
-  if (confirm(`Tem certeza que deseja excluir o antídoto "${antidote.name}"?`)) {
-    router.delete(`/antidotes/${antidote.id}`, {
-      onSuccess: () => {
-        loadAntidotes()
-      }
-    })
-  }
+  antidoteParaExcluir.value = antidote
+}
+
+const confirmarExclusaoAntidote = () => {
+  excluindoAntidote.value = true
+  router.delete(`/antidotes/${antidoteParaExcluir.value.id}`, {
+    onSuccess: () => {
+      loadAntidotes()
+    },
+    onFinish: () => {
+      excluindoAntidote.value = false
+      antidoteParaExcluir.value = null
+    }
+  })
 }
 
 </script>

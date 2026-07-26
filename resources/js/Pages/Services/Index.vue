@@ -173,6 +173,15 @@
       <div v-if="services.links && services.links.length > 3">
         <Pagination :links="services.links" />
       </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDeleteModal
+      :show="!!serviceIdParaExcluir"
+      message="Tem certeza que deseja excluir este serviço?"
+      :processing="excluindoService"
+      @confirm="confirmarExclusaoService"
+      @cancel="cancelarExclusaoService"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -183,6 +192,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -214,14 +224,30 @@ const clearSearch = () => {
   searchServices();
 };
 
+// Estado do modal de confirmação de exclusão
+const serviceIdParaExcluir = ref(null);
+const excluindoService = ref(false);
+
 const deleteService = (id) => {
-  if (confirm('Tem certeza que deseja excluir este serviço?')) {
-    router.delete(`/services/${id}`, {
-      onSuccess: () => {
-        // Sucesso
-      },
-    });
-  }
+  serviceIdParaExcluir.value = id;
+};
+
+const confirmarExclusaoService = () => {
+  excluindoService.value = true;
+
+  router.delete(`/services/${serviceIdParaExcluir.value}`, {
+    onSuccess: () => {
+      // Sucesso
+    },
+    onFinish: () => {
+      excluindoService.value = false;
+      serviceIdParaExcluir.value = null;
+    },
+  });
+};
+
+const cancelarExclusaoService = () => {
+  serviceIdParaExcluir.value = null;
 };
 
 const formatPrice = (price) => {

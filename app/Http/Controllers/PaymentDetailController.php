@@ -6,6 +6,8 @@ use App\Http\Requests\PaymentDetailRequest;
 use App\Models\FinancialEntry;
 use App\Models\PaymentDetail;
 use App\Models\WorkOrder;
+use App\Services\PaymentDetailService;
+use App\Support\BusinessDate;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -14,6 +16,11 @@ use Illuminate\Support\Facades\Log;
 
 class PaymentDetailController extends Controller
 {
+    public function __construct(
+        private readonly PaymentDetailService $paymentDetailService
+    ) {
+    }
+
     /**
      * Store a newly created payment detail.
      */
@@ -24,21 +31,26 @@ class PaymentDetailController extends Controller
             Log::info('PaymentDetail store - work_order_id:', ['work_order_id' => $request->input('work_order_id')]);
             Log::info('PaymentDetail store - dados validados:', $request->validated());
 
+            // Parcela sem pagamento não pode nascer com valor em `amount_paid`:
+            // o valor informado é quanto a parcela vale e vai para `final_amount`.
+            $dados = $this->paymentDetailService->normalizarValores($request->validated());
+            $valorDaParcela = $this->paymentDetailService->valorDaParcela($dados);
+
             // Verificar se já existe parcela pendente com o mesmo valor para evitar duplicatas
             // Mas permitir criação automática (quando payment_notes contém "Parcela restante do pagamento original")
             if ($request->input('payment_status') === 'pending') {
                 $isAutomaticCreation = str_contains($request->input('payment_notes', ''), 'Parcela restante do pagamento original');
 
                 if (!$isAutomaticCreation) {
-                    $existingPendingPayment = PaymentDetail::where('work_order_id', $request->input('work_order_id'))
-                        ->where('payment_status', 'pending')
-                        ->where('amount_paid', $request->input('amount_paid'))
-                        ->first();
+                    $existingPendingPayment = $this->paymentDetailService->parcelaEmAbertoComValor(
+                        (int) $request->input('work_order_id'),
+                        $valorDaParcela
+                    );
 
                     if ($existingPendingPayment) {
                         Log::info('Tentativa de criar parcela pendente duplicada bloqueada', [
                             'work_order_id' => $request->input('work_order_id'),
-                            'amount_paid' => $request->input('amount_paid'),
+                            'valor_da_parcela' => $valorDaParcela,
                             'existing_payment_id' => $existingPendingPayment->id
                         ]);
 
@@ -50,13 +62,13 @@ class PaymentDetailController extends Controller
                 } else {
                     Log::info('Criação automática de parcela pendente permitida', [
                         'work_order_id' => $request->input('work_order_id'),
-                        'amount_paid' => $request->input('amount_paid'),
+                        'valor_da_parcela' => $valorDaParcela,
                         'payment_notes' => $request->input('payment_notes')
                     ]);
                 }
             }
 
-            $paymentDetail = PaymentDetail::create($request->validated());
+            $paymentDetail = PaymentDetail::create($dados);
 
             Log::info('PaymentDetail criado:', $paymentDetail->toArray());
 
@@ -122,7 +134,11 @@ class PaymentDetailController extends Controller
                 ], 422);
             }
 
-            $paymentDetail->update($request->validated());
+            // Mesma regra da criação: editar uma parcela em aberto altera quanto
+            // ela vale, não quanto foi pago.
+            $paymentDetail->update(
+                $this->paymentDetailService->normalizarValores($request->validated(), $paymentDetail)
+            );
 
             // Se o status não foi fornecido pelo usuário, calcular automaticamente
             if (!$request->has('payment_status') || empty($request->input('payment_status'))) {
@@ -219,13 +235,23 @@ class PaymentDetailController extends Controller
             // Capturar o status anterior
             $previousStatus = $paymentDetail->payment_status;
 
-            // Reabrir o pagamento (remover data de pagamento e zerar valor pago)
-            $paymentDetail->update([
+            // Reabrir o pagamento (remover data de pagamento e zerar valor pago).
+            // O valor que estava pago volta a ser o valor da parcela em aberto:
+            // sem isso a parcela reaberta ficaria sem valor nenhum na tela.
+            $valorReaberto = (float) ($paymentDetail->amount_paid ?? 0);
+
+            $alteracoes = [
                 'payment_status' => 'pending',
                 'payment_date' => null,
                 'amount_paid' => 0,
                 'payment_notes' => ($paymentDetail->payment_notes ?? '') . ' [REABERTO EM ' . now()->format('d/m/Y H:i') . ']'
-            ]);
+            ];
+
+            if ($valorReaberto > 0 && (float) ($paymentDetail->final_amount ?? 0) <= 0) {
+                $alteracoes['final_amount'] = $valorReaberto;
+            }
+
+            $paymentDetail->update($alteracoes);
 
             // Atualizar o status de pagamento da ordem de serviço
             $this->updateWorkOrderPaymentStatus($paymentDetail->work_order_id);
@@ -287,19 +313,18 @@ class PaymentDetailController extends Controller
 
         $amountPaid = $paymentDetail->amount_paid ?? 0;
         $finalAmount = $workOrder->final_amount ?? $workOrder->total_cost ?? 0;
-        $paymentDate = $paymentDetail->payment_date;
 
         $status = 'pending';
 
         // Se não há valor pago
         if ($amountPaid <= 0) {
-            // Se data é futura, é vencimento futuro
-            if ($paymentDate && $paymentDate > now()->toDateString()) {
-                $status = 'pending';
-            } else {
-                // Se data é passada/hoje e não há pagamento, está vencido
-                $status = 'overdue';
-            }
+            // Quem decide é o VENCIMENTO, nunca a data em que a parcela foi
+            // paga: parcela em aberto tem `payment_date` nula e olhar para ela
+            // marcava como vencida qualquer parcela ainda no prazo. Mesmo corte
+            // dia a dia da rotina payments:update-statuses.
+            $status = BusinessDate::estaVencido($paymentDetail->payment_due_date)
+                ? 'overdue'
+                : 'pending';
         } else {
             // Se há valor pago
             // Se valor pago >= valor final, está pago
@@ -501,10 +526,10 @@ class PaymentDetailController extends Controller
             $amountPaid = $paymentDetail->amount_paid;
             $finalAmount = $workOrder->final_amount ?? $workOrder->total_cost ?? 0;
 
-            // Calcular o total já pago em todas as parcelas confirmadas
-            $totalPaidSoFar = PaymentDetail::where('work_order_id', $workOrder->id)
-                ->where('payment_status', 'paid')
-                ->sum('amount_paid');
+            // Total já recebido: só conta parcela com data de pagamento. Somar
+            // por `payment_status` incluía parcela marcada como paga sem
+            // recebimento nenhum e suprimia a criação da parcela do restante.
+            $totalPaidSoFar = $this->paymentDetailService->totalRecebidoDaOrdem($workOrder->id);
 
             $remainingAmount = $finalAmount - $totalPaidSoFar;
 
@@ -528,11 +553,11 @@ class PaymentDetailController extends Controller
             }
 
             // Verificar se já existe uma parcela pendente para este valor restante
-            $existingPendingPayment = PaymentDetail::where('work_order_id', $workOrder->id)
-                ->where('payment_status', 'pending')
-                ->where('amount_paid', $remainingAmount)
-                ->where('payment_notes', 'like', '%Parcela pendente criada automaticamente%')
-                ->first();
+            $existingPendingPayment = $this->paymentDetailService->parcelaEmAbertoComValor(
+                $workOrder->id,
+                (float) $remainingAmount,
+                'Parcela pendente criada automaticamente'
+            );
 
             if ($existingPendingPayment) {
                 Log::info('Já existe parcela pendente automática para o valor restante', [
@@ -544,10 +569,10 @@ class PaymentDetailController extends Controller
             }
 
             // Verificar se já existe qualquer parcela pendente (incluindo manuais)
-            $anyPendingPayment = PaymentDetail::where('work_order_id', $workOrder->id)
-                ->where('payment_status', 'pending')
-                ->where('amount_paid', $remainingAmount)
-                ->first();
+            $anyPendingPayment = $this->paymentDetailService->parcelaEmAbertoComValor(
+                $workOrder->id,
+                (float) $remainingAmount
+            );
 
             if ($anyPendingPayment) {
                 Log::info('Já existe parcela pendente (manual ou automática) para o valor restante', [
@@ -559,11 +584,17 @@ class PaymentDetailController extends Controller
                 return;
             }
 
-            // Criar nova parcela pendente
+            // Criar nova parcela pendente.
+            // O valor restante é valor A RECEBER: vai para `final_amount`.
+            // `amount_paid` fica zerado e `payment_date` nula porque nada foi
+            // pago nesta parcela, a mesma representação usada na reabertura de
+            // pagamento. Zero, e não nulo, porque o sistema soma essa coluna e
+            // compara com ela em consulta.
             $pendingPayment = PaymentDetail::create([
                 'work_order_id' => $workOrder->id,
                 'payment_due_date' => now()->addDays(30)->toDateString(), // 30 dias a partir de hoje
-                'amount_paid' => $remainingAmount,
+                'final_amount' => $remainingAmount,
+                'amount_paid' => 0,
                 'payment_method' => $paymentDetail->payment_method,
                 'payment_status' => 'pending',
                 'payment_notes' => 'Parcela pendente criada automaticamente - valor restante do pagamento parcial',

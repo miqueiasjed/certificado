@@ -114,7 +114,7 @@
         <h3 class="text-lg font-medium text-gray-900">Produtos</h3>
         <div class="flex space-x-2">
           <button
-            @click="showProductModal = true; console.log('Produto modal:', showProductModal)"
+            @click="showProductModal = true"
             class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
           >
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,7 +182,7 @@
       </div>
 
       <!-- Modal para adicionar Produto à OS -->
-      <div v-if="showProductModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4" @click="console.log('Modal produto renderizado')">
+      <div v-if="showProductModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
         <div class="relative bg-white rounded-xl shadow-xl min-w-[400px] max-w-4xl w-fit mx-4 transform transition-all max-h-[85vh] overflow-hidden">
           <div class="p-6 overflow-y-auto max-h-[85vh]">
             <div class="flex items-center justify-between mb-6">
@@ -278,7 +278,7 @@
       </div>
 
       <!-- Modal para adicionar Serviço à OS -->
-      <div v-if="showServiceModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4" @click="console.log('Modal serviço renderizado')">
+      <div v-if="showServiceModal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
         <div class="relative bg-white rounded-xl shadow-xl min-w-[400px] max-w-4xl w-fit mx-4 transform transition-all max-h-[85vh] overflow-hidden">
           <div class="p-6 overflow-y-auto max-h-[85vh]">
             <div class="flex items-center justify-between mb-6">
@@ -949,7 +949,7 @@
                       </svg>
                     </button>
                     <button
-                      @click="deleteDeviceEvent(event.id, deviceGroup.device.id)"
+                      @click="deleteDeviceEvent(deviceGroup.device.id, event.id)"
                       class="text-red-600 hover:text-red-800 transition-colors"
                     >
                       <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1973,7 +1973,7 @@
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data de Vencimento</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data do Pagamento</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Forma de Pagamento</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor Pago</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor da Parcela</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Observações</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
@@ -1999,7 +1999,7 @@
                   {{ getPaymentMethodText(payment.payment_method) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  R$ {{ formatCurrency(payment.amount_paid || 0) }}
+                  R$ {{ formatCurrency(getPaymentAmount(payment)) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span :class="getPaymentStatusBadgeClass(payment.payment_status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
@@ -2179,7 +2179,7 @@
 
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Valor Devido</label>
-                    <p class="text-sm text-gray-900 font-semibold">R$ {{ formatCurrency(selectedPayment.amount_paid) }}</p>
+                    <p class="text-sm text-gray-900 font-semibold">R$ {{ formatCurrency(getPaymentAmount(selectedPayment)) }}</p>
                   </div>
 
                   <div>
@@ -2330,7 +2330,7 @@
                 </div>
 
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-1">Valor Pago *</label>
+                  <label class="block text-sm font-medium text-gray-700 mb-1">Valor da Parcela *</label>
                   <div class="relative">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <span class="text-gray-500 sm:text-sm">R$</span>
@@ -2766,11 +2766,25 @@
         </div>
       </div>
     </div>
+
+    <!-- Confirmação das ações destrutivas da aba -->
+    <ConfirmDeleteModal
+      :show="!!confirmacao"
+      :title="confirmacao?.titulo"
+      :message="confirmacao?.mensagem || ''"
+      :confirm-text="confirmacao?.textoConfirmar"
+      :variant="confirmacao?.variante || 'danger'"
+      :subtitle="confirmacao?.subtitulo ?? 'Esta ação não pode ser desfeita.'"
+      :processing="confirmacaoEmAndamento"
+      @confirm="executarConfirmacao"
+      @cancel="cancelarConfirmacao"
+    />
 </template>
 
 <script setup>
 import { ref, computed, nextTick, watch } from 'vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import {
   formatarData,
   formatarDataHora,
@@ -2817,6 +2831,46 @@ const props = defineProps({
   }
 });
 
+// Confirmação de ações destrutivas.
+// Um único estado parametrizado atende os nove fluxos da aba: cada um informa
+// título, mensagem, texto do botão e a ação executada na confirmação.
+const confirmacao = ref(null);
+const confirmacaoEmAndamento = ref(false);
+
+const pedirConfirmacao = (config) => {
+  confirmacao.value = config;
+};
+
+const cancelarConfirmacao = () => {
+  if (confirmacaoEmAndamento.value) return;
+  confirmacao.value = null;
+};
+
+const executarConfirmacao = async () => {
+  if (!confirmacao.value || confirmacaoEmAndamento.value) return;
+
+  const acao = confirmacao.value.acao;
+  confirmacaoEmAndamento.value = true;
+
+  try {
+    await acao();
+  } finally {
+    confirmacaoEmAndamento.value = false;
+    confirmacao.value = null;
+  }
+};
+
+// router.delete devolvendo uma promise que só resolve no fim da requisição,
+// para o modal manter o botão desabilitado enquanto o envio acontece.
+const deleteComPromessa = (url, opcoes = {}) => new Promise((resolve) => {
+  router.delete(url, {
+    ...opcoes,
+    onFinish: () => {
+      opcoes.onFinish?.();
+      resolve();
+    },
+  });
+});
 
 // Estado do modal
 const isSubmitting = ref(false);
@@ -2969,6 +3023,26 @@ const parseCurrencyValue = (value) => {
   return parseFloat(numericValue) || 0;
 };
 
+// Valor que a parcela representa.
+// `amount_paid` significa valor PAGO: parcela em aberto não teve pagamento e
+// guarda quanto vale em `final_amount`.
+// O fallback é transitório. Registros gravados antes desta correção ainda têm o
+// valor devido em `amount_paid`, e enquanto o backfill
+// (php artisan payments:corrigir-parcelas-pendentes) não roda, esse é o número
+// com que o sistema vem operando. Depois do backfill, parcela em aberto fica com
+// `amount_paid` zerado e `final_amount` responde sozinho.
+const getPaymentAmount = (payment) => {
+  if (!payment) return 0;
+
+  const valorPago = parseFloat(payment.amount_paid) || 0;
+
+  if (valorPago > 0) {
+    return valorPago;
+  }
+
+  return parseFloat(payment.final_amount) || 0;
+};
+
 // Função para formatar o campo de valor recebido
 const formatReceivePaymentCurrencyField = (event) => {
   const input = event.target;
@@ -2996,11 +3070,11 @@ const formatReceivePaymentCurrencyField = (event) => {
 // Função para calcular o valor restante do pagamento específico
 const getPaymentRemainingAmount = () => {
   if (!selectedPayment.value || !receivePaymentForm.amount_received) {
-    return selectedPayment.value?.amount_paid || 0;
+    return getPaymentAmount(selectedPayment.value);
   }
 
   const amountPaid = parseCurrencyValue(receivePaymentForm.amount_received);
-  const amountDue = selectedPayment.value.amount_paid;
+  const amountDue = getPaymentAmount(selectedPayment.value);
 
   return Math.max(0, amountDue - amountPaid);
 };
@@ -3161,11 +3235,8 @@ const formatPaymentCurrencyField = (event, fieldName) => {
   const input = event.target;
   let value = input.value;
 
-  console.log('formatPaymentCurrencyField - input value:', value);
-
   // Remove tudo exceto números
   let numbers = value.replace(/\D/g, '');
-  console.log('formatPaymentCurrencyField - numbers only:', numbers);
 
   if (numbers === '') {
     paymentForm[fieldName] = '';
@@ -3174,14 +3245,12 @@ const formatPaymentCurrencyField = (event, fieldName) => {
 
   // Converte para centavos e depois para reais
   let amount = parseFloat(numbers) / 100;
-  console.log('formatPaymentCurrencyField - amount:', amount);
 
   // Formata o valor
   let formatted = amount.toLocaleString('pt-BR', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });
-  console.log('formatPaymentCurrencyField - formatted:', formatted);
 
   // Atualiza o campo
   paymentForm[fieldName] = formatted;
@@ -3379,7 +3448,6 @@ const displayToast = (message, type = 'success') => {
 
 // Função para editar um evento existente
 const editEvent = (event) => {
-  console.log('Editando evento:', event);
   selectedEvent.value = event;
 
   // Formatar a data para o formato datetime-local, em hora de Brasília
@@ -3400,9 +3468,6 @@ const editEvent = (event) => {
   editEventForm.bait_change_quantity = event.bait_change_quantity || '';
   editEventForm.technician_notes = event.technician_notes || '';
 
-  console.log('Formulário preenchido:', editEventForm.data());
-  console.log('Descrição:', editEventForm.description);
-  console.log('Observações:', editEventForm.observations);
   showEditEventModal.value = true;
 };
 
@@ -3456,8 +3521,6 @@ const updateEvent = async () => {
       active: true
     };
 
-    console.log('Enviando dados para atualização:', updateData);
-
     // Usar router.put do Inertia
     router.put(`/device-events/${editEventForm.id}`, updateData, {
       preserveScroll: true,
@@ -3473,7 +3536,6 @@ const updateEvent = async () => {
       }
     });
   } catch (error) {
-    console.error('Erro na atualização:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
   } finally {
     isUpdating.value = false;
@@ -3507,7 +3569,6 @@ const submitDeviceEvent = async () => {
   isSubmitting.value = true;
 
   try {
-    console.log('Enviando dados:', deviceEventForm.data());
     // Usar deviceEventForm.post do Inertia
     deviceEventForm.post('/device-events', {
       preserveScroll: true,
@@ -3521,7 +3582,6 @@ const submitDeviceEvent = async () => {
       }
     });
   } catch (error) {
-    console.error('Erro na submissão:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
   } finally {
     isSubmitting.value = false;
@@ -3550,7 +3610,6 @@ const submitPestSighting = async () => {
       }
     });
   } catch (error) {
-    console.error('Erro na submissão:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
   } finally {
     isSubmittingPestSighting.value = false;
@@ -3586,7 +3645,6 @@ const addProductToOS = async () => {
       }
     });
   } catch (error) {
-    console.error('Erro na submissão:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
   } finally {
     isSubmittingProduct.value = false;
@@ -3619,7 +3677,6 @@ const addServiceToOS = async () => {
       }
     });
   } catch (error) {
-    console.error('Erro na submissão:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
   } finally {
     isSubmittingService.value = false;
@@ -3628,21 +3685,17 @@ const addServiceToOS = async () => {
 
 // Métodos para gerenciar produtos e serviços na OS
 const editProductInOS = (product) => {
-  console.log('🔍 editProductInOS chamado:', product);
   selectedProduct.value = product;
   editProductForm.quantity = product.pivot.quantity || 1;
   editProductForm.unit = product.pivot.unit || '';
   editProductForm.observations = product.pivot.observations || '';
   showEditProductModal.value = true;
-  console.log('🔍 showEditProductModal.value:', showEditProductModal.value);
 };
 
 const editServiceInOS = (service) => {
-  console.log('🔍 editServiceInOS chamado:', service);
   selectedService.value = service;
   editServiceForm.observations = service.pivot.observations || '';
   showEditServiceModal.value = true;
-  console.log('🔍 showEditServiceModal.value:', showEditServiceModal.value);
 };
 
 const updateProductInOS = async () => {
@@ -3670,7 +3723,6 @@ const updateProductInOS = async () => {
       }
     });
   } catch (error) {
-    console.error('Erro na atualização:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
   } finally {
     isUpdatingProduct.value = false;
@@ -3700,58 +3752,56 @@ const updateServiceInOS = async () => {
       }
     });
   } catch (error) {
-    console.error('Erro na atualização:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
   } finally {
     isUpdatingService.value = false;
   }
 };
 
-const removeProductFromOS = async (product) => {
-  if (!confirm(`Tem certeza que deseja remover o produto "${product.name}" desta ordem de serviço?`)) {
-    return;
-  }
-
-  try {
-    // Usar router.delete do Inertia
-    router.delete(`/work-orders/${props.workOrder.id}/products/${product.id}`, {
-      preserveScroll: true,
-      onSuccess: () => {
-      },
-      onError: (errors) => {
-        displayToast('Erro ao remover produto: ' + (errors.message || 'Erro desconhecido'), 'error');
+const removeProductFromOS = (product) => {
+  pedirConfirmacao({
+    titulo: 'Remover produto',
+    mensagem: `Tem certeza que deseja remover o produto "${product.name}" desta ordem de serviço?`,
+    textoConfirmar: 'Remover',
+    acao: async () => {
+      try {
+        // Usar router.delete do Inertia
+        await deleteComPromessa(`/work-orders/${props.workOrder.id}/products/${product.id}`, {
+          preserveScroll: true,
+          onError: (errors) => {
+            displayToast('Erro ao remover produto: ' + (errors.message || 'Erro desconhecido'), 'error');
+          }
+        });
+      } catch (error) {
+        displayToast('Erro inesperado. Tente novamente.', 'error');
       }
-    });
-  } catch (error) {
-    console.error('Erro na remoção:', error);
-    displayToast('Erro inesperado. Tente novamente.', 'error');
-  }
+    }
+  });
 };
 
-const removeServiceFromOS = async (service) => {
-  if (!confirm(`Tem certeza que deseja remover o serviço "${service.name}" desta ordem de serviço?`)) {
-    return;
-  }
-
-  try {
-    // Usar router.delete do Inertia
-    router.delete(`/work-orders/${props.workOrder.id}/services/${service.id}`, {
-      preserveScroll: true,
-      onSuccess: () => {
-      },
-      onError: (errors) => {
-        displayToast('Erro ao remover serviço: ' + (errors.message || 'Erro desconhecido'), 'error');
+const removeServiceFromOS = (service) => {
+  pedirConfirmacao({
+    titulo: 'Remover serviço',
+    mensagem: `Tem certeza que deseja remover o serviço "${service.name}" desta ordem de serviço?`,
+    textoConfirmar: 'Remover',
+    acao: async () => {
+      try {
+        // Usar router.delete do Inertia
+        await deleteComPromessa(`/work-orders/${props.workOrder.id}/services/${service.id}`, {
+          preserveScroll: true,
+          onError: (errors) => {
+            displayToast('Erro ao remover serviço: ' + (errors.message || 'Erro desconhecido'), 'error');
+          }
+        });
+      } catch (error) {
+        displayToast('Erro inesperado. Tente novamente.', 'error');
       }
-    });
-  } catch (error) {
-    console.error('Erro na remoção:', error);
-    displayToast('Erro inesperado. Tente novamente.', 'error');
-  }
+    }
+  });
 };
 
 // Função para visualizar um evento existente
 const viewEvent = (event) => {
-  console.log('Evento selecionado para visualização:', event);
   selectedEvent.value = event;
   showViewEventModal.value = true;
 };
@@ -3839,8 +3889,6 @@ const updatePestSighting = async () => {
       active: true
     };
 
-    console.log('Enviando dados para atualização do avistamento:', updateData);
-
     const response = await fetch(`/pest-sightings/${editPestSightingForm.id}`, {
       method: 'PUT',
       headers: {
@@ -3866,7 +3914,6 @@ const updatePestSighting = async () => {
       displayToast('Erro ao atualizar avistamento: ' + result.message, 'error');
     }
   } catch (error) {
-    console.error('Erro na atualização do avistamento:', error);
     displayToast('Erro inesperado. Tente novamente.', 'error');
   } finally {
     isUpdatingPestSighting.value = false;
@@ -4051,7 +4098,7 @@ const receivePayment = (payment) => {
   // Definir data atual como padrão
   const today = hojeISO();
   receivePaymentForm.payment_date = today;
-  receivePaymentForm.amount_received = formatCurrency(payment.amount_paid);
+  receivePaymentForm.amount_received = formatCurrency(getPaymentAmount(payment));
   receivePaymentForm.payment_method = payment.payment_method; // Preencher com a forma original
   receivePaymentForm.payment_notes = '';
 
@@ -4065,10 +4112,8 @@ const confirmReceivePayment = async () => {
 
   try {
     const amountReceived = parseCurrencyValue(receivePaymentForm.amount_received);
-    const amountDue = selectedPayment.value.amount_paid;
+    const amountDue = getPaymentAmount(selectedPayment.value);
     const remainingAmount = getPaymentRemainingAmount();
-
-    console.log('Valores:', { amountReceived, amountDue, remainingAmount });
 
     // 1. Atualizar o pagamento atual com o valor recebido
     const updatePaymentData = {
@@ -4079,8 +4124,6 @@ const confirmReceivePayment = async () => {
       payment_notes: receivePaymentForm.payment_notes,
       payment_status: 'paid' // Sempre marcamos como 'paid' pois o valor foi efetivamente recebido
     };
-
-    console.log('Atualizando pagamento:', updatePaymentData);
 
     const updateResponse = await fetch(`/payment-details/${selectedPayment.value.id}`, {
       method: 'PUT',
@@ -4093,7 +4136,6 @@ const confirmReceivePayment = async () => {
     });
 
     const updateData = await updateResponse.json();
-    console.log('Resposta da atualização:', updateData);
 
     if (!updateData.success) {
       throw new Error(updateData.message || 'Erro ao atualizar pagamento');
@@ -4113,7 +4155,6 @@ const confirmReceivePayment = async () => {
     router.reload({ only: ["workOrder"] });
 
   } catch (error) {
-    console.error('Erro ao receber pagamento:', error);
     displayToast('Erro ao receber pagamento: ' + error.message, 'error');
 
     // Fechar modal em caso de erro
@@ -4139,69 +4180,80 @@ const editPayment = (payment) => {
   editPaymentForm.payment_due_date = formatDateForInput(payment.payment_due_date);
   editPaymentForm.payment_date = formatDateForInput(payment.payment_date);
   editPaymentForm.payment_method = payment.payment_method || '';
-  editPaymentForm.amount_paid = payment.amount_paid || '';
+  // O modal de edição só abre para parcela não paga: o campo carrega o valor da
+  // parcela, e o backend devolve esse valor para `final_amount`.
+  // O valor entra já no formato brasileiro porque é assim que
+  // parseCurrencyValue() lê de volta na hora de enviar. Preencher com o valor
+  // cru do banco ("100.00") fazia o ponto sumir e enviava 10000.
+  const valorDaParcela = getPaymentAmount(payment);
+  editPaymentForm.amount_paid = valorDaParcela ? formatCurrency(valorDaParcela) : '';
   editPaymentForm.payment_notes = payment.payment_notes || '';
   editPaymentForm.is_partial_payment = payment.is_partial_payment || false;
   editPaymentForm.payment_status = payment.payment_status || 'pending';
 
-  console.log('Editing payment:', payment);
-  console.log('Form data:', editPaymentForm.data());
-
   showEditPaymentModal.value = true;
 };
 
-const deletePayment = async (paymentId) => {
-  if (!confirm('Tem certeza que deseja excluir este pagamento?')) {
-    return;
-  }
+const deletePayment = (paymentId) => {
+  pedirConfirmacao({
+    titulo: 'Excluir pagamento',
+    mensagem: 'Tem certeza que deseja excluir este pagamento?',
+    textoConfirmar: 'Excluir',
+    acao: async () => {
+      try {
+        const response = await fetch(`/payment-details/${paymentId}`, {
+          method: 'DELETE',
+          headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+          },
+        });
 
-  try {
-    const response = await fetch(`/payment-details/${paymentId}`, {
-      method: 'DELETE',
-      headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (response.ok) {
-      // Recarregar a página para atualizar os dados
-      router.reload({ only: ["workOrder"] });
-    } else {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Erro ao excluir pagamento');
+        if (response.ok) {
+          // Recarregar a página para atualizar os dados
+          router.reload({ only: ["workOrder"] });
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao excluir pagamento');
+        }
+      } catch (error) {
+        displayToast(error.message || 'Erro ao excluir pagamento', 'error');
+      }
     }
-  } catch (error) {
-    console.error('Erro ao excluir pagamento:', error);
-    displayToast(error.message || 'Erro ao excluir pagamento', 'error');
-  }
+  });
 };
 
-const reopenPayment = async (payment) => {
-  if (!confirm(`Tem certeza que deseja reabrir o pagamento de R$ ${formatCurrency(payment.amount_paid)}? O valor será debitado das entradas financeiras.`)) {
-    return;
-  }
+const reopenPayment = (payment) => {
+  pedirConfirmacao({
+    titulo: 'Reabrir pagamento',
+    mensagem: `Tem certeza que deseja reabrir o pagamento de R$ ${formatCurrency(payment.amount_paid)}? O valor será debitado das entradas financeiras.`,
+    textoConfirmar: 'Reabrir',
+    // Reabrir é justamente desfazer um recebimento, então nem o alerta vermelho
+    // nem o aviso de irreversibilidade cabem aqui.
+    variante: 'warning',
+    subtitulo: '',
+    acao: async () => {
+      try {
+        const response = await fetch(`/payment-details/${payment.id}/reopen`, {
+          method: 'POST',
+          headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Content-Type': 'application/json',
+          },
+        });
 
-  try {
-    const response = await fetch(`/payment-details/${payment.id}/reopen`, {
-      method: 'POST',
-      headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (response.ok) {
-      // Recarregar a página para atualizar os dados
-      router.reload({ only: ["workOrder"] });
-    } else {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Erro ao reabrir pagamento');
+        if (response.ok) {
+          // Recarregar a página para atualizar os dados
+          router.reload({ only: ["workOrder"] });
+        } else {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Erro ao reabrir pagamento');
+        }
+      } catch (error) {
+        displayToast(error.message || 'Erro ao reabrir pagamento', 'error');
+      }
     }
-  } catch (error) {
-    console.error('Erro ao reabrir pagamento:', error);
-    displayToast(error.message || 'Erro ao reabrir pagamento', 'error');
-  }
+  });
 };
 
 // Funções para manipular formulários de pagamento
@@ -4221,8 +4273,6 @@ const submitPayment = async () => {
       payment_notes: paymentForm.payment_notes,
       payment_status: 'pending'
     };
-
-    console.log('Dados do pagamento sendo enviados:', formData);
 
     const response = await fetch('/payment-details', {
       method: 'POST',
@@ -4245,7 +4295,6 @@ const submitPayment = async () => {
       throw new Error(data.message || 'Erro ao adicionar pagamento');
     }
   } catch (error) {
-    console.error('Erro ao adicionar pagamento:', error);
     displayToast('Erro ao adicionar pagamento: ' + error.message, 'error');
   } finally {
     isSubmittingPayment.value = false;
@@ -4265,9 +4314,6 @@ const updatePayment = async () => {
       formData.amount_paid = parseCurrencyValue(formData.amount_paid);
     }
 
-    console.log('Dados sendo enviados:', formData);
-    console.log('Payment ID:', selectedPayment.value.id);
-
     const response = await fetch(`/payment-details/${selectedPayment.value.id}`, {
       method: 'PUT',
       headers: {
@@ -4279,7 +4325,6 @@ const updatePayment = async () => {
     });
 
     const data = await response.json();
-    console.log('Resposta do servidor:', data);
 
     if (data.success) {
       showEditPaymentModal.value = false;
@@ -4290,7 +4335,6 @@ const updatePayment = async () => {
       throw new Error(data.message || 'Erro ao atualizar pagamento');
     }
   } catch (error) {
-    console.error('Erro ao atualizar pagamento:', error);
     displayToast('Erro ao atualizar pagamento: ' + error.message, 'error');
   } finally {
     isSubmittingPayment.value = false;
@@ -4339,7 +4383,6 @@ const submitFinancialInfo = async () => {
       throw new Error(data.message || 'Erro ao atualizar informações financeiras');
     }
   } catch (error) {
-    console.error('Erro ao atualizar informações financeiras:', error);
     displayToast('Erro ao atualizar informações financeiras: ' + error.message, 'error');
   } finally {
     isSubmittingPayment.value = false;
@@ -4432,36 +4475,24 @@ const getSeverityLevelText = (severityLevel) => {
 
 // Computed properties para produtos e serviços disponíveis
 const availableProductsForOS = computed(() => {
-  console.log('🔍 Debug availableProductsForOS:');
-  console.log('  - props.availableProducts:', props.availableProducts);
-  console.log('  - props.workOrder.products:', props.workOrder.products);
-
   if (!props.availableProducts || !props.workOrder.products) {
-    console.log('  - Retornando todos os produtos (sem filtro)');
     return props.availableProducts || [];
   }
 
   // Filtrar produtos que ainda não estão vinculados à OS
   const linkedProductIds = props.workOrder.products.map(p => p.id);
   const filtered = props.availableProducts.filter(product => !linkedProductIds.includes(product.id));
-  console.log('  - Produtos filtrados:', filtered);
   return filtered;
 });
 
 const availableServicesForOS = computed(() => {
-  console.log('🔍 Debug availableServicesForOS:');
-  console.log('  - props.availableServices:', props.availableServices);
-  console.log('  - props.workOrder.services:', props.workOrder.services);
-
   if (!props.availableServices || !props.workOrder.services) {
-    console.log('  - Retornando todos os serviços (sem filtro)');
     return props.availableServices || [];
   }
 
   // Filtrar serviços que ainda não estão vinculados à OS
   const linkedServiceIds = props.workOrder.services.map(s => s.id);
   const filtered = props.availableServices.filter(service => !linkedServiceIds.includes(service.id));
-  console.log('  - Serviços filtrados:', filtered);
   return filtered;
 });
 
@@ -4502,32 +4533,31 @@ const addTechnicianToOS = async () => {
       }
     });
   } catch (error) {
-    console.error('Erro ao adicionar técnico:', error);
     displayToast('Erro ao adicionar técnico. Tente novamente.', 'error');
   } finally {
     isSubmittingTechnician.value = false;
   }
 };
 
-const removeTechnicianFromOS = async (technician) => {
-  if (!confirm(`Tem certeza que deseja remover o técnico "${technician.name}" desta ordem de serviço?`)) {
-    return;
-  }
-
-  try {
-    // Usar router.delete do Inertia
-    router.delete(`/work-orders/${props.workOrder.id}/technicians/${technician.id}`, {
-      preserveScroll: true,
-      onSuccess: () => {
-      },
-      onError: (errors) => {
-        displayToast('Erro ao remover técnico: ' + (errors.message || 'Erro desconhecido'), 'error');
+const removeTechnicianFromOS = (technician) => {
+  pedirConfirmacao({
+    titulo: 'Remover técnico',
+    mensagem: `Tem certeza que deseja remover o técnico "${technician.name}" desta ordem de serviço?`,
+    textoConfirmar: 'Remover',
+    acao: async () => {
+      try {
+        // Usar router.delete do Inertia
+        await deleteComPromessa(`/work-orders/${props.workOrder.id}/technicians/${technician.id}`, {
+          preserveScroll: true,
+          onError: (errors) => {
+            displayToast('Erro ao remover técnico: ' + (errors.message || 'Erro desconhecido'), 'error');
+          }
+        });
+      } catch (error) {
+        displayToast('Erro ao remover técnico. Tente novamente.', 'error');
       }
-    });
-  } catch (error) {
-    console.error('Erro ao remover técnico:', error);
-    displayToast('Erro ao remover técnico. Tente novamente.', 'error');
-  }
+    }
+  });
 };
 
 // Métodos para gerenciar cômodos
@@ -4550,7 +4580,6 @@ const loadAvailableRooms = async () => {
       displayToast('Erro ao carregar cômodos disponíveis: ' + (result.message || 'Erro desconhecido'), 'error');
     }
   } catch (error) {
-    console.error('Erro ao carregar cômodos disponíveis:', error);
     displayToast('Erro ao carregar cômodos disponíveis: ' + error.message, 'error');
   } finally {
     isLoadingAvailableRooms.value = false;
@@ -4759,27 +4788,29 @@ const addDeviceWithEvent = async () => {
   });
 };
 
-const removeRoom = async (roomId) => {
-  if (!confirm('Tem certeza que deseja remover este cômodo da ordem de serviço?')) {
-    return;
-  }
+const removeRoom = (roomId) => {
+  pedirConfirmacao({
+    titulo: 'Remover cômodo',
+    mensagem: 'Tem certeza que deseja remover este cômodo da ordem de serviço?',
+    textoConfirmar: 'Remover',
+    acao: async () => {
+      isRemovingRoom.value = true;
 
-  isRemovingRoom.value = true;
-
-  try {
-    // Usar router.delete do Inertia
-    router.delete(`/work-orders/${props.workOrder.id}/rooms/${roomId}`, {
-      preserveScroll: true,
-      onError: (errors) => {
-        displayToast('Erro ao remover cômodo: ' + (errors.message || 'Erro desconhecido'), 'error');
+      try {
+        // Usar router.delete do Inertia
+        await deleteComPromessa(`/work-orders/${props.workOrder.id}/rooms/${roomId}`, {
+          preserveScroll: true,
+          onError: (errors) => {
+            displayToast('Erro ao remover cômodo: ' + (errors.message || 'Erro desconhecido'), 'error');
+          }
+        });
+      } catch (error) {
+        displayToast('Erro ao remover cômodo: ' + error.message, 'error');
+      } finally {
+        isRemovingRoom.value = false;
       }
-    });
-  } catch (error) {
-    console.error('Erro ao remover cômodo:', error);
-    displayToast('Erro ao remover cômodo: ' + error.message, 'error');
-  } finally {
-    isRemovingRoom.value = false;
-  }
+    }
+  });
 };
 
 const updateRoomObservation = async (roomId) => {
@@ -4814,7 +4845,6 @@ const updateRoomObservation = async (roomId) => {
       displayToast('Erro ao atualizar observação: ' + (result.message || 'Erro desconhecido'), 'error');
     }
   } catch (error) {
-    console.error('Erro ao atualizar observação:', error);
     displayToast('Erro ao atualizar observação: ' + error.message, 'error');
   } finally {
     editingRoomId.value = null;
@@ -4902,12 +4932,6 @@ const saveRoomEvent = async () => {
     };
 
 
-    console.log('Sending data:', {
-      method: isEditing ? 'PUT' : 'POST',
-      url: `/work-orders/${props.workOrder.id}/rooms/${selectedRoomForEvent.value}/event`,
-      data: requestData
-    });
-
     // Usar router do Inertia
     const url = route(isEditing ? 'work-orders.rooms.event.update' : 'work-orders.rooms.event.add', {
       workOrder: props.workOrder.id,
@@ -4931,7 +4955,6 @@ const saveRoomEvent = async () => {
       router.post(url, requestData, options);
     }
   } catch (error) {
-    console.error('Erro ao salvar evento:', error);
     displayToast('Erro ao salvar evento: ' + error.message, 'error');
   }
 };
@@ -4979,7 +5002,6 @@ const saveRoomPestSighting = async () => {
       }
     });
   } catch (error) {
-    console.error('Erro ao salvar avistamento:', error);
     displayToast('Erro ao salvar avistamento: ' + error.message, 'error');
   }
 };
@@ -5206,44 +5228,34 @@ const saveDeviceEvent = async () => {
       });
     }
   } catch (error) {
-    console.error('Erro ao salvar evento:', error);
     displayToast('Erro ao salvar evento: ' + error.message, 'error');
   } finally {
     isSavingDeviceEvent.value = false;
   }
 };
 
-const deleteDeviceEvent = async (deviceId, eventId) => {
-  if (!confirm('Tem certeza que deseja remover este evento?')) {
-    return;
-  }
-
-  try {
-    router.delete(`/work-orders/${props.workOrder.id}/devices/${deviceId}/events/${eventId}`, {
-      preserveScroll: true,
-      onSuccess: () => {
-        router.reload({ only: ["workOrder"] });
-      },
-      onError: (errors) => {
-        displayToast('Erro ao remover evento: ' + (errors.message || 'Erro desconhecido'), 'error');
+const deleteDeviceEvent = (deviceId, eventId) => {
+  pedirConfirmacao({
+    titulo: 'Remover evento',
+    mensagem: 'Tem certeza que deseja remover este evento?',
+    textoConfirmar: 'Remover',
+    acao: async () => {
+      try {
+        await deleteComPromessa(`/work-orders/${props.workOrder.id}/devices/${deviceId}/events/${eventId}`, {
+          preserveScroll: true,
+          onSuccess: () => {
+            router.reload({ only: ["workOrder"] });
+          },
+          onError: (errors) => {
+            displayToast('Erro ao remover evento: ' + (errors.message || 'Erro desconhecido'), 'error');
+          }
+        });
+      } catch (error) {
+        displayToast('Erro ao remover evento: ' + error.message, 'error');
       }
-    });
-  } catch (error) {
-    console.error('Erro ao remover evento:', error);
-    displayToast('Erro ao remover evento: ' + error.message, 'error');
-  }
+    }
+  });
 };
-
-// Watcher para debug do activeTab
-watch(() => props.activeTab, (newVal, oldVal) => {
-  console.log('WorkOrderTabContent: activeTab mudou de', oldVal, 'para', newVal);
-  if (newVal === 'devices') {
-    console.log('WorkOrderTabContent: Aba dispositivos ativada!');
-    console.log('WorkOrderTabContent: workOrder.address existe?', !!props.workOrder?.address);
-    console.log('WorkOrderTabContent: workOrder.address.devices existe?', !!props.workOrder?.address?.devices);
-    console.log('WorkOrderTabContent: workOrder.address.devices.length =', props.workOrder?.address?.devices?.length || 0);
-  }
-}, { immediate: true });
 
 // ─── Adequações ──────────────────────────────────────────────────────────────
 
@@ -5301,14 +5313,18 @@ const saveAdequation = () => {
 };
 
 const deleteAdequation = (adequation) => {
-  if (!confirm('Deseja remover esta adequação?')) return;
-  router.delete(`/work-orders/${props.workOrder.id}/adequations/${adequation.id}`, {
-    preserveScroll: true,
-    onSuccess: () => {
-      router.reload({ only: ['workOrder'] });
-      displayToast('Adequação removida.', 'success');
-    },
-    onError: () => displayToast('Erro ao remover adequação.', 'error'),
+  pedirConfirmacao({
+    titulo: 'Remover adequação',
+    mensagem: 'Deseja remover esta adequação?',
+    textoConfirmar: 'Remover',
+    acao: () => deleteComPromessa(`/work-orders/${props.workOrder.id}/adequations/${adequation.id}`, {
+      preserveScroll: true,
+      onSuccess: () => {
+        router.reload({ only: ['workOrder'] });
+        displayToast('Adequação removida.', 'success');
+      },
+      onError: () => displayToast('Erro ao remover adequação.', 'error'),
+    }),
   });
 };
 
@@ -5498,24 +5514,30 @@ const handlePhotoFiles = async (files) => {
   }
 };
 
-const deletePhoto = async (photoId) => {
-  if (!confirm('Remover esta foto?')) return;
-  const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+const deletePhoto = (photoId) => {
+  pedirConfirmacao({
+    titulo: 'Remover foto',
+    mensagem: 'Remover esta foto?',
+    textoConfirmar: 'Remover',
+    acao: async () => {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-  try {
-    const resp = await fetch(`/work-orders/${props.workOrder.id}/photos/${photoId}`, {
-      method: 'DELETE',
-      headers: {
-        'X-CSRF-TOKEN': csrfToken,
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!resp.ok) throw new Error('Falha ao remover foto');
-    router.reload({ only: ['workOrder', 'roomEventPhotos'] });
-    displayToast('Foto removida.', 'success');
-  } catch (err) {
-    displayToast('Erro ao remover foto.', 'error');
-  }
+      try {
+        const resp = await fetch(`/work-orders/${props.workOrder.id}/photos/${photoId}`, {
+          method: 'DELETE',
+          headers: {
+            'X-CSRF-TOKEN': csrfToken,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!resp.ok) throw new Error('Falha ao remover foto');
+        router.reload({ only: ['workOrder', 'roomEventPhotos'] });
+        displayToast('Foto removida.', 'success');
+      } catch (err) {
+        displayToast('Erro ao remover foto.', 'error');
+      }
+    }
+  });
 };
 
 // Em <script setup>, todas as variáveis e funções são automaticamente exportadas

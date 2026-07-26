@@ -425,6 +425,18 @@ class RotinasAgendadasTest extends TestCase
                 'payment_date' => self::ONTEM,
                 'amount_paid' => 500.00,
             ],
+            // Este cenário faltava, e foi por isso que a suíte não pegou o
+            // accessor devolvendo 'paid' para parcela recebida pela metade.
+            'recebida parcialmente' => [
+                'payment_due_date' => self::HOJE,
+                'payment_date' => self::ONTEM,
+                'amount_paid' => 200.00,
+            ],
+            'com data de pagamento e valor zerado' => [
+                'payment_due_date' => self::ONTEM,
+                'payment_date' => self::ONTEM,
+                'amount_paid' => 0.00,
+            ],
         ];
 
         $parcelas = [];

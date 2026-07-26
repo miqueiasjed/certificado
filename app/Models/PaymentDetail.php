@@ -91,6 +91,11 @@ class PaymentDetail extends Model
 
     /**
      * Get the payment status based on dates and amounts.
+     *
+     * A coluna gravada tem prioridade. Sem ela, o valor é calculado com a mesma
+     * regra de statusDaParcela() em UpdatePaymentStatuses, que é a fonte de
+     * verdade: a tela e a rotina precisam dizer a mesma palavra sobre a mesma
+     * parcela, senão o usuário vê "Pago" até a rodada noturna corrigir.
      */
     public function getPaymentStatusAttribute(): string
     {
@@ -99,17 +104,30 @@ class PaymentDetail extends Model
             return $this->attributes['payment_status'];
         }
 
-        // Caso contrário, calcule baseado nas regras antigas. O vencimento é um
-        // dia: só está vencido quando é anterior a hoje no fuso do negócio.
-        // Parcela que vence hoje continua pendente.
-        if (!$this->payment_date) {
+        $valorPago = (float) ($this->amount_paid ?? 0);
+
+        // `payment_date` preenchida é o sinal de pagamento em todo o sistema,
+        // o mesmo critério dos scopes paid() e pending(). Valor sozinho não
+        // prova recebimento: a parcela do restante nasce com `amount_paid`
+        // preenchido e sem data de pagamento, e continua em aberto.
+        if (BusinessDate::diaDe($this->payment_date) === null || $valorPago <= 0) {
+            // O vencimento é um dia: só está vencido quando é anterior a hoje
+            // no fuso do negócio. Parcela que vence hoje continua pendente.
             if ($this->payment_due_date && BusinessDate::estaVencido($this->payment_due_date)) {
                 return 'overdue';
             }
+
             return 'pending';
         }
 
-        return 'paid';
+        // O total cobrado é o da ordem de serviço, não o da parcela: as colunas
+        // de valor de payment_details foram migradas para work_orders e hoje
+        // vivem lá. Parcela órfã a rotina nem avalia; sem ordem não há total a
+        // comparar, e o recebimento registrado quita o que se conhece.
+        $ordem = $this->workOrder;
+        $valorFinal = (float) ($ordem?->final_amount ?? $ordem?->total_cost ?? 0);
+
+        return $valorPago >= $valorFinal ? 'paid' : 'partial';
     }
 
     /**

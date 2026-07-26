@@ -65,10 +65,55 @@ comportamento, não de configuração.
 - **Rodar `migrate:rollback` sem `--path` com agentes em paralelo** reverte o
   batch inteiro, incluindo migration de outro agente. Sempre usar `--path`.
 
-### Dívida deixada em aberto, com motivo
+### Rodada de correção da dívida (25/07/2026, logo após o Plano 1)
 
-Tudo abaixo foi encontrado durante a execução e NÃO corrigido, por estar fora do
-escopo declarado do Plano 1:
+A pedido do usuário, tudo o que estava listado abaixo como dívida foi corrigido
+na mesma sessão. Ao corrigir, apareceram outros bugs, também corrigidos:
+
+- `PaymentDetailController` gravava valor a receber em `amount_paid` em QUATRO
+  pontos, não só na criação automática: os modais de adicionar e editar pagamento
+  mandavam o valor da parcela nesse campo. A normalização foi para
+  `App\Services\PaymentDetailService`, valendo para qualquer entrada.
+- As guardas contra parcela duplicada buscavam por `amount_paid`. Sem ajuste,
+  passariam a não encontrar nada e liberariam cobrança em dobro.
+- `editPayment()` preenchia o campo de moeda com o valor cru do banco, e como
+  `parseCurrencyValue()` remove o ponto, editar uma parcela de R$ 100,00 sem
+  tocar no campo enviava R$ 10.000,00.
+- `updatePaymentStatusBasedOnAmount()` no controller repetia o bug de vencimento
+  corrigido na Task 1.17, decidindo atraso por `payment_date`.
+- A exclusão de evento de dispositivo passava os argumentos invertidos
+  (`deleteDeviceEvent(event.id, device.id)` para uma assinatura
+  `(deviceId, eventId)`), montando URL trocada. Nunca funcionou.
+- `formatarDataHora` aplicava a heurística de meia-noite UTC e exibia como 00:00
+  uma OS iniciada às 21:00 de Brasília. A heurística agora vale só para quem
+  exibe apenas o dia.
+- `ServiceOrderController@show` não carregava a relação `service`, então a tela
+  sempre dizia "Serviço não informado".
+- `ServiceOrders/Show.vue` exibia QUATRO campos inexistentes, não dois:
+  `start_date`, `due_date`, `priority` e `notes`.
+
+**Lição de coordenação:** despachei dois agentes que acabaram no mesmo arquivo
+(`WorkOrderTabContent.vue`) e um deles restaurou o arquivo do HEAD no meio do
+trabalho do outro. Nada se perdeu porque o segundo detectou, esperou o arquivo
+estabilizar e refez por casamento de conteúdo em vez de número de linha. Ao
+paralelizar, listar explicitamente os arquivos proibidos de cada agente.
+
+### Dívida que continua em aberto
+
+1. **Backfill não executado.** O comando `payments:corrigir-parcelas-pendentes`
+   existe, com `--dry-run` e confirmação interativa, mas NÃO foi rodado em modo
+   de gravação. A parcela #4 do banco local caiu no balde de conferência manual:
+   tem `final_amount` de R$ 250,00 e `amount_paid` de R$ 100,00, valores que
+   discordam sobre quanto ela vale, e o comando se recusa a adivinhar.
+2. **`start_time`/`end_time` históricos.** O formulário antigo de edição de OS
+   deslocava o instante em 3 horas A CADA salvamento, de forma cumulativa. O
+   código está corrigido, mas não há como saber quantas vezes cada OS foi salva,
+   logo não existe backfill confiável. Precisa de conferência manual ou de
+   aceitar o desvio.
+3. **28 `console.error`** permanecem, todos em `catch` com tratamento visível ao
+   usuário. Removê-los transformaria erro em falha silenciosa.
+
+### Dívida original, agora resolvida (mantida como histórico)
 
 1. **`PaymentDetailController` cria parcela pendente com `amount_paid`
    preenchido** (por volta da linha 563). A Task 1.18 protegeu a rotina, mas a

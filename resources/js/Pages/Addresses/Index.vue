@@ -189,6 +189,15 @@
         </div>
       </Card>
     </div>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <ConfirmDeleteModal
+      :show="!!addressIdParaExcluir"
+      message="Tem certeza que deseja excluir este endereço?"
+      :processing="excluindoAddress"
+      @confirm="confirmarExclusaoAddress"
+      @cancel="addressIdParaExcluir = null"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -201,6 +210,7 @@ import Card from '@/Components/Card.vue';
 import StatCard from '@/Components/StatCard.vue';
 import Pagination from '@/Components/Pagination.vue';
 import Alert from '@/Components/Alert.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 
 const props = defineProps({
   addresses: Object,
@@ -247,10 +257,21 @@ const clearSearch = () => {
   });
 };
 
+const addressIdParaExcluir = ref(null);
+const excluindoAddress = ref(false);
+
 const deleteAddress = (id) => {
-  if (confirm('Tem certeza que deseja excluir este endereço?')) {
-    router.delete(`/addresses/${id}`);
-  }
+  addressIdParaExcluir.value = id;
+};
+
+const confirmarExclusaoAddress = () => {
+  excluindoAddress.value = true;
+  router.delete(`/addresses/${addressIdParaExcluir.value}`, {
+    onFinish: () => {
+      excluindoAddress.value = false;
+      addressIdParaExcluir.value = null;
+    },
+  });
 };
 </script>
 

@@ -191,6 +191,15 @@
         <Pagination :links="products.links" />
       </div>
     </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <ConfirmDeleteModal
+      :show="!!produtoIdParaExcluir"
+      message="Tem certeza que deseja excluir este produto?"
+      :processing="excluindoProduto"
+      @confirm="confirmarExclusaoProduto"
+      @cancel="cancelarExclusaoProduto"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -201,6 +210,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 
 const props = defineProps({
   products: Object,
@@ -238,13 +248,29 @@ const clearSearch = () => {
   searchProducts();
 };
 
+// Estado do modal de confirmação de exclusão
+const produtoIdParaExcluir = ref(null);
+const excluindoProduto = ref(false);
+
 const deleteProduct = (productId) => {
-  if (confirm('Tem certeza que deseja excluir este produto?')) {
-    router.delete(`/products/${productId}`, {
-      onSuccess: () => {
-        // Success message will be shown via flash
-      },
-    });
-  }
+  produtoIdParaExcluir.value = productId;
+};
+
+const confirmarExclusaoProduto = () => {
+  excluindoProduto.value = true;
+
+  router.delete(`/products/${produtoIdParaExcluir.value}`, {
+    onSuccess: () => {
+      // Success message will be shown via flash
+    },
+    onFinish: () => {
+      excluindoProduto.value = false;
+      produtoIdParaExcluir.value = null;
+    },
+  });
+};
+
+const cancelarExclusaoProduto = () => {
+  produtoIdParaExcluir.value = null;
 };
 </script>

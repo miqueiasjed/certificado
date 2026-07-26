@@ -919,7 +919,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import ClientSearch from '@/Components/ClientSearch.vue';
-import { hojeISO } from '@/utils/formatDate';
+import { hojeISO, inputDateTimeParaUtc } from '@/utils/formatDate';
 
 const { proxy } = getCurrentInstance();
 
@@ -1128,6 +1128,13 @@ const submit = () => {
   form.rooms = cleanedRooms;
   form.devices = cleanedDevices;
 
+  // Os campos mostram hora de Brasília; o backend grava os instantes em UTC.
+  form.transform((dados) => ({
+    ...dados,
+    start_time: inputDateTimeParaUtc(dados.start_time),
+    end_time: inputDateTimeParaUtc(dados.end_time),
+  }));
+
   form.post('/work-orders', {
     onSuccess: () => {
       // Ordem de serviço criada com sucesso
@@ -1219,11 +1226,9 @@ const removeDevice = (index) => {
 
 // Funções para gerenciar eventos de dispositivo
 const openDeviceEventModal = (deviceIndex) => {
-  console.log('openDeviceEventModal chamado com deviceIndex:', deviceIndex);
   currentDeviceIndex.value = deviceIndex;
   showDeviceEventModal.value = true;
-  console.log('showDeviceEventModal.value:', showDeviceEventModal.value);
-  
+
   const device = form.devices[deviceIndex];
   
   // Garantir que device_events existe

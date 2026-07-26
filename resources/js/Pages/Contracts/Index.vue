@@ -144,6 +144,15 @@
         </div>
       </Card>
     </div>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <ConfirmDeleteModal
+      :show="!!contractIdParaExcluir"
+      message="Tem certeza que deseja excluir este contrato?"
+      :processing="excluindoContract"
+      @confirm="confirmarExclusaoContract"
+      @cancel="contractIdParaExcluir = null"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -154,6 +163,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -198,10 +208,21 @@ const formatCurrency = (value) => {
   });
 };
 
+const contractIdParaExcluir = ref(null);
+const excluindoContract = ref(false);
+
 const deleteContract = (id) => {
-  if (confirm('Tem certeza que deseja excluir este contrato?')) {
-    router.delete(`/contracts/${id}`);
-  }
+  contractIdParaExcluir.value = id;
+};
+
+const confirmarExclusaoContract = () => {
+  excluindoContract.value = true;
+  router.delete(`/contracts/${contractIdParaExcluir.value}`, {
+    onFinish: () => {
+      excluindoContract.value = false;
+      contractIdParaExcluir.value = null;
+    },
+  });
 };
 
 const generateContractPDF = (addressId) => {
