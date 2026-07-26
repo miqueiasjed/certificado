@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\DeviceRequest;
+use App\Http\Requests\StoreDeviceBatchRequest;
+use App\Models\Address;
 use App\Models\Device;
+use App\Services\DeviceBatchService;
+use App\Services\DeviceReplacementService;
 use App\Services\DeviceService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,9 +16,18 @@ class DeviceController extends Controller
 {
     protected $deviceService;
 
-    public function __construct(DeviceService $deviceService)
-    {
+    protected DeviceBatchService $deviceBatchService;
+
+    protected DeviceReplacementService $deviceReplacementService;
+
+    public function __construct(
+        DeviceService $deviceService,
+        DeviceBatchService $deviceBatchService,
+        DeviceReplacementService $deviceReplacementService
+    ) {
         $this->deviceService = $deviceService;
+        $this->deviceBatchService = $deviceBatchService;
+        $this->deviceReplacementService = $deviceReplacementService;
     }
 
     public function index(Request $request)
@@ -75,8 +88,17 @@ class DeviceController extends Controller
     {
         $device->load(['address.client', 'baitType']);
 
+        // Histórico do ponto de monitoramento: os dispositivos que já
+        // ocuparam este lugar, do mais antigo ao atual, a partir de qualquer
+        // elo da cadeia. Dispositivo nunca substituído devolve uma linha do
+        // tempo com ele mesmo como único item, e a tela trata isso como
+        // "nenhuma substituição registrada".
+        $historico = $this->deviceReplacementService->historicoParaTela(
+            $this->deviceReplacementService->historicoDoPonto($device)
+        );
+
         return Inertia::render('Devices/Show', [
-            'device' => $device,
+            'device' => array_merge($device->toArray(), ['historico' => $historico]),
         ]);
     }
 
@@ -134,7 +156,42 @@ class DeviceController extends Controller
             'can_delete' => $canDelete,
             'message' => $canDelete
                 ? 'Dispositivo pode ser excluído'
-                : 'Dispositivo não pode ser excluído pois está vinculado a ordens de serviço ou eventos'
+                : 'Dispositivo não pode ser excluído pois está vinculado a ordens de serviço ou eventos',
+        ]);
+    }
+
+    /**
+     * Cria de uma vez a faixa numerada de dispositivos de um endereço.
+     *
+     * Toda a regra vive em `DeviceBatchService`: aqui só orquestra e devolve a
+     * resposta. O `Address` chega por Model Binding, e o escopo global por
+     * empresa já responde 404 para um endereço de outro tenant antes de qualquer
+     * linha daqui rodar.
+     *
+     * A resposta é JSON, e não redirect Inertia, por dois motivos: a recusa por
+     * número repetido precisa chegar à tela com 422 e a lista dos números em
+     * conflito, e o sucesso devolve os dispositivos criados para a tela oferecer
+     * a impressão da folha de etiquetas em seguida.
+     */
+    public function criarLote(StoreDeviceBatchRequest $request, Address $address)
+    {
+        $resultado = $this->deviceBatchService->criarLote($address, $request->validated());
+
+        if (! $resultado['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $resultado['message'],
+                'numeros_em_conflito' => $resultado['data']['numeros_em_conflito'],
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $resultado['message'],
+            // `load` na coleção, e não em cada dispositivo: o tipo de isca é o
+            // mesmo para o lote inteiro, e carregar um a um seriam 200 consultas
+            // para trazer sempre a mesma linha.
+            'dispositivos' => $resultado['data']['dispositivos']->load('baitType')->values(),
         ]);
     }
 

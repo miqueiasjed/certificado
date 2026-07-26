@@ -403,3 +403,102 @@ lista escrita à mão. Rota nova entra na varredura sozinha.
    depois do clique. Falta decidir qual é a remediação real dessa pendência.
 5. Contrato sem `end_date` gera calendário de até 10 anos. Com periodicidade
    semanal, são ~520 linhas sem paginação na tela do contrato.
+
+## Plano 11 - QR code e identificação de dispositivos (26/07/2026)
+
+Concluído. 9 tasks, todas fechadas sem afrouxar critério de aceitação. 307
+testes passando na suíte inteira ao final (isolada em `testing_plano11`).
+
+### O aprendizado central
+
+Duas lacunas apareceram entre o que as tasks especificavam e o que o resto do
+sistema já exigia, nenhuma das duas prevista em nenhum arquivo de task:
+
+1. **Nenhuma task expunha `DeviceLabelService::folhaDeEtiquetas()` (Task 11.3)
+   por rota HTTP**, mas a Task 11.8 (telas) pressupunha uma URL para abrir a
+   folha em nova aba. Resolvido criando `DeviceLabelController` e a rota
+   `GET /addresses/{address}/devices/etiquetas` fora do escopo de qualquer task
+   nomeada, porque bloqueava a Task 11.8.
+2. **`DeviceController::show()` nunca ganhou o histórico do ponto** (a Task
+   11.8 é só frontend, não pode mexer em PHP; a Task 11.5, que criou
+   `DeviceReplacementService::historicoDoPonto()`, não tinha `Show.vue` no
+   escopo). Resolvido promovendo `historicoEmTela()` de método privado do
+   `DeviceReplacementController` para `DeviceReplacementService::historicoParaTela()`
+   (reaproveitado pelos dois controllers) e injetando o resultado em
+   `DeviceController::show()`.
+
+**Regra que fica:** ao decompor um plano em tasks, task de frontend que
+"pressupõe uma rota" e task de backend que "cria o Service mas não o
+controller" podem ficar sem costura no meio se nenhuma task nomear
+explicitamente o endpoint. Vale a pena, ao revisar o plano de tasks antes de
+despachar, seguir o fio de cada entregável do Service até a URL que o frontend
+vai chamar de verdade.
+
+### Vazamento entre worktrees paralelas: `.claude/tasks/`, `.claude/plans/`, `.claude/prd/`
+
+Durante a Task 11.1, o subagente relatou ter symlinkado/copiado `vendor/` e
+criado `.env` do zero (a worktree tinha nascido sem os dois). Nesse processo,
+alguma operação (provavelmente um `git clean`/`reset` amplo tentando "resolver"
+o symlink problemático de `vendor/`) apagou boa parte de `.claude/tasks/`
+(sobrou só 1, 2, 3, 4, 9), quase todo `.claude/plans/*.md` (sobrou só 3.md e
+INDEX.md) e todo `.claude/prd/`, porque esses arquivos eram untracked no git e
+não deixam rastro em `git status` quando somem. O orquestrador desta sessão já
+tinha lido o plano e as 9 tasks completas antes disso acontecer, e reconstruiu
+`.claude/plans/11.md` e `.claude/tasks/11/*` a partir do que estava na própria
+conversa. `.claude/prd/operacao-campo.md` (referenciado pelo plano) não foi
+recuperado, porque seu conteúdo nunca tinha sido lido nesta sessão.
+
+**Regra que fica:** subagente que precisa mexer em `vendor/`/`.env`/cache
+dentro de uma worktree isolada NUNCA deve rodar `git clean`, `git checkout --
+.` ou `git reset --hard` para "começar do zero" - isso apaga todo arquivo
+untracked da worktree inteira, incluindo material de planejamento que não tem
+nada a ver com o problema. A instrução explícita contra isso entrou no prompt
+de todos os subagentes despachados depois da 11.1, e nenhum repetiu o problema.
+Se isso acontecer de novo, o orquestrador que já leu os arquivos no início da
+sessão é a única rede de segurança: reconstrua a partir do que está na própria
+conversa antes de continuar despachando.
+
+### Nomenclatura de rota corrigida pelo orquestrador
+
+As tasks 11.3 a 11.7 (geradas antes desta execução) especificavam rotas
+totalmente em português (`/dispositivos/ler/{codigo}`, `/dispositivos/{device}
+/substituir`, `/enderecos/{address}/dispositivos/lote`), o que contraria a
+convenção real do projeto (raiz do recurso em inglês, ação específica em
+português - ver `contracts.encerrar`, `contracts.visitas.gerar` já existentes
+em `routes/web.php`) e ignorava que `devices`/`addresses` já são os nomes de
+recurso em uso. Corrigido nos arquivos de task antes de despachar os
+subagentes, para `devices.ler`, `devices.substituir`, `addresses.devices.lote`.
+Vale conferir esse padrão ao gerar tasks novas que criem rota.
+
+### Regressão pega e corrigida antes do commit
+
+Adicionar `device_replacements`/`DeviceReplacement` a
+`DominioMultiempresa::MODELS_DE_DOMINIO` (Task 11.1, correto pela skill de
+multiempresa) quebrou `VazamentoEntreEmpresasTest::test_o_cenario_cobre_todos_os_models_de_dominio`,
+porque esse teste (Task 4.11) exige que todo model de domínio tenha dado no
+cenário de duas empresas. Corrigido adicionando `$dados['deviceReplacement']`
+em `criarConjuntoCompleto()`, sem alterar `situacao`/`active` do dispositivo já
+usado por outros testes do mesmo arquivo. Suíte completa (307 testes) voltou a
+passar sem afrouxar nenhuma asserção.
+
+### Divergências entre a especificação das tasks e o backend real (documentadas, não corrigidas)
+
+- `StoreDeviceBatchRequest::prefixo` é `required`, mas a Task 11.6 descrevia
+  como opcional. O frontend (Task 11.8) seguiu o comportamento real do
+  backend. Decidir se o campo deveria ser de fato opcional é dívida em aberto.
+- `Devices/Show.vue` não oferece troca de tipo de isca na substituição
+  (`DeviceReplacementController::show()`/`edit()` é quem recebe `baitTypes`,
+  não `show()`). O dispositivo novo herda o tipo do anterior por padrão; quem
+  quiser trocar edita depois na tela de edição.
+
+### O que NÃO foi feito, de propósito
+
+- Nenhum teste automatizado dedicado a `CodigoDeDispositivo` (a Task 11.2 cita
+  `CodigoDeDispositivoTest` no "Teste esperado", mas não lista o arquivo em
+  "Arquivos a criar/modificar", e nenhuma outra task o cria). Coberto
+  manualmente pelo subagente da Task 11.2 durante a implementação, mas sem
+  teste de regressão automatizado.
+- O leitor de câmera (Task 11.7) não foi testado em hardware real (sem celular
+  disponível neste ambiente). A leitura de código, o desligamento da câmera e
+  os três estados de permissão foram verificados só por leitura cuidadosa do
+  código-fonte do ciclo de vida do `Html5Qrcode`.
