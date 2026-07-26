@@ -8,15 +8,15 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 11.1 | Migration e model: código público e substituição | backend-estrutura | ⏳ | baixa |
-| 11.2 | Geração do código público, backfill e unique composto | backend-logica | ⏳ | média |
-| 11.3 | Service de QR code e folha de etiquetas em PDF | backend-logica | ⏳ | média |
-| 11.4 | Endpoint de leitura com validação contra a OS | backend-endpoint | ⏳ | média |
-| 11.5 | Substituição preservando o histórico do ponto | backend-endpoint | ⏳ | média |
-| 11.6 | Cadastro em lote de dispositivos do endereço | backend-endpoint | ⏳ | média |
-| 11.7 | Componente leitor de QR code pela câmera | frontend-componente | ⏳ | alta |
-| 11.8 | Telas de etiqueta, lote e substituição | frontend-pagina | ⏳ | alta |
-| 11.9 | Testes de leitura, substituição e lote | teste | ⏳ | alta |
+| 11.1 | Migration e model: código público e substituição | backend-estrutura | ✅ | baixa |
+| 11.2 | Geração do código público, backfill e unique composto | backend-logica | ✅ | média |
+| 11.3 | Service de QR code e folha de etiquetas em PDF | backend-logica | ✅ | média |
+| 11.4 | Endpoint de leitura com validação contra a OS | backend-endpoint | ✅ | média |
+| 11.5 | Substituição preservando o histórico do ponto | backend-endpoint | ✅ | média |
+| 11.6 | Cadastro em lote de dispositivos do endereço | backend-endpoint | ✅ | média |
+| 11.7 | Componente leitor de QR code pela câmera | frontend-componente | ✅ | alta |
+| 11.8 | Telas de etiqueta, lote e substituição | frontend-pagina | ✅ | alta |
+| 11.9 | Testes de leitura, substituição e lote | teste | ✅ | alta |
 
 ## Ordem de execução
 
@@ -68,3 +68,15 @@ Lote 7:             11.9
 - O plano estimava ~6 tasks. A decomposição chegou a 9 porque a coluna nova exige a mesma disciplina de três etapas do Plano 4, e porque o leitor de câmera não cabe junto com as telas.
 - `active` continua existindo e não é substituído por `situacao` nesta entrega. Unificar os dois é dívida técnica anotada, e mexer nisso agora mudaria o comportamento das telas atuais do cliente em produção.
 - A leitura registra evento apenas no Plano 13. Aqui ela só resolve e navega.
+
+## Nota operacional (orquestrador)
+
+Durante a execução da Task 11.1, os diretórios `.claude/tasks/{5,6,7,8,10-27}`,
+a maior parte de `.claude/plans/*.md` e todo `.claude/prd/` desapareceram desta
+worktree (provável `git clean` amplo rodado pelo subagente ao lidar com um
+symlink problemático de `vendor/`; esses arquivos eram untracked e não deixam
+rastro em `git status` quando apagados). Os arquivos deste plano (`plans/11.md`
+e `tasks/11/*`) foram reconstruídos pelo orquestrador a partir do que já havia
+sido lido no início da sessão. `.claude/prd/operacao-campo.md` não foi
+recuperado (conteúdo nunca lido nesta sessão) - se for necessário, buscar em
+outra worktree ou no histórico do agente que gerou o PRD original.

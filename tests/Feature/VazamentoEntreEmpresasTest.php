@@ -18,6 +18,7 @@ use App\Models\ContractVisitJustification;
 use App\Models\DailyCashBalance;
 use App\Models\Device;
 use App\Models\DeviceEvent;
+use App\Models\DeviceReplacement;
 use App\Models\EventType;
 use App\Models\FinancialEntry;
 use App\Models\NotificationLog;
@@ -1493,6 +1494,30 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'mensagem' => 'Tempo limite do provedor '.$marca,
                 'resposta_bruta' => ['codigo' => 504, 'marca' => $marca],
                 'ocorrida_em' => '2026-07-04 18:01:00',
+            ]);
+
+            // Dispositivo novo só para dar destino à substituição abaixo. Não
+            // vira uma entrada própria em `$dados`/`basesDeRecurso()` porque
+            // `device_replacements` não tem rota de CRUD direta (a única rota é
+            // a ação `devices.substituir`, coberta pela Task 11.9); aqui o
+            // objetivo é só o model de domínio ter dado no cenário, sem alterar
+            // `situacao`/`active` de `$dados['device']`, que outros testes deste
+            // arquivo já usam supondo um dispositivo comum.
+            $dispositivoNovoDaSubstituicao = Device::create([
+                'address_id' => $dados['address']->id,
+                'bait_type_id' => $dados['baitType']->id,
+                'label' => 'Dispositivo substituto '.$marca,
+                'number' => 'DISP-SUB-'.$marca,
+                'active' => true,
+            ]);
+
+            $dados['deviceReplacement'] = DeviceReplacement::create([
+                'device_anterior_id' => $dados['device']->id,
+                'device_novo_id' => $dispositivoNovoDaSubstituicao->id,
+                'motivo' => 'danificado',
+                'observacao' => 'Substituicao '.$marca,
+                'substituido_em' => '2026-07-05',
+                'user_id' => $autor->id,
             ]);
 
             $dados['auditLog'] = AuditLog::create([

@@ -16,6 +16,9 @@ use App\Http\Controllers\AddressController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\BaitTypeController;
 use App\Http\Controllers\DeviceController;
+use App\Http\Controllers\DeviceLabelController;
+use App\Http\Controllers\DeviceReplacementController;
+use App\Http\Controllers\DeviceScanController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\DeviceEventController;
@@ -243,6 +246,56 @@ Route::middleware(['auth'])->group(function () {
     // can-delete responde se o dispositivo pode ser removido, então acompanha a
     // permissão de exclusão e não a de leitura.
     Route::get('/devices/{device}/can-delete', [DeviceController::class, 'canDelete'])->middleware('permission:dispositivo-excluir')->name('devices.can-delete');
+
+    // Substituição do dispositivo do ponto: cria o dispositivo novo, marca o
+    // anterior como substituído e grava a linha que liga os dois. Mesma
+    // permissão de editar, por isso: a troca substitui a edição do dispositivo
+    // danificado, e não pode ficar mais frouxa do que ela. Não usa
+    // `dispositivo-criar` porque o dispositivo novo é consequência da troca, e
+    // quem só pode cadastrar não pode retirar um dispositivo de circulação.
+    Route::post('/devices/{device}/substituir', [DeviceReplacementController::class, 'store'])->middleware('permission:dispositivo-editar')->name('devices.substituir');
+
+    // Cadastro em lote dos dispositivos de um endereço: cria a faixa numerada
+    // inteira em uma transação, ou nenhuma linha.
+    //
+    // O caminho fica sob `/addresses/{address}` porque o lote só existe dentro
+    // de um endereço (é ele que define a faixa de números), e é ali que o
+    // Model Binding traz o endereço já escopado por empresa. A permissão, ao
+    // contrário das outras rotas daquele bloco, é `dispositivo-criar` e não
+    // `endereco-criar`: o que nasce aqui são dezenas de dispositivos, e quem
+    // pode cadastrar endereço não fica com o poder de povoar o imóvel inteiro.
+    // Por isso a rota mora aqui, junto do resto do módulo de dispositivos.
+    Route::post('/addresses/{address}/devices/lote', [DeviceController::class, 'criarLote'])->middleware('permission:dispositivo-criar')->name('addresses.devices.lote');
+
+    // Folha de etiquetas (QR code) dos dispositivos de um endereço, para
+    // imprimir, recortar e colar. Não fazia parte de nenhuma task do Plano 11 -
+    // a Task 11.3 criou só o Service e a view, e a Task 11.8 (telas) pressupõe
+    // uma URL para abrir a folha em nova aba. Permissão de leitura, porque
+    // imprimir etiqueta não altera nada.
+    Route::get('/addresses/{address}/devices/etiquetas', [DeviceLabelController::class, 'folha'])->middleware('permission:dispositivo-ver')->name('addresses.devices.etiquetas');
+
+    // Leitura do código da etiqueta / QR code do dispositivo.
+    //
+    // O `{codigo}` é uma string livre e nunca vira Model Binding: código
+    // malformado, inexistente e de outra empresa precisam sair todos com 200 e
+    // `situacao: nao_encontrado`, e o 404 automático do binding entregaria uma
+    // resposta diferente para o primeiro caso. Sem restrição de formato na rota
+    // pelo mesmo motivo.
+    //
+    // As duas rotas apontam para o mesmo método e devolvem o mesmo JSON. A
+    // versão `/api` não sai do grupo `auth`: quem consome é o frontend Vue desta
+    // aplicação, autenticado por sessão, e não um cliente externo com token. O
+    // prefixo existe só para o leitor de QR e o aplicativo do Plano 12 terem um
+    // caminho estável no dia em que `/devices/ler/{codigo}` ganhar uma tela.
+    // Precedente do mesmo arranjo: `/api/clients/{client}/addresses`.
+    //
+    // Permissão `dispositivo-ver`, e não `ordem-servico-executar`: a leitura
+    // avulsa (sem work_order_id) é consulta de dispositivo, e o papel `tecnico`
+    // já carrega essa permissão. O vínculo do técnico com a ordem informada é
+    // verificado por WorkOrderAccessService dentro do Service, porque depende da
+    // instância e o middleware não alcança.
+    Route::get('/devices/ler/{codigo}', [DeviceScanController::class, 'ler'])->middleware('permission:dispositivo-ver')->name('devices.ler');
+    Route::get('/api/devices/ler/{codigo}', [DeviceScanController::class, 'ler'])->middleware('permission:dispositivo-ver')->name('api.devices.ler');
 
     // Rotas de Ordens de Serviço
     Route::resource('work-orders', WorkOrderController::class)
