@@ -403,3 +403,135 @@ lista escrita à mão. Rota nova entra na varredura sozinha.
    depois do clique. Falta decidir qual é a remediação real dessa pendência.
 5. Contrato sem `end_date` gera calendário de até 10 anos. Com periodicidade
    semanal, são ~520 linhas sem paginação na tela do contrato.
+
+================================================================================
+
+## Plano 10 - Agenda em calendário (26/07/2026)
+
+Concluído. 8 tasks, todas fechadas como planejadas na decomposição (nenhuma
+task extra nasceu durante a execução). Suíte foi de 310 para 310 testes com 22
+novos casos (`DisponibilidadeTest` com 7, `AgendaTest` com 12, mais os que a
+varredura de `VazamentoEntreEmpresasTest` passou a cobrir sozinha com as rotas
+novas). 3387 -> 3398 assertions.
+
+### O aprendizado central
+
+A decomposição em tasks previu bem o backend e a grade do calendário, mas
+deixou duas lacunas de integração que só apareceram ao montar a página: nenhum
+endpoint HTTP para `cargaPorTecnico()` (só o Service existia) e nenhuma rota
+própria para a visão do técnico (`MeuDia`). As duas foram fechadas como
+extensão pequena e explícita, autorizada no prompt do subagente antes de ele
+começar, em vez de deixar a decisão para o meio da implementação. **Regra que
+fica:** ao revisar a decomposição de tasks antes de despachar, simular o fluxo
+de dado ponta a ponta (tela -> requisição -> Service) e não só a lista de
+arquivos de cada task. Lista de arquivo por task não prova que o contrato
+fecha.
+
+### Decisões de arquitetura
+
+- **Sem FullCalendar nem biblioteca de calendário.** Decisão já registrada no
+  `INDEX.md` das tasks, mantida: `utils/calendario.js` faz a aritmética de
+  grade com conversão dia-civil <-> número de dias (algoritmo de Howard
+  Hinnant), sem instanciar `Date` em nenhum ponto. Testado à mão contra todo
+  mês de 2026 e contra fevereiro bissexto antes de aceitar como correto.
+- **Arrastar e soltar com a API nativa do HTML5**, mesma razão. Em toque, a
+  ação "Reagendar" do painel lateral continua sendo o caminho, sem tentar
+  emular arrasto por toque.
+- **Dois formatos de horário coexistem de propósito, sem se confundir.**
+  `DisponibilidadeService` aceita `HH:MM` (hora de parede de Brasília, o que o
+  calendário devolve em `hora_inicio`/`hora_fim`) para leitura/checagem de
+  conflito, e `Y-m-d\TH:i` já convertido para UTC pelo frontend (mesma
+  convenção que `WorkOrders/Edit.vue` já usava, via `inputDateTimeParaUtc()`)
+  para os campos `start_time`/`end_time` gravados no reagendamento. O
+  `ReagendamentoRequest` ainda valida que o horário informado cai, em hora de
+  Brasília, no mesmo dia de `scheduled_date` - sem essa checagem, um horário
+  entre 00:00 e 02:59 UTC grava um instante que pertence à noite anterior em
+  Brasília, e a OS fica com a data do calendário e a hora do relógio
+  discordando entre si.
+- **Conflito de horário considera `work_orders.technician_id` E a pivot
+  `work_order_technicians`.** O formulário de OS grava times pela pivot; checar
+  só a coluna deixaria a maior parte das OS reais sem verificação de conflito.
+  Extensão feita pela Task 10.2 e replicada pela 10.3, fora da literalidade da
+  spec original mas necessária para a regra de bloqueio valer de verdade.
+- **`AgendaController@index` ramifica por papel** (Task 10.7): usuário com
+  papel `tecnico` recebe `Agenda/MeuDia`, os demais recebem `Agenda/Index`. Um
+  único link de menu (`/agenda`) serve as duas audiências sem duplicar rota
+  nem tocar o `Sidebar.vue` de novo.
+- **Nenhum campo novo para "quem reagendou".** A trait `Auditavel` do Plano 3
+  já grava autor, instante e valores antes/depois em todo `update()` de
+  `WorkOrder`; testado explicitamente no caso 10 do `AgendaTest`.
+
+### Armadilhas encontradas
+
+- **`Technician.company_id` não está em `$fillable`.** Criar técnico de outra
+  empresa em teste ou em tinker sem `TenantAtual::comTenant($id, fn () =>
+  Technician::create([...]))` faz o registro nascer sempre na empresa 1 (cai no
+  preenchimento automático da trait `BelongsToCompany`, que só age quando o
+  atributo não veio setado, e sem tenant explícito o fallback vale). Achado
+  duas vezes, por dois subagentes diferentes (10.2 e 10.8), sinal de que vale a
+  pena documentar de forma mais visível para quem mexer em teste de técnico
+  daqui pra frente.
+- **`start_time`/`end_time` são `datetime` gravados em UTC, mas Eloquent não
+  normaliza fuso na escrita, só na leitura.** Atribuir um Carbon com timezone
+  diferente de `config('app.timezone')` grava a hora de parede como se já
+  fosse UTC, sem converter - é exatamente o padrão que o formulário de OS
+  evita ao converter no frontend antes de enviar (`inputDateTimeParaUtc()`), e
+  que o Plano 10 replicou em vez de reinventar uma segunda convenção de fuso
+  para a agenda.
+- **Dois subagentes em paralelo editaram `resources/js/Pages/Agenda/Index.vue`
+  ao mesmo tempo** (Task 10.6 e Task 10.7, ambas modificando o mesmo arquivo
+  sem estarem listadas como "arquivo disputado" no `INDEX.md` das tasks - a
+  tabela de disputa não previu isso). Não houve perda de trabalho: o segundo
+  agente a terminar leu o arquivo já modificado pelo primeiro e editou por
+  cima, com o cuidado de conferir o conteúdo atual antes de aplicar o diff.
+  Confirmado depois pelo orquestrador com `grep` das duas integrações no
+  arquivo final. **Regra que fica:** ao montar tasks que tocam a mesma página a
+  partir de ângulos diferentes (aqui: arrastar-soltar e painel de carga), listar
+  o arquivo como disputado mesmo que cada task o cite como "modificar" e não
+  "criar" - a tabela de coordenação do plano só cobriu os arquivos que uma task
+  cria e outra edita, não os que duas tasks editam ao mesmo tempo.
+- **`gradeDoMes`/`diasDaSemana` com aritmética de dia civil evita todo risco de
+  fuso na grade**, mas exige teste numérico à parte de qualquer teste
+  automatizado do projeto (rodado à mão em Node pelo subagente da Task 10.4,
+  descartado depois) para provar que a matriz de semanas fecha em todo mês.
+  Não ficou nenhum teste desse formalizado na suíte PHP/JS - se a grade
+  quebrar no futuro, é regressão silenciosa até alguém notar visualmente.
+
+### Extensões de escopo autorizadas fora da literalidade das tasks
+
+Registradas aqui porque não estão no `INDEX.md` das tasks e alguém revisando o
+diff sem este contexto pode estranhar:
+
+1. `AgendaController::index()` ganhou as props `tecnicos` e `servicos` (Task
+   10.5), para popular os filtros da página - nenhuma task anterior previa
+   essas duas linhas.
+2. `AgendaController` ganhou o endpoint `GET /agenda/carga` (Task 10.7),
+   porque `DisponibilidadeService::cargaPorTecnico()` já existia (Task 10.2)
+   mas não tinha rota.
+3. `AgendaController::index()` ramifica por papel para servir `Agenda/MeuDia`
+   (Task 10.7), sem rota nova - mesma URL `/agenda`.
+
+### Dívida que fica em aberto
+
+1. **Suporte ao botão Voltar do navegador na Agenda é parcial.** O listener de
+   `popstate` foi implementado (Task 10.5), mas não foi testado manualmente
+   contra um navegador real dentro desta execução, só por leitura de código.
+2. **Nenhuma task testou manualmente o arrasto contra o backend rodando** (Task
+   10.6 validou por `npm run build` e leitura de contrato; a Task 10.8 cobre o
+   endpoint de reagendamento por teste automatizado, não o gesto de arrastar em
+   si, que não é testável por PHPUnit). Vale uma passada manual no navegador
+   antes do deploy do frontend.
+3. **Toque em tela de celular não arrasta** (decisão deliberada do plano, não
+   bug) - a alternativa é sempre o painel lateral. Confirmar que isso está
+   claro para quem for treinar os técnicos que usam celular em campo.
+
+### Aplicação em produção
+
+1. Deploy do backend primeiro (migrations: nenhuma nova neste plano, só rotas
+   e código). Nenhuma tela nova aparece para o usuário até o deploy do
+   frontend, pela ordem já registrada no `INDEX.md` das tasks.
+2. Deploy do frontend. O item "Agenda" aparece no menu para quem tem
+   `ordem-servico-ver`.
+3. Conferir o desempenho da agenda com um mês cheio depois que o Plano 9
+   estiver gerando visitas de verdade em produção - é o cenário de volume que
+   o caso 12 do `AgendaTest` protege em teste, mas vale conferir com dado real.

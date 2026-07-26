@@ -8,14 +8,14 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 10.1 | Endpoint de dados da agenda | backend-endpoint | ⏳ | média |
-| 10.2 | Conflito de horário e carga por técnico | backend-logica | ⏳ | média |
-| 10.3 | Endpoints de reagendamento e atribuição | backend-endpoint | ⏳ | média |
-| 10.4 | Componente de calendário: dia, semana e mês | frontend-componente | ⏳ | alta |
-| 10.5 | Página da agenda com filtros e integração | frontend-pagina | ⏳ | alta |
-| 10.6 | Reagendamento por arrastar e soltar | frontend-componente | ⏳ | alta |
-| 10.7 | Carga por técnico e visão do dia do técnico | frontend-pagina | ⏳ | média |
-| 10.8 | Testes da agenda, do conflito e do escopo | teste | ⏳ | alta |
+| 10.1 | Endpoint de dados da agenda | backend-endpoint | ✅ | média |
+| 10.2 | Conflito de horário e carga por técnico | backend-logica | ✅ | média |
+| 10.3 | Endpoints de reagendamento e atribuição | backend-endpoint | ✅ | média |
+| 10.4 | Componente de calendário: dia, semana e mês | frontend-componente | ✅ | alta |
+| 10.5 | Página da agenda com filtros e integração | frontend-pagina | ✅ | alta |
+| 10.6 | Reagendamento por arrastar e soltar | frontend-componente | ✅ | alta |
+| 10.7 | Carga por técnico e visão do dia do técnico | frontend-pagina | ✅ | média |
+| 10.8 | Testes da agenda, do conflito e do escopo | teste | ✅ | alta |
 
 ## Ordem de execução
 

@@ -137,6 +137,24 @@
             <span v-if="!collapsed">Ordens de Serviço</span>
           </Link>
         </li>
+        <li v-if="podeVerOrdensServico">
+          <Link
+            :href="'/agenda'"
+            :class="[
+              isCurrentRoute('/agenda')
+                ? 'bg-green-700 text-white'
+                : 'text-green-100 hover:bg-green-700 hover:text-white',
+              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+            ]">
+            <svg :class="[
+              isCurrentRoute('/agenda') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              'h-5 w-5 shrink-0 transition-colors'
+            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span v-if="!collapsed">Agenda</span>
+          </Link>
+        </li>
         <li v-if="podeVerCertificados">
           <Link
             :href="'/certificates'"

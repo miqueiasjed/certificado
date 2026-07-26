@@ -17,6 +17,7 @@ use App\Http\Controllers\RoomController;
 use App\Http\Controllers\BaitTypeController;
 use App\Http\Controllers\DeviceController;
 use App\Http\Controllers\WorkOrderController;
+use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\DeviceEventController;
 use App\Http\Controllers\WorkOrderAdequationController;
 use App\Http\Controllers\WorkOrderPhotoController;
@@ -244,6 +245,24 @@ Route::middleware(['auth'])->group(function () {
         ->middlewareFor('destroy', 'permission:ordem-servico-excluir');
     Route::get('/work-orders/client/{clientId}', [WorkOrderController::class, 'getByClient'])->middleware('permission:ordem-servico-ver')->name('work-orders.by-client');
     Route::get('/work-orders/{workOrder}/pdf', [WorkOrderController::class, 'generatePDF'])->middleware('permission:ordem-servico-ver')->name('work-orders.pdf');
+
+    // Agenda em calendário: mesma permissão de leitura de OS, porque é a
+    // mesma informação, só que organizada por data em vez de listagem.
+    Route::get('/agenda', [AgendaController::class, 'index'])->middleware('permission:ordem-servico-ver')->name('agenda.index');
+    Route::get('/agenda/dados', [AgendaController::class, 'dados'])->middleware('permission:ordem-servico-ver')->name('agenda.dados');
+    // Carga por técnico (Task 10.7): mesma permissão de leitura de dados(), é
+    // a mesma informação agregada por técnico em vez de por visita.
+    Route::get('/agenda/carga', [AgendaController::class, 'carga'])->middleware('permission:ordem-servico-ver')->name('agenda.carga');
+
+    // Escrita pelo calendário: reagendar, atribuir técnico e a lista de
+    // técnicos livres que alimenta a atribuição. As três exigem
+    // ordem-servico-editar, porque as três existem para alterar a OS. A lista
+    // de disponíveis entra no mesmo grupo de propósito: ela só serve para
+    // atribuir, e quem não pode atribuir não precisa saber a agenda de cada
+    // técnico.
+    Route::get('/agenda/tecnicos-disponiveis', [AgendaController::class, 'tecnicosDisponiveis'])->middleware('permission:ordem-servico-editar')->name('agenda.tecnicos-disponiveis');
+    Route::put('/agenda/{workOrder}/reagendar', [AgendaController::class, 'reagendar'])->middleware('permission:ordem-servico-editar')->name('agenda.reagendar');
+    Route::put('/agenda/{workOrder}/tecnico', [AgendaController::class, 'atribuirTecnico'])->middleware('permission:ordem-servico-editar')->name('agenda.atribuir-tecnico');
 
     // Rotas para gerenciar produtos e serviços das work orders
     Route::post('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'addProduct'])->middleware('permission:ordem-servico-executar')->name('work-orders.products.add');
