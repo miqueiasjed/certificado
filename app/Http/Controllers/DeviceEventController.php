@@ -22,7 +22,7 @@ class DeviceEventController extends Controller
 
     public function index(Request $request)
     {
-        $query = DeviceEvent::with(['device.room.address.client', 'workOrder.technician']);
+        $query = DeviceEvent::with(['device.address.client', 'workOrder.technician']);
 
         // Filtros
         if ($request->filled('device_id')) {
@@ -55,7 +55,7 @@ class DeviceEventController extends Controller
 
     public function create(Request $request)
     {
-        $devices = Device::with('room.address.client')->orderBy('label')->get();
+        $devices = Device::with('address.client')->orderBy('label')->get();
         $workOrders = WorkOrder::with('technician')->orderBy('order_number')->get();
 
         return Inertia::render('DeviceEvents/Create', [
@@ -79,7 +79,7 @@ class DeviceEventController extends Controller
 
     public function show(DeviceEvent $deviceEvent)
     {
-        $deviceEvent->load(['device.room.address.client', 'workOrder.technician']);
+        $deviceEvent->load(['device.address.client', 'workOrder.technician']);
 
         return Inertia::render('DeviceEvents/Show', [
             'deviceEvent' => $deviceEvent,
@@ -88,8 +88,8 @@ class DeviceEventController extends Controller
 
     public function edit(DeviceEvent $deviceEvent)
     {
-        $deviceEvent->load(['device.room.address.client', 'workOrder.technician']);
-        $devices = Device::with('room.address.client')->orderBy('label')->get();
+        $deviceEvent->load(['device.address.client', 'workOrder.technician']);
+        $devices = Device::with('address.client')->orderBy('label')->get();
         $workOrders = WorkOrder::with('technician')->orderBy('order_number')->get();
 
         return Inertia::render('DeviceEvents/Edit', [
@@ -135,7 +135,7 @@ class DeviceEventController extends Controller
     public function getByWorkOrder($workOrderId)
     {
         $deviceEvents = DeviceEvent::where('work_order_id', $workOrderId)
-            ->with(['device.room.address.client'])
+            ->with(['device.address.client'])
             ->orderBy('event_date', 'desc')
             ->get();
 

@@ -3,6 +3,12 @@
     <template #header>
       <PageHeader title="Contratos" description="Gerenciar contratos de dedetização">
         <template #actions>
+          <Link v-if="pode('contrato-ver')" href="/contracts/pendencias" class="btn-secondary">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+            Pendências
+          </Link>
           <Link v-if="pode('contrato-criar')" href="/contracts/create" class="btn-primary">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -14,6 +20,15 @@
     </template>
 
     <div class="max-w-7xl mx-auto">
+      <!-- Mensagens Flash: a rejeição de exclusão de contrato com visita executada
+           chega aqui como flash.error, e precisa aparecer, não sumir em silêncio. -->
+      <div v-if="$page.props.flash.success" class="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
+        <p class="text-sm font-medium text-green-800">{{ $page.props.flash.success }}</p>
+      </div>
+      <div v-if="$page.props.flash.error" class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+        <p class="text-sm font-medium text-red-800">{{ $page.props.flash.error }}</p>
+      </div>
+
       <!-- Filtros e Busca -->
       <Card class="mb-6">
         <div class="p-6">
@@ -119,12 +134,26 @@
                     PDF
                   </button>
                   <Link
+                    v-if="pode('contrato-ver')"
+                    :href="`/contracts/${contract.id}`"
+                    class="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Ver
+                  </Link>
+                  <Link
                     v-if="pode('contrato-editar')"
                     :href="`/contracts/${contract.id}/edit`"
                     class="px-3 py-1 text-sm text-green-600 hover:text-green-800 font-medium"
                   >
                     Editar
                   </Link>
+                  <button
+                    v-if="pode('contrato-editar')"
+                    @click="abrirEncerramento(contract)"
+                    class="px-3 py-1 text-sm text-amber-600 hover:text-amber-800 font-medium"
+                  >
+                    Encerrar
+                  </button>
                   <button
                     v-if="pode('contrato-excluir')"
                     @click="deleteContract(contract.id)"
@@ -155,17 +184,52 @@
       @confirm="confirmarExclusaoContract"
       @cancel="contractIdParaExcluir = null"
     />
+
+    <!-- Modal de Encerramento de Contrato: cancela as visitas futuras não
+         executadas e fecha a vigência. É o caminho que a recusa de exclusão
+         (flash.error acima) indica quando o contrato tem visita já
+         executada. -->
+    <Modal :show="!!contratoParaEncerrar" @close="cancelarEncerramento">
+      <template #icon>
+        <svg class="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+        </svg>
+      </template>
+      <template #title>Encerrar contrato</template>
+      <template #content>
+        <p class="text-sm text-gray-700 mb-4">
+          {{ mensagemEncerramento }}
+          Visitas já executadas não são alteradas.
+        </p>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Motivo do encerramento</label>
+        <textarea
+          v-model="motivoEncerramento"
+          rows="3"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          placeholder="Explique por que o contrato está sendo encerrado (opcional). Este texto é anexado a cada visita futura cancelada."
+        ></textarea>
+      </template>
+      <template #actions>
+        <button type="button" class="btn-secondary" :disabled="encerrandoContrato" @click="cancelarEncerramento">
+          Cancelar
+        </button>
+        <button type="button" class="btn-danger ml-3" :disabled="encerrandoContrato" @click="confirmarEncerramento">
+          {{ encerrandoContrato ? 'Encerrando...' : 'Encerrar contrato' }}
+        </button>
+      </template>
+    </Modal>
   </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
+import Modal from '@/Components/Modal.vue';
 import { formatarData } from '@/utils/formatDate';
 import { usePermissoes } from '@/Composables/usePermissoes';
 
@@ -233,6 +297,51 @@ const confirmarExclusaoContract = () => {
 const generateContractPDF = (addressId) => {
   const url = `/addresses/${addressId}/contract/pdf`;
   window.open(url, '_blank');
+};
+
+// Encerramento de contrato: cancela as visitas futuras não executadas e fecha
+// a vigência (grava end_date). `visitas_futuras_count` já vem calculado pelo
+// controller, para o aviso ser exato sem precisar de uma segunda requisição.
+const contratoParaEncerrar = ref(null);
+const motivoEncerramento = ref('');
+const encerrandoContrato = ref(false);
+
+const mensagemEncerramento = computed(() => {
+  const quantidade = contratoParaEncerrar.value?.visitas_futuras_count ?? 0;
+
+  if (quantidade === 0) {
+    return 'Este contrato não tem visita futura agendada para cancelar. O encerramento só fecha a vigência.';
+  }
+
+  return quantidade === 1
+    ? 'Isso cancela 1 visita futura ainda não executada deste contrato.'
+    : `Isso cancela ${quantidade} visitas futuras ainda não executadas deste contrato.`;
+});
+
+const abrirEncerramento = (contract) => {
+  contratoParaEncerrar.value = contract;
+  motivoEncerramento.value = '';
+};
+
+const cancelarEncerramento = () => {
+  if (encerrandoContrato.value) return;
+  contratoParaEncerrar.value = null;
+  motivoEncerramento.value = '';
+};
+
+const confirmarEncerramento = () => {
+  encerrandoContrato.value = true;
+
+  router.post(`/contracts/${contratoParaEncerrar.value.id}/encerrar`, {
+    motivo: motivoEncerramento.value,
+  }, {
+    preserveScroll: true,
+    onFinish: () => {
+      encerrandoContrato.value = false;
+      contratoParaEncerrar.value = null;
+      motivoEncerramento.value = '';
+    },
+  });
 };
 </script>
 

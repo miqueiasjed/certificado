@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ContractEncerrarRequest;
+use App\Http\Requests\ContractRequest;
 use App\Services\ContractService;
+use App\Services\GeracaoDeVisitasService;
 use App\Models\Address;
 use App\Models\Contract;
 use Barryvdh\DomPDF\Facade\Pdf as FacadePdf;
@@ -14,8 +17,10 @@ class ContractController extends Controller
 {
     protected $contractService;
 
-    public function __construct(ContractService $contractService)
-    {
+    public function __construct(
+        ContractService $contractService,
+        private readonly GeracaoDeVisitasService $geracaoDeVisitas,
+    ) {
         $this->contractService = $contractService;
     }
 
@@ -37,6 +42,14 @@ class ContractController extends Controller
         }
 
         $contracts = $query->paginate(15);
+
+        // Quantas visitas futuras cada contrato perderia se fosse encerrado
+        // agora: o botão "Encerrar" precisa avisar isso antes da confirmação.
+        $contracts->getCollection()->transform(function (Contract $contract) {
+            $contract->visitas_futuras_count = $this->contractService->contarVisitasFuturas($contract);
+
+            return $contract;
+        });
 
         return Inertia::render('Contracts/Index', [
             'contracts' => $contracts,
@@ -76,51 +89,35 @@ class ContractController extends Controller
     /**
      * Criar novo contrato
      */
-    public function store(Request $request, Address $address = null)
+    public function store(ContractRequest $request, Address $address = null)
     {
-        // Regras de validação
-        $rules = [
-            'contract_number' => 'nullable|string',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'service_value' => 'nullable|numeric|min:0',
-            'service_type' => 'required|in:pontual,periodico',
-            'visit_frequency' => 'required|in:weekly,biweekly,monthly',
-            'visit_count' => 'required|integer|min:1',
-            'pest_target' => 'nullable|string',
-            'payment_method' => 'nullable|string',
-            'payment_details' => 'nullable|string',
-            'additional_clause' => 'nullable|string',
-            'jurisdiction' => 'nullable|string',
-        ];
-
-        // Se não veio pela rota com endereço, exigir address_id
-        if (!$address) {
-            $rules['address_id'] = 'required|exists:addresses,id';
-        }
-
-        $validated = $request->validate($rules);
+        $validated = $request->validated();
 
         // Se veio pela rota com endereço, usar esse, senão usar do request
-        $addressId = $address ? $address->id : $validated['address_id'];
-        $address = $address ?: Address::findOrFail($addressId);
+        $address = $address ?: Address::findOrFail($validated['address_id']);
 
-        // Gerar número do contrato se não fornecido
-        if (empty($validated['contract_number'])) {
-            $validated['contract_number'] = 'CONT-' . str_pad($address->id, 6, '0', STR_PAD_LEFT) . '-' . date('Ymd');
-        }
-
-        // Remover address_id do validated antes de criar
+        // address_id é só para localizar o endereço: não é campo do contrato
         unset($validated['address_id']);
 
-        // Criar ou atualizar contrato
-        $contract = $address->contract()->updateOrCreate(
-            ['address_id' => $address->id],
-            $validated
-        );
+        $this->contractService->criar($address, $validated);
 
         return redirect()->route('contracts.index')
             ->with('success', 'Contrato criado com sucesso!');
+    }
+
+    /**
+     * Exibir contrato, com as visitas previstas do calendário (Task 9.7).
+     */
+    public function show(Contract $contract)
+    {
+        $contract->load('address.client');
+
+        return Inertia::render('Contracts/Show', [
+            'contract' => $contract,
+            'address' => $contract->address,
+            'visitas' => $this->geracaoDeVisitas->visitasComSituacao($contract),
+            'visitasFuturasCount' => $this->contractService->contarVisitasFuturas($contract),
+        ]);
     }
 
     /**
@@ -177,27 +174,39 @@ class ContractController extends Controller
     /**
      * Atualizar contrato
      */
-    public function update(Request $request, Contract $contract)
+    public function update(ContractRequest $request, Contract $contract)
     {
-        $validated = $request->validate([
-            'contract_number' => 'nullable|string',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after:start_date',
-            'service_value' => 'nullable|numeric|min:0',
-            'service_type' => 'required|in:pontual,periodico',
-            'visit_frequency' => 'required|in:weekly,biweekly,monthly',
-            'visit_count' => 'required|integer|min:1',
-            'pest_target' => 'nullable|string',
-            'payment_method' => 'nullable|string',
-            'payment_details' => 'nullable|string',
-            'additional_clause' => 'nullable|string',
-            'jurisdiction' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
-        $contract->update($validated);
+        try {
+            $resultado = $this->contractService->atualizar($contract, $validated);
+        } catch (\Exception $e) {
+            Log::error('Erro ao atualizar contrato: ' . $e->getMessage(), ['contract_id' => $contract->id]);
+
+            return redirect()->back()->with('error', 'Erro ao atualizar contrato: ' . $e->getMessage());
+        }
 
         return redirect()->route('contracts.index')
-            ->with('success', 'Contrato atualizado com sucesso!');
+            ->with('success', $resultado['message']);
+    }
+
+    /**
+     * Encerrar contrato: cancela as visitas futuras não executadas e fecha a
+     * vigência (grava `end_date`), sem excluir o registro nem tocar nas
+     * visitas já executadas.
+     *
+     * É o caminho que `ContractService::excluir()` indica quando recusa
+     * apagar um contrato com histórico de visita executada.
+     */
+    public function encerrar(ContractEncerrarRequest $request, Contract $contract)
+    {
+        $resultado = $this->contractService->encerrar($contract, $request->validated('motivo'));
+
+        if (!$resultado['success']) {
+            return redirect()->back()->with('error', $resultado['message']);
+        }
+
+        return redirect()->back()->with('success', $resultado['message']);
     }
 
     /**
@@ -205,9 +214,13 @@ class ContractController extends Controller
      */
     public function destroy(Contract $contract)
     {
-        $contract->delete();
+        $resultado = $this->contractService->excluir($contract);
+
+        if (!$resultado['success']) {
+            return redirect()->back()->with('error', $resultado['message']);
+        }
 
         return redirect()->route('contracts.index')
-            ->with('success', 'Contrato excluído com sucesso!');
+            ->with('success', $resultado['message']);
     }
 }

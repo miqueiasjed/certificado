@@ -22,7 +22,7 @@
             >
               <option value="">Selecione um dispositivo</option>
               <option v-for="device in devices" :key="device.id" :value="device.id">
-                {{ device.label }} ({{ device.number }}) - {{ device.room?.address?.client?.name }} - {{ device.room?.address?.street }}, {{ device.room?.address?.number }}
+                {{ device.label }} ({{ device.number }}) - {{ device.address?.client?.name }} - {{ device.address?.street }}, {{ device.address?.number }}
               </option>
             </select>
             <p v-if="form.errors.device_id" class="mt-1 text-sm text-red-600">

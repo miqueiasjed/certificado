@@ -64,6 +64,15 @@ class BudgetController extends Controller
         return redirect()->route('budgets.index')->with('success', 'Orçamento criado com sucesso!');
     }
 
+    public function show(Budget $budget)
+    {
+        $budget->load(['services', 'products', 'client.addresses']);
+
+        return Inertia::render('Budgets/Show', [
+            'budget' => $budget,
+        ]);
+    }
+
     public function edit(Budget $budget)
     {
         $budget->load(['services', 'products', 'client']);

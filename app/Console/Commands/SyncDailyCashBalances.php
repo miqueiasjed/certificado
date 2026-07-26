@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\OperaPorTenant;
 use App\Models\DailyCashBalance;
 use App\Models\FinancialEntry;
 use Illuminate\Console\Command;
@@ -9,6 +10,8 @@ use Carbon\Carbon;
 
 class SyncDailyCashBalances extends Command
 {
+    use OperaPorTenant;
+
     /**
      * The name and signature of the console command.
      *
@@ -26,13 +29,28 @@ class SyncDailyCashBalances extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
         $fromDate = $this->option('from') ? Carbon::parse($this->option('from')) : Carbon::now()->subMonth();
         $toDate = $this->option('to') ? Carbon::parse($this->option('to')) : Carbon::now();
 
         $this->info("Sincronizando saldos diários de {$fromDate->format('d/m/Y')} até {$toDate->format('d/m/Y')}");
 
+        // Cada empresa recebe a própria cópia das datas: o laço interno avança
+        // o Carbon dia a dia, e reaproveitar a instância deixaria a segunda
+        // empresa começando no fim do intervalo da primeira.
+        return $this->paraCadaTenant(
+            fn (): int => $this->processarEmpresa($fromDate->copy(), $toDate->copy())
+        );
+    }
+
+    /**
+     * Uma empresa, já dentro do tenant dela.
+     *
+     * @return int quantidade de dias processados
+     */
+    private function processarEmpresa(Carbon $fromDate, Carbon $toDate): int
+    {
         $currentDate = $fromDate->copy();
         $processedDays = 0;
         $errors = 0;
@@ -58,6 +76,8 @@ class SyncDailyCashBalances extends Command
         if ($errors > 0) {
             $this->warn("Erros encontrados: {$errors}");
         }
+
+        return $processedDays;
     }
 
     private function syncDayBalance(Carbon $date): void

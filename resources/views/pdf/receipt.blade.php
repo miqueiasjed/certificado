@@ -209,18 +209,14 @@
 </head>
 
 <body>
-    @php
-        $company = \App\Models\Company::current();
-
-        $path = $company->logo_path ? storage_path('app/public/' . $company->logo_path) : null;
-        $logoSrc = null;
-        if ($path && file_exists($path)) {
-            $type = pathinfo($path, PATHINFO_EXTENSION);
-            $data = file_get_contents($path);
-            $base64 = base64_encode($data);
-            $logoSrc = 'data:image/' . $type . ';base64,' . $base64;
-        }
-    @endphp
+    {{--
+        `$company` e `$logoSrc` chegam prontos de
+        WorkOrderService::prepareReceiptData(). Esta view resolvia a empresa
+        sozinha com Company::current(), o que quebrava no acesso sem login do
+        cliente final: sem usuário autenticado não há tenant para resolver. Quem
+        decide a empresa emitente é o controller, a partir do company_id da
+        própria ordem de serviço.
+    --}}
 
     <!-- Header simples -->
     <div class="header">
@@ -306,12 +302,22 @@
                         <span class="field-label">Data do Serviço:</span>
                         {{ $workOrder->scheduled_date ? $workOrder->scheduled_date->format('d/m/Y') : 'Não informada' }}
                     </div>
-                    <div class="field-row">
-                        <span class="field-label">Descrição do Serviço:</span>
-                    </div>
-                    <div class="field-row">
-                        {{ $workOrder->description ?? 'Atendimento emergencial para infestação de ratos' }}
-                    </div>
+                    {{--
+                        O texto de exemplo que estava aqui como valor padrão
+                        ("Atendimento emergencial para infestação de ratos")
+                        entrava sempre que a OS não tinha descrição, e o recibo
+                        saía afirmando um serviço que ninguém prestou. Recibo
+                        tem valor perante fiscalização, então sem descrição o
+                        campo simplesmente não é impresso.
+                    --}}
+                    @if(filled($workOrder->description))
+                        <div class="field-row">
+                            <span class="field-label">Descrição do Serviço:</span>
+                        </div>
+                        <div class="field-row">
+                            {{ $workOrder->description }}
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>

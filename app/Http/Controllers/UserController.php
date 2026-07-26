@@ -23,10 +23,16 @@ class UserController extends Controller
      * Lista os usuários da empresa com papel e técnico vinculado, além dos
      * dados que alimentam o formulário de criação/edição: papéis disponíveis
      * e técnicos ainda sem usuário.
+     *
+     * O `daEmpresaAtual()` é obrigatório aqui: `User` é o único model de
+     * domínio sem o escopo global de leitura (o motivo está no próprio model),
+     * então sem este filtro a tela mostraria os usuários de todas as empresas.
+     * `Technician` tem o escopo global e não precisa do filtro explícito.
      */
     public function index(): Response
     {
         $usuarios = User::query()
+            ->daEmpresaAtual()
             ->with(['roles:id,name', 'technician:id,user_id,name'])
             ->orderBy('name')
             ->get()
@@ -64,6 +70,13 @@ class UserController extends Controller
             ->with('success', 'Usuário criado com sucesso.');
     }
 
+    /**
+     * Nada de checagem de empresa aqui, e isso é deliberado: o `{user}` que
+     * chega já vem escopado por `User::resolveRouteBindingQuery()`, que devolve
+     * 404 para usuário de outra empresa antes de esta ação começar. A proteção
+     * vale para toda rota que receba `{user}`, inclusive as que ainda não
+     * existem.
+     */
     public function update(UserRequest $request, User $user)
     {
         try {

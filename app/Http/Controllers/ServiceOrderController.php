@@ -51,11 +51,6 @@ class ServiceOrderController extends Controller
     {
         $data = $request->validated();
 
-        // Generate order number if not provided
-        if (empty($data['order_number'])) {
-            $data['order_number'] = $this->generateServiceOrderNumber();
-        }
-
         $serviceOrder = $this->serviceOrderService->createServiceOrder($data);
 
         return redirect()->route('service-orders.index')
@@ -157,27 +152,5 @@ class ServiceOrderController extends Controller
         }
 
         return response()->json(['rooms' => $rooms]);
-    }
-
-    /**
-     * Generate service order number.
-     */
-    private function generateServiceOrderNumber(): string
-    {
-        do {
-            $lastOrder = ServiceOrder::orderBy('id', 'desc')->first();
-            $nextId = $lastOrder ? $lastOrder->id + 1 : 1;
-            $orderNumber = 'SO' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
-
-            // Check if this order number already exists
-            $exists = ServiceOrder::where('order_number', $orderNumber)->exists();
-
-            if (!$exists) {
-                return $orderNumber;
-            }
-
-            // If exists, increment and try again
-            $nextId++;
-        } while (true);
     }
 }

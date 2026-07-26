@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\OperaPorTenant;
 use App\Models\DailyCashBalance;
 use App\Models\FinancialEntry;
 use Illuminate\Console\Command;
@@ -9,6 +10,8 @@ use Carbon\Carbon;
 
 class CreateMissingDailyBalances extends Command
 {
+    use OperaPorTenant;
+
     /**
      * The name and signature of the console command.
      *
@@ -26,14 +29,28 @@ class CreateMissingDailyBalances extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(): int
     {
         $fromDate = $this->option('from') ? Carbon::parse($this->option('from')) : Carbon::now()->subMonth();
         $toDate = $this->option('to') ? Carbon::parse($this->option('to')) : Carbon::now();
 
         $this->info("Criando saldos para dias sem movimento de {$fromDate->format('d/m/Y')} até {$toDate->format('d/m/Y')}");
 
-        $currentDate = $fromDate->copy();
+        // Cópia por empresa: o laço interno avança o Carbon dia a dia.
+        return $this->paraCadaTenant(fn (): int => $this->processarEmpresa($toDate->copy()));
+    }
+
+    /**
+     * Uma empresa, já dentro do tenant dela.
+     *
+     * A primeira data com movimento é lida aqui dentro, e não no `handle()`:
+     * ela é a primeira movimentação **desta** empresa, e o escopo global por
+     * empresa só filtra a consulta executada dentro do tenant.
+     *
+     * @return int quantidade de saldos criados e atualizados
+     */
+    private function processarEmpresa(Carbon $toDate): int
+    {
         $createdCount = 0;
         $updatedCount = 0;
 
@@ -43,8 +60,8 @@ class CreateMissingDailyBalances extends Command
             ->value('entry_date');
 
         if (!$firstMovementDate) {
-            $this->warn('Nenhuma entrada financeira encontrada no sistema.');
-            return;
+            $this->warn('Nenhuma entrada financeira encontrada nesta empresa.');
+            return 0;
         }
 
         // Começar da primeira data com movimento
@@ -94,6 +111,8 @@ class CreateMissingDailyBalances extends Command
         $this->info("Processo concluído!");
         $this->info("Saldos criados: {$createdCount}");
         $this->info("Saldos atualizados: {$updatedCount}");
+
+        return $createdCount + $updatedCount;
     }
 
     /**

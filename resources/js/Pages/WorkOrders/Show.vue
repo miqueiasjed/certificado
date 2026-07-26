@@ -217,9 +217,10 @@
                   PDF
                 </button>
 
-                <!-- Botão Emitir Recibo - só aparece quando status = 'paid' -->
+                <!-- Botão Emitir Recibo - só aparece quando o backend mandou o
+                     link assinado, o que só acontece com status = 'paid' -->
                 <button
-                  v-if="workOrder.payment_status === 'paid'"
+                  v-if="reciboUrl"
                   @click="generateReceipt"
                   class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 shadow-sm transition-all duration-200"
                 >
@@ -456,6 +457,9 @@ import { formatarData } from '@/utils/formatDate';
     availableServices: Array,
     availableTechnicians: Array,
     eventTypes: Array,
+    // URL assinada do recibo, gerada no backend. Vem null quando a OS não está
+    // paga. Nunca montar esta URL aqui com route(): a rota exige assinatura.
+    reciboUrl: { type: String, default: null },
   });
 
   const activeTab = ref('financial');
@@ -505,9 +509,12 @@ import { formatarData } from '@/utils/formatDate';
   ];
 
   // Função para gerar recibo
+  // A URL vem assinada do backend (prop reciboUrl). Montar aqui com route()
+  // produziria um link sem assinatura, que a rota recusa com 403.
   const generateReceipt = () => {
-    const url = route('service-orders.receipt', props.workOrder.id);
-    window.open(url, '_blank');
+    if (!props.reciboUrl) return;
+
+    window.open(props.reciboUrl, '_blank');
   };
 
   // Função para gerar PDF da OS

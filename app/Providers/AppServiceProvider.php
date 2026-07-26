@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Listeners\RegistraAcesso;
 use App\Listeners\RegistraExecucaoAgendada;
+use App\Support\TenantAtual;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
@@ -11,6 +12,7 @@ use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -30,6 +32,32 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->registrarAuditoriaDasRotinas();
         $this->registrarAuditoriaDeAcesso();
+        $this->limparTenantEntreJobsDaFila();
+    }
+
+    /**
+     * Zera o tenant explícito antes de o worker buscar cada job.
+     *
+     * `TenantAtual` guarda o tenant em propriedade estática, com vida útil do
+     * processo. Em requisição HTTP isso dura um ciclo e morre; em worker de
+     * fila, que é um processo longo, o que um job deixar para trás vale para o
+     * próximo. Um job que chame `TenantAtual::definir()` e não limpe faria o
+     * job seguinte gravar dentro da empresa errada, sem erro nenhum na saída.
+     *
+     * O caminho normal já é seguro: `App\Jobs\Concerns\CarregaTenant` usa
+     * `comTenant()`, que restaura o valor anterior no `finally`, inclusive
+     * quando o job estoura. Este listener é a rede embaixo disso, para o job
+     * que não usa a trait, para código de terceiro e para o dia em que alguém
+     * chamar `definir()` direto dentro de um `handle()`.
+     *
+     * O evento `Looping` é disparado a cada volta do `queue:work`, antes de
+     * buscar o próximo job, que é exatamente onde a limpeza precisa acontecer.
+     */
+    private function limparTenantEntreJobsDaFila(): void
+    {
+        Queue::looping(static function (): void {
+            TenantAtual::limpar();
+        });
     }
 
     /**

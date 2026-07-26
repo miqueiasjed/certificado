@@ -23,6 +23,7 @@ use App\Http\Controllers\WorkOrderPhotoController;
 use App\Http\Controllers\PestSightingController;
 use App\Http\Controllers\PaymentDetailController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\ContractVisitController;
 use App\Http\Controllers\WorkOrderFinancialController;
 use App\Http\Controllers\FinancialEntryController;
 use App\Http\Controllers\FinancialWithdrawalController;
@@ -41,8 +42,21 @@ use App\Models\ServiceOrder;
 use App\Models\Certificate;
 use App\Http\Controllers\BudgetController;
 
-// Rota de recibo (fora de qualquer middleware)
-Route::get('/service-orders/{workOrder}/receipt', [WorkOrderController::class, 'generateReceipt'])->name('service-orders.receipt');
+// Recibo de pagamento: única rota do sistema que responde sem login.
+//
+// Quem abre é o cliente final, que não tem conta aqui, então a autorização não
+// pode vir de papel nem de permissão. Ela vem da assinatura da URL: o link é
+// emitido pelo próprio sistema com `URL::temporarySignedRoute()` e validade, e
+// o middleware `signed` recusa qualquer requisição sem `signature` válida ou
+// com `expires` no passado. Link com o id puro, que era o que funcionava antes,
+// deixou de abrir o recibo.
+//
+// O recibo carrega nome do cliente, endereço e valores pagos, e por isso a rota
+// aberta era vazamento de dado: bastava conhecer um id. A geração do link fica
+// em WorkOrderService::urlAssinadaDoRecibo(), atrás de ordem-servico-ver.
+Route::get('/service-orders/{workOrder}/receipt', [WorkOrderController::class, 'generateReceipt'])
+    ->middleware('signed')
+    ->name('service-orders.receipt');
 
 
 Route::get('/login', function () {
@@ -161,6 +175,12 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/addresses/{address}/rooms/{room}', [AddressController::class, 'deleteRoom'])->middleware('permission:comodo-gerenciar')->name('addresses.rooms.delete');
 
     // Rotas de Contratos
+    // O painel de pendências (Task 9.7) precisa ser registrado antes do
+    // resource: GET /contracts/{contract} (show) casaria com
+    // /contracts/pendencias primeiro, tentando bindar um contrato com id
+    // "pendencias" e devolvendo 404 em vez do painel.
+    Route::get('/contracts/pendencias', [ContractVisitController::class, 'pendencias'])->middleware('permission:contrato-ver')->name('contracts.pendencias');
+
     Route::resource('contracts', ContractController::class)
         ->middlewareFor(['index', 'show'], 'permission:contrato-ver')
         ->middlewareFor(['create', 'store'], 'permission:contrato-criar')
@@ -172,6 +192,27 @@ Route::middleware(['auth'])->group(function () {
     // substitui o store do resource na tabela de rotas. Sem esta permissão a do
     // resource seria ignorada e a criação de contrato ficaria aberta.
     Route::post('/contracts', [ContractController::class, 'store'])->middleware('permission:contrato-criar')->name('contracts.store');
+
+    // Encerramento do contrato: cancela as visitas futuras não executadas e
+    // fecha a vigência, com efeito cascata na agenda igual ao de
+    // `atualizar()` quando muda o calendário. Mesma permissão de editar, por
+    // isso: não pode ficar mais frouxo do que editar o contrato.
+    Route::post('/contracts/{contract}/encerrar', [ContractController::class, 'encerrar'])->middleware('permission:contrato-editar')->name('contracts.encerrar');
+
+    // Visitas do contrato (Task 9.7): leitura exige contrato-ver, geração sob
+    // demanda exige contrato-editar por ser escrita na agenda.
+    Route::get('/contracts/{contrato}/visitas', [ContractVisitController::class, 'index'])->middleware('permission:contrato-ver')->name('contracts.visitas.index');
+    Route::post('/contracts/{contrato}/visitas/gerar', [ContractVisitController::class, 'gerar'])->middleware('permission:contrato-editar')->name('contracts.visitas.gerar');
+
+    // Justificativa de data prevista que não virou visita: é o que tira a
+    // pendência de conformidade do painel sem criar OS retroativa. Mesma
+    // permissão da geração (`contrato-editar`), e por dois motivos: registrar
+    // o motivo é escrita no contrato, e silenciar um alerta de conformidade
+    // não pode ser mais fácil do que gerar a visita que o alerta pede.
+    // Remover a justificativa devolve a pendência ao painel, que é a direção
+    // segura, e por isso não exige permissão mais forte que registrar.
+    Route::post('/contracts/{contrato}/visitas/justificativas', [ContractVisitController::class, 'justificar'])->middleware('permission:contrato-editar')->name('contracts.visitas.justificativas.store');
+    Route::delete('/contracts/{contrato}/visitas/justificativas/{justificativa}', [ContractVisitController::class, 'removerJustificativa'])->middleware('permission:contrato-editar')->name('contracts.visitas.justificativas.destroy');
 
     // Rotas de Cômodos
     Route::resource('rooms', RoomController::class)
@@ -331,6 +372,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/settings/company', [\App\Http\Controllers\CompanyController::class, 'update'])->middleware('permission:empresa-configurar')->name('settings.company.update');
 
     // Rotas de Gestão de Usuários
+    // O `{user}` destas rotas é resolvido por `User::resolveRouteBindingQuery()`,
+    // que filtra pela empresa corrente e devolve 404 para usuário de outra
+    // empresa. Rota nova com `{user}` herda essa proteção sem precisar repetir
+    // nada; o que não é herdado é id de usuário vindo do corpo da requisição,
+    // que continua exigindo `User::daEmpresaAtual()` antes do uso.
     Route::get('/settings/users', [UserController::class, 'index'])->middleware('permission:usuario-ver')->name('settings.users.index');
     Route::post('/settings/users', [UserController::class, 'store'])->middleware('permission:usuario-criar')->name('settings.users.store');
     Route::put('/settings/users/{user}', [UserController::class, 'update'])->middleware('permission:usuario-editar')->name('settings.users.update');

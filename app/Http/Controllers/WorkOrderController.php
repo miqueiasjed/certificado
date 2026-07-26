@@ -15,6 +15,7 @@ use App\Models\WorkOrderDeviceEvent;
 use App\Models\Company;
 use App\Services\WorkOrderService;
 use App\Services\WorkOrderAccessService;
+use App\Support\TenantAtual;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -271,6 +272,13 @@ class WorkOrderController extends Controller
             ->orderBy('name')
             ->get();
 
+        // O link do recibo é assinado, então não pode ser montado no front com
+        // route(): sem `signature` e `expires` a rota responde 403. Ele sai
+        // pronto daqui, e só quando há recibo a emitir.
+        $reciboUrl = $workOrder->payment_status === 'paid'
+            ? $this->workOrderService->urlAssinadaDoRecibo($workOrder)
+            : null;
+
         return Inertia::render('WorkOrders/Show', [
             'workOrder' => $workOrder,
             'roomEventPhotos' => $roomEventPhotos,
@@ -279,6 +287,7 @@ class WorkOrderController extends Controller
             'availableServices' => $availableServices,
             'availableTechnicians' => $availableTechnicians,
             'eventTypes' => $eventTypes,
+            'reciboUrl' => $reciboUrl,
         ]);
     }
 
@@ -495,51 +504,96 @@ class WorkOrderController extends Controller
     }
 
     /**
-     * Gerar recibo de pagamento em PDF
+     * Gerar recibo de pagamento em PDF.
+     *
+     * Rota sem login, liberada apenas pela assinatura da URL (middleware
+     * `signed`). Como não há usuário autenticado, `Company::current()` não tem
+     * de onde resolver o tenant, e a empresa emitente vem da própria ordem de
+     * serviço, aplicada com `TenantAtual::comTenant()`. O `comTenant()` precisa
+     * envolver também o `loadView`, porque é ele que renderiza o Blade do
+     * recibo, e não o `stream()`.
+     *
+     * O `garantirAcesso()` continua aqui pelo caminho autenticado: quando um
+     * técnico abre o link de dentro do sistema, a regra de OS atribuída vale
+     * igual. Sem usuário na sessão ele passa direto, e quem autoriza é a
+     * assinatura.
      */
     public function generateReceipt(WorkOrder $workOrder)
     {
         $this->garantirAcesso($workOrder);
 
-        // Log para debug
-        Log::info('GenerateReceipt called', [
+        Log::info('Recibo solicitado', [
             'work_order_id' => $workOrder->id,
             'payment_status' => $workOrder->payment_status,
-            'user_id' => 'user_authenticated'
+            'user_id' => Auth::id(),
         ]);
 
         // Verificar se o status é "paid"
         if ($workOrder->payment_status !== 'paid') {
-            Log::warning('Receipt generation denied - status not paid', [
+            Log::warning('Emissão de recibo negada: ordem de serviço não está paga', [
                 'work_order_id' => $workOrder->id,
                 'payment_status' => $workOrder->payment_status
             ]);
-            return redirect()->back()->with('error', 'Só é possível emitir recibo para ordens de serviço com status "Pago".');
+
+            return $this->avisoDoRecibo(
+                'Recibo indisponível',
+                'Esta ordem de serviço ainda não consta como paga, então o recibo não pode ser emitido. '
+                .'Se o pagamento já foi feito, fale com a empresa que prestou o serviço.',
+                409
+            );
         }
 
         try {
-            // Preparar dados usando o service
-            $data = $this->workOrderService->prepareReceiptData($workOrder);
+            $empresaEmitente = $this->workOrderService->empresaEmitenteDoRecibo($workOrder);
 
-            Log::info('Generating PDF', [
-                'work_order_id' => $workOrder->id,
-                'receipt_number' => $data['receiptNumber']
-            ]);
+            $pdf = TenantAtual::comTenant($empresaEmitente, function () use ($workOrder) {
+                $dados = $this->workOrderService->prepareReceiptData($workOrder);
 
-            // Gerar o PDF
-            $pdf = FacadePdf::loadView('pdf.receipt', $data)
-                ->setPaper('a4', 'landscape');
+                Log::info('Gerando PDF do recibo', [
+                    'work_order_id' => $workOrder->id,
+                    'company_id' => $dados['company']->id,
+                    'receipt_number' => $dados['receiptNumber'],
+                ]);
+
+                return FacadePdf::loadView('pdf.receipt', $dados)->setPaper('a4', 'landscape');
+            });
 
             return $pdf->stream('recibo-pagamento-' . $workOrder->id . '.pdf');
         } catch (\Exception $e) {
-            Log::error('Error generating receipt', [
+            Log::error('Erro ao gerar recibo', [
                 'work_order_id' => $workOrder->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return redirect()->back()->with('error', 'Erro ao gerar recibo: ' . $e->getMessage());
+            // Mensagem genérica de propósito: quem abre o link pode ser o
+            // cliente final, e o texto da exceção não é para ele.
+            return $this->avisoDoRecibo(
+                'Não foi possível emitir o recibo',
+                'Houve uma falha ao gerar o recibo desta ordem de serviço. Peça um novo link à empresa '
+                .'que prestou o serviço.',
+                500
+            );
         }
+    }
+
+    /**
+     * Página de aviso do recibo, legível por quem não tem conta no sistema.
+     *
+     * Redirecionar com flash não serve aqui: o recibo abre em aba nova e boa
+     * parte dos acessos vem de fora, sem sessão, onde `back()` cairia na tela
+     * de login com uma mensagem que ninguém veria.
+     */
+    private function avisoDoRecibo(string $titulo, string $mensagem, int $status)
+    {
+        if (request()->expectsJson()) {
+            return response()->json(['message' => $mensagem], $status);
+        }
+
+        return response()->view('publico.aviso', [
+            'titulo' => $titulo,
+            'mensagem' => $mensagem,
+        ], $status);
     }
 
     /**

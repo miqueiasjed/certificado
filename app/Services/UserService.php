@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Technician;
 use App\Models\User;
+use App\Support\DominioMultiempresa;
+use App\Support\TenantAtual;
 use Illuminate\Support\Str;
 
 class UserService
@@ -28,8 +30,7 @@ class UserService
         }
 
         if (! empty($dados['technician_id'])) {
-            Technician::whereKey($dados['technician_id'])
-                ->update(['user_id' => $usuario->id]);
+            $this->vincularTecnico($usuario, (int) $dados['technician_id']);
         }
 
         return $usuario->fresh();
@@ -58,11 +59,10 @@ class UserService
         $usuario->save();
 
         if (array_key_exists('technician_id', $dados)) {
-            Technician::where('user_id', $usuario->id)->update(['user_id' => null]);
+            $this->desvincularTecnicos($usuario);
 
             if (! empty($dados['technician_id'])) {
-                Technician::whereKey($dados['technician_id'])
-                    ->update(['user_id' => $usuario->id]);
+                $this->vincularTecnico($usuario, (int) $dados['technician_id']);
             }
         }
 
@@ -96,6 +96,19 @@ class UserService
      * Garante que a operação sobre este usuário não deixe a empresa sem
      * nenhum administrador ativo. Lança exceção quando este usuário é o
      * único administrador ativo restante.
+     *
+     * A contagem é escopada pela empresa do usuário ALVO, e não pela de quem
+     * pediu a operação. A diferença importa: contar no tenant do solicitante
+     * fazia a checagem responder sobre a empresa errada, e a empresa do alvo
+     * podia ficar sem nenhum administrador porque a do solicitante ainda tinha
+     * os dela. O binding de `{user}` já impede que as duas sejam diferentes em
+     * requisição HTTP; contar pela do alvo é o que mantém a regra correta
+     * também quando o Service é chamado de outro contexto.
+     *
+     * Sem empresa no alvo nem no contexto, a contagem não filtra, como o resto
+     * do sistema faz quando não há tenant resolvido. Isso só acontece fora de
+     * requisição HTTP, porque `users.company_id` é NOT NULL e o registro que
+     * vem do banco sempre traz a coluna.
      */
     private function garantirAdministradorRestante(User $usuario): void
     {
@@ -103,13 +116,56 @@ class UserService
             return;
         }
 
-        $administradoresAtivos = User::role('administrador')
+        $consulta = User::role('administrador')
             ->where('is_active', true)
-            ->where('id', '!=', $usuario->id)
-            ->count();
+            ->where('id', '!=', $usuario->id);
 
-        if ($administradoresAtivos === 0) {
+        $empresaDoAlvo = $usuario->getAttribute(DominioMultiempresa::COLUNA_TENANT) ?? TenantAtual::id();
+
+        if ($empresaDoAlvo !== null) {
+            $consulta->where(
+                $usuario->qualifyColumn(DominioMultiempresa::COLUNA_TENANT),
+                $empresaDoAlvo
+            );
+        }
+
+        if ($consulta->count() === 0) {
             throw new \RuntimeException('Não é possível concluir a operação: é necessário manter ao menos um administrador ativo.');
         }
+    }
+
+    /**
+     * Solta o vínculo de qualquer técnico que aponte para este usuário.
+     *
+     * `Technician` tem o escopo global por empresa, então a limpeza nunca
+     * atravessa o tenant corrente.
+     */
+    private function desvincularTecnicos(User $usuario): void
+    {
+        Technician::query()
+            ->where('user_id', $usuario->id)
+            ->update(['user_id' => null]);
+    }
+
+    /**
+     * Vincula o usuário ao técnico informado.
+     *
+     * O técnico é RESOLVIDO antes de ser alterado, em vez de receber um
+     * `whereKey()->update()` direto. A diferença é de desenho: o update em
+     * massa dependia do escopo global para não escrever no técnico de outra
+     * empresa, e quando o id era de fora ele simplesmente não afetava nenhuma
+     * linha, em silêncio. Resolvendo primeiro, id de outra empresa vira erro
+     * explícito e o vínculo nunca fica pela metade sem ninguém saber.
+     */
+    private function vincularTecnico(User $usuario, int $tecnicoId): void
+    {
+        $tecnico = Technician::query()->whereKey($tecnicoId)->first();
+
+        if ($tecnico === null) {
+            throw new \RuntimeException('O técnico selecionado não existe nesta empresa.');
+        }
+
+        $tecnico->user_id = $usuario->id;
+        $tecnico->save();
     }
 }

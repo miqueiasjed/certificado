@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditavel;
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,13 +12,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkOrder extends Model
 {
-    use HasFactory, Auditavel;
+    use HasFactory, Auditavel, BelongsToCompany;
 
     protected $fillable = [
         'client_id',
         'address_id',
         'technician_id',
         'service_id',
+        'contract_id',
+        'origem',
+        'visita_numero',
         'order_number',
         'priority_level',
         'scheduled_date',

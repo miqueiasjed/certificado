@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\OperaPorTenant;
 use App\Models\PaymentDetail;
 use App\Models\WorkOrder;
 use App\Support\BusinessDate;
@@ -9,6 +10,8 @@ use Illuminate\Console\Command;
 
 class UpdatePaymentStatuses extends Command
 {
+    use OperaPorTenant;
+
     /**
      * The name and signature of the console command.
      *
@@ -39,6 +42,20 @@ class UpdatePaymentStatuses extends Command
             ? 'Modo simulação (--dry-run): nada será gravado.'
             : 'Modo aplicação: os status serão gravados.');
 
+        return $this->paraCadaTenant(fn (): int => $this->processarEmpresa($hoje, $simulacao, $detalhado));
+    }
+
+    /**
+     * Uma empresa, já dentro do tenant dela.
+     *
+     * Os `chunkById` de parcelas e de ordens rodam aqui dentro de propósito: o
+     * escopo global por empresa é avaliado na execução de cada página da
+     * consulta, e paginar por fora do tenant traria registro de outra empresa.
+     *
+     * @return int quantidade de parcelas e ordens avaliadas
+     */
+    private function processarEmpresa(string $hoje, bool $simulacao, bool $detalhado): int
+    {
         $parcelas = $this->processarParcelas($hoje, $simulacao, $detalhado);
         $ordens = $this->processarOrdens($hoje, $simulacao, $detalhado);
 
@@ -49,7 +66,7 @@ class UpdatePaymentStatuses extends Command
             ? 'Simulação concluída. Nada foi gravado.'
             : 'Status atualizados com sucesso!');
 
-        return Command::SUCCESS;
+        return $parcelas['total'] + $ordens['total'];
     }
 
     /**

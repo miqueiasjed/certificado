@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WorkOrderPhoto extends Model
 {
+    use BelongsToCompany;
+
     protected $fillable = [
         'work_order_id',
         'entity_type',

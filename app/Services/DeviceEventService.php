@@ -48,7 +48,7 @@ class DeviceEventService
     public function getEventsByWorkOrder(int $workOrderId): \Illuminate\Database\Eloquent\Collection
     {
         return DeviceEvent::where('work_order_id', $workOrderId)
-            ->with(['device.room.address.client'])
+            ->with(['device.address.client'])
             ->orderBy('event_date', 'desc')
             ->get();
     }
@@ -59,7 +59,7 @@ class DeviceEventService
     public function getRecentEvents(int $days = 30): \Illuminate\Database\Eloquent\Collection
     {
         return DeviceEvent::where('event_date', '>=', now()->subDays($days))
-            ->with(['device.room.address.client', 'workOrder.technician'])
+            ->with(['device.address.client', 'workOrder.technician'])
             ->orderBy('event_date', 'desc')
             ->get();
     }
@@ -70,7 +70,7 @@ class DeviceEventService
     public function getEventsByType(string $type): \Illuminate\Database\Eloquent\Collection
     {
         return DeviceEvent::where('event_type', $type)
-            ->with(['device.room.address.client', 'workOrder.technician'])
+            ->with(['device.address.client', 'workOrder.technician'])
             ->orderBy('event_date', 'desc')
             ->get();
     }

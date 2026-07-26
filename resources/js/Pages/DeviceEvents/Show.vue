@@ -94,25 +94,19 @@
               <div>
                 <label class="block text-sm font-medium text-gray-500">Cliente</label>
                 <p class="mt-1 text-sm text-gray-900">
-                  {{ deviceEvent.device?.room?.address?.client?.name }}
+                  {{ deviceEvent.device?.address?.client?.name }}
                 </p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-500">Endereço</label>
                 <p class="mt-1 text-sm text-gray-900">
-                  {{ deviceEvent.device?.room?.address?.street }}, {{ deviceEvent.device?.room?.address?.number }}
+                  {{ deviceEvent.device?.address?.street }}, {{ deviceEvent.device?.address?.number }}
                 </p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-500">Cidade/Estado</label>
                 <p class="mt-1 text-sm text-gray-900">
-                  {{ deviceEvent.device?.room?.address?.city }}/{{ deviceEvent.device?.room?.address?.state }}
-                </p>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-500">Cômodo</label>
-                <p class="mt-1 text-sm text-gray-900">
-                  {{ deviceEvent.device?.room?.name }}
+                  {{ deviceEvent.device?.address?.city }}/{{ deviceEvent.device?.address?.state }}
                 </p>
               </div>
             </div>

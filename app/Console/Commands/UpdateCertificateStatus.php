@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Console\Commands\Concerns\OperaPorTenant;
 use App\Models\Certificate;
 use App\Support\BusinessDate;
 use Illuminate\Console\Command;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class UpdateCertificateStatus extends Command
 {
+    use OperaPorTenant;
+
     protected $signature = 'certificates:update-status
                             {--dry-run : Simula a execução e mostra as transições, sem gravar nada}';
 
@@ -25,6 +28,20 @@ class UpdateCertificateStatus extends Command
             ? 'Modo simulação (--dry-run): nada será gravado.'
             : 'Modo aplicação: os status serão gravados.');
 
+        return $this->paraCadaTenant(fn (): int => $this->processarEmpresa($hoje, $simulacao));
+    }
+
+    /**
+     * Uma empresa, já dentro do tenant dela.
+     *
+     * Todos os builders nascem e são executados aqui dentro: o escopo global
+     * por empresa é avaliado na execução da consulta, então montar o builder
+     * fora deste método o faria rodar com o tenant da volta errada do laço.
+     *
+     * @return int quantidade de certificados avaliados
+     */
+    private function processarEmpresa(string $hoje, bool $simulacao): int
+    {
         $resumo = $this->levantarTransicoes($hoje);
 
         if ($this->getOutput()->isVerbose()) {
@@ -40,7 +57,7 @@ class UpdateCertificateStatus extends Command
 
         $this->imprimirResumo($resumo, $simulacao);
 
-        return Command::SUCCESS;
+        return $resumo['total'];
     }
 
     /**

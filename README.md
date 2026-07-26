@@ -70,3 +70,54 @@ O comando mostra a última execução de cada rotina, o status, a duração e se
 ### Checagem de deploy
 
 O `.env` de produção precisa ser conferido a cada deploy: só o ambiente local foi verificado até agora, e é lá que `CACHE_STORE=database` está confirmado. Rodar `php artisan routines:status` logo depois do deploy confirma que o cron está instalado no servidor e que as quatro rotinas seguem executando.
+
+## A empresa fora da requisição HTTP
+
+O sistema é multiempresa: todo dado de domínio pertence a uma empresa, e quem responde qual é a empresa corrente é `App\Support\TenantAtual`. Em requisição web ela sai do usuário autenticado. Comando artisan, seeder e job de fila não têm usuário autenticado e portanto não têm empresa nenhuma: nesses três contextos a empresa é informada explicitamente, nunca inferida.
+
+Como o banco chega a esse estado, em cinco deploys separados, e como voltar atrás em cada um: [`docs/multiempresa-migracao.md`](docs/multiempresa-migracao.md). Leia antes de aplicar qualquer migration de `company_id` em produção, principalmente a parte do `DEFAULT 1` temporário e a do ponto sem retorno.
+
+### Comando artisan
+
+Rotina que percorre dado de domínio usa a trait `App\Console\Commands\Concerns\OperaPorTenant`, que dá ao comando duas opções:
+
+```
+php artisan certificates:update-status --company=1   # roda só na empresa 1
+php artisan certificates:update-status --todas       # roda em todas as empresas
+php artisan certificates:update-status               # igual a --todas
+```
+
+Sem opção o comando percorre todas as empresas cadastradas, uma por vez, dentro do contexto de cada uma. É esse padrão que mantém as linhas de cron atuais funcionando sem alteração. A saída traz um bloco por empresa e um resumo no fim, com a quantidade processada e o erro de cada uma. Empresa que falha não interrompe as outras: o erro é registrado no log, aparece no resumo e o comando termina com código de saída 1, que é o que `routines:status` enxerga.
+
+### Job de fila
+
+Todo job novo usa a trait `App\Jobs\Concerns\CarregaTenant` e chama `capturarTenantAtual()` no construtor:
+
+```php
+class EnviarCertificadoPorEmail implements ShouldQueue
+{
+    use Queueable, CarregaTenant;
+
+    public function __construct(public int $certificateId)
+    {
+        $this->capturarTenantAtual();
+    }
+
+    public function handle(): void
+    {
+        // já roda dentro da empresa que despachou o job
+    }
+}
+```
+
+A empresa é capturada no despacho e viaja no payload da fila, na propriedade pública `$companyId`. No consumo, o middleware `App\Jobs\Middleware\AplicaTenantDoJob` envolve o `handle()` no contexto dessa empresa, com `try/finally`, então nem job que falha deixa a empresa dele valendo para o próximo job do mesmo worker. Como reforço, o worker zera o contexto antes de buscar cada job (`Queue::looping` em `AppServiceProvider`).
+
+Três coisas que valem lembrar antes de escrever um job:
+
+1. **Nunca resolver a empresa dentro do `handle()`.** No worker não há usuário autenticado, então o que estiver valendo ali é o que sobrou de outro job.
+2. **Despachar com `dispatch()` ou `dispatchSync()`.** `dispatchNow()` não passa pelo middleware de job.
+3. **Job enfileirado antes deste deploy não tem `companyId` no payload.** Ao ser processado depois, ele falha com mensagem explícita e vai para `failed_jobs`, em vez de rodar na empresa errada. Reenfileirar com `queue:retry` resolve, porque o job é reconstruído já com a empresa.
+
+### Seeder
+
+`DatabaseSeeder` fixa a empresa fundadora antes de semear, e os seeders chamados por ele herdam esse contexto. Rodar um seeder de domínio sozinho (`php artisan db:seed --class=ClientSeeder`) fica sem empresa definida.

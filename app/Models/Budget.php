@@ -3,13 +3,22 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditavel;
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 
 class Budget extends Model
 {
-    use Auditavel;
+    use Auditavel, BelongsToCompany;
 
-    protected $guarded = [];
+    /**
+     * Único campo bloqueado para atribuição em massa. O model é o único de
+     * domínio sem `$fillable`, então antes disto `company_id` entrava por
+     * qualquer `create($request->all())`. Quem preenche a coluna é a trait
+     * `BelongsToCompany`, a partir do tenant corrente, nunca o formulário.
+     *
+     * @var array<int, string>
+     */
+    protected $guarded = ['company_id'];
 
     protected $casts = [
         'target_pests' => 'array',

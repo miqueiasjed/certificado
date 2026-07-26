@@ -3,9 +3,26 @@
 namespace App\Services;
 
 use App\Models\WorkOrder;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\URL;
+use RuntimeException;
 
 class WorkOrderService
 {
+    /**
+     * Validade do link assinado do recibo, em dias.
+     *
+     * Sete dias é o prazo escolhido porque o recibo é mandado ao cliente por
+     * WhatsApp ou e-mail logo depois da baixa do pagamento, e ele costuma abrir
+     * o link em outro momento: uma semana cobre o pagamento na sexta aberto na
+     * segunda seguinte, e ainda cobre quem repassa o link ao contador. Acima
+     * disso o documento, que traz nome, endereço e valores pagos do cliente,
+     * ficaria vivo por tempo demais em uma conversa de aplicativo. Abaixo
+     * disso, um link de 24 horas quebraria o caso comum sem ganho real de
+     * segurança. Quando expira não há perda: qualquer usuário com
+     * `ordem-servico-ver` reabre a OS e o botão emite um link novo.
+     */
+    public const DIAS_DE_VALIDADE_DO_LINK_DO_RECIBO = 7;
     /**
      * Create a new work order.
      */
@@ -19,7 +36,7 @@ class WorkOrderService
 
         unset($data['technicians'], $data['products'], $data['services'], $data['rooms'], $data['devices']);
 
-        $workOrder = WorkOrder::create($data);
+        $workOrder = $this->criarComNumeroDeOrdemUnico($data);
 
         // Sincronizar técnicos
         if (!empty($technicians)) {
@@ -117,6 +134,50 @@ class WorkOrderService
         }
 
         return $workOrder;
+    }
+
+    /**
+     * Cria a ordem de serviço tratando a corrida entre duas requisições que
+     * calcularam o mesmo `order_number` ao mesmo tempo.
+     *
+     * `generateOrderNumber()` só lê o maior número existente; não reserva
+     * nada. Então duas requisições concorrentes podem gerar o mesmo
+     * candidato antes de qualquer uma delas gravar. Quem grava por último
+     * esbarra na unique de `order_number` e cai aqui: gera um número novo (já
+     * enxergando a linha que a outra requisição acabou de inserir) e tenta de
+     * novo, até o limite de tentativas.
+     *
+     * Isso NÃO elimina a corrida, só o efeito dela: em vez de duas OS com o
+     * mesmo número (o que a unique do banco já impediria) ou um erro cru pro
+     * usuário, a segunda requisição recalcula e segue. Se o `order_number` já
+     * vier em `$data` (fluxo normal, gerado em `WorkOrderRequest` ou em
+     * `GeracaoDeVisitasService`), ele só é descartado se colidir de fato.
+     */
+    private function criarComNumeroDeOrdemUnico(array $data, int $maxTentativas = 5): WorkOrder
+    {
+        for ($tentativa = 1; $tentativa <= $maxTentativas; $tentativa++) {
+            try {
+                return WorkOrder::create($data);
+            } catch (QueryException $e) {
+                if (! $this->violacaoDeNumeroDeOrdemDuplicado($e) || $tentativa === $maxTentativas) {
+                    throw $e;
+                }
+
+                $data['order_number'] = $this->generateOrderNumber();
+            }
+        }
+
+        // Inatingível: o laço acima sempre retorna ou lança na última tentativa.
+        throw new \RuntimeException('Não foi possível criar a ordem de serviço: número de ordem em conflito.');
+    }
+
+    /**
+     * A exceção é uma violação da unique de `order_number` (SQLSTATE 23000,
+     * "Duplicate entry"), e não outro erro de integridade (ex.: FK inválida)?
+     */
+    private function violacaoDeNumeroDeOrdemDuplicado(QueryException $e): bool
+    {
+        return $e->getCode() === '23000' && str_contains($e->getMessage(), 'order_number');
     }
 
     /**
@@ -372,13 +433,12 @@ class WorkOrderService
      */
     public function generateOrderNumber(): string
     {
-        // Otimização: usar max('id') ao invés de orderBy().first()
-        $maxId = WorkOrder::max('id') ?? 0;
+        $maiorNumero = $this->maiorNumeroDeOrdemExistente();
         $attempts = 0;
         $maxAttempts = 10; // Limitar tentativas para evitar loop infinito
 
         do {
-            $nextId = $maxId + 1 + $attempts;
+            $nextId = $maiorNumero + 1 + $attempts;
             $orderNumber = 'OS' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
 
             // Check if this order number already exists
@@ -398,6 +458,31 @@ class WorkOrderService
 
         // Fallback: usar timestamp
         return 'OS' . date('YmdHis');
+    }
+
+    /**
+     * Maior número sequencial já usado em `order_number` no formato "OS" +
+     * dígitos, que é o formato que este método gera.
+     *
+     * Deriva do próprio `order_number`, nunca do `id` da tabela: `id` é
+     * auto-increment global da tabela inteira, então usá-lo como base deixa
+     * a numeração cheia de buracos sempre que alguma linha some sem virar OS
+     * (e o próximo passo do projeto, a numeração por empresa do Plano 4, só
+     * funciona se a base para "próximo número" for o número já emitido, não
+     * um id compartilhado entre empresas).
+     *
+     * Ignora valores que não sejam exatamente "OS" seguido só de dígitos, para
+     * não deixar um número fora do padrão (ex.: o fallback de timestamp deste
+     * mesmo método) inflar a sequência.
+     */
+    private function maiorNumeroDeOrdemExistente(): int
+    {
+        $maior = WorkOrder::query()
+            ->where('order_number', 'regexp', '^OS[0-9]+$')
+            ->selectRaw('MAX(CAST(SUBSTRING(order_number, 3) AS UNSIGNED)) as maior')
+            ->value('maior');
+
+        return (int) ($maior ?? 0);
     }
 
     /**
@@ -509,7 +594,62 @@ class WorkOrderService
     }
 
     /**
+     * Link assinado e temporário do recibo desta ordem de serviço.
+     *
+     * Este é o único jeito de chegar ao recibo: a rota exige o middleware
+     * `signed`, e a assinatura só é produzida aqui, dentro do sistema, por quem
+     * já passou pelo middleware de permissão da tela que oferece o botão.
+     *
+     * A URL sai absoluta de propósito. Ela é feita para ser copiada e enviada
+     * ao cliente final, e a assinatura do Laravel cobre a URL inteira,
+     * inclusive o domínio, então precisa bater com o host por onde a
+     * requisição chega.
+     */
+    public function urlAssinadaDoRecibo(WorkOrder $workOrder): string
+    {
+        return URL::temporarySignedRoute(
+            'service-orders.receipt',
+            now()->addDays(self::DIAS_DE_VALIDADE_DO_LINK_DO_RECIBO),
+            ['workOrder' => $workOrder->id]
+        );
+    }
+
+    /**
+     * Empresa emitente do recibo: sempre a dona da ordem de serviço.
+     *
+     * Quem abre o link assinado não está autenticado, então `TenantAtual` não
+     * tem usuário de onde tirar o tenant e `Company::current()` estouraria. O
+     * tenant sai do próprio recurso, que é o único dado confiável nesse
+     * contexto, e é aplicado com `TenantAtual::comTenant()` na geração.
+     *
+     * Cair na empresa 1 quando `company_id` está vazio é proibido: com dois
+     * tenants isso emitiria um documento com o cabeçalho e o CNPJ da empresa
+     * errada, e recibo tem valor perante fiscalização. Falhar é o
+     * comportamento desejado.
+     *
+     * @throws RuntimeException Quando a ordem de serviço está sem empresa.
+     */
+    public function empresaEmitenteDoRecibo(WorkOrder $workOrder): int
+    {
+        $empresa = $workOrder->company_id ?? null;
+
+        if (! is_numeric($empresa) || (int) $empresa < 1) {
+            throw new RuntimeException(
+                "A ordem de serviço {$workOrder->id} está sem empresa (company_id) e por isso "
+                .'não é possível saber quem emite este recibo. Corrija o vínculo da ordem antes '
+                .'de emitir o documento.'
+            );
+        }
+
+        return (int) $empresa;
+    }
+
+    /**
      * Prepare receipt data for PDF generation.
+     *
+     * Depende do tenant corrente (`Company::current()`), então quem chama é
+     * responsável por envolver a chamada em `TenantAtual::comTenant()` com a
+     * empresa devolvida por `empresaEmitenteDoRecibo()`.
      */
     public function prepareReceiptData(WorkOrder $workOrder): array
     {

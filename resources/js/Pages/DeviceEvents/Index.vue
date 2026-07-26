@@ -146,7 +146,7 @@
                       </span>
                     </div>
                     <p class="text-sm text-gray-500">
-                      {{ event.device?.room?.address?.client?.name }} - {{ event.device?.room?.address?.street }}, {{ event.device?.room?.address?.number }}
+                      {{ event.device?.address?.client?.name }} - {{ event.device?.address?.street }}, {{ event.device?.address?.number }}
                     </p>
                     <p class="text-sm text-gray-500">
                       {{ formatarDataHora(event.event_date) }} • {{ event.work_order?.order_number }}

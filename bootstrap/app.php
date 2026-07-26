@@ -6,6 +6,8 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
+use Illuminate\Routing\Exceptions\InvalidSignatureException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -54,5 +56,24 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        // Link assinado inválido ou vencido.
         //
+        // O middleware `signed` lança esta exceção, e o tratamento padrão do
+        // Laravel devolve a página crua de 403 com o texto "Invalid signature".
+        // Quem cai aqui é o cliente final abrindo o link do recibo que a
+        // empresa mandou, então a resposta precisa dizer, em português, o que
+        // aconteceu e o que fazer.
+        $exceptions->renderable(function (InvalidSignatureException $e, Request $request) {
+            $mensagem = 'Este link não é mais válido. Links de documento têm prazo de validade e '
+                .'deixam de funcionar depois dele. Peça um link novo à empresa que emitiu o documento.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $mensagem], 403);
+            }
+
+            return response()->view('publico.aviso', [
+                'titulo' => 'Link expirado ou inválido',
+                'mensagem' => $mensagem,
+            ], 403);
+        });
     })->create();

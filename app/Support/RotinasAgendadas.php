@@ -26,6 +26,10 @@ final class RotinasAgendadas
         'payments:update-statuses' => '00:20',
         'cash:sync-daily-balances' => '00:30',
         'cash:create-missing-balances' => '00:40',
+        // 01:00: depois das rotinas financeiras e de certificado (00:10 a
+        // 00:40), que ela não depende, e antes da purga de auditoria
+        // (02:00), para não competir com a rotina mais pesada da janela.
+        'contratos:gerar-visitas' => '01:00',
         // 02:00, fora da janela das outras: é a rotina mais pesada, porque
         // percorre e apaga em lotes as tabelas de auditoria inteiras.
         'auditoria:purge' => '02:00',

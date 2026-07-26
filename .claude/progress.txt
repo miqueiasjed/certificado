@@ -303,3 +303,103 @@ usuário desativado é escolhida por uma checagem que não autentica ninguém.
    esperado.
 4. Conferir o crescimento de `audit_logs` na primeira semana antes de aceitar os
    730 dias de retenção padrão (`AUDITORIA_DIAS_DE_RETENCAO`).
+
+================================================================================
+
+## Planos 4 e 9 - executados em paralelo (26/07/2026)
+
+Os dois foram tocados na mesma working tree, por trilhas separadas de
+subagentes, porque eram os únicos planos com dependências satisfeitas. Deu
+certo, mas com regras que valem para a próxima vez que alguém repetir isso.
+
+### O que aprendemos sobre rodar duas trilhas juntas
+
+- **Banco de teste é recurso disputado.** Duas suítes com `RefreshDatabase` no
+  mesmo banco se derrubam, e a falha parece bug do código. Criamos
+  `testing_plano9`, `testing_p4a` e `testing_p4b`. Rodar com
+  `DB_DATABASE=<banco> php artisan test` funciona porque o `<env>` do
+  `phpunit.xml` só define a variável quando ela ainda não existe.
+- **Lista de arquivos proibidos em cada prompt.** Todo subagente recebeu a lista
+  do que a outra trilha estava editando naquele momento. Nenhum conflito de
+  edição aconteceu em 20 despachos.
+- **Subagente deixa resíduo no banco de desenvolvimento** se testar fora de
+  transação. Instruir transação revertida desde o primeiro prompt.
+
+### Furos encontrados durante a execução, que o plano não previa
+
+- **`company_id` NOT NULL sem default derruba a operação.** Entre o Deploy 3 e o
+  Deploy 5, a coluna é obrigatória e nenhum código a preenche. A saída foi
+  `DEFAULT 1` temporário, removido por migration que vive em
+  `database/migrations/deploy5/`, fora do alcance do `migrate` padrão. Detalhe
+  que custou uma tentativa: pôr essa migration na raiz faz o `migrate` do Deploy
+  3 rodá-la junto, a guarda aborta e a suíte inteira quebra no `RefreshDatabase`.
+- **Banco novo não sobrevivia à etapa 3.** `populate_service_types_table` insere
+  5 linhas antes de `company_id` existir, e `companies` fica vazia até alguém
+  chamar `Company::current()`. Resolvido com migration de fundação, no-op quando
+  já existe empresa.
+- **A geração de visitas criava OS retroativa.** `gerarPara` percorria as datas
+  desde `start_date`; um contrato mensal vigente há dois anos criaria dezenas de
+  OS vencidas na primeira execução da rotina. Data passada sem OS virou pendência
+  de conformidade, que é o que o painel mostra.
+- **Cálculo de data em cascata acumula erro.** Cada visita partia da anterior,
+  então um contrato mensal iniciado em 31/01 virava "dia 28" para sempre depois
+  de fevereiro. Agora é ancorado em `start_date`: a enésima visita é
+  `start_date + n x periodicidade`, com `addMonthsNoOverflow`.
+
+### Vazamento real encontrado pelo teste da Task 4.11
+
+Administrador da empresa A alterava e desativava usuário da empresa B por
+`PUT /settings/users/{id}` e `PATCH /settings/users/{id}/status`. Causa: `User`
+vive sem escopo global de leitura (por reentrância: o resolvedor de tenant lê
+`auth()->user()`, que é resolvido por consulta a `users`), e o route-model
+binding encontrava usuário de qualquer empresa.
+
+A correção que ficou: override de `User::resolveRouteBindingQuery()`. Centraliza
+no model, então rota nova que receba `{user}` nasce protegida. A alternativa
+(`abort_unless` em cada ação) foi descartada por ser exatamente o mecanismo que
+já tinha falhado: depende de alguém lembrar.
+
+O que o teste achou, achou porque varre `Route::getRoutes()` em vez de conferir
+lista escrita à mão. Rota nova entra na varredura sozinha.
+
+### Bugs pré-existentes corrigidos de passagem
+
+- `resources/views/pdf/receipt.blade.php` imprimia
+  `'Atendimento emergencial para infestação de ratos'` quando a OS não tinha
+  descrição. Documento com valor perante fiscalização afirmando serviço não
+  prestado. Conferir se algum recibo já emitido saiu com essa frase.
+- `ServiceOrderController::generateServiceOrderNumber()` tinha loop infinito:
+  `$nextId` era recalculado do zero a cada volta, então o `$nextId++` não tinha
+  efeito. Não disparava só porque `service_orders` está vazia.
+- Numeração de OS derivava de `max('id')`, não do maior número emitido. O
+  contador AUTO_INCREMENT do InnoDB não volta com rollback, então já andava à
+  frente.
+- `GET /budgets/{budget}` estourava 500 sempre: rota registrada pelo resource,
+  controller sem método `show()`. A tela `Budgets/Show.vue` já existia.
+- `GET /device-events` estourava 500 com qualquer dispositivo cadastrado: eager
+  load de `device.room`, relação que sumiu quando `devices.room_id` virou
+  `address_id`.
+- Rota de recibo respondia sem login. Qualquer pessoa com um id baixava recibo
+  com nome do cliente, endereço e valores. Agora exige URL assinada com validade
+  de 7 dias, e resolve a empresa pelo `company_id` da própria OS.
+
+### Pendências que ficaram abertas, em ordem de gravidade
+
+1. **A suíte roda num schema diferente do de produção pós-Deploy 5.** A migration
+   que remove o `DEFAULT 1` está fora de `database/migrations/`, então
+   `RefreshDatabase` nunca a executa. Caminho de código que esquece o tenant
+   passa no CI por causa do padrão do banco e falha em produção. Mover o arquivo
+   resolve e quebra todo teste que cria registro de domínio sem tenant, o que é o
+   objetivo. Fazer antes do segundo tenant.
+2. **Quatro comandos rodam sem tenant:** `BackfillPeriodicidade`,
+   `BackfillAcesso`, `CorrectPendingInstallments`, `SyncPermissions`. Como
+   `Auditavel` grava em tabela de domínio dentro de try/catch, eles alteram dado
+   e perdem o registro de auditoria em silêncio depois do Deploy 5.
+3. **Tentativa de login recusada deixa de ser registrada** depois do Deploy 5:
+   grava sem usuário autenticado, logo sem tenant, dentro de try/catch. Perda de
+   rastro de segurança. Precisa de decisão sobre onde arquivar esse caso.
+4. **Botão "Gerar visitas" não resolve pendência histórica.** A geração nunca
+   cria data no passado, por desenho, então o contrato pode continuar no painel
+   depois do clique. Falta decidir qual é a remediação real dessa pendência.
+5. Contrato sem `end_date` gera calendário de até 10 anos. Com periodicidade
+   semanal, são ~520 linhas sem paginação na tela do contrato.
