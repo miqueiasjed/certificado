@@ -69,6 +69,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Fuso do Negócio
+    |--------------------------------------------------------------------------
+    |
+    | Fuso em que o negócio opera e no qual o usuário lê qualquer data. A
+    | aplicação continua em UTC acima, porque o histórico do banco foi gravado
+    | assim, então esta chave é a referência para vencimento, validade e
+    | rotina agendada. Use App\Support\BusinessDate para lê-la.
+    |
+    */
+
+    'business_timezone' => env('APP_BUSINESS_TIMEZONE', 'America/Sao_Paulo'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

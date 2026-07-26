@@ -36,7 +36,7 @@
             <div class="flex-1">
               <h1 class="text-2xl font-bold text-gray-900">{{ product.name }}</h1>
               <p class="text-sm text-gray-500">ID: {{ product.id }}</p>
-              <p class="text-sm text-gray-500">Criado em: {{ formatDate(product.created_at) }}</p>
+              <p class="text-sm text-gray-500">Criado em: {{ formatarDataHora(product.created_at) }}</p>
             </div>
           </div>
         </div>
@@ -128,11 +128,11 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <dt class="text-sm font-medium text-gray-500">Data de Criação</dt>
-              <dd class="mt-1 text-sm text-gray-900">{{ formatDate(product.created_at) }}</dd>
+              <dd class="mt-1 text-sm text-gray-900">{{ formatarDataHora(product.created_at) }}</dd>
             </div>
             <div>
               <dt class="text-sm font-medium text-gray-500">Última Atualização</dt>
-              <dd class="mt-1 text-sm text-gray-900">{{ formatDate(product.updated_at) }}</dd>
+              <dd class="mt-1 text-sm text-gray-900">{{ formatarDataHora(product.updated_at) }}</dd>
             </div>
             <div>
               <dt class="text-sm font-medium text-gray-500">Status</dt>
@@ -170,19 +170,9 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   product: Object,
 });
-
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
 </script>

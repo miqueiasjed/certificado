@@ -860,7 +860,7 @@
                     v-model="deviceEventForm.event_date"
                     type="date"
                     required
-                    :max="new Date().toISOString().split('T')[0]"
+                    :max="maxDataHoje"
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   />
                 </div>
@@ -919,8 +919,12 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import ClientSearch from '@/Components/ClientSearch.vue';
+import { hojeISO } from '@/utils/formatDate';
 
 const { proxy } = getCurrentInstance();
+
+// Limite superior dos campos de data do formulário: o dia de hoje em Brasília.
+const maxDataHoje = computed(() => hojeISO());
 
 const props = defineProps({
   clients: Array,
@@ -982,7 +986,7 @@ const form = useForm({
   }],
   devices: [], // Array de dispositivos com eventos
   priority_level: '',
-  scheduled_date: new Date().toISOString().slice(0, 10),
+  scheduled_date: hojeISO(),
   start_time: '',
   end_time: '',
   status: 'pending',

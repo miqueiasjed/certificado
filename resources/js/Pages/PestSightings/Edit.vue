@@ -239,6 +239,7 @@ import { Link, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { paraInputDateTime, inputDateTimeParaUtc } from '@/utils/formatDate';
 
 const props = defineProps({
   pestSighting: Object,
@@ -250,7 +251,7 @@ const props = defineProps({
 const form = useForm({
   address_id: props.pestSighting?.address_id || '',
   work_order_id: props.pestSighting?.work_order_id || '',
-  sighting_date: props.pestSighting?.sighting_date ? new Date(props.pestSighting.sighting_date).toISOString().slice(0, 16) : '',
+  sighting_date: props.pestSighting?.sighting_date ? paraInputDateTime(props.pestSighting.sighting_date) : '',
   pest_type: props.pestSighting?.pest_type || '',
   severity_level: props.pestSighting?.severity_level || '',
   location_description: props.pestSighting?.location_description || '',
@@ -261,7 +262,13 @@ const form = useForm({
 });
 
 const submit = () => {
-  form.put(route('pest-sightings.update', props.pestSighting.id));
+  // O campo mostra hora de Brasília; o backend grava o campo em UTC.
+  form
+    .transform((dados) => ({
+      ...dados,
+      sighting_date: inputDateTimeParaUtc(dados.sighting_date),
+    }))
+    .put(route('pest-sightings.update', props.pestSighting.id));
 };
 </script>
 

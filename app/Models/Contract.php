@@ -24,8 +24,12 @@ class Contract extends Model
     ];
 
     protected $casts = [
+        // Dia sem hora relevante: vigência do contrato, nunca sofre conversão de fuso
         'start_date' => 'date',
         'end_date' => 'date',
+        // Instante
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
         'service_value' => 'decimal:2',
     ];
 

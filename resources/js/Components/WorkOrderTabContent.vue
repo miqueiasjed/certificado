@@ -28,15 +28,15 @@
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
           <div>
             <label class="block text-sm font-medium text-gray-500">Data Agendada</label>
-          <p class="mt-1 text-sm text-gray-900">{{ formatDate(props.workOrder.scheduled_date) }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ formatarData(props.workOrder.scheduled_date) }}</p>
           </div>
         <div v-if="props.workOrder.start_time">
             <label class="block text-sm font-medium text-gray-500">Horário de Início</label>
-          <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(props.workOrder.start_time) }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ formatarDataHora(props.workOrder.start_time) }}</p>
           </div>
         <div v-if="props.workOrder.end_time">
             <label class="block text-sm font-medium text-gray-500">Horário de Término</label>
-          <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(props.workOrder.end_time) }}</p>
+          <p class="mt-1 text-sm text-gray-900">{{ formatarDataHora(props.workOrder.end_time) }}</p>
           </div>
         <div v-if="props.workOrder.duration_text">
             <label class="block text-sm font-medium text-gray-500">Duração</label>
@@ -681,7 +681,7 @@
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-500 mb-1">Data do Evento</label>
-                <p class="text-sm text-gray-900">{{ formatDate(room.pivot.event_date) }}</p>
+                <p class="text-sm text-gray-900">{{ formatarData(room.pivot.event_date) }}</p>
               </div>
               </div>
             <div v-if="room.pivot?.event_description" class="mt-4">
@@ -764,7 +764,7 @@
                 </div>
                 <div>
                 <label class="block text-sm font-medium text-gray-500 mb-1">Data do Avistamento</label>
-                <p class="text-sm text-gray-900">{{ formatDate(room.pivot.pest_sighting_date) }}</p>
+                <p class="text-sm text-gray-900">{{ formatarData(room.pivot.pest_sighting_date) }}</p>
                 </div>
                 </div>
             <div v-if="room.pivot?.pest_location || room.pivot?.pest_quantity" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -887,7 +887,7 @@
                       </div>
                       <div>
                         <label class="block text-sm font-medium text-gray-500 mb-1">Data do Evento</label>
-                        <p class="text-sm text-gray-900">{{ formatDate(event.event_date) }}</p>
+                        <p class="text-sm text-gray-900">{{ formatarData(event.event_date) }}</p>
                       </div>
                     </div>
                     <div v-if="event.event_description" class="mt-4">
@@ -1125,7 +1125,7 @@
                     v-model="newDeviceForm.event_date"
                     type="date"
                     required
-                    :max="new Date().toISOString().split('T')[0]"
+                    :max="maxDataHoje"
                     class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 text-sm"
                     :class="deviceFormErrors.event_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'"
                   >
@@ -1250,7 +1250,7 @@
                         v-model="newRoomForm.event_date"
                         type="date"
                         required
-                        :max="new Date().toISOString().split('T')[0]"
+                        :max="maxDataHoje"
                         class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 text-sm"
                         :class="roomFormErrors.event_date ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'"
                       >
@@ -1703,7 +1703,7 @@
             </div>
             <div v-if="adequation.deadline">
               <label class="block text-sm font-medium text-gray-500">Prazo</label>
-              <p class="mt-1 text-sm text-gray-900">{{ formatDate(adequation.deadline) }}</p>
+              <p class="mt-1 text-sm text-gray-900">{{ formatarData(adequation.deadline) }}</p>
             </div>
           </div>
 
@@ -2174,7 +2174,7 @@
                 <div class="space-y-3">
                   <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Data de Vencimento</label>
-                    <p class="text-sm text-gray-900">{{ selectedPayment.payment_due_date ? formatDateForDisplay(selectedPayment.payment_due_date) : '-' }}</p>
+                    <p class="text-sm text-gray-900">{{ selectedPayment.payment_due_date ? formatarData(selectedPayment.payment_due_date) : '-' }}</p>
                   </div>
 
                   <div>
@@ -2563,7 +2563,7 @@
             <!-- Linha 2 -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Data do Avistamento</label>
-              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ formatDateTime(selectedPestSighting.sighting_date) }}</p>
+              <p class="text-sm text-gray-900 whitespace-pre-line break-words">{{ formatarDataHora(selectedPestSighting.sighting_date) }}</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Localização</label>
@@ -2771,6 +2771,16 @@
 <script setup>
 import { ref, computed, nextTick, watch } from 'vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
+import {
+  formatarData,
+  formatarDataHora,
+  hojeISO,
+  paraInputDateTime,
+  inputDateTimeParaUtc,
+} from '@/utils/formatDate';
+
+// Limite superior dos campos de data do formulário: o dia de hoje em Brasília.
+const maxDataHoje = computed(() => hojeISO());
 
 const props = defineProps({
   workOrder: {
@@ -2959,13 +2969,6 @@ const parseCurrencyValue = (value) => {
   return parseFloat(numericValue) || 0;
 };
 
-// Função para formatar data para exibição
-const formatDateForDisplay = (dateString) => {
-  if (!dateString) return '-';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('pt-BR');
-};
-
 // Função para formatar o campo de valor recebido
 const formatReceivePaymentCurrencyField = (event) => {
   const input = event.target;
@@ -3026,7 +3029,7 @@ const getDateLabel = (dateString, hasPayment = false) => {
 const getPaymentDueDate = (payment) => {
   // Se há payment_due_date específico, mostra ele
   if (payment.payment_due_date) {
-    return formatDate(payment.payment_due_date);
+    return formatarData(payment.payment_due_date);
   }
 
   // Se não há payment_date, não há vencimento
@@ -3036,7 +3039,7 @@ const getPaymentDueDate = (payment) => {
 
   // Se payment_date é futura, é vencimento
   if (isFutureDate(payment.payment_date)) {
-    return formatDate(payment.payment_date);
+    return formatarData(payment.payment_date);
   }
 
   // Se payment_date é passada/hoje, não há vencimento
@@ -3057,7 +3060,7 @@ const getPaymentDate = (payment) => {
 
   // Se payment_date é passada/hoje e há valor pago, é pagamento
   if (payment.amount_paid && payment.amount_paid > 0) {
-    return formatDate(payment.payment_date);
+    return formatarData(payment.payment_date);
   }
 
   return '-';
@@ -3379,9 +3382,8 @@ const editEvent = (event) => {
   console.log('Editando evento:', event);
   selectedEvent.value = event;
 
-  // Formatar a data para o formato datetime-local
-  const eventDate = new Date(event.event_date);
-  const formattedDate = eventDate.toISOString().slice(0, 16);
+  // Formatar a data para o formato datetime-local, em hora de Brasília
+  const formattedDate = paraInputDateTime(event.event_date);
 
   editEventForm.id = event.id;
   editEventForm.event_type = event.event_type;
@@ -3439,7 +3441,8 @@ const updateEvent = async () => {
     const updateData = {
       event_type: editEventForm.event_type,
       device_id: editEventForm.device_id,
-      event_date: editEventForm.event_date,
+      // O campo guarda hora de Brasília; o backend grava o campo em UTC.
+      event_date: inputDateTimeParaUtc(editEventForm.event_date),
       description: editEventForm.description || '',
       observations: editEventForm.observations || '',
       bait_consumption_status: editEventForm.bait_consumption_status || '',
@@ -3783,8 +3786,8 @@ const editPestSighting = async (sighting) => {
 
   selectedPestSighting.value = full;
 
-  const sightingDate = new Date(full.sighting_date);
-  const formattedDate = sightingDate.toISOString().slice(0, 16);
+  // Formatar a data para o formato datetime-local, em hora de Brasília
+  const formattedDate = paraInputDateTime(full.sighting_date);
 
   editPestSightingForm.id = full.id;
   editPestSightingForm.pest_type = full.pest_type;
@@ -3823,7 +3826,8 @@ const updatePestSighting = async () => {
     const updateData = {
       pest_type: editPestSightingForm.pest_type,
       severity_level: editPestSightingForm.severity_level,
-      sighting_date: editPestSightingForm.sighting_date,
+      // O campo guarda hora de Brasília; o backend grava o campo em UTC.
+      sighting_date: inputDateTimeParaUtc(editPestSightingForm.sighting_date),
       location_description: editPestSightingForm.location_description || '',
       description: editPestSightingForm.description || '',
       observations: editPestSightingForm.observations || '',
@@ -3869,17 +3873,7 @@ const updatePestSighting = async () => {
   }
 };
 
-// Formatação de datas e valores
-const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('pt-BR');
-};
-
-const formatDateTime = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleString('pt-BR');
-};
-
+// Formatação de valores
 const formatCurrency = (value) => {
   if (!value && value !== 0) return '0,00';
   return parseFloat(value).toLocaleString('pt-BR', {
@@ -4055,7 +4049,7 @@ const receivePayment = (payment) => {
   selectedPayment.value = payment;
 
   // Definir data atual como padrão
-  const today = new Date().toISOString().split('T')[0];
+  const today = hojeISO();
   receivePaymentForm.payment_date = today;
   receivePaymentForm.amount_received = formatCurrency(payment.amount_paid);
   receivePaymentForm.payment_method = payment.payment_method; // Preencher com a forma original

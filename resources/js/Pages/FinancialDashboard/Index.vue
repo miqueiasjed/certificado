@@ -206,7 +206,7 @@
                     <svg class="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    {{ formatDate(entry.entry_date) }}
+                    {{ formatarData(entry.entry_date) }}
                     <span v-if="entry.payment_method" class="ml-2">
                       • {{ entry.payment_method_text }}
                     </span>
@@ -339,6 +339,7 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, LinearSca
 import { Doughnut, Bar, Line } from 'vue-chartjs'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PageHeader from '@/Components/PageHeader.vue'
+import { formatarData, hojeISO } from '@/utils/formatDate'
 
 // Registrar componentes do Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, PointElement, LineElement)
@@ -397,27 +398,38 @@ const chartOptions = {
 }
 
 // Methods
+// Serializa um Date montado com componentes locais sem passar por UTC, que é o que
+// desloca o dia quando o navegador não está no fuso de Brasília.
+const paraDiaISO = (data) => {
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+
+  return `${data.getFullYear()}-${mes}-${dia}`
+}
+
 const updateDateRange = () => {
-  const today = new Date()
+  // O dia de referência é o do fuso do negócio, não o do relógio do navegador.
+  const [anoHoje, mesHoje, diaHoje] = hojeISO().split('-').map(Number)
+  const today = new Date(anoHoje, mesHoje - 1, diaHoje)
 
   switch (selectedPeriod.value) {
     case 'this_month':
-      filters.start_date = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0]
-      filters.end_date = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]
+      filters.start_date = paraDiaISO(new Date(today.getFullYear(), today.getMonth(), 1))
+      filters.end_date = paraDiaISO(new Date(today.getFullYear(), today.getMonth() + 1, 0))
       break
     case 'last_month':
       const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
-      filters.start_date = lastMonth.toISOString().split('T')[0]
-      filters.end_date = new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0).toISOString().split('T')[0]
+      filters.start_date = paraDiaISO(lastMonth)
+      filters.end_date = paraDiaISO(new Date(lastMonth.getFullYear(), lastMonth.getMonth() + 1, 0))
       break
     case 'this_year':
-      filters.start_date = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0]
-      filters.end_date = new Date(today.getFullYear(), 11, 31).toISOString().split('T')[0]
+      filters.start_date = paraDiaISO(new Date(today.getFullYear(), 0, 1))
+      filters.end_date = paraDiaISO(new Date(today.getFullYear(), 11, 31))
       break
     case 'last_year':
       const lastYear = today.getFullYear() - 1
-      filters.start_date = new Date(lastYear, 0, 1).toISOString().split('T')[0]
-      filters.end_date = new Date(lastYear, 11, 31).toISOString().split('T')[0]
+      filters.start_date = paraDiaISO(new Date(lastYear, 0, 1))
+      filters.end_date = paraDiaISO(new Date(lastYear, 11, 31))
       break
   }
 
@@ -472,12 +484,6 @@ const formatCurrency = (value) => {
   }).format(value)
 }
 
-const formatDate = (dateString) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('pt-BR')
-}
-
 const getSourceBadgeClass = (source) => {
   if (source === 'work_order') return 'bg-blue-100 text-blue-800'
   if (source === 'manual') return 'bg-green-100 text-green-800'
@@ -523,7 +529,7 @@ const submitForm = async () => {
 // Lifecycle
 onMounted(() => {
   // Set default date to today
-  const today = new Date().toISOString().split('T')[0]
+  const today = hojeISO()
   form.entry_date = today
 
   // Initialize date range only if no dates are set

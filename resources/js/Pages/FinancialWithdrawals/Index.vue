@@ -139,7 +139,7 @@
                     <svg class="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
-                    {{ formatDate(withdrawal.entry_date) }}
+                    {{ formatarData(withdrawal.entry_date) }}
                     <span v-if="withdrawal.payment_method" class="ml-2">
                       • {{ withdrawal.payment_method_text }}
                     </span>
@@ -371,6 +371,7 @@ import { ref, onMounted, reactive } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PageHeader from '@/Components/PageHeader.vue'
+import { formatarData, hojeISO } from '@/utils/formatDate'
 
 // Props
 const props = defineProps({
@@ -461,12 +462,6 @@ const formatCurrency = (value) => {
     style: 'currency',
     currency: 'BRL'
   }).format(value)
-}
-
-const formatDate = (dateString) => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
-  return date.toLocaleDateString('pt-BR')
 }
 
 const getSourceBadgeClass = (source) => {
@@ -585,7 +580,7 @@ const closeModal = () => {
 // Lifecycle
 onMounted(() => {
   // Set default date to today
-  const today = new Date().toISOString().split('T')[0]
+  const today = hojeISO()
   form.entry_date = today
 })
 </script>

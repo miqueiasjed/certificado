@@ -108,7 +108,7 @@
                 >
                   <option value="">Selecione uma OS (opcional)</option>
                   <option v-for="wo in workOrders" :key="wo.id" :value="wo.id">
-                    {{ wo.order_number }} - {{ wo.client.name }} - {{ new Date(wo.scheduled_date).toLocaleDateString('pt-BR') }}
+                    {{ wo.order_number }} - {{ wo.client.name }} - {{ formatarData(wo.scheduled_date) }}
                   </option>
                 </select>
                 <p v-if="errors.work_order_id" class="mt-1 text-sm text-red-600">{{ errors.work_order_id }}</p>
@@ -335,6 +335,7 @@ import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
   certificate: Object,

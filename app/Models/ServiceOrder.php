@@ -26,9 +26,14 @@ class ServiceOrder extends Model
     ];
 
     protected $casts = [
+        // Dia sem hora relevante: nunca sofre conversão de fuso
         'order_date' => 'date',
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
+        // start_time e end_time são coluna TIME (hora do dia, sem data).
+        // Ficam sem cast de propósito: 'datetime' faria o Eloquent fabricar
+        // uma data e gravar "Y-m-d H:i:s" numa coluna que só aceita hora.
+        // Instante: timestamps
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function client(): BelongsTo

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BusinessDate;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,8 +26,12 @@ class Certificate extends Model
     ];
 
     protected $casts = [
+        // Dia sem hora relevante: execução e garantia, nunca sofrem conversão de fuso
         'execution_date' => 'date',
         'warranty' => 'date',
+        // Instante
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function client(): BelongsTo
@@ -83,18 +88,36 @@ class Certificate extends Model
 
 
 
+    /**
+     * A garantia é um dia, não um instante. A comparação usa o dia de hoje no
+     * fuso do negócio, igual à rotina certificates:update-status, para que a
+     * tela não mostre "vencido" enquanto a rotina grava "active".
+     */
     public function getIsExpiredAttribute(): bool
     {
-        return $this->warranty && $this->warranty->isPast() && $this->status !== 'cancelled';
+        return $this->warranty
+            && $this->status !== 'cancelled'
+            && BusinessDate::estaVencido($this->warranty);
     }
 
+    /**
+     * Dias até a garantia, contados de dia para dia no fuso do negócio.
+     * Positivo para garantia futura, 0 para a que vence hoje e negativo para a
+     * que já venceu. Sem garantia, devolve 0.
+     */
     public function getDaysUntilExpiryAttribute(): int
     {
         if (!$this->warranty) {
             return 0;
         }
 
-        return now()->diffInDays($this->warranty, false);
+        $garantia = BusinessDate::paraFusoNegocio($this->warranty);
+
+        if ($garantia === null) {
+            return 0;
+        }
+
+        return (int) round(BusinessDate::hoje()->diffInDays($garantia->startOfDay(), false));
     }
 
     public function getCalculatedStatusAttribute(): string
@@ -109,8 +132,8 @@ class Certificate extends Model
             return 'active';
         }
 
-        // Se a garantia venceu, é vencido
-        if ($this->warranty->isPast()) {
+        // Se a garantia venceu, é vencido. Vencer hoje ainda não é estar vencido.
+        if (BusinessDate::estaVencido($this->warranty)) {
             return 'expired';
         }
 

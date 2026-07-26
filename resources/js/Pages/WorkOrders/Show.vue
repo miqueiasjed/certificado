@@ -54,7 +54,7 @@
                     </div>
                     <div class="flex items-center">
                       <span class="font-medium text-gray-700">Criado em:</span>
-                      <span class="ml-2">{{ formatDate(workOrder.created_at) }}</span>
+                      <span class="ml-2">{{ formatarData(workOrder.created_at) }}</span>
                     </div>
                   </div>
                 </div>
@@ -175,7 +175,7 @@
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
-                Última atualização: {{ formatDate(workOrder.updated_at) }}
+                Última atualização: {{ formatarData(workOrder.updated_at) }}
               </div>
               <div class="flex flex-wrap gap-2 justify-end">
                 <Link
@@ -308,7 +308,7 @@
                     </div>
                     <div class="flex justify-between text-sm">
                       <span class="text-gray-500">Data Agendada:</span>
-                      <span class="font-medium">{{ new Date(workOrder.scheduled_date).toLocaleDateString('pt-BR') }}</span>
+                      <span class="font-medium">{{ formatarData(workOrder.scheduled_date) }}</span>
                     </div>
                   </div>
                 </div>
@@ -442,6 +442,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import WorkOrderTabContent from '@/Components/WorkOrderTabContent.vue';
 import Alert from '@/Components/Alert.vue';
+import { formatarData } from '@/utils/formatDate';
 
   const props = defineProps({
     workOrder: Object,
@@ -498,11 +499,6 @@ import Alert from '@/Components/Alert.vue';
     { name: 'devices', label: 'Dispositivos', count: deviceCount.value },
     { name: 'adequations', label: 'Adequações', count: props.workOrder?.adequations?.length || 0 },
   ];
-
-  const formatDate = (date) => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('pt-BR');
-  };
 
   // Função para gerar recibo
   const generateReceipt = () => {

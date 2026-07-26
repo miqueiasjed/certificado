@@ -51,7 +51,7 @@
                 CERT-{{ certificate.id.toString().padStart(6, '0') }}
               </p>
               <p class="text-sm text-gray-500">
-                Criado em {{ formatDate(certificate.created_at) }}
+                Criado em {{ formatarDataHora(certificate.created_at) }}
               </p>
             </div>
           </div>
@@ -176,13 +176,13 @@
             <div>
               <label class="block text-sm font-medium text-gray-500">Data da Execução</label>
               <div class="mt-1 text-sm text-gray-900">
-                {{ formatDate(certificate.execution_date) }}
+                {{ formatarData(certificate.execution_date) }}
               </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-500">Data da Garantia</label>
               <div class="mt-1 text-sm text-gray-900">
-                {{ formatDate(certificate.warranty) }}
+                {{ formatarData(certificate.warranty) }}
               </div>
             </div>
           </div>
@@ -219,13 +219,13 @@
             <div>
               <label class="block text-sm font-medium text-gray-500">Data de Criação</label>
               <div class="mt-1 text-sm text-gray-900">
-                {{ formatDate(certificate.created_at) }}
+                {{ formatarDataHora(certificate.created_at) }}
               </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-500">Última Atualização</label>
               <div class="mt-1 text-sm text-gray-900">
-                {{ formatDate(certificate.updated_at) }}
+                {{ formatarDataHora(certificate.updated_at) }}
               </div>
             </div>
           </div>
@@ -266,19 +266,9 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarData, formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   certificate: Object,
 });
-
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
 </script>

@@ -149,7 +149,7 @@
                       {{ event.device?.room?.address?.client?.name }} - {{ event.device?.room?.address?.street }}, {{ event.device?.room?.address?.number }}
                     </p>
                     <p class="text-sm text-gray-500">
-                      {{ formatDate(event.event_date) }} • {{ event.work_order?.order_number }}
+                      {{ formatarDataHora(event.event_date) }} • {{ event.work_order?.order_number }}
                     </p>
                   </div>
                 </div>
@@ -220,6 +220,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import { formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   deviceEvents: Object,
@@ -250,11 +251,6 @@ const clearFilters = () => {
     date_from: '',
   };
   router.get(route('device-events.index'));
-};
-
-const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('pt-BR');
 };
 </script>
 

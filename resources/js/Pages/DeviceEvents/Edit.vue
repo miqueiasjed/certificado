@@ -306,6 +306,7 @@ import { Link, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { paraInputDateTime, inputDateTimeParaUtc } from '@/utils/formatDate';
 
 const props = defineProps({
   deviceEvent: Object,
@@ -318,7 +319,7 @@ const form = useForm({
   device_id: props.deviceEvent?.device_id || '',
   work_order_id: props.deviceEvent?.work_order_id || '',
   event_type: props.deviceEvent?.event_type || '',
-  event_date: props.deviceEvent?.event_date ? new Date(props.deviceEvent.event_date).toISOString().slice(0, 16) : '',
+  event_date: props.deviceEvent?.event_date ? paraInputDateTime(props.deviceEvent.event_date) : '',
   bait_consumption_status: props.deviceEvent?.bait_consumption_status || '',
   bait_consumption_quantity: props.deviceEvent?.bait_consumption_quantity || '',
   cleaning_done: props.deviceEvent?.cleaning_done !== undefined ? props.deviceEvent.cleaning_done : false,
@@ -344,7 +345,13 @@ watch(() => form.event_type, (newType) => {
 });
 
 const submit = () => {
-  form.put(route('device-events.update', props.deviceEvent.id));
+  // O campo mostra hora de Brasília; o backend grava o campo em UTC.
+  form
+    .transform((dados) => ({
+      ...dados,
+      event_date: inputDateTimeParaUtc(dados.event_date),
+    }))
+    .put(route('device-events.update', props.deviceEvent.id));
 };
 </script>
 

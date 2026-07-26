@@ -239,6 +239,7 @@ import { Link, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { agoraInputDateTime, inputDateTimeParaUtc } from '@/utils/formatDate';
 
 const props = defineProps({
   addresses: Array,
@@ -251,7 +252,7 @@ const props = defineProps({
 const form = useForm({
   address_id: props.preselectedAddress || '',
   work_order_id: props.preselectedWorkOrder || '',
-  sighting_date: new Date().toISOString().slice(0, 16),
+  sighting_date: agoraInputDateTime(),
   pest_type: '',
   severity_level: '',
   location_description: '',
@@ -262,7 +263,13 @@ const form = useForm({
 });
 
 const submit = () => {
-  form.post(route('pest-sightings.store'));
+  // O campo mostra hora de Brasília; o backend grava o campo em UTC.
+  form
+    .transform((dados) => ({
+      ...dados,
+      sighting_date: inputDateTimeParaUtc(dados.sighting_date),
+    }))
+    .post(route('pest-sightings.store'));
 };
 </script>
 

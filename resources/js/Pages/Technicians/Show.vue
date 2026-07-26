@@ -41,7 +41,7 @@
                 {{ technician.specialty || 'Sem especialidade definida' }}
               </p>
               <p class="text-sm text-gray-500">
-                Criado em {{ formatDate(technician.created_at) }}
+                Criado em {{ formatarDataHora(technician.created_at) }}
               </p>
             </div>
           </div>
@@ -139,13 +139,13 @@
             <div>
               <label class="block text-sm font-medium text-gray-500">Data de Criação</label>
               <div class="mt-1 text-sm text-gray-900">
-                {{ formatDate(technician.created_at) }}
+                {{ formatarDataHora(technician.created_at) }}
               </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-500">Última Atualização</label>
               <div class="mt-1 text-sm text-gray-900">
-                {{ formatDate(technician.updated_at) }}
+                {{ formatarDataHora(technician.updated_at) }}
               </div>
             </div>
           </div>
@@ -176,19 +176,9 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   technician: Object,
 });
-
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
 </script>

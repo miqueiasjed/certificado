@@ -233,7 +233,7 @@
                       {{ workOrder.client?.name }} - {{ workOrder.address?.street }}, {{ workOrder.address?.number }} - {{ workOrder.address?.city }}/{{ workOrder.address?.state }}
                     </p>
                     <p class="text-sm text-gray-500">
-                      {{ formatDate(workOrder.scheduled_date) }} • {{ workOrder.technician?.name }}
+                      {{ formatarData(workOrder.scheduled_date) }} • {{ workOrder.technician?.name }}
                     </p>
                   </div>
                 </div>
@@ -296,6 +296,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
   workOrders: Object,
@@ -338,13 +339,8 @@ const clearFilters = () => {
   router.get(route('work-orders.index'));
 };
 
-const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('pt-BR');
-};
-
 const deleteWorkOrder = (workOrder) => {
-  if (confirm(`Tem certeza que deseja excluir a ordem de serviço ${workOrder.order_number}?\n\nCliente: ${workOrder.client?.name}\nData: ${formatDate(workOrder.scheduled_date)}\n\nEsta ação não pode ser desfeita.`)) {
+  if (confirm(`Tem certeza que deseja excluir a ordem de serviço ${workOrder.order_number}?\n\nCliente: ${workOrder.client?.name}\nData: ${formatarData(workOrder.scheduled_date)}\n\nEsta ação não pode ser desfeita.`)) {
     router.delete(route('work-orders.destroy', workOrder.id), {
       preserveScroll: true,
       onSuccess: () => {

@@ -246,6 +246,7 @@ import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { hojeISO } from '@/utils/formatDate';
 
 const props = defineProps({
   contract: Object,
@@ -275,7 +276,7 @@ const formatDateForInput = (date) => {
 };
 
 const form = useForm({
-  start_date: formatDateForInput(props.contract.start_date) || new Date().toISOString().split('T')[0],
+  start_date: formatDateForInput(props.contract.start_date) || hojeISO(),
   end_date: formatDateForInput(props.contract.end_date) || null,
   service_value: props.contract.service_value || null,
   service_type: props.contract.service_type || 'pontual',

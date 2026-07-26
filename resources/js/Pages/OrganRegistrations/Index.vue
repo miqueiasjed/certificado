@@ -92,7 +92,7 @@
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {{ formatDate(organRegistration.created_at) }}
+                {{ formatarData(organRegistration.created_at) }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex items-center justify-end space-x-3">
@@ -151,6 +151,7 @@ import { router, Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Card from '@/Components/Card.vue'
 import Pagination from '@/Components/Pagination.vue'
+import { formatarData } from '@/utils/formatDate'
 
 const props = defineProps({
   organRegistrations: Object,
@@ -204,7 +205,4 @@ const deleteOrganRegistration = (organRegistration) => {
   }
 }
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('pt-BR')
-}
 </script>

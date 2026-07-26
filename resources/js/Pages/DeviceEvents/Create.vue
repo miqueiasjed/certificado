@@ -306,6 +306,7 @@ import { Link, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { agoraInputDateTime, inputDateTimeParaUtc } from '@/utils/formatDate';
 
 const props = defineProps({
   devices: Array,
@@ -319,7 +320,7 @@ const form = useForm({
   device_id: props.preselectedDevice || '',
   work_order_id: props.preselectedWorkOrder || '',
   event_type: '',
-  event_date: new Date().toISOString().slice(0, 16),
+  event_date: agoraInputDateTime(),
   bait_consumption_status: '',
   bait_consumption_quantity: '',
   cleaning_done: false,
@@ -345,7 +346,13 @@ watch(() => form.event_type, (newType) => {
 });
 
 const submit = () => {
-  form.post(route('device-events.store'));
+  // O campo mostra hora de Brasília; o backend grava o campo em UTC.
+  form
+    .transform((dados) => ({
+      ...dados,
+      event_date: inputDateTimeParaUtc(dados.event_date),
+    }))
+    .post(route('device-events.store'));
 };
 </script>
 

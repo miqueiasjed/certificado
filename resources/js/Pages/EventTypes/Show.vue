@@ -76,13 +76,13 @@
               <div>
                 <dt class="text-sm font-medium text-gray-500">Criado em</dt>
                 <dd class="mt-1 text-sm text-gray-900">
-                  {{ formatDate(eventType?.created_at) }}
+                  {{ formatarDataHora(eventType?.created_at) }}
                 </dd>
               </div>
               <div>
                 <dt class="text-sm font-medium text-gray-500">Última atualização</dt>
                 <dd class="mt-1 text-sm text-gray-900">
-                  {{ formatDate(eventType?.updated_at) }}
+                  {{ formatarDataHora(eventType?.updated_at) }}
                 </dd>
               </div>
             </dl>
@@ -98,6 +98,7 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   eventType: {
@@ -105,17 +106,5 @@ const props = defineProps({
     required: true,
   },
 });
-
-const formatDate = (date) => {
-  if (!date) return '-';
-  const d = new Date(date);
-  return d.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 </script>
 

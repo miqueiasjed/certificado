@@ -136,7 +136,7 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ formatDate(serviceType.created_at) }}
+                  {{ formatarData(serviceType.created_at) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div class="flex items-center justify-end space-x-2">
@@ -178,6 +178,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import StatCard from '@/Components/StatCard.vue';
 import Pagination from '@/Components/Pagination.vue';
+import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
   serviceTypes: Object,
@@ -236,10 +237,6 @@ const deleteServiceType = (serviceType) => {
       }
     });
   }
-};
-
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('pt-BR');
 };
 
 // Computed para estatísticas

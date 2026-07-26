@@ -106,7 +106,7 @@
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-900">{{ formatDate(service.created_at) }}</div>
+                  <div class="text-sm text-gray-900">{{ formatarData(service.created_at) }}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex items-center space-x-2">
@@ -183,6 +183,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
   services: Object,
@@ -221,15 +222,6 @@ const deleteService = (id) => {
       },
     });
   }
-};
-
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
 };
 
 const formatPrice = (price) => {

@@ -1,66 +1,62 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistema de Gestão para Controle de Pragas
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Sistema operacional para empresas de dedetização e manejo integrado de pragas. Reúne o atendimento ao cliente, a execução em campo, a documentação obrigatória e o controle financeiro.
 
-## About Laravel
+## O que o sistema oferece
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Cadastro de clientes, endereços, ambientes e contratos.
+- Orçamentos com geração de documento e conversão em serviço.
+- Ordens de serviço com produtos, procedimentos, técnicos e áreas atendidas.
+- Registro de dispositivos, armadilhas, eventos e avistamentos de pragas.
+- Controle de adequações recomendadas e evidências fotográficas.
+- Cadastro de produtos, princípios ativos, grupos químicos, antídotos e registros em órgãos competentes.
+- Emissão de certificados de garantia, ordens de serviço, recibos e contratos.
+- Gestão de técnicos, serviços e tipos de ocorrência.
+- Acompanhamento de pagamentos e informações financeiras por ordem.
+- Fluxo de caixa, entradas, retiradas e painel financeiro.
+- Configuração dos dados e da identidade da empresa nos documentos.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Para quem foi feito
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+O sistema atende empresas de controle de pragas que precisam padronizar a execução dos serviços, manter rastreabilidade e entregar documentação profissional aos clientes.
 
-## Learning Laravel
+## Rotinas agendadas
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+O sistema tem quatro rotinas diárias, executadas pelo agendador do Laravel e configuradas em `bootstrap/app.php` a partir da lista única em `App\Support\RotinasAgendadas::DIARIAS`.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+| Rotina | Horário (America/Sao_Paulo) | O que faz |
+|---|---|---|
+| `certificates:update-status` | 00:10 | Atualiza o status dos certificados (ativo ou vencido) comparando a garantia com o dia de hoje. |
+| `payments:update-statuses` | 00:20 | Atualiza o status de pagamento das parcelas e das ordens de serviço. Roda depois da anterior porque depende do dia de pagamento já fechado. |
+| `cash:sync-daily-balances` | 00:30 | Sincroniza os saldos diários de caixa com as entradas e retiradas financeiras do dia. |
+| `cash:create-missing-balances` | 00:40 | Cria o registro de saldo diário para os dias sem nenhum movimento financeiro. |
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### O cron que faz tudo isso rodar
 
-## Laravel Sponsors
+Nenhuma dessas rotinas roda sozinha. O Laravel só as dispara quando o comando `schedule:run` é chamado a cada minuto, e isso depende de uma linha de cron cadastrada no servidor:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```
+* * * * * cd /Users/miqueias/Sites/certificado && php artisan schedule:run >> /dev/null 2>&1
+```
 
-### Premium Partners
+O caminho acima é o do ambiente de desenvolvimento. No servidor, troque pelo caminho real da aplicação em produção antes de cadastrar o cron.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+Sem essa linha configurada no servidor, nenhuma rotina executa. Essa foi a causa do bug de status em produção mapeado em `.claude/prd/divida-tecnica.md`: os quatro comandos sempre estiveram corretos, mas nunca eram chamados, então certificado vencido continuava marcado como ativo e pagamento atrasado continuava pendente.
 
-## Contributing
+### Como conferir se está rodando
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```
+php artisan routines:status
+```
 
-## Code of Conduct
+O comando mostra a última execução de cada rotina, o status, a duração e se está atrasada, sempre no fuso de Brasília. Ele termina com código de saída 1 quando alguma rotina está atrasada ou falhou, para servir de sinal em monitoramento externo. A opção `--task=` filtra uma rotina específica, por exemplo `php artisan routines:status --task=certificates:update-status`.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Dois alertas antes de confiar no cron
 
-## Security Vulnerabilities
+1. **`CACHE_STORE` precisa ser `database` em produção, nunca `array`.** A trava `withoutOverlapping` usa o cache para o mutex que impede duas execuções simultâneas da mesma rotina. Com `CACHE_STORE=array`, o cache vive só na memória do processo, some a cada chamada do `schedule:run` e a trava perde o efeito entre uma chamada de cron e a seguinte.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+2. **Se o MySQL cair, a rotina morre no mutex antes de qualquer código da aplicação.** O store `database` grava a trava na tabela `cache_locks`. Com o banco fora do ar, a tentativa de adquirir a trava falha ali mesmo, e nenhuma linha de `app/Console/Commands/` chega a executar. Nesse caso, `routines:status` mostra a lacuna crescendo desde a última execução, sem nenhuma linha `failed` para apontar a causa.
 
-## License
+### Checagem de deploy
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+O `.env` de produção precisa ser conferido a cada deploy: só o ambiente local foi verificado até agora, e é lá que `CACHE_STORE=database` está confirmado. Rodar `php artisan routines:status` logo depois do deploy confirma que o cron está instalado no servidor e que as quatro rotinas seguem executando.

@@ -196,7 +196,7 @@
                       {{ sighting.address?.client?.name }} - {{ sighting.address?.street }}, {{ sighting.address?.number }} - {{ sighting.address?.city }}/{{ sighting.address?.state }}
                     </p>
                     <p class="text-sm text-gray-500">
-                      {{ formatDate(sighting.sighting_date) }} • {{ sighting.work_order?.order_number }}
+                      {{ formatarDataHora(sighting.sighting_date) }} • {{ sighting.work_order?.order_number }}
                     </p>
                   </div>
                 </div>
@@ -255,6 +255,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import { formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   pestSightings: Object,
@@ -289,11 +290,6 @@ const clearFilters = () => {
     date_to: '',
   };
   router.get(route('pest-sightings.index'));
-};
-
-const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('pt-BR');
 };
 </script>
 

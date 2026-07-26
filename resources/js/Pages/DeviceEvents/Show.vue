@@ -46,7 +46,7 @@
             <div class="flex-1">
               <h1 class="text-2xl font-bold text-gray-900">{{ deviceEvent.event_type_text }}</h1>
               <p class="text-sm text-gray-500">ID: {{ deviceEvent.id }}</p>
-              <p class="text-sm text-gray-500">Criado em: {{ formatDate(deviceEvent.created_at) }}</p>
+              <p class="text-sm text-gray-500">Criado em: {{ formatarData(deviceEvent.created_at) }}</p>
             </div>
             <div class="flex-shrink-0">
               <span v-if="deviceEvent.active" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
@@ -73,7 +73,7 @@
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-500">Data do Evento</label>
-                <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(deviceEvent.event_date) }}</p>
+                <p class="mt-1 text-sm text-gray-900">{{ formatarDataHora(deviceEvent.event_date) }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-500">Dispositivo</label>
@@ -208,20 +208,11 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarData, formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   deviceEvent: Object,
 });
-
-const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('pt-BR');
-};
-
-const formatDateTime = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleString('pt-BR');
-};
 </script>
 
 

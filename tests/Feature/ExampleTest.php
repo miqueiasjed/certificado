@@ -2,18 +2,21 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
     /**
-     * A basic test example.
+     * A raiz do sistema é o dashboard, que fica atrás do middleware auth.
+     * Visitante sem sessão é mandado para o login.
+     *
+     * O teste que veio com o scaffold do Laravel esperava 200 nesta rota, o que
+     * nunca valeu neste projeto: o dashboard sempre exigiu autenticação.
      */
-    public function test_the_application_returns_a_successful_response(): void
+    public function test_visitante_sem_sessao_e_redirecionado_para_o_login(): void
     {
-        $response = $this->get('/');
+        $resposta = $this->get('/');
 
-        $response->assertStatus(200);
+        $resposta->assertRedirect(route('login'));
     }
 }

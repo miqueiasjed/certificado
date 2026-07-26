@@ -85,11 +85,11 @@
                 </div>
                 <div>
                   <span class="text-gray-500">Criado em:</span>
-                  <span class="ml-2 text-gray-900">{{ formatDate(serviceType.created_at) }}</span>
+                  <span class="ml-2 text-gray-900">{{ formatarData(serviceType.created_at) }}</span>
                 </div>
                 <div>
                   <span class="text-gray-500">Atualizado em:</span>
-                  <span class="ml-2 text-gray-900">{{ formatDate(serviceType.updated_at) }}</span>
+                  <span class="ml-2 text-gray-900">{{ formatarData(serviceType.updated_at) }}</span>
                 </div>
               </div>
             </div>
@@ -120,10 +120,11 @@
 </template>
 
 <script setup>
-import { useForm } from '@inertiajs/vue3';
+import { useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
   serviceType: Object,
@@ -148,7 +149,4 @@ const goBack = () => {
   window.history.back();
 };
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('pt-BR');
-};
 </script>

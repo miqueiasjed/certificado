@@ -36,15 +36,19 @@ class WorkOrder extends Model
     ];
 
     protected $casts = [
+        // Dia sem hora relevante: nunca sofre conversão de fuso
         'scheduled_date' => 'date',
+        'payment_due_date' => 'date',
+        // Instante: gravado em UTC e convertido na exibição
         'start_time' => 'datetime',
         'end_time' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
         'active' => 'boolean',
         'materials_used' => 'array',
         'total_cost' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'final_amount' => 'decimal:2',
-        'payment_due_date' => 'date',
     ];
 
     protected $appends = [

@@ -43,7 +43,7 @@
             <div class="flex-1">
               <h1 class="text-2xl font-bold text-gray-900">{{ pestSighting.pest_type_text }}</h1>
               <p class="text-sm text-gray-500">ID: {{ pestSighting.id }}</p>
-              <p class="text-sm text-gray-500">Criado em: {{ formatDate(pestSighting.created_at) }}</p>
+              <p class="text-sm text-gray-500">Criado em: {{ formatarData(pestSighting.created_at) }}</p>
             </div>
             <div class="flex-shrink-0 space-y-2">
               <span
@@ -82,7 +82,7 @@
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-500">Data do Avistamento</label>
-                <p class="mt-1 text-sm text-gray-900">{{ formatDateTime(pestSighting.sighting_date) }}</p>
+                <p class="mt-1 text-sm text-gray-900">{{ formatarDataHora(pestSighting.sighting_date) }}</p>
               </div>
               <div>
                 <label class="block text-sm font-medium text-gray-500">Nível de Severidade</label>
@@ -177,20 +177,11 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarData, formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   pestSighting: Object,
 });
-
-const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('pt-BR');
-};
-
-const formatDateTime = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleString('pt-BR');
-};
 </script>
 
 

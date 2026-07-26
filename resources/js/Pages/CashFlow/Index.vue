@@ -138,7 +138,7 @@
                 <dl>
                   <dt class="text-sm font-medium text-gray-500 truncate">Período</dt>
                   <dd class="text-lg font-medium text-gray-900">
-                    {{ formatDate(stats.period?.start_date) }} - {{ formatDate(stats.period?.end_date) }}
+                    {{ formatarData(stats.period?.start_date) }} - {{ formatarData(stats.period?.end_date) }}
                   </dd>
                 </dl>
               </div>
@@ -165,7 +165,7 @@
                 <div class="ml-4">
                   <div class="text-sm font-medium text-gray-900">{{ entry.description }}</div>
                   <div class="text-sm text-gray-500">
-                    {{ formatDate(entry.entry_date) }} • {{ getPaymentMethodText(entry.payment_method) }}
+                    {{ formatarData(entry.entry_date) }} • {{ getPaymentMethodText(entry.payment_method) }}
                     <span v-if="entry.reference_number">• Ref: {{ entry.reference_number }}</span>
                     <span v-if="entry.work_order_id">• OS #{{ entry.work_order_id }}</span>
                   </div>
@@ -246,6 +246,7 @@ import { ref, reactive, onMounted } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
+import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
   entries: {
@@ -343,11 +344,6 @@ const formatCurrency = (value) => {
     style: 'currency',
     currency: 'BRL'
   }).format(value);
-};
-
-const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('pt-BR');
 };
 
 const getTypeText = (source) => {

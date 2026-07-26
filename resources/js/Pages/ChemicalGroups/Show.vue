@@ -15,14 +15,14 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Criado em
           </label>
-          <div class="text-gray-900">{{ formatDate(chemicalGroup.created_at) }}</div>
+          <div class="text-gray-900">{{ formatarData(chemicalGroup.created_at) }}</div>
         </div>
 
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Atualizado em
           </label>
-          <div class="text-gray-900">{{ formatDate(chemicalGroup.updated_at) }}</div>
+          <div class="text-gray-900">{{ formatarData(chemicalGroup.updated_at) }}</div>
         </div>
       </div>
 
@@ -49,12 +49,9 @@ import { Link } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PageHeader from '@/Components/PageHeader.vue'
 import Card from '@/Components/Card.vue'
+import { formatarData } from '@/utils/formatDate'
 
 const props = defineProps({
   chemicalGroup: Object,
 })
-
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('pt-BR')
-}
 </script>

@@ -41,7 +41,7 @@
                 OS-{{ serviceOrder.id.toString().padStart(6, '0') }}
               </p>
               <p class="text-sm text-gray-500">
-                Criada em {{ formatDate(serviceOrder.created_at) }}
+                Criada em {{ formatarDataHora(serviceOrder.created_at) }}
               </p>
             </div>
           </div>
@@ -155,13 +155,13 @@
             <div>
               <label class="block text-sm font-medium text-gray-500">Data de Início</label>
               <div class="mt-1 text-sm text-gray-900">
-                {{ formatDate(serviceOrder.start_date) }}
+                {{ formatarDataHora(serviceOrder.start_date) }}
               </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-500">Data de Conclusão Prevista</label>
               <div class="mt-1 text-sm text-gray-900">
-                {{ formatDate(serviceOrder.due_date) }}
+                {{ formatarDataHora(serviceOrder.due_date) }}
               </div>
             </div>
           </div>
@@ -212,13 +212,13 @@
             <div>
               <label class="block text-sm font-medium text-gray-500">Data de Criação</label>
               <div class="mt-1 text-sm text-gray-900">
-                {{ formatDate(serviceOrder.created_at) }}
+                {{ formatarDataHora(serviceOrder.created_at) }}
               </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-500">Última Atualização</label>
               <div class="mt-1 text-sm text-gray-900">
-                {{ formatDate(serviceOrder.updated_at) }}
+                {{ formatarDataHora(serviceOrder.updated_at) }}
               </div>
             </div>
           </div>
@@ -255,21 +255,11 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   serviceOrder: Object,
 });
-
-const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  return new Date(dateString).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-};
 
 const formatPrice = (price) => {
   if (!price) return 'Não informado';

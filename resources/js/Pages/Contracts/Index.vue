@@ -91,13 +91,13 @@
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                       </svg>
-                      Início: {{ formatDate(contract.start_date) }}
+                      Início: {{ formatarData(contract.start_date) }}
                     </div>
                     <div v-if="contract.end_date" class="flex items-center gap-1">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                       </svg>
-                      Fim: {{ formatDate(contract.end_date) }}
+                      Fim: {{ formatarData(contract.end_date) }}
                     </div>
                     <div v-if="contract.service_value" class="flex items-center gap-1">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -154,6 +154,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
   contracts: Object,
@@ -187,11 +188,6 @@ const clearSearch = () => {
     preserveState: true,
     replace: true,
   });
-};
-
-const formatDate = (date) => {
-  if (!date) return '-';
-  return new Date(date).toLocaleDateString('pt-BR');
 };
 
 const formatCurrency = (value) => {

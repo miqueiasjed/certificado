@@ -80,7 +80,7 @@
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                   <label class="block text-xs font-medium text-gray-500">Data</label>
-                  <div class="text-sm">{{ new Date(budget.date).toLocaleDateString() }}</div>
+                  <div class="text-sm">{{ formatarData(budget.date) }}</div>
               </div>
               <div>
                   <label class="block text-xs font-medium text-gray-500">Prioridade</label>
@@ -106,6 +106,7 @@ import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
   budget: Object,

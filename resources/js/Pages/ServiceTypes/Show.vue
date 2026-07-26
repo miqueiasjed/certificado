@@ -107,12 +107,12 @@
 
                 <div>
                   <dt class="text-sm font-medium text-gray-500">Criado em</dt>
-                  <dd class="text-sm text-gray-900">{{ formatDate(serviceType.created_at) }}</dd>
+                  <dd class="text-sm text-gray-900">{{ formatarData(serviceType.created_at) }}</dd>
                 </div>
 
                 <div>
                   <dt class="text-sm font-medium text-gray-500">Atualizado em</dt>
-                  <dd class="text-sm text-gray-900">{{ formatDate(serviceType.updated_at) }}</dd>
+                  <dd class="text-sm text-gray-900">{{ formatarData(serviceType.updated_at) }}</dd>
                 </div>
               </dl>
             </div>
@@ -157,6 +157,7 @@ import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
   serviceType: Object,
@@ -177,7 +178,4 @@ const deleteServiceType = () => {
   }
 };
 
-const formatDate = (date) => {
-  return new Date(date).toLocaleDateString('pt-BR');
-};
 </script>

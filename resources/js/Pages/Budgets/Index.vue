@@ -81,7 +81,7 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ new Date(budget.date).toLocaleDateString() }}
+                  {{ formatarData(budget.date) }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                    <span :class="budget.priority === 'urgent' ? 'text-red-600 bg-red-100' : 'text-gray-600 bg-gray-100'" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full">
@@ -157,6 +157,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
 import { watchDebounced } from '@vueuse/core';
+import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({
   budgets: Object,

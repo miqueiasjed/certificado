@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\BusinessDate;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -26,11 +27,15 @@ class PaymentDetail extends Model
     ];
 
     protected $casts = [
+        // Dia sem hora relevante: vencimento e pagamento, nunca sofrem conversão de fuso
+        'payment_due_date' => 'date',
+        'payment_date' => 'date',
+        // Instante
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
         'total_cost' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'final_amount' => 'decimal:2',
-        'payment_due_date' => 'date',
-        'payment_date' => 'date',
         'amount_paid' => 'decimal:2',
         'is_partial_payment' => 'boolean',
         'payment_status' => 'string',
@@ -94,9 +99,11 @@ class PaymentDetail extends Model
             return $this->attributes['payment_status'];
         }
 
-        // Caso contrário, calcule baseado nas regras antigas
+        // Caso contrário, calcule baseado nas regras antigas. O vencimento é um
+        // dia: só está vencido quando é anterior a hoje no fuso do negócio.
+        // Parcela que vence hoje continua pendente.
         if (!$this->payment_date) {
-            if ($this->payment_due_date && $this->payment_due_date < now()->toDateString()) {
+            if ($this->payment_due_date && BusinessDate::estaVencido($this->payment_due_date)) {
                 return 'overdue';
             }
             return 'pending';
@@ -159,10 +166,13 @@ class PaymentDetail extends Model
 
     /**
      * Scope for overdue payments.
+     *
+     * Vencimento estritamente anterior ao dia de hoje no fuso do negócio, o
+     * mesmo corte usado pela rotina payments:update-statuses.
      */
     public function scopeOverdue($query)
     {
         return $query->whereNull('payment_date')
-                    ->where('payment_due_date', '<', now()->toDateString());
+                    ->where('payment_due_date', '<', BusinessDate::hoje()->toDateString());
     }
 }

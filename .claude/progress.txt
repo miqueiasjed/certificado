@@ -1,0 +1,106 @@
+# Registro de execução dos planos
+
+## Plano 1 - Rotinas agendadas, datas e correções de base (25/07/2026)
+
+Concluído. Decomposto inicialmente em 14 tasks, fechou com 18: quatro nasceram
+de achados durante a execução.
+
+### O aprendizado central
+
+Ligar o agendamento transformou código morto em código que roda todo dia. As
+quatro rotinas nunca tinham sido exercitadas contra dado real, e a lógica delas
+carregava bugs que ninguém via porque nada executava. Dois desses bugs, se
+tivessem ido para produção junto com o agendamento, causariam dano maior que o
+problema original que o plano queria resolver:
+
+1. `UpdatePaymentStatuses` decidia `overdue` olhando `payment_date`, a data em
+   que a parcela foi PAGA, e não `payment_due_date`. Parcela em aberto tem esse
+   campo nulo, então caía sempre em vencida. Rodar a rotina marcaria a carteira
+   inteira do cliente como atrasada. Corrigido na Task 1.17.
+2. A mesma rotina decidia `paid` apenas por `amount_paid`. Mas
+   `PaymentDetailController` cria a parcela do valor restante já com
+   `amount_paid` preenchido (o valor A RECEBER) e `payment_date` nula. A rotina
+   declararia recebido dinheiro que não entrou. Corrigido na Task 1.18.
+
+**Regra que fica:** antes de agendar comando que nunca rodou, leia a lógica dele
+contra dado real e rode em `--dry-run`. Ativar agendamento é mudança de
+comportamento, não de configuração.
+
+### Decisões de arquitetura
+
+- `APP_TIMEZONE` continua `UTC`. Trocar para `America/Sao_Paulo` reinterpretaria
+  todo `created_at` já gravado, deslocando o histórico em 3 horas. Em vez disso
+  entrou `config('app.business_timezone')` e `App\Support\BusinessDate`.
+- Backend e frontend convergiram, de forma independente, na mesma heurística:
+  `2026-07-25T00:00:00.000000Z` é tratado como DIA, não instante. Sem isso, o
+  cast `date` do Laravel serializa para o Inertia e o frontend devolve 24/07,
+  reintroduzindo o bug. O efeito colateral aceito é que um instante genuíno
+  gravado exatamente às 00:00:00Z é lido como dia.
+- `withoutOverlapping` depende de `CACHE_STORE`. Com `array` a trava some entre
+  execuções. Local está `database`. **Conferir o `.env` de produção.**
+
+### Armadilhas encontradas
+
+- **`grep` de `toLocaleString` não distingue data de moeda.** Minha contagem
+  inicial inflou várias tasks: das 13 ocorrências em `WorkOrderTabContent.vue`,
+  só 3 eram data, as outras 10 eram máscara de reais. Toda spec de substituição
+  precisa mandar o agente conferir campo a campo antes de trocar.
+- **Carbon 3 devolve `diffInHours` COM SINAL.** A primeira versão do comando de
+  diagnóstico comparava `> 48` sobre um valor negativo, então nenhuma rotina
+  jamais apareceria atrasada. Precisa de `absolute: true`.
+- **`schedule:test` não dispara os eventos do agendador** no Laravel 11.45: ele
+  chama `$event->run()` direto. Listener puro passa no `schedule:run` e falha no
+  `schedule:test`. A solução foi listener + ganchos `before`/`then` apontando
+  para os mesmos métodos, com gravação idempotente por rodada.
+- **Comando agendado roda em processo separado.** Exceção dentro dele nunca vira
+  `Throwable` no processo pai: vira exit code. Confiar só em
+  `ScheduledTaskFailed` gravaria comando quebrado como `success`.
+- **`ServiceOrder.start_time` e `end_time` são coluna `TIME`,** não datetime. O
+  cast `datetime` fabricava uma data e tentava gravar `Y-m-d H:i:s` numa coluna
+  que só aceita hora. Bug pré-existente, removido o cast na Task 1.5.
+- **SQLite não roda as migrations deste projeto.** A migration
+  `2026_01_07_085358_change_devices_room_id_to_address_id` usa `UPDATE ... INNER
+  JOIN` e `ROW_NUMBER() OVER (PARTITION BY ...)`, sintaxe só de MySQL. O banco
+  de teste é MySQL `testing`, criado na Task 1.14.
+- **Rodar `migrate:rollback` sem `--path` com agentes em paralelo** reverte o
+  batch inteiro, incluindo migration de outro agente. Sempre usar `--path`.
+
+### Dívida deixada em aberto, com motivo
+
+Tudo abaixo foi encontrado durante a execução e NÃO corrigido, por estar fora do
+escopo declarado do Plano 1:
+
+1. **`PaymentDetailController` cria parcela pendente com `amount_paid`
+   preenchido** (por volta da linha 563). A Task 1.18 protegeu a rotina, mas a
+   origem do dado continua errada, e existem registros já gravados assim (a
+   parcela #4 do banco local é um deles). Corrigir a origem exige backfill com
+   conferência. Vai para o Plano 18 (contas a receber).
+2. **`WorkOrders/Edit.vue` preenche `start_time`/`end_time` sem conversão de
+   fuso,** enquanto `WorkOrderTabContent.vue` os exibe convertendo. Os dois
+   discordam em 3 horas para o mesmo registro. É o mesmo problema de contrato que
+   a Task 1.15 resolveu para evento de dispositivo e avistamento de praga.
+3. **`PaymentDetail::getPaymentStatusAttribute()`** devolve `paid` para qualquer
+   parcela com `payment_date`, sem olhar valor, enquanto a rotina devolve
+   `partial` quando o valor é menor que o total. Só afeta linha com a coluna
+   `payment_status` nula, e some na próxima rodada da rotina.
+4. **`ServiceOrders/Show.vue` exibe `start_date` e `due_date`,** campos que não
+   existem no model nem são passados pelo controller. Código morto.
+5. **22 arquivos ainda usam `confirm()` nativo** para ação destrutiva, o que o
+   `CLAUDE.md` proíbe.
+
+### Aplicação em produção, ainda pendente
+
+O entregável "status corrigidos em produção" depende de deploy e não foi
+executado. O procedimento:
+
+1. Subir o código e rodar `php artisan migrate` (remove as duas tabelas órfãs; a
+   migration aborta sozinha se encontrar linha).
+2. Rodar `php artisan certificates:update-status --dry-run` e
+   `php artisan payments:update-statuses --dry-run`. **Conferir as contagens por
+   transição antes de aplicar.** Número muito alto de `-> overdue` ou `-> paid` é
+   sinal de que algo está errado, e o dry-run existe para pegar isso.
+3. Só então rodar os dois comandos sem `--dry-run`.
+4. Cadastrar o cron do `schedule:run` (a linha está no README, com o caminho de
+   desenvolvimento: trocar pelo caminho de produção).
+5. Conferir `CACHE_STORE=database` no `.env` de produção.
+6. Validar com `php artisan routines:status` no dia seguinte.

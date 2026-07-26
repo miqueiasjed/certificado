@@ -258,6 +258,7 @@ import { useForm, Link } from '@inertiajs/vue3';
 import Card from '@/Components/Card.vue';
 import ClientSearch from '@/Components/ClientSearch.vue';
 import { useMasks } from '@/Composables/useMasks';
+import { hojeISO } from '@/utils/formatDate';
 import axios from 'axios';
 
 const props = defineProps({
@@ -277,7 +278,7 @@ const form = useForm({
   prospect_phone: props.budget?.prospect_phone || '',
   prospect_address: props.budget?.prospect_address || '',
   prospect_address: props.budget?.prospect_address || '',
-  date: props.budget?.date ? props.budget.date.substring(0, 10) : new Date().toISOString().substring(0, 10),
+  date: props.budget?.date ? props.budget.date.substring(0, 10) : hojeISO(),
   validity_date: props.budget?.validity_date ? props.budget.validity_date.substring(0, 10) : '',
   priority: props.budget?.priority || 'normal',
   channel: props.budget?.channel || '',

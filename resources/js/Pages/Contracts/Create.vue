@@ -272,6 +272,7 @@ import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import { hojeISO } from '@/utils/formatDate';
 
 const props = defineProps({
   address: Object,
@@ -304,7 +305,7 @@ const contractPeriods = [
 
 const form = useForm({
   address_id: props.address?.id || '',
-  start_date: new Date().toISOString().split('T')[0],
+  start_date: hojeISO(),
   end_date: null,
   service_value: null,
   service_type: 'pontual',
@@ -324,14 +325,6 @@ if (props.address) {
   selectedAddress.value = props.address;
   selectedAddressClient.value = props.address.client?.name || '';
 }
-
-const formatDate = (date) => {
-  if (!date) return null;
-  if (typeof date === 'string') {
-    return date.split('T')[0];
-  }
-  return new Date(date).toISOString().split('T')[0];
-};
 
 const setContractPeriod = (months) => {
   selectedPeriod.value = months;
