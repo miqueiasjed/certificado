@@ -156,6 +156,8 @@ class SyncPermissions extends Command
                 'usuario-editar',
                 'usuario-desativar',
                 'empresa-configurar',
+                'auditoria-ver',
+                'acesso-log-ver',
             ],
         ];
     }

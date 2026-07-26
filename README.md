@@ -22,7 +22,7 @@ O sistema atende empresas de controle de pragas que precisam padronizar a execu�
 
 ## Rotinas agendadas
 
-O sistema tem quatro rotinas diárias, executadas pelo agendador do Laravel e configuradas em `bootstrap/app.php` a partir da lista única em `App\Support\RotinasAgendadas::DIARIAS`.
+O sistema tem cinco rotinas diárias, executadas pelo agendador do Laravel e configuradas em `bootstrap/app.php` a partir da lista única em `App\Support\RotinasAgendadas::DIARIAS`.
 
 | Rotina | Horário (America/Sao_Paulo) | O que faz |
 |---|---|---|
@@ -30,6 +30,16 @@ O sistema tem quatro rotinas diárias, executadas pelo agendador do Laravel e co
 | `payments:update-statuses` | 00:20 | Atualiza o status de pagamento das parcelas e das ordens de serviço. Roda depois da anterior porque depende do dia de pagamento já fechado. |
 | `cash:sync-daily-balances` | 00:30 | Sincroniza os saldos diários de caixa com as entradas e retiradas financeiras do dia. |
 | `cash:create-missing-balances` | 00:40 | Cria o registro de saldo diário para os dias sem nenhum movimento financeiro. |
+| `auditoria:purge` | 02:00 | Apaga de `audit_logs` e `access_logs` os registros mais antigos que o período de retenção. Horário fora da janela das outras porque é a mais pesada: percorre e apaga em lotes as tabelas de auditoria inteiras. |
+
+### Expurgo de auditoria
+
+`audit_logs` e `access_logs` são imutáveis pela aplicação: o model bloqueia exclusão e alteração (`AuditLog`/`AccessLog`, em `booted()`). O único jeito permitido de remover uma linha dessas tabelas é o expurgo por retenção, e nenhuma tela, endpoint ou outro comando deve apagar auditoria.
+
+- **Retenção:** `AUDITORIA_DIAS_DE_RETENCAO` no `.env`, lida em `config('auditoria.dias_de_retencao')`. Padrão de 730 dias (2 anos). Encurtar é decisão de negócio, não técnica.
+- **Comando:** `php artisan auditoria:purge`. Aceita `--dias=N` para sobrepor a retenção configurada numa execução específica, e `--dry-run` para só contar e imprimir, sem apagar nada.
+- O corte é calculado no dia de hoje do fuso do negócio (`BusinessDate::hoje()->subDays($dias)`) e a exclusão acontece em lotes de 1.000 linhas por vez, para não travar a tabela em produção.
+- Rodar o comando duas vezes no mesmo dia é seguro: a segunda execução não encontra mais nada elegível e remove zero linhas.
 
 ### O cron que faz tudo isso rodar
 

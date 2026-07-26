@@ -1,6 +1,6 @@
 # INDEX - Planos do Sistema de Certificados
 
-> Última atualização: 25/07/2026
+> Última atualização: 26/07/2026
 > Fonte de requisitos: `.claude/prd/` (índice em `.claude/prd/README.md`)
 
 ## Legenda
@@ -26,7 +26,7 @@ bloqueio.
 |---|------|--------|------------|-------|
 | 1 | Rotinas agendadas, datas e correções de base | ✅ | - | 18 |
 | 2 | Papéis e permissões | ✅ | - | 20 |
-| 3 | Auditoria e histórico de alterações | ⏳ | 2 | 9 |
+| 3 | Auditoria e histórico de alterações | ✅ | 2 | 9 |
 
 ### SaaS multiempresa
 
@@ -44,51 +44,51 @@ bloqueio.
 |---|------|--------|------------|-------|
 | 9 | Geração automática de visitas do contrato | ⏳ | 1 | 9 |
 | 10 | Agenda em calendário | ⏳ | 2, 9 | 8 |
-| 11 | QR code e identificação de dispositivos | ⏳ | 4 | ~6 |
-| 12 | App do técnico: fundação offline | ⏳ | 2, 4, 10 | ~8 |
-| 13 | App do técnico: execução e assinatura em campo | ⏳ | 3, 11, 12 | ~8 |
+| 11 | QR code e identificação de dispositivos | ⏳ | 4 | 9 |
+| 12 | App do técnico: fundação offline | ⏳ | 2, 4, 10 | 12 |
+| 13 | App do técnico: execução e assinatura em campo | ⏳ | 3, 11, 12 | 10 |
 
 ### Relacionamento com o cliente
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 14 | Central de notificações | ⏳ | 1, 9 | ~8 |
-| 15 | Portal do cliente | ⏳ | 6, 14 | ~8 |
-| 16 | Agendamento online e pesquisa de satisfação | ⏳ | 10, 14, 15 | ~6 |
+| 14 | Central de notificações | ⏳ | 1, 9 | 9 |
+| 15 | Portal do cliente | ⏳ | 6, 14 | 9 |
+| 16 | Agendamento online e pesquisa de satisfação | ⏳ | 10, 14, 15 | 8 |
 
 ### Financeiro e fiscal
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 17 | Estoque de produtos com lote, validade e custo | ⏳ | 6, 13 | ~8 |
-| 18 | Contas a receber e a pagar | ⏳ | 6, 17 | ~8 |
-| 19 | Cobrança recorrente dos clientes finais | ⏳ | 14, 15, 18 | ~7 |
-| 20 | Nota fiscal de serviço | ⏳ | 18 | ~6 |
+| 17 | Estoque de produtos com lote, validade e custo | ⏳ | 6, 13 | 10 |
+| 18 | Contas a receber e a pagar | ⏳ | 6, 17 | 10 |
+| 19 | Cobrança recorrente dos clientes finais | ⏳ | 14, 15, 18 | 8 |
+| 20 | Nota fiscal de serviço | ⏳ | 18 | 7 |
 
 ### Inteligência e gestão
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 21 | Monitoramento CIP: tendência e mapa de pontos | ⏳ | 6, 13, 15 | ~8 |
-| 22 | Roteirização e rastreamento em campo | ⏳ | 10, 13 | ~7 |
-| 23 | Comissões, metas e renovação de contratos | ⏳ | 14, 18 | ~8 |
-| 24 | Conformidade RDC 622/2022 | ⏳ | 14, 17 | ~6 |
+| 21 | Monitoramento CIP: tendência e mapa de pontos | ⏳ | 6, 13, 15 | 9 |
+| 22 | Roteirização e rastreamento em campo | ⏳ | 10, 13 | 8 |
+| 23 | Comissões, metas e renovação de contratos | ⏳ | 14, 18 | 9 |
+| 24 | Conformidade RDC 622/2022 | ⏳ | 14, 17 | 7 |
 
 ### Diferenciais
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 25 | Laudo assistido por IA | ⏳ | 6, 21 | ~6 |
-| 26 | Assinatura eletrônica de contratos | ⏳ | 14, 15 | ~6 |
-| 27 | Frota e veículos | ⏳ | 17, 22 | ~5 |
+| 25 | Laudo assistido por IA | ⏳ | 6, 21 | 7 |
+| 26 | Assinatura eletrônica de contratos | ⏳ | 14, 15 | 6 |
+| 27 | Frota e veículos | ⏳ | 17, 22 | 6 |
 
-Total: 114 tasks decompostas (planos 1 a 10) mais ~95 estimadas (planos 11 a 27).
+Total: 262 tasks decompostas nos 27 planos.
 
-A decomposição real dos planos 2 a 10 ficou ~45% acima da estimativa inicial. O
-motivo é o limite de dimensionamento das tasks: nenhuma mistura backend com
-frontend, e cada etapa de migração em produção vira task própria porque é um
-deploy próprio. As estimativas dos planos 11 a 27 carregam o mesmo viés e devem
-ser lidas com essa correção.
+A decomposição real ficou ~40% acima da estimativa inicial de ~185 tasks. O
+motivo é o limite de dimensionamento: nenhuma task mistura backend com frontend,
+e cada etapa de migração em produção vira task própria porque é um deploy
+próprio. Os planos que mais cresceram são os que tocam schema com dado existente
+(4, 17, 18) e os que entregam duas camadas independentes (12, 13).
 
 ## Ordem de execução recomendada
 

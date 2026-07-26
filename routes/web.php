@@ -32,6 +32,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EventTypeController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AuditLogController;
 use App\Models\Client;
 use App\Models\Product;
 use App\Models\Technician;
@@ -334,6 +335,14 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/settings/users', [UserController::class, 'store'])->middleware('permission:usuario-criar')->name('settings.users.store');
     Route::put('/settings/users/{user}', [UserController::class, 'update'])->middleware('permission:usuario-editar')->name('settings.users.update');
     Route::patch('/settings/users/{user}/status', [UserController::class, 'alterarStatus'])->middleware('permission:usuario-desativar')->name('settings.users.status');
+
+    // Rota de Histórico de Auditoria
+    // {tipo} é um apelido de uma lista fechada de models auditados (ver
+    // AuditoriaService::MODELS_AUDITADOS), nunca um FQCN vindo do cliente.
+    Route::get('/audit-logs/{tipo}/{id}', [AuditLogController::class, 'index'])
+        ->where(['tipo' => '[a-z-]+', 'id' => '[0-9]+'])
+        ->middleware('permission:auditoria-ver')
+        ->name('audit-logs.index');
 
     // Logout
     // Sem permissão: sair do sistema não pode depender de papel.

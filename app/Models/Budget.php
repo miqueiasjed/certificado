@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditavel;
 use Illuminate\Database\Eloquent\Model;
 
 class Budget extends Model
 {
+    use Auditavel;
+
     protected $guarded = [];
 
     protected $casts = [

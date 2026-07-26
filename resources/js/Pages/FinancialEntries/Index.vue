@@ -374,6 +374,11 @@
               </button>
             </div>
           </form>
+
+          <!-- Histórico de Alterações -->
+          <div v-if="showEditModal && editingEntry" class="mt-6">
+            <HistoricoRegistro tipo="lancamento-financeiro" :id="editingEntry.id" />
+          </div>
         </div>
       </div>
     </div>
@@ -395,6 +400,7 @@ import { Link, router } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import PageHeader from '@/Components/PageHeader.vue'
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue'
+import HistoricoRegistro from '@/Components/HistoricoRegistro.vue'
 import { formatarData, hojeISO } from '@/utils/formatDate'
 
 // Props

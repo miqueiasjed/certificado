@@ -245,3 +245,61 @@ Os passos 2 e 3 rodam no MESMO deploy: entre um e outro, ninguém entra.
 3. `php artisan acesso:backfill --dry-run`, conferir a saída, depois sem a flag.
 4. Conferir na tela de usuários se cada pessoa ficou com o papel certo. O backfill
    dá `administrador` a todo mundo que estava sem papel.
+
+## Plano 3 - Auditoria e histórico de alterações (concluído em 26/07/2026)
+
+### O que ficou pronto
+
+Duas tabelas novas (`audit_logs`, `access_logs`), a trait `Auditavel` aplicada em
+10 models sensíveis, listener de login/falha/logout, endpoint
+`GET /audit-logs/{tipo}/{id}` protegido por `auditoria-ver`, componente
+`HistoricoRegistro.vue` embutido em quatro telas, e expurgo diário
+`auditoria:purge` às 02:00. 84 testes passando (381 assertions).
+
+### Gotchas que custaram tempo
+
+- **`app()->runningInConsole()` é a checagem certa para decidir se há requisição
+  HTTP.** O bootstrapper `SetRequestForConsole` monta um Request falso a partir de
+  `APP_URL` com `REMOTE_ADDR = 127.0.0.1`. Checar `REMOTE_ADDR` gravaria IP
+  inventado em comando artisan, fila e seeder. Efeito colateral: como a suíte roda
+  em CLI, teste HTTP também grava `ip` nulo.
+- **`created_at` da auditoria é UTC; `BusinessDate::hoje()` é America/Sao_Paulo.**
+  Passar o Carbon local direto ao `where()` do expurgo desloca a fronteira em até
+  3 horas e apaga registro que deveria sobreviver. O comando converte com
+  `->utc()->format('Y-m-d H:i:s')` antes da query.
+- **Model recém-criado por factory não tem todas as colunas hidratadas em
+  `$original`.** Um resave do mesmo objeto em memória faz `getChanges()` acusar
+  campo `null -> null` como alterado. Em teste, usar `->fresh()` antes do resave,
+  que é o que o route-model-binding faz numa requisição real.
+- **O papel `leitura` recebe permissão por sufixo `-ver`.** Toda permissão nova
+  terminada em `-ver` cai nele automaticamente. `auditoria-ver` e `acesso-log-ver`
+  precisaram entrar na lista de rejeição do seeder.
+
+### Bug corrigido fora do escopo do plano
+
+Login de usuário desativado gravava o par `login` + `logout` em vez de
+`login_falhou`: o `AuthController` autenticava e só depois checava `is_active`.
+O log dizia que a pessoa entrou. Agora `is_active` entra na própria tentativa
+(`Auth::attempt($credenciais + ['is_active' => true])`) e a mensagem específica de
+usuário desativado é escolhida por uma checagem que não autentica ninguém.
+
+### Decisões de projeto que valem lembrar
+
+- A trait tem piso próprio de campos sensíveis (`password`, `senha`, `token`,
+  `secret`, por substring), independente de `config/auditoria.php`, porque config
+  cacheada em versão antiga não pode virar vazamento de senha no histórico.
+- Falha ao auditar nunca derruba a operação de negócio: tudo em try/catch com
+  `Log::error`. Mesma regra no listener de acesso.
+- O histórico não é carregado ao abrir a tela: só no clique em "Ver histórico".
+- `historicoDe()` limita a página a 100 registros porque `por_pagina` vem da URL.
+
+### Aplicação em produção
+
+1. Deploy com as duas migrations (tabelas novas, sem dado existente: um passo só).
+2. `php artisan permissions:sync` e
+   `php artisan db:seed --class=RolesAndPermissionsSeeder` para criar
+   `auditoria-ver` e `acesso-log-ver` e dá-las só ao administrador.
+3. A auditoria grava a partir do deploy. Não há histórico retroativo, o que é
+   esperado.
+4. Conferir o crescimento de `audit_logs` na primeira semana antes de aceitar os
+   730 dias de retenção padrão (`AUDITORIA_DIAS_DE_RETENCAO`).

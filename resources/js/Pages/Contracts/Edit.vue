@@ -236,6 +236,11 @@
           </div>
         </form>
       </Card>
+
+      <!-- Histórico de Alterações -->
+      <div class="mt-6">
+        <HistoricoRegistro tipo="contrato" :id="contract.id" />
+      </div>
     </div>
   </AuthenticatedLayout>
 </template>
@@ -246,6 +251,7 @@ import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import HistoricoRegistro from '@/Components/HistoricoRegistro.vue';
 import { hojeISO } from '@/utils/formatDate';
 
 const props = defineProps({

@@ -257,6 +257,9 @@
           Voltar à Lista
         </Link>
       </div>
+
+      <!-- Histórico de Alterações -->
+      <HistoricoRegistro tipo="certificado" :id="certificate.id" />
     </div>
   </AuthenticatedLayout>
 </template>
@@ -266,6 +269,7 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import HistoricoRegistro from '@/Components/HistoricoRegistro.vue';
 import { formatarData, formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({

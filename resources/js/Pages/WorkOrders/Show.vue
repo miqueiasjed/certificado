@@ -232,6 +232,9 @@
             </div>
           </div>
         </div>
+
+        <!-- Histórico de Alterações -->
+        <HistoricoRegistro tipo="ordem-servico" :id="workOrder.id" />
       </div>
 
       <!-- Modal para criar Avistamento de Praga -->
@@ -442,6 +445,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import WorkOrderTabContent from '@/Components/WorkOrderTabContent.vue';
 import Alert from '@/Components/Alert.vue';
+import HistoricoRegistro from '@/Components/HistoricoRegistro.vue';
 import { formatarData } from '@/utils/formatDate';
 
   const props = defineProps({

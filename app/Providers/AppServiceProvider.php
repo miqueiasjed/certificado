@@ -2,7 +2,11 @@
 
 namespace App\Providers;
 
+use App\Listeners\RegistraAcesso;
 use App\Listeners\RegistraExecucaoAgendada;
+use Illuminate\Auth\Events\Failed;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Auth\Events\Logout;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskStarting;
@@ -25,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registrarAuditoriaDasRotinas();
+        $this->registrarAuditoriaDeAcesso();
     }
 
     /**
@@ -40,5 +45,19 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ScheduledTaskStarting::class, [RegistraExecucaoAgendada::class, 'aoIniciar']);
         Event::listen(ScheduledTaskFinished::class, [RegistraExecucaoAgendada::class, 'aoFinalizar']);
         Event::listen(ScheduledTaskFailed::class, [RegistraExecucaoAgendada::class, 'aoFalhar']);
+    }
+
+    /**
+     * Liga o registro de login, falha de login e logout em access_logs.
+     *
+     * AuthController usa Auth::attempt() e Auth::logout(), que já disparam os
+     * eventos nativos Login/Failed/Logout, então nenhuma mudança no controller
+     * foi necessária: este listener é o único ponto de captura.
+     */
+    private function registrarAuditoriaDeAcesso(): void
+    {
+        Event::listen(Login::class, [RegistraAcesso::class, 'aoEntrar']);
+        Event::listen(Failed::class, [RegistraAcesso::class, 'aoFalhar']);
+        Event::listen(Logout::class, [RegistraAcesso::class, 'aoSair']);
     }
 }

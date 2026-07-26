@@ -124,6 +124,10 @@ class RolesAndPermissionsSeeder extends Seeder
      * primeiras porque leitura não alcança dinheiro; a terceira porque a tela
      * de usuários é administração da empresa, não consulta de dado.
      *
+     * auditoria-ver e acesso-log-ver também ficam de fora: o histórico mostra
+     * o valor antes e depois de campo de qualquer módulo, inclusive financeiro,
+     * e o registro de acesso expõe quem entrou e de onde. Só administrador lê.
+     *
      * @param  \Illuminate\Support\Collection<int, string>  $todasAsPermissoes
      * @return array<int, string>
      */
@@ -131,7 +135,13 @@ class RolesAndPermissionsSeeder extends Seeder
     {
         return $todasAsPermissoes
             ->filter(fn (string $nome) => Str::endsWith($nome, '-ver'))
-            ->reject(fn (string $nome) => in_array($nome, ['financeiro-ver', 'pagamento-ver', 'usuario-ver'], true))
+            ->reject(fn (string $nome) => in_array($nome, [
+                'financeiro-ver',
+                'pagamento-ver',
+                'usuario-ver',
+                'auditoria-ver',
+                'acesso-log-ver',
+            ], true))
             ->values()
             ->all();
     }

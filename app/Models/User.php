@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Concerns\Auditavel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -13,7 +14,15 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasRoles;
+    use HasFactory, Notifiable, HasRoles, Auditavel;
+
+    /**
+     * Campos que nunca vão para o log de auditoria, mesmo que a configuração
+     * global mude: senha e token de sessão são o que mais importa blindar aqui.
+     *
+     * @var array<int, string>
+     */
+    protected array $naoAuditar = ['password', 'remember_token'];
 
     /**
      * The attributes that are mass assignable.

@@ -26,6 +26,9 @@ final class RotinasAgendadas
         'payments:update-statuses' => '00:20',
         'cash:sync-daily-balances' => '00:30',
         'cash:create-missing-balances' => '00:40',
+        // 02:00, fora da janela das outras: é a rotina mais pesada, porque
+        // percorre e apaga em lotes as tabelas de auditoria inteiras.
+        'auditoria:purge' => '02:00',
     ];
 
     /**
