@@ -111,8 +111,10 @@ final class DominioMultiempresa
         'jobs' => 'Fila do framework: o payload do job é que carrega o company_id.',
         'migrations' => 'Controle de versão do schema.',
         'password_reset_tokens' => 'Autenticação: chaveada por e-mail, que é global.',
+        'plans' => 'Catálogo de planos comerciais da plataforma, compartilhado entre tenants.',
         'scheduled_task_runs' => 'Diagnóstico das rotinas agendadas da plataforma, roda fora de tenant.',
         'sessions' => 'Sessão do framework: vínculo por usuário.',
+        'tenant_usages' => 'Apuração de uso lida pelo super admin entre todos os tenants; o tenant que quiser ver o próprio uso filtra explicitamente por company_id.',
     ];
 
     /**
@@ -177,7 +179,9 @@ final class DominioMultiempresa
     public const MODELS_FORA_DO_ESCOPO = [
         \App\Models\Company::class => 'É o próprio tenant.',
         \App\Models\PestSightingItem::class => 'Filha de PestSighting, alcançada só pelo relacionamento: escopo herdado.',
+        \App\Models\Plan::class => 'Catálogo de planos comerciais da plataforma, compartilhado entre tenants.',
         \App\Models\ScheduledTaskRun::class => 'Diagnóstico de rotina agendada da plataforma, roda fora de tenant.',
+        \App\Models\TenantUsage::class => 'Apuração de uso lida pelo super admin entre todos os tenants; o tenant que quiser ver o próprio uso filtra explicitamente por company_id.',
     ];
 
     /**
@@ -265,6 +269,13 @@ final class DominioMultiempresa
                 'indice' => 'failed_jobs_uuid_unique',
                 'colunas' => ['uuid'],
                 'motivo' => 'Infraestrutura de fila do framework.',
+            ],
+        ],
+        'plans' => [
+            [
+                'indice' => 'plans_slug_unique',
+                'colunas' => ['slug'],
+                'motivo' => 'Catálogo comercial da plataforma: o slug do plano é único para todos os tenants, de propósito.',
             ],
         ],
         'certificate_service' => [

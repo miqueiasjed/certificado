@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Closure;
+use Illuminate\Contracts\Auth\Authenticatable;
 use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
@@ -19,13 +20,14 @@ use Throwable;
  * Ordem de resolução
  * ------------------
  * 1. Tenant fixado explicitamente por `definir()` ou `comTenant()`. É o caminho
- *    obrigatório fora de requisição HTTP (comando artisan, seeder, job de fila)
- *    e o caminho do "assumir tenant" do super admin, no Plano 5.
- * 2. `company_id` do usuário autenticado. É o caminho normal de toda requisição
+ *    obrigatório fora de requisição HTTP (comando artisan, seeder, job de fila).
+ * 2. Tenant assumido na sessão pelo super admin (Task 5.5 do Plano 5), e
+ *    **somente** quando o usuário autenticado tem `is_platform_admin = true`.
+ * 3. `company_id` do usuário autenticado. É o caminho normal de toda requisição
  *    web do sistema.
- * 3. `null`, quando não há nem um nem outro.
+ * 4. `null`, quando não há nenhum dos três.
  *
- * O nível 3 significa "sem tenant resolvido", e nele o escopo global não filtra
+ * O nível 4 significa "sem tenant resolvido", e nele o escopo global não filtra
  * nada. Isso é deliberado: migration, seeder e boa parte da suíte de testes
  * rodam sem usuário autenticado e precisam enxergar o banco inteiro. É também
  * o motivo de a Task 4.11 (teste de vazamento entre tenants) ser obrigatória:
@@ -42,9 +44,11 @@ use Throwable;
  *
  * Ponto de extensão para a Task 4.9 (fila e CLI)
  * ----------------------------------------------
- * Esta classe já funciona fora de requisição HTTP: nada aqui depende de sessão,
- * de request ou de rota. O que a Task 4.9 acrescenta é quem chama `definir()` e
- * `comTenant()` em cada contexto, sem alterar esta classe:
+ * Esta classe funciona fora de requisição HTTP: a leitura de sessão que a Task
+ * 5.5 acrescentou é opcional e falha para "sem tenant assumido" quando não há
+ * sessão iniciada, que é o caso de comando artisan, seeder e job de fila. O que
+ * a Task 4.9 acrescenta é quem chama `definir()` e `comTenant()` em cada
+ * contexto, sem alterar esta classe:
  *
  * - Job de fila: carrega `company_id` no payload e envolve o `handle()` em
  *   `TenantAtual::comTenant($this->companyId, fn () => ...)`, ou usa um
@@ -72,6 +76,22 @@ final class TenantAtual
     private static int $nivelSemEscopo = 0;
 
     /**
+     * Chave de sessão com o id da empresa que o super admin assumiu.
+     *
+     * Escrita e apagada por `App\Services\AssumirTenantService`, lida aqui. As
+     * duas pontas apontam para esta constante para nunca divergirem: a string
+     * literal repetida em dois arquivos é como se cria o bug em que "liberar"
+     * limpa uma chave e a resolução do tenant continua lendo outra.
+     */
+    public const CHAVE_SESSAO_TENANT_ASSUMIDO = 'tenant_assumido_id';
+
+    /**
+     * Chave de sessão com o nome da empresa assumida, para a faixa de aviso.
+     * Nunca participa da resolução do tenant: quem decide isolamento é o id.
+     */
+    public const CHAVE_SESSAO_TENANT_ASSUMIDO_NOME = 'tenant_assumido_nome';
+
+    /**
      * Id da empresa corrente, ou `null` quando não há tenant resolvido.
      */
     public static function id(): ?int
@@ -80,7 +100,19 @@ final class TenantAtual
             return self::$tenantExplicito;
         }
 
-        return self::idDoUsuarioAutenticado();
+        $usuario = self::usuarioAutenticado();
+
+        if ($usuario === null) {
+            return null;
+        }
+
+        $assumido = self::idDoTenantAssumidoNaSessao($usuario);
+
+        if ($assumido !== null) {
+            return $assumido;
+        }
+
+        return self::idDaEmpresaDoUsuario($usuario);
     }
 
     /**
@@ -226,33 +258,102 @@ final class TenantAtual
     }
 
     /**
-     * `company_id` do usuário autenticado, quando houver.
+     * Usuário autenticado, quando houver.
      *
      * Precisa sobreviver a contexto sem autenticação nenhuma: comando artisan,
      * seeder, job de fila e migration rodam sem guard utilizável, e resolver o
      * tenant nunca pode derrubar a execução. Daí a checagem do container e o
-     * try/catch: na dúvida, "sem tenant".
+     * try/catch: na dúvida, "sem usuário", que vira "sem tenant".
      *
-     * A Task 4.7 troca `Company::current()` para resolver a empresa por este
-     * mesmo caminho. Enquanto ela não entra, quem lê o usuário autenticado é
-     * apenas este método.
+     * Ponto único de leitura do usuário autenticado nesta classe. Ele é
+     * resolvido uma vez por chamada de `id()` e serve às duas fontes seguintes
+     * (sessão de suporte e `company_id`), em vez de cada uma perguntar ao guard
+     * por conta própria.
+     *
+     * Não há risco de reentrância aqui: `User` declara
+     * `aplicaEscopoDeEmpresaNaLeitura() === false`, então carregar o usuário
+     * não dispara o escopo global que voltaria a perguntar o tenant.
      */
-    private static function idDoUsuarioAutenticado(): ?int
+    private static function usuarioAutenticado(): ?Authenticatable
     {
         if (! app()->bound('auth')) {
             return null;
         }
 
         try {
-            $usuario = auth()->user();
+            return auth()->user();
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Empresa do tenant assumido na sessão, e `null` em todo o resto.
+     *
+     * ESTE MÉTODO É O PONTO MAIS SENSÍVEL DO ISOLAMENTO ENTRE EMPRESAS.
+     *
+     * A sessão é dado que chega do cliente: cookie adulterado, sessão copiada
+     * de outra máquina, payload forjado. Se a presença da chave bastasse para
+     * trocar de tenant, qualquer usuário de uma dedetizadora passaria a ler os
+     * clientes, as ordens de serviço e o financeiro da concorrente dele
+     * escrevendo um id na própria sessão. É por isso que a primeira linha do
+     * método é a checagem de `is_platform_admin`, e não a leitura da sessão: a
+     * chave só tem valor para quem é super admin, e para todo o resto ela é
+     * texto inerte.
+     *
+     * A comparação é estrita e a favor do fechado, igual à do middleware
+     * `EnsurePlatformAdmin`: só o booleano `true` passa. Atributo ausente, nulo,
+     * `1` sem cast ou qualquer outro valor cai fora, e o usuário volta a
+     * resolver o tenant pelo `company_id` dele.
+     *
+     * Fora de requisição HTTP não há sessão iniciada, e o método devolve `null`
+     * sem tocar em driver nenhum: comando artisan, seeder e job continuam
+     * resolvendo o tenant como antes desta task.
+     */
+    private static function idDoTenantAssumidoNaSessao(Authenticatable $usuario): ?int
+    {
+        if (($usuario->is_platform_admin ?? null) !== true) {
+            return null;
+        }
+
+        if (! app()->bound('session')) {
+            return null;
+        }
+
+        try {
+            $sessao = app('session');
+
+            // Sessão não iniciada é o caso de CLI e de fila. Ler antes disso
+            // devolveria sempre nulo, mas passaria pelo driver à toa.
+            if (! $sessao->isStarted()) {
+                return null;
+            }
+
+            $assumido = $sessao->get(self::CHAVE_SESSAO_TENANT_ASSUMIDO);
         } catch (Throwable) {
             return null;
         }
 
-        if ($usuario === null) {
+        if (! is_numeric($assumido)) {
             return null;
         }
 
+        $assumido = (int) $assumido;
+
+        // Id inválido vira "sem tenant assumido", nunca `0` nem negativo: um id
+        // fora de faixa que passasse adiante desligaria o filtro do escopo
+        // global em vez de restringi-lo.
+        return $assumido >= 1 ? $assumido : null;
+    }
+
+    /**
+     * `company_id` do usuário, quando houver.
+     *
+     * A Task 4.7 troca `Company::current()` para resolver a empresa por este
+     * mesmo caminho.
+     */
+    private static function idDaEmpresaDoUsuario(Authenticatable $usuario): ?int
+    {
         $empresa = $usuario->company_id ?? null;
 
         return is_numeric($empresa) ? (int) $empresa : null;

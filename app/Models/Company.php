@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Support\TenantAtual;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Company extends Model
@@ -35,6 +36,25 @@ class Company extends Model
         'signature_operational_path',
         'signature_chemical_path',
         'signature_responsible_path',
+
+        // Campos de plataforma (Plano 5). Só a área do super admin escreve
+        // neles; o único endpoint de autoatendimento que atualiza a empresa
+        // (`CompanyController::update`) valida com whitelist explícita, então
+        // nenhum deles é alcançável pelo formulário do tenant.
+        'plan_id',
+        'situacao',
+        'is_internal',
+        'trial_ends_at',
+        'suspensa_em',
+        'motivo_suspensao',
+        'ultimo_acesso_em',
+    ];
+
+    protected $casts = [
+        'is_internal' => 'boolean',
+        'trial_ends_at' => 'date',
+        'suspensa_em' => 'datetime',
+        'ultimo_acesso_em' => 'datetime',
     ];
 
     /**
@@ -77,6 +97,19 @@ class Company extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * Plano comercial contratado.
+     *
+     * Nulo enquanto o super admin não define um plano para o tenant, e nulo
+     * também quando o plano é excluído do catálogo (`nullOnDelete`). Quem lê
+     * limites precisa tratar o caso: empresa sem plano não é empresa sem
+     * limite.
+     */
+    public function plan(): BelongsTo
+    {
+        return $this->belongsTo(Plan::class);
     }
 
     /**

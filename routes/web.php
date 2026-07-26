@@ -37,6 +37,11 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\NotificationTemplateController;
 use App\Http\Controllers\NotificationQueueController;
+use App\Http\Controllers\Plataforma\AssumirTenantController;
+use App\Http\Controllers\Plataforma\DashboardController as PlataformaDashboardController;
+use App\Http\Controllers\Plataforma\PlanController as PlataformaPlanController;
+use App\Http\Controllers\Plataforma\TenantController as PlataformaTenantController;
+use App\Http\Controllers\Plataforma\UsageController as PlataformaUsageController;
 use App\Models\Client;
 use App\Models\Product;
 use App\Models\Technician;
@@ -450,4 +455,76 @@ Route::middleware(['auth'])->group(function () {
     // Logout
     // Sem permissão: sair do sistema não pode depender de papel.
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+});
+
+// Área da plataforma.
+//
+// Tudo acima deste ponto é o mundo das empresas: cada requisição enxerga apenas
+// o tenant do usuário autenticado. Daqui para baixo é o mundo do super admin,
+// que não pertence a empresa nenhuma e enxerga todos os tenants ao mesmo tempo.
+// Os dois grupos ficam separados de propósito, e nenhuma rota de empresa entra
+// aqui dentro.
+//
+// Decisão de autenticação, registrada na Task 5.3 do Plano 5: mesmo formulário
+// de login, mesma tabela `users`, redirecionamento diferente depois de entrar.
+// Um guard separado dobraria o custo de manutenção de sessão, recuperação de
+// senha e auditoria sem ganho real de isolamento. O isolamento vem do
+// middleware `platform.admin` (`EnsurePlatformAdmin`), que exige
+// `is_platform_admin` e liga `TenantAtual::semEscopo()` só durante estas
+// requisições.
+//
+// Enquanto não assume um tenant, o super admin continua vendo a empresa do
+// próprio `company_id` na área das empresas. É intencional: a ação explícita de
+// assumir outro tenant é a Task 5.5.
+Route::prefix('plataforma')->name('plataforma.')->middleware(['auth', 'platform.admin'])->group(function () {
+    // Modo suporte: entrar em um tenant e sair dele (Task 5.5).
+    //
+    // As duas são POST porque mudam estado e ficam em auditoria. Assumir tenant
+    // por link seria acesso a dado de cliente real disparado por um GET, ou
+    // seja, por prefetch do navegador, por crawler ou por uma imagem em e-mail.
+    //
+    // `{company}` é o binding padrão de `App\Models\Company`, que não usa
+    // `BelongsToCompany` e por isso encontra qualquer empresa. É o comportamento
+    // desejado: escolher entre todos os tenants é o propósito desta área.
+    Route::post('/tenants/{company}/assumir', [AssumirTenantController::class, 'assumir'])->name('tenants.assumir');
+
+    // Sem `{company}`: sai de onde estiver, e a empresa vem da sessão. Um id na
+    // URL só criaria a chance de a saída não bater com a entrada.
+    Route::post('/liberar', [AssumirTenantController::class, 'liberar'])->name('liberar');
+
+    // CRUD de tenants e ações de ciclo de vida (Task 5.7).
+    //
+    // Mesmo `{company}` das rotas de assumir/liberar acima: `Company` não usa
+    // `BelongsToCompany`, então o binding sempre enxerga qualquer tenant, em
+    // qualquer rota deste grupo. Sem `destroy`: `TenantService` não exclui
+    // tenant de propósito (ver o cabeçalho do Service), então não existe
+    // endpoint para isso.
+    Route::resource('tenants', PlataformaTenantController::class)
+        ->parameters(['tenants' => 'company'])
+        ->except(['destroy']);
+
+    // POST porque mudam estado (situação do tenant) e ficam em auditoria, mesmo
+    // critério das rotas de assumir/liberar.
+    Route::post('/tenants/{company}/suspender', [PlataformaTenantController::class, 'suspender'])->name('tenants.suspender');
+    Route::post('/tenants/{company}/reativar', [PlataformaTenantController::class, 'reativar'])->name('tenants.reativar');
+
+    // CRUD do catálogo de planos comerciais (Task 5.7). `destroy` recusa plano
+    // com tenant vinculado (ver `PlanController::destroy`); desativar
+    // (`ativo = false`) é o caminho normal para tirar um plano de circulação.
+    Route::resource('planos', PlataformaPlanController::class)
+        ->parameters(['planos' => 'plan']);
+
+    // Painel geral e uso por tenant (Task 5.8).
+    //
+    // `/plataforma` sem mais nada é a página inicial da área, para onde o
+    // login do super admin redireciona (Task 5.3). Precisa vir registrada
+    // aqui dentro do grupo para herdar `platform.admin`; sem ela, o painel
+    // inteiro cai em 404 assim que alguém entra.
+    Route::get('/', [PlataformaDashboardController::class, 'index'])->name('dashboard');
+
+    // Uso de um tenant específico: mês corrente ao vivo, histórico e
+    // percentual do teto do plano. Fora do `Route::resource('tenants', ...)`
+    // acima porque não é uma ação de CRUD do cadastro, é uma tela de
+    // consulta à parte.
+    Route::get('/tenants/{company}/uso', [PlataformaUsageController::class, 'show'])->name('tenants.uso');
 });

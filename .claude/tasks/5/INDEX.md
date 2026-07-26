@@ -8,18 +8,18 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 5.1 | Migration e model do plano comercial e campos de plataforma | backend-estrutura | ⏳ | média |
-| 5.2 | Migration e model de uso por tenant | backend-estrutura | ⏳ | baixa |
-| 5.3 | Área do super admin com acesso separado | backend-endpoint | ⏳ | média |
-| 5.4 | Service de gestão de tenants | backend-logica | ⏳ | média |
-| 5.5 | Assumir tenant para suporte, com registro em auditoria | backend-endpoint | ⏳ | média |
-| 5.6 | Apuração de uso por tenant | backend-logica | ⏳ | média |
-| 5.7 | Endpoints de tenants e de planos comerciais | backend-endpoint | ⏳ | alta |
-| 5.8 | Endpoints do painel geral e do uso por tenant | backend-endpoint | ⏳ | média |
-| 5.9 | Layout do painel da plataforma e faixa de suporte | frontend-componente | ⏳ | média |
-| 5.10 | Telas de lista e cadastro de tenants | frontend-pagina | ⏳ | alta |
-| 5.11 | Telas de visão geral, uso do tenant e planos | frontend-pagina | ⏳ | alta |
-| 5.12 | Testes do painel da plataforma | teste | ⏳ | alta |
+| 5.1 | Migration e model do plano comercial e campos de plataforma | backend-estrutura | ✅ | média |
+| 5.2 | Migration e model de uso por tenant | backend-estrutura | ✅ | baixa |
+| 5.3 | Área do super admin com acesso separado | backend-endpoint | ✅ | média |
+| 5.4 | Service de gestão de tenants | backend-logica | ✅ | média |
+| 5.5 | Assumir tenant para suporte, com registro em auditoria | backend-endpoint | ✅ | média |
+| 5.6 | Apuração de uso por tenant | backend-logica | ✅ | média |
+| 5.7 | Endpoints de tenants e de planos comerciais | backend-endpoint | ✅ | alta |
+| 5.8 | Endpoints do painel geral e do uso por tenant | backend-endpoint | ✅ | média |
+| 5.9 | Layout do painel da plataforma e faixa de suporte | frontend-componente | ✅ | média |
+| 5.10 | Telas de lista e cadastro de tenants | frontend-pagina | ✅ | alta |
+| 5.11 | Telas de visão geral, uso do tenant e planos | frontend-pagina | ✅ | alta |
+| 5.12 | Testes do painel da plataforma | teste | ✅ | alta |
 
 ## Ordem de execução
 

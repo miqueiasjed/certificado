@@ -32,6 +32,23 @@ class User extends Authenticatable
     /**
      * The attributes that are mass assignable.
      *
+     * Duas colunas de `users` ficam de fora de propósito, e as duas decidem
+     * privilégio, não dado: `company_id` (motivo no docblock de `company()`) e
+     * `is_platform_admin`.
+     *
+     * `is_platform_admin` é o único flag que concede acesso à área de
+     * plataforma (`/plataforma`, Task 5.3), onde a consulta roda com
+     * `TenantAtual::semEscopo()` e enxerga o banco inteiro, de todos os
+     * tenants. Um `User::create($request->all())`, ou um `update()` com um
+     * campo a mais no formulário, hoje ou daqui a um ano, não pode ser capaz de
+     * fabricar um super admin: seria escalada de um usuário comum para "vê tudo
+     * de todas as empresas", o pior desfecho possível neste sistema.
+     *
+     * Promover alguém é atribuição direta na instância, sempre visível no
+     * código: `$usuario->is_platform_admin = true; $usuario->save();`. Não
+     * existe tela para isso, e o primeiro super admin nasce de um UPDATE feito
+     * à mão no banco, por decisão registrada em `.claude/tasks/5/INDEX.md`.
+     *
      * @var array<int, string>
      */
     protected $fillable = [
@@ -66,6 +83,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_platform_admin' => 'boolean',
         ];
     }
 

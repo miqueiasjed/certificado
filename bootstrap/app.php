@@ -25,10 +25,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // Aliases dos middlewares do Spatie Permission. O pacote não os
         // registra sozinho no Laravel 11, e sem isto "permission:financeiro-ver"
         // na rota estoura como classe inexistente em vez de barrar o acesso.
+        //
+        // `platform.admin` não é do Spatie e não é permissão de empresa: ele
+        // guarda o prefixo `/plataforma`, onde a consulta roda sem o escopo por
+        // empresa e enxerga todos os tenants. Ver EnsurePlatformAdmin.
         $middleware->alias([
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {

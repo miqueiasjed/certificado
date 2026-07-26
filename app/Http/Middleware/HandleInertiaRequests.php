@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\AssumirTenantService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -51,6 +52,39 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
                 'success' => fn () => $request->session()->get('success'),
             ],
+            'suporte' => $this->estadoDoSuporte($request),
         ]);
+    }
+
+    /**
+     * Estado do modo suporte, para a faixa de aviso da Task 5.9.
+     *
+     * Vai em toda resposta, sem closure: a faixa precisa aparecer em qualquer
+     * tela e some se a prop faltar num recarregamento parcial. O custo é uma
+     * leitura de sessão por requisição.
+     *
+     * A condição repete, de propósito, a mesma regra de `TenantAtual`: só é
+     * suporte ativo quando o usuário tem `is_platform_admin` E existe empresa
+     * assumida na sessão. Se a faixa saísse só da chave de sessão, um usuário
+     * comum com a sessão adulterada veria "você está operando como Empresa X"
+     * enquanto seguiria, corretamente, dentro do próprio tenant. O dado seria
+     * inofensivo e a leitura, assustadora.
+     *
+     * @return array{ativo: bool, empresa: string|null}
+     */
+    private function estadoDoSuporte(Request $request): array
+    {
+        $usuario = $request->user();
+
+        if ($usuario === null || ($usuario->is_platform_admin ?? null) !== true) {
+            return ['ativo' => false, 'empresa' => null];
+        }
+
+        $assumido = app(AssumirTenantService::class)->assumidoAtualmente();
+
+        return [
+            'ativo' => $assumido !== null,
+            'empresa' => $assumido['nome'] ?? null,
+        ];
     }
 }

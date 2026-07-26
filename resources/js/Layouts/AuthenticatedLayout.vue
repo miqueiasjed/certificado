@@ -1,5 +1,9 @@
 <template>
-  <div class="flex h-screen bg-gray-50">
+  <FaixaDeSuporte />
+
+  <div
+    class="flex h-screen bg-gray-50"
+    :class="{ 'pt-11 sm:pt-12': suporteAtivo }">
     <!-- Sidebar -->
     <div class="sidebar relative flex">
       <!-- Overlay for mobile -->
@@ -76,8 +80,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import Sidebar from '@/Components/Sidebar.vue';
+import FaixaDeSuporte from '@/Components/FaixaDeSuporte.vue';
+
+const $page = usePage();
+const suporteAtivo = computed(() => $page.props.suporte?.ativo === true);
 
 const sidebarOpen = ref(false);
 const sidebarCollapsed = ref(false);

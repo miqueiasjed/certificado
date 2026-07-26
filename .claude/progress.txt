@@ -650,3 +650,152 @@ diff sem este contexto pode estranhar:
 3. Conferir o desempenho da agenda com um mês cheio depois que o Plano 9
    estiver gerando visitas de verdade em produção - é o cenário de volume que
    o caso 12 do `AgendaTest` protege em teste, mas vale conferir com dado real.
+
+================================================================================
+
+## Plano 5 - Painel do super admin (26/07/2026)
+
+Concluído. As 12 tasks previstas fecharam sem virar 13: nenhuma dependência
+faltou nem apareceu regra nova durante a execução, algo raro nos planos deste
+projeto até aqui. A suíte foi de 291 para 317 testes (3166 para 3377
+assertions), 100% verde.
+
+### O aprendizado central
+
+A regra que mais importa no plano inteiro não é código de produto, é o ponto
+único em que a sessão do usuário pode virar vetor de ataque:
+`TenantAtual::idDoTenantAssumidoNaSessao()` só lê a chave `tenant_assumido_id`
+da sessão DEPOIS de confirmar `$usuario->is_platform_admin === true`. Sessão é
+dado que chega do cliente (cookie adulterado, sessão copiada). Se a chave
+sozinha bastasse, qualquer usuário de uma dedetizadora leria o banco da
+concorrente escrevendo um número na própria sessão. A Task 5.12 provou isso por
+mutação: desligar essa checagem sozinha, sem tocar em mais nada, derruba
+exatamente os dois testes que dependem dela e nenhum outro — evidência de que o
+teste prende a regra certa, não uma regra qualquer.
+
+A segunda regra que sustenta o plano: `TenantService::suspender()` confere
+`is_internal` a partir do banco, não só do atributo em memória do model
+recebido (`ehTenantInterno()` em `TenantService.php` faz um `SELECT` extra
+antes de aceitar "não é interno"). Uma instância que passou por `fill()` com
+dado de formulário poderia responder errado. É a regra que protege a empresa 1
+(o cliente real de hoje) de ser suspensa por engano, e o custo de uma consulta
+extra por chamada é barato perto do risco.
+
+### Decisões de arquitetura
+
+- **Login único, sem guard separado para o super admin.** Mesma tabela
+  `users`, mesmo formulário. O isolamento vem do middleware
+  `EnsurePlatformAdmin` (`platform.admin`), que checa `is_platform_admin` e liga
+  `TenantAtual::semEscopo()` só durante a requisição, envolvendo `$next($request)`
+  — não em outro ponto do middleware, senão o desligamento não cobre o
+  controller nem religa direito em caso de exceção.
+- **Super admin fica com `company_id` da empresa 1** (a empresa interna, hoje o
+  cliente real), em vez de `company_id` nulo. Evita afrouxar o `NOT NULL`
+  gravado pelo Plano 4. Consequência aceita: sem tenant assumido, o super admin
+  navegando fora de `/plataforma` enxerga a empresa 1 como se fosse dela — não é
+  bug, é o fallback natural da decisão.
+- **`is_platform_admin` fica fora do `$fillable` de `User`,** mesmo padrão já
+  usado para `company_id`: é o único flag que abre a porta de plataforma, então
+  nenhum formulário pode setá-lo por mass assignment. Só existe atribuição
+  direta (`$user->is_platform_admin = true; $user->save();`), e não há tela para
+  isso ainda — o primeiro super admin de cada ambiente é criado por UPDATE
+  direto no banco.
+- **`TenantService::CAMPOS_DO_TENANT` é lista de permissão, não `Arr::except()`
+  dos campos do administrador.** `Company::$fillable` também contém
+  `is_internal`, `situacao`, `suspensa_em`, `motivo_suspensao` — campos de
+  estado de plataforma que o formulário de cadastro NUNCA pode alcançar. Com
+  `Arr::except()`, um campo a mais no request um dia marcaria um tenant como
+  interno (imune a suspensão) por dentro do "salvar cadastro". Confirmado em
+  tinker durante a Task 5.4: mandar `is_internal => true` no `$dados` de
+  `criar()` com a lista de permissão não teve efeito nenhum.
+- **`suspensa_em` e `ultimo_acesso_em` gravam com `now()` (UTC), nunca com
+  `BusinessDate::agora()`.** São campos de INSTANTE, não de dia. O texto da
+  Task 5.4 dizia "instante no fuso do negócio", frase que engana: a skill
+  `datas-timezone` é clara que instante grava em UTC (igual `created_at`) e só
+  converte na exibição. `BusinessDate::agora()` serve para comparar "hoje", não
+  para carimbar evento — usar ele aqui gravaria a hora de Brasília rotulada como
+  UTC, some 3 horas.
+- **`plans` e `tenant_usages` não usam `BelongsToCompany`,** são tabela de
+  plataforma e apuração lida entre todos os tenants pelo super admin. As duas
+  entraram em `DominioMultiempresa::TABELAS_FORA_DO_ESCOPO` e
+  `MODELS_FORA_DO_ESCOPO`, senão o teste que varre `app/Models/` (Plano 4)
+  quebra sozinho.
+- **Migration de deploy em duas etapas** (Task 5.1): a fundação do tenant (marca
+  a empresa 1 como interna) sobe junto com a estrutura, porque em produção há
+  só uma linha em `companies` hoje — seguro em deploy único, mas com contagem
+  impressa (`fwrite(STDOUT, ...)`) para conferência.
+- **Armazenamento de foto não tem coluna de tamanho gravada.** A apuração de uso
+  (Task 5.6) soma via `Storage::disk('public')->size($path)` por arquivo, mais
+  caro que deveria. Ficou registrado no código (não implementado) que gravar o
+  tamanho no momento do upload seria mais barato — fora do escopo deste plano.
+
+### Armadilhas encontradas
+
+- **Ambiente desta worktree nasceu sem `vendor/`, sem `node_modules/`, sem
+  `.env`.** As worktrees deste projeto são checkouts git puros; nenhuma delas
+  vem com o setup de desenvolvimento pronto. Rodar `composer install`,
+  `npm install`, criar `.env` com `DB_DATABASE` próprio da worktree (evita
+  colidir com o banco de dev de outros agentes rodando em paralelo) e `php
+  artisan key:generate` é pré-requisito antes de qualquer teste, e não estava
+  documentado em lugar nenhum além do bom senso.
+- **`.claude/plans/`, `.claude/tasks/` e algumas `.claude/skills/` não estavam
+  commitados na branch** no momento em que este plano começou a rodar (existiam
+  só como untracked no checkout principal). Precisaram ser copiados manualmente
+  para esta worktree antes de qualquer leitura funcionar. Vale commitar esses
+  artefatos de planejamento cedo, para toda worktree nova nascer com eles.
+- **`npm install` reescreve `"name"` em `package-lock.json` para o nome do
+  diretório** quando ele não bate com `package.json` (o nome da pasta da
+  worktree, tipo `agent-aa6a0b...`). É ruído puro de ambiente, não é intenção de
+  ninguém: `git checkout -- package-lock.json` antes do commit final, do mesmo
+  jeito que `phpunit.xml` precisa ser revertido.
+- **Duas tasks (5.1 e 5.2) escrevem no mesmo arquivo (`DominioMultiempresa.php`)
+  mesmo estando marcadas como "paralelo" no plano de execução.** Rodar duas
+  edições concorrentes no mesmo arquivo, na mesma worktree, é risco real de
+  corromper uma escrita. A resolução foi sequenciar essas duas na prática
+  (5.1 sozinha primeiro), mesmo com o INDEX chamando de "Lote 1 paralelo" — e só
+  paralelizar de verdade quando os subagentes não compartilham nenhum arquivo,
+  nem os de infraestrutura (`routes/web.php`, `bootstrap/app.php`,
+  `DominioMultiempresa.php`, `RotinasAgendadas.php`).
+- **Rodar a suíte completa (`php artisan test` sem filtro) com dois subagentes
+  ativos na mesma worktree é perigoso.** `RefreshDatabase` roda `migrate:fresh`
+  na primeira vez que um processo PHP novo usa o trait, e dois processos fazendo
+  isso ao mesmo tempo no mesmo banco MySQL colidem de verdade. A solução foi
+  proibir suíte completa sem `--filter` durante lotes paralelos, e deixar só o
+  orquestrador rodar a suíte inteira, sempre depois que todos os subagentes do
+  lote já retornaram.
+- **`TenantController` e as demais páginas Inertia da área de plataforma
+  precisaram de páginas `Create.vue`/`Edit.vue` separadas, não um `Form.vue`
+  único**, porque o controller (Task 5.7) segue o padrão de todo o resto do
+  projeto (`Inertia::render('.../Create', ...)` e `.../Edit`). O arquivo da
+  Task 5.10 pedia um `Form.vue` único — a solução foi manter `Form.vue` como
+  componente compartilhado, com `Create.vue`/`Edit.vue` finos por cima. Vale
+  conferir esse tipo de divergência entre o texto da task e o controller já
+  implementado antes de married ao Vue.
+- **`TenantController::show` (rota `plataforma.tenants.show`) não tinha página
+  correspondente em NENHUMA das duas tasks de frontend** (5.10 nem 5.11), e é
+  para onde `store()`/`update()` redirecionam depois de salvar — sem essa
+  página, o fluxo de criar/editar tenant quebrava com "page component not
+  found" logo depois de salvar. Resolvido criando `Tenants/Show.vue` como
+  arquivo extra na Task 5.10, fora da lista original. Vale conferir, ao
+  desenhar plano com backend e frontend em tasks separadas, se todo `redirect()`
+  do controller aponta para uma página que alguma task realmente cria.
+
+### Pendências que ficaram abertas, em ordem de gravidade
+
+1. **Tela para promover o primeiro super admin não existe.** Hoje é
+   `UPDATE users SET is_platform_admin = 1 WHERE id = ?` direto no banco, em
+   cada ambiente. Documentado como esperado na Task 5.1, mas é operação manual
+   toda vez que um ambiente novo precisar de super admin.
+2. **Bloqueio efetivo de módulo por limite de plano não existe.** `trocarPlano()`
+   só troca o vínculo; nada no sistema impede um tenant de passar do teto do
+   plano dele hoje. É o Plano 6, que já está listado como dependente.
+3. **Fatura e cobrança não existem.** `situacao = 'em_avaliacao'`/`'suspensa'`
+   não têm nenhum gatilho automático ainda — a régua de inadimplência é o
+   Plano 7.
+4. **Autoatendimento de criação de tenant não existe.** `TenantService::criar()`
+   já está pronto para ser reusado por um fluxo de autoatendimento (Plano 8),
+   mas hoje só o super admin cria tenant, pelo formulário da Task 5.10.
+5. **Armazenamento de foto recalculado via `Storage::size()` a cada apuração**
+   (rotina diária, `plataforma:apurar-uso`), em vez de gravar o tamanho no
+   momento do upload. Funciona, mas é o cálculo mais caro da apuração — vale
+   revisitar se o número de fotos crescer muito.
