@@ -18,6 +18,20 @@ class Client extends Model
         'phone',
         'cnpj',
         'notes',
+        // Preferência de contato da central de notificações (Plano 14).
+        'aceita_email',
+        'aceita_whatsapp',
+        'canal_preferido',
+        'email_notificacao',
+    ];
+
+    protected $casts = [
+        // Nascem `true`: cliente sem preferência declarada recebe. A recusa é
+        // registrada quando ele pedir.
+        'aceita_email' => 'boolean',
+        'aceita_whatsapp' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function certificates(): HasMany

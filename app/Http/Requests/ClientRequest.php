@@ -21,6 +21,13 @@ class ClientRequest extends FormRequest
             'phone' => 'required|string|max:20',
             'cnpj' => 'required|string|max:18|unique:clients,cnpj,' . $clientId,
             'notes' => 'nullable|string|max:1000',
+            // Preferência de contato da central de notificações (Plano 14).
+            // Sem regra aqui, o FormRequest descartaria os quatro campos de
+            // $request->validated(), mesmo estando em $fillable no model.
+            'aceita_email' => 'sometimes|boolean',
+            'aceita_whatsapp' => 'sometimes|boolean',
+            'canal_preferido' => 'nullable|in:email,whatsapp',
+            'email_notificacao' => 'nullable|email|max:255',
         ];
     }
 

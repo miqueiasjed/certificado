@@ -34,6 +34,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EventTypeController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\NotificationTemplateController;
+use App\Http\Controllers\NotificationQueueController;
 use App\Models\Client;
 use App\Models\Product;
 use App\Models\Technician;
@@ -366,6 +368,42 @@ Route::middleware(['auth'])->group(function () {
         ->middlewareFor('destroy', 'permission:orcamento-excluir');
     Route::get('/budgets/{budget}/pdf', [BudgetController::class, 'pdf'])->middleware('permission:orcamento-ver')->name('budgets.pdf');
     Route::post('/budgets/{budget}/convert', [BudgetController::class, 'convert'])->middleware('permission:orcamento-converter')->name('budgets.convert');
+
+    // Rotas de Notificações (Plano 14)
+    // /notificacoes/templates tem dois segmentos e /notificacoes/{item}/... tem
+    // três, então nenhuma das duas colide com a listagem em /notificacoes (um
+    // segmento): diferente do caso de /contracts/pendencias, a ordem de
+    // registro aqui não importa.
+    //
+    // Nenhum endpoint envia notificação. "templates" edita o texto que o
+    // próximo enfileiramento vai usar; a fila só recoloca em pendente
+    // (reenviar) ou marca como cancelada (cancelar) para o despachante da
+    // Task 14.3 agir. notificacao-ver cobre leitura; notificacao-gerenciar
+    // cobre toda escrita.
+    Route::get('/notificacoes/templates', [NotificationTemplateController::class, 'index'])
+        ->middleware('permission:notificacao-ver')
+        ->name('notificacoes.templates.index');
+    Route::put('/notificacoes/templates/{evento}/{canal}', [NotificationTemplateController::class, 'update'])
+        ->where(['evento' => '[a-z_]+', 'canal' => 'email|whatsapp'])
+        ->middleware('permission:notificacao-gerenciar')
+        ->name('notificacoes.templates.update');
+    Route::delete('/notificacoes/templates/{evento}/{canal}', [NotificationTemplateController::class, 'destroy'])
+        ->where(['evento' => '[a-z_]+', 'canal' => 'email|whatsapp'])
+        ->middleware('permission:notificacao-gerenciar')
+        ->name('notificacoes.templates.destroy');
+
+    Route::get('/notificacoes', [NotificationQueueController::class, 'index'])
+        ->middleware('permission:notificacao-ver')
+        ->name('notificacoes.index');
+    Route::post('/notificacoes/{item}/reenviar', [NotificationQueueController::class, 'reenviar'])
+        ->middleware('permission:notificacao-gerenciar')
+        ->name('notificacoes.reenviar');
+    Route::post('/notificacoes/{item}/cancelar', [NotificationQueueController::class, 'cancelar'])
+        ->middleware('permission:notificacao-gerenciar')
+        ->name('notificacoes.cancelar');
+    Route::get('/notificacoes/{item}/whatsapp', [NotificationQueueController::class, 'whatsapp'])
+        ->middleware('permission:notificacao-ver')
+        ->name('notificacoes.whatsapp');
 
     // Configurações da Empresa
     Route::get('/settings/company', [\App\Http\Controllers\CompanyController::class, 'edit'])->middleware('permission:empresa-configurar')->name('settings.company.edit');

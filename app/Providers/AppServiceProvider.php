@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use App\Listeners\RegistraAcesso;
 use App\Listeners\RegistraExecucaoAgendada;
+use App\Models\WorkOrder;
+use App\Observers\WorkOrderNotificationObserver;
 use App\Support\TenantAtual;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
@@ -32,7 +34,22 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->registrarAuditoriaDasRotinas();
         $this->registrarAuditoriaDeAcesso();
+        $this->registrarObservadoresDeNotificacao();
         $this->limparTenantEntreJobsDaFila();
+    }
+
+    /**
+     * Liga os avisos que nascem de uma ação sobre a ordem de serviço: visita
+     * agendada, técnico a caminho e OS concluída (Task 14.4).
+     *
+     * O observer fica registrado aqui, e não em bootstrap/app.php, para manter
+     * aquele arquivo no que ele já cuida (rotas, middleware, agendamento e
+     * tratamento de exceção). O agendamento da rotina diária de avisos continua
+     * lá, pela lista de `RotinasAgendadas`.
+     */
+    private function registrarObservadoresDeNotificacao(): void
+    {
+        WorkOrder::observe(WorkOrderNotificationObserver::class);
     }
 
     /**

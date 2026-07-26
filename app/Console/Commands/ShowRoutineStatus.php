@@ -14,9 +14,10 @@ use Illuminate\Console\Command;
  * cron do `schedule:run` está rodando.
  *
  * Comando somente leitura: consulta scheduled_task_runs e não grava nada
- * nela. A lista de rotinas vem de RotinasAgendadas::DIARIAS, a mesma
- * constante usada pelo agendamento em bootstrap/app.php, para que o
- * diagnóstico nunca divirja do que de fato está agendado.
+ * nela. A lista de rotinas vem de RotinasAgendadas::todas(), que junta as
+ * diárias e as de intervalo curto lidas pelo agendamento em
+ * bootstrap/app.php, para que o diagnóstico nunca divirja do que de fato
+ * está agendado.
  */
 class ShowRoutineStatus extends Command
 {
@@ -24,12 +25,6 @@ class ShowRoutineStatus extends Command
                             {--task= : Mostra apenas a rotina com esta assinatura}';
 
     protected $description = 'Mostra quando cada rotina agendada rodou pela última vez e se alguma está atrasada. Comando somente leitura, não grava nada em scheduled_task_runs.';
-
-    /**
-     * Horas desde a última execução com sucesso a partir das quais a rotina
-     * é considerada atrasada.
-     */
-    private const HORAS_PARA_ATRASO = 48;
 
     /**
      * Larguras de coluna da tabela impressa, na mesma ordem do cabeçalho.
@@ -69,20 +64,21 @@ class ShowRoutineStatus extends Command
      */
     private function tarefasParaVerificar(): ?array
     {
+        $rotinas = RotinasAgendadas::todas();
         $filtro = $this->option('task');
 
         if ($filtro === null) {
-            return RotinasAgendadas::DIARIAS;
+            return $rotinas;
         }
 
-        if (! array_key_exists($filtro, RotinasAgendadas::DIARIAS)) {
+        if (! array_key_exists($filtro, $rotinas)) {
             $this->error("Rotina '{$filtro}' não é uma rotina agendada conhecida.");
             $this->line('Rotinas disponíveis: '.implode(', ', RotinasAgendadas::assinaturas()));
 
             return null;
         }
 
-        return [$filtro => RotinasAgendadas::DIARIAS[$filtro]];
+        return [$filtro => $rotinas[$filtro]];
     }
 
     /**
@@ -105,30 +101,42 @@ class ShowRoutineStatus extends Command
             'ultimaExecucao' => $ultima !== null ? $this->formatarInstante($ultima->started_at) : 'nunca executou',
             'status' => $ultima !== null ? $this->rotuloDoStatus($ultima->status) : '-',
             'duracao' => $this->formatarDuracao($ultima?->duration_ms),
-            'atrasada' => $this->estaAtrasada($ultimoSucesso),
+            'atrasada' => $this->estaAtrasada($assinatura, $ultimoSucesso),
             'statusBruto' => $ultima?->status,
         ];
     }
 
     /**
      * Atrasada quando nunca houve execução com sucesso, ou quando a última
-     * execução com sucesso passou de 48 horas. Uma rodada `skipped`, barrada
-     * pela trava de sobreposição, não conta como sucesso e por isso não
-     * adia o atraso: ela é tratada como se a rotina não tivesse rodado.
+     * passou da janela de tolerância declarada para aquela rotina.
+     *
+     * A janela vem de `RotinasAgendadas`, e não de um limiar fixo aqui, para que
+     * este diagnóstico e o aviso automático de `rotinas:verificar` respondam a
+     * mesma coisa. Com o limiar fixo de 48 horas que existia antes, uma diária
+     * parada há 30 horas gerava e-mail ao administrador e aparecia como "não
+     * atrasada" nesta tabela, e o comando que existe para tirar a dúvida virava
+     * a fonte da dúvida.
+     *
+     * Uma rodada `skipped`, barrada pela trava de sobreposição, não conta como
+     * sucesso e por isso não adia o atraso: ela é tratada como se a rotina não
+     * tivesse rodado.
      */
-    private function estaAtrasada(?ScheduledTaskRun $ultimoSucesso): bool
+    private function estaAtrasada(string $assinatura, ?ScheduledTaskRun $ultimoSucesso): bool
     {
-        if ($ultimoSucesso === null) {
+        if ($ultimoSucesso === null || $ultimoSucesso->started_at === null) {
             return true;
         }
 
-        $desde = BusinessDate::paraFusoNegocio($ultimoSucesso->started_at);
+        $janela = RotinasAgendadas::janelaDeToleranciaEmMinutos($assinatura);
 
-        if ($desde === null) {
-            return true;
+        if ($janela === null) {
+            return false;
         }
 
-        return BusinessDate::agora()->diffInHours($desde, absolute: true) > self::HORAS_PARA_ATRASO;
+        // Diferença entre instantes, sem passar pelo conversor de fuso: ele
+        // trata meia-noite exata como dia puro e a reconstrói em Brasília, o que
+        // deslocaria em três horas a idade de uma rodada iniciada às 00:00 UTC.
+        return BusinessDate::agora()->diffInMinutes($ultimoSucesso->started_at, absolute: true) > $janela;
     }
 
     /**

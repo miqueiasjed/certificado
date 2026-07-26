@@ -22,7 +22,7 @@ O sistema atende empresas de controle de pragas que precisam padronizar a execu�
 
 ## Rotinas agendadas
 
-O sistema tem cinco rotinas diárias, executadas pelo agendador do Laravel e configuradas em `bootstrap/app.php` a partir da lista única em `App\Support\RotinasAgendadas::DIARIAS`.
+As rotinas são executadas pelo agendador do Laravel e configuradas em `bootstrap/app.php` a partir das listas únicas de `App\Support\RotinasAgendadas`: `DIARIAS`, com hora marcada no dia, e `POR_INTERVALO`, que roda de N em N minutos.
 
 | Rotina | Horário (America/Sao_Paulo) | O que faz |
 |---|---|---|
@@ -30,7 +30,11 @@ O sistema tem cinco rotinas diárias, executadas pelo agendador do Laravel e con
 | `payments:update-statuses` | 00:20 | Atualiza o status de pagamento das parcelas e das ordens de serviço. Roda depois da anterior porque depende do dia de pagamento já fechado. |
 | `cash:sync-daily-balances` | 00:30 | Sincroniza os saldos diários de caixa com as entradas e retiradas financeiras do dia. |
 | `cash:create-missing-balances` | 00:40 | Cria o registro de saldo diário para os dias sem nenhum movimento financeiro. |
+| `contratos:gerar-visitas` | 01:00 | Gera as visitas previstas dos contratos periódicos vigentes dentro da janela configurada, sem duplicar visita já existente. |
 | `auditoria:purge` | 02:00 | Apaga de `audit_logs` e `access_logs` os registros mais antigos que o período de retenção. Horário fora da janela das outras porque é a mais pesada: percorre e apaga em lotes as tabelas de auditoria inteiras. |
+| `notificacoes:avisos-diarios` | 07:00 | Enfileira os avisos que dependem da passagem do tempo: véspera de visita, certificado e contrato a vencer, pagamento vencido, orçamento a expirar e visita periódica não gerada. Uma hora antes das 08:00, que é a hora padrão de envio, para o lembrete da véspera já estar na fila quando o despachante passar. |
+| `notificacoes:despachar` | a cada 5 minutos | Envia os avisos vencidos da fila de notificações, registra cada tentativa em `notification_logs` e reagenda as falhas temporárias. A cada 5 minutos, e não a cada minuto, porque aviso de visita não é tempo real. |
+| `rotinas:verificar` | a cada 60 minutos | Descobre qual rotina desta tabela falhou ou parou de executar e avisa por e-mail o administrador de cada empresa. É a rotina que transforma "silêncio no histórico" em aviso. |
 
 ### Expurgo de auditoria
 
@@ -40,6 +44,43 @@ O sistema tem cinco rotinas diárias, executadas pelo agendador do Laravel e con
 - **Comando:** `php artisan auditoria:purge`. Aceita `--dias=N` para sobrepor a retenção configurada numa execução específica, e `--dry-run` para só contar e imprimir, sem apagar nada.
 - O corte é calculado no dia de hoje do fuso do negócio (`BusinessDate::hoje()->subDays($dias)`) e a exclusão acontece em lotes de 1.000 linhas por vez, para não travar a tabela em produção.
 - Rodar o comando duas vezes no mesmo dia é seguro: a segunda execução não encontra mais nada elegível e remove zero linhas.
+
+### Avisos diários da central de notificações
+
+`notificacoes:avisos-diarios` roda uma passada por empresa, dentro do tenant de cada uma, e coloca na fila os avisos que ninguém dispara clicando em nada. Os avisos ligados a uma ação (visita agendada, técnico a caminho, OS concluída) não passam por aqui: eles saem do observer da ordem de serviço, no momento em que a ação acontece.
+
+- **Opções:** `--company=ID` roda em uma empresa só, e `--todas` deixa explícito o comportamento padrão.
+- **Rodar duas vezes no mesmo dia não duplica nada.** A chave de idempotência da fila reconhece o aviso que já está lá, e nenhum corte desta rotina depende do instante da execução. É o que permite reprocessar um dia que falhou.
+- **Erro em um registro não cala os demais:** cada disparo tem o próprio tratamento de erro, e o resumo do comando mostra quantos registros falharam. Erro em uma empresa também não interrompe as outras.
+- **Certificado a vencer e pagamento vencido saem duas vezes**, uma para o cliente, com o texto do template (editável pelo tenant), e uma para a empresa, com um texto interno fixo. O template tem uma linha por evento e canal, escrita para o cliente; mandar esse mesmo texto para a equipe entregaria uma mensagem endereçada a quem não é o leitor.
+- **Prazos configuráveis** em `config/notificacoes.php`: `NOTIFICACOES_DIAS_AVISO_CONTRATO_VENCER` (padrão 30) e `NOTIFICACOES_DIAS_AVISO_ORCAMENTO_A_EXPIRAR` (padrão 3). São globais da aplicação, não por empresa.
+
+### Despacho das notificações
+
+`notificacoes:despachar` roda uma passada por empresa, cada uma dentro do tenant dela, e envia o que está `pendente` na tabela `notification_queue` com a hora de envio já vencida.
+
+- **Opções:** `--limite=N` (padrão 100) limita quantos itens cada empresa processa por passada; `--company=ID` roda em uma empresa só, e `--todas` deixa explícito o comportamento padrão.
+- **Toda tentativa vira uma linha em `notification_logs`**, inclusive a que falhou. É esse histórico que responde "por que o cliente não recebeu".
+- **Falha temporária** (tempo limite, provedor fora do ar, limite de taxa) reagenda com espera crescente: 5 minutos, 30 minutos e 2 horas, com teto de 4 tentativas. A quarta encerra o item em `falha`.
+- **Falha permanente** (endereço inválido, caixa inexistente, recusa definitiva do provedor) encerra em `falha` na primeira tentativa, sem repetir. Repetir envio para endereço inexistente derruba a reputação do remetente da empresa e leva junto a entrega de todos os outros avisos dela.
+- **Item preso em `enviando` há mais de 15 minutos** volta para a fila na passada seguinte, com a tentativa registrada. É o que impede que um processo morto no meio do envio deixe o aviso parado para sempre.
+- O remetente é sempre o e-mail da empresa dona do aviso, com `reply-to` dela. Sem e-mail cadastrado na empresa, o envio falha com a instrução do que corrigir.
+
+### Aviso automático de rotina parada
+
+`routines:status` responde a pergunta para quem abre o terminal e pergunta. `rotinas:verificar` faz a pergunta sozinha, de hora em hora, e manda a resposta para quem pode agir.
+
+A diferença entre as duas está no caso grave. Rotina que falha grava `failed` em `scheduled_task_runs` e aparece no diagnóstico. Rotina que deixa de executar não grava nada: o histórico dela fica idêntico ao de um sistema saudável, e ninguém descobre o problema até um certificado vencido aparecer como ativo diante da fiscalização. Foi exatamente assim que o bug de status chegou à produção.
+
+- **Dois problemas, avisados com textos diferentes:** `falhou` (a última execução terminou com erro, e o aviso carrega a mensagem registrada) e `não rodou` (nenhuma execução com sucesso dentro da janela de tolerância da rotina).
+- **Janela de tolerância** = intervalo declarado da rotina + `RotinasAgendadas::MINUTOS_DE_TOLERANCIA_EXTRA` (120 minutos). Uma diária é cobrada depois de 26 horas sem rodar, não de 24: deploy na madrugada e cron disputado atrasam a passada sem que nada esteja quebrado, e alerta que dispara por atraso normal vira ruído e para de ser lido.
+- **Um aviso por rotina por dia, por administrador.** A data do dia entra no marco da chave de idempotência, então rodar a verificação 24 vezes gera um aviso, e rotina quebrada há uma semana não gera 168 e-mails.
+- **Quem recebe é o administrador de cada empresa**, por e-mail (evento `rotina_agendada_falhou`), e não o técnico: quem mexe em cron e em servidor é quem administra. Administrador desativado fica de fora. Empresa sem nenhum administrador ativo não interrompe a verificação: o caso vai para o log da aplicação.
+- **Rotina com problema não faz o comando falhar.** O código de saída responde "a verificação funcionou?", e não "o sistema está saudável?". Terminar em erro marcaria esta execução como `failed` e a passada seguinte acusaria a própria verificação.
+- **A verificação não se acusa de não ter rodado**, porque quem estaria escrevendo o aviso é a execução que prova o contrário. A falha dela, registrada na passada anterior, é avisada normalmente.
+- Rodar `php artisan rotinas:verificar` no terminal é seguro e mostra a tabela de problemas encontrados. `--company=ID` limita a quais empresas o aviso é enfileirado; a detecção é sempre da plataforma inteira, porque `scheduled_task_runs` tem uma linha por execução do comando, não por empresa processada dentro dele.
+
+Um limite honesto: se o cron parar por completo, `rotinas:verificar` para junto e nenhum aviso sai. Ela cobre a rotina que quebrou, não o agendador que morreu. Para esse caso continua valendo o monitoramento externo em cima do código de saída de `routines:status`.
 
 ### O cron que faz tudo isso rodar
 
@@ -69,7 +110,7 @@ O comando mostra a última execução de cada rotina, o status, a duração e se
 
 ### Checagem de deploy
 
-O `.env` de produção precisa ser conferido a cada deploy: só o ambiente local foi verificado até agora, e é lá que `CACHE_STORE=database` está confirmado. Rodar `php artisan routines:status` logo depois do deploy confirma que o cron está instalado no servidor e que as quatro rotinas seguem executando.
+O `.env` de produção precisa ser conferido a cada deploy: só o ambiente local foi verificado até agora, e é lá que `CACHE_STORE=database` está confirmado. Rodar `php artisan routines:status` logo depois do deploy confirma que o cron está instalado no servidor e que as rotinas seguem executando.
 
 ## A empresa fora da requisição HTTP
 

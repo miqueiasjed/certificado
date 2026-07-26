@@ -20,6 +20,9 @@ use App\Models\Device;
 use App\Models\DeviceEvent;
 use App\Models\EventType;
 use App\Models\FinancialEntry;
+use App\Models\NotificationLog;
+use App\Models\NotificationQueue;
+use App\Models\NotificationTemplate;
 use App\Models\OrganRegistration;
 use App\Models\PaymentDetail;
 use App\Models\PestSighting;
@@ -1450,6 +1453,46 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'evento' => 'login',
                 'ip' => '10.0.0.1',
                 'user_agent' => 'Navegador '.$marca,
+            ]);
+
+            // Central de notificações. O texto do template e o corpo já montado
+            // na fila são escritos pela empresa e citam nome de cliente e número
+            // de OS: o vazamento aqui entregaria a carteira de clientes da
+            // concorrente em texto puro.
+            $dados['notificationTemplate'] = NotificationTemplate::create([
+                'evento' => 'visita_agendada',
+                'canal' => 'email',
+                'assunto' => 'Visita agendada '.$marca,
+                'corpo' => 'Modelo de aviso '.$marca,
+                'ativo' => true,
+            ]);
+
+            $dados['notificationQueue'] = NotificationQueue::create([
+                'evento' => 'visita_agendada',
+                'canal' => 'email',
+                // A chave de idempotência é unique global de propósito, então a
+                // marca precisa entrar nela: duas empresas com a mesma chave
+                // colidiriam no banco, e é esse o comportamento declarado em
+                // DominioMultiempresa::UNIQUES_GLOBAIS_MANTIDOS.
+                'chave_idempotencia' => 'visita_agendada:cliente:'.$dados['client']->id.':work_order:'.$dados['workOrder']->id,
+                'destinatario_tipo' => NotificationQueue::DESTINATARIO_CLIENTE,
+                'destinatario_id' => $dados['client']->id,
+                'destino' => $dados['client']->email,
+                'assunto' => 'Visita agendada '.$marca,
+                'corpo' => 'Aviso enfileirado '.$marca,
+                'contexto' => ['work_order_id' => $dados['workOrder']->id, 'marca' => $marca],
+                'situacao' => NotificationQueue::SITUACAO_PENDENTE,
+                'agendada_para' => '2026-07-04 18:00:00',
+                'tentativas' => 0,
+            ]);
+
+            $dados['notificationLog'] = NotificationLog::create([
+                'notification_queue_id' => $dados['notificationQueue']->id,
+                'tentativa' => 1,
+                'resultado' => NotificationLog::RESULTADO_FALHA_TEMPORARIA,
+                'mensagem' => 'Tempo limite do provedor '.$marca,
+                'resposta_bruta' => ['codigo' => 504, 'marca' => $marca],
+                'ocorrida_em' => '2026-07-04 18:01:00',
             ]);
 
             $dados['auditLog'] = AuditLog::create([

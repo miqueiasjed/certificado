@@ -51,6 +51,9 @@ final class DominioMultiempresa
         'devices',
         'event_types',
         'financial_entries',
+        'notification_logs',
+        'notification_queue',
+        'notification_templates',
         'organ_registrations',
         'payment_details',
         'pest_sightings',
@@ -143,6 +146,9 @@ final class DominioMultiempresa
         \App\Models\DeviceEvent::class,
         \App\Models\EventType::class,
         \App\Models\FinancialEntry::class,
+        \App\Models\NotificationLog::class,
+        \App\Models\NotificationQueue::class,
+        \App\Models\NotificationTemplate::class,
         \App\Models\OrganRegistration::class,
         \App\Models\PaymentDetail::class,
         \App\Models\PestSighting::class,
@@ -230,6 +236,13 @@ final class DominioMultiempresa
                 'indice' => 'technicians_user_id_unique',
                 'colunas' => ['user_id'],
                 'motivo' => 'Vínculo 1:1 com users. Como o usuário pertence a uma empresa só, o unique global não bloqueia o segundo tenant.',
+            ],
+        ],
+        'notification_queue' => [
+            [
+                'indice' => 'notification_queue_chave_idempotencia_unique',
+                'colunas' => ['chave_idempotencia'],
+                'motivo' => 'Chave de idempotência do Plano 14, montada como {evento}:{destinatario_tipo}:{destinatario_id}:{referencia_tipo}:{referencia_id}. Os ids são os do banco compartilhado e já pertencem a uma empresa só, então compor com company_id não separaria tenant nenhum e só enfraqueceria a restrição que impede o mesmo aviso sair duas vezes.',
             ],
         ],
         // As demais vivem em tabelas fora do escopo e ficam aqui só como registro.

@@ -52,7 +52,7 @@ bloqueio.
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 14 | Central de notificações | ⏳ | 1, 9 | 9 |
+| 14 | Central de notificações | ✅ | 1, 9 | 9 |
 | 15 | Portal do cliente | ⏳ | 6, 14 | 9 |
 | 16 | Agendamento online e pesquisa de satisfação | ⏳ | 10, 14, 15 | 8 |
 

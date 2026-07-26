@@ -114,6 +114,91 @@
             </div>
           </div>
 
+          <!-- Comunicação -->
+          <div>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <p class="text-sm text-yellow-800">
+                    Desmarcar um canal interrompe todos os avisos automáticos daquele tipo para este cliente.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <h3 class="text-sm font-medium text-gray-700 mb-3">Comunicação</h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="flex items-center">
+                <label class="flex items-center">
+                  <input
+                    id="aceita_email"
+                    v-model="form.aceita_email"
+                    type="checkbox"
+                    class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <span class="ml-2 text-sm text-gray-700">Aceita receber avisos por e-mail</span>
+                </label>
+              </div>
+
+              <div class="flex items-center">
+                <label class="flex items-center">
+                  <input
+                    id="aceita_whatsapp"
+                    v-model="form.aceita_whatsapp"
+                    type="checkbox"
+                    class="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <span class="ml-2 text-sm text-gray-700">Aceita receber avisos por WhatsApp</span>
+                </label>
+              </div>
+
+              <div>
+                <label for="canal_preferido" class="block text-sm font-medium text-gray-700 mb-2">
+                  Canal preferido
+                </label>
+                <select
+                  id="canal_preferido"
+                  v-model="form.canal_preferido"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  :class="{ 'border-red-500': form.errors.canal_preferido }"
+                >
+                  <option :value="null">Sem preferência</option>
+                  <option value="email">E-mail</option>
+                  <option value="whatsapp">WhatsApp</option>
+                </select>
+                <p v-if="form.errors.canal_preferido" class="mt-1 text-sm text-red-600">
+                  {{ form.errors.canal_preferido }}
+                </p>
+              </div>
+
+              <div>
+                <label for="email_notificacao" class="block text-sm font-medium text-gray-700 mb-2">
+                  E-mail de notificação
+                </label>
+                <input
+                  id="email_notificacao"
+                  v-model="form.email_notificacao"
+                  type="email"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  :class="{ 'border-red-500': form.errors.email_notificacao }"
+                  placeholder="email@exemplo.com"
+                />
+                <p class="mt-1 text-xs text-gray-500">
+                  Deixe em branco para usar o e-mail principal.
+                </p>
+                <p v-if="form.errors.email_notificacao" class="mt-1 text-sm text-red-600">
+                  {{ form.errors.email_notificacao }}
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- Nota: Endereços agora são cadastrados separadamente no módulo de Endereços -->
           <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
             <div class="flex">
@@ -189,6 +274,10 @@ const form = useForm({
   phone: props.client.phone,
   cnpj: props.client.cnpj,
   notes: props.client.notes || '',
+  aceita_email: props.client.aceita_email ?? true,
+  aceita_whatsapp: props.client.aceita_whatsapp ?? true,
+  canal_preferido: props.client.canal_preferido ?? null,
+  email_notificacao: props.client.email_notificacao || '',
 });
 
 const alert = ref({
