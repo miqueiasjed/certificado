@@ -5,13 +5,10 @@ namespace App\Services;
 use App\Exceptions\TenantInternoException;
 use App\Models\Company;
 use App\Models\Plan;
-use App\Models\User;
 use App\Support\BusinessDate;
-use App\Support\TenantAtual;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Regras de ciclo de vida de um tenant, usadas pela área da plataforma.
@@ -100,6 +97,16 @@ class TenantService
     ];
 
     /**
+     * O preparo do tenant novo (administrador, catálogo inicial e trilha de
+     * primeiros passos) é da Task 8.3 e vive em `ProvisionamentoService`, para
+     * o cadastro público da Task 8.7 aproveitar exatamente o mesmo preparo sem
+     * passar por este Service.
+     */
+    public function __construct(
+        private readonly ProvisionamentoService $provisionamentoService,
+    ) {}
+
+    /**
      * Cria o tenant e o usuário administrador dele.
      *
      * ## Contrato de `$dados`
@@ -121,6 +128,7 @@ class TenantService
      * Campos do administrador (não vão para `companies`):
      * - `administrador_nome` (string, obrigatório)
      * - `administrador_email` (string, obrigatório, único em `users`)
+     * - `administrador_senha` (string, opcional) - ver "Senha do administrador"
      *
      * ## Situação inicial
      *
@@ -129,22 +137,43 @@ class TenantService
      *
      * ## Senha do administrador
      *
-     * Aleatória de 32 caracteres, nunca devolvida. Não existe envio de e-mail de
-     * boas-vindas nesta task: o super admin combina o acesso por fora, e o
-     * usuário entra pela recuperação de senha. O fluxo de autoatendimento, com
-     * convite por e-mail, é o Plano 8, que reusa este mesmo método.
+     * Sem `administrador_senha`, uma senha aleatória de 32 caracteres é gravada
+     * e nunca devolvida. É o caso do formulário do super admin (`TenantRequest`
+     * não coleta senha): ele combina o acesso por fora, e o usuário entra pela
+     * recuperação de senha.
+     *
+     * Com `administrador_senha`, ela é a senha do administrador. Quem informa é
+     * o cadastro público da Task 8.7, em que a própria pessoa escolhe a senha e
+     * é autenticada logo em seguida. A chave é repassada a
+     * `ProvisionamentoService::provisionar()`, que já a previa no contrato dele,
+     * para que a senha escolhida seja gravada dentro da mesma transação: um
+     * `update()` de senha depois do `criar()` deixaria a senha aleatória
+     * gravada, e cifrada, no intervalo entre as duas escritas.
+     *
+     * O hash é do cast `hashed` de `User`; nada em texto legível trafega para
+     * fora deste caminho.
+     *
+     * ## O que acontece depois da empresa (Task 8.3)
+     *
+     * A criação do administrador saiu daqui e virou
+     * `ProvisionamentoService::provisionar()`, junto com duas coisas que o
+     * tenant novo também precisa para operar: o catálogo inicial de cadastros
+     * (tipos de evento, de isca, de serviço e os cadastros regulatórios) e a
+     * trilha de primeiros passos. Antes disso, um tenant recém-criado abria o
+     * sistema sem nenhum tipo de serviço para escolher na primeira ordem de
+     * serviço, e alguém precisava semear à mão.
+     *
+     * O provisionamento é um Service à parte porque o cadastro público da
+     * Task 8.7 cria a empresa por outro caminho e precisa exatamente do mesmo
+     * preparo.
      *
      * ## Transação
      *
-     * Empresa e administrador nascem juntos ou não nascem. E-mail duplicado
-     * estoura no unique de `users` e desfaz a empresa, em vez de deixar um tenant
-     * órfão, sem ninguém que consiga entrar nele.
-     *
-     * O usuário é criado dentro de `TenantAtual::comTenant()` porque `company_id`
-     * está fora do `$fillable` de `User`: quem preenche é a trait
-     * `BelongsToCompany`, a partir do tenant corrente. Sem isso o administrador
-     * do tenant novo nasceria na empresa de quem está criando, que é o super
-     * admin.
+     * Empresa, administrador, catálogo e trilha nascem juntos ou não nascem.
+     * E-mail duplicado estoura no unique de `users` e desfaz a empresa, em vez
+     * de deixar um tenant órfão, sem ninguém que consiga entrar nele. A
+     * transação aberta aqui envolve o provisionamento inteiro: a que
+     * `provisionar()` abre por dentro vira savepoint e não solta nada sozinha.
      *
      * @param  array<string, mixed>  $dados  Já validados pelo FormRequest.
      */
@@ -159,17 +188,15 @@ class TenantService
 
             $empresa = Company::create($camposDaEmpresa);
 
-            $administrador = TenantAtual::comTenant(
-                $empresa->id,
-                fn (): User => User::create([
-                    'name' => $dados['administrador_nome'],
-                    'email' => $dados['administrador_email'],
-                    'password' => Str::random(32),
-                    'is_active' => true,
-                ])
-            );
-
-            $administrador->assignRole('administrador');
+            $this->provisionamentoService->provisionar($empresa, [
+                'nome' => $dados['administrador_nome'],
+                'email' => $dados['administrador_email'],
+                // Nulo quando quem chamou não coletou senha (formulário do
+                // super admin): `provisionar()` trata isso gerando uma
+                // aleatória. Lista fixa de chaves, e não o `$dados` inteiro,
+                // pelo mesmo motivo de `Arr::only()` acima.
+                'senha' => $dados['administrador_senha'] ?? null,
+            ]);
 
             // `refresh()` para devolver a empresa com os padrões que quem
             // preenche é o banco (`is_internal = false`, timestamps). Sem ele o

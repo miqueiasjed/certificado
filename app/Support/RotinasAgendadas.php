@@ -58,6 +58,15 @@ final class RotinasAgendadas
         // rotina anterior. Antes dos avisos diários (07:00), que é quando a
         // central de notificações do Plano 14 leva o aviso ao cliente.
         'plataforma:inadimplencia' => '05:00',
+        // 05:30, logo depois da régua de inadimplência (05:00), sem disputar a
+        // mesma janela: as duas leem e escrevem `companies.situacao`, mas de
+        // tenants que nunca se sobrepõem (`suspensa`/`ativa`/`em_atraso` de um
+        // lado, `em_avaliacao` do outro), então a ordem entre elas não muda o
+        // resultado. Fica depois por semelhança de papel, não por dependência
+        // de dado. Meia hora de folga é o que cobre uma passada de
+        // inadimplência mais lenta que o normal sem empurrar esta para a
+        // janela dos avisos diários (07:00).
+        'plataforma:encerrar-avaliacoes' => '05:30',
         // 07:00: depois de tudo que muda o dado que ela lê (status de
         // certificado, status de pagamento e geração de visitas, entre 00:10 e
         // 01:00), e antes das 08:00, que é a hora padrão de envio da central de

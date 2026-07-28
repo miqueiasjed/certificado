@@ -8,6 +8,9 @@
     </template>
 
     <div class="space-y-6">
+      <!-- Trilha de primeiros passos -->
+      <TrilhaDePrimeirosPassos />
+
       <!-- Estatísticas Gerais -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
@@ -194,6 +197,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import StatCard from '@/Components/StatCard.vue';
 import QuickAction from '@/Components/QuickAction.vue';
+import TrilhaDePrimeirosPassos from '@/Components/TrilhaDePrimeirosPassos.vue';
 
 const props = defineProps({
   stats: {

@@ -36,7 +36,7 @@ bloqueio.
 | 5 | Painel do super admin | ✅ | 3, 4 | 12 |
 | 6 | Liberação de módulos por plano | ✅ | 5 | 9 |
 | 7 | Assinaturas e cobrança dos tenants (PagBank) | ✅ | 6 | 12 |
-| 8 | Onboarding e provisionamento de tenant | ⏳ | 7 | 10 |
+| 8 | Onboarding e provisionamento de tenant | ✅ | 7 | 10 |
 
 ### Operação de campo
 

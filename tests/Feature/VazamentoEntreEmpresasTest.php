@@ -21,9 +21,11 @@ use App\Models\DeviceEvent;
 use App\Models\DeviceReplacement;
 use App\Models\EventType;
 use App\Models\FinancialEntry;
+use App\Models\Invitation;
 use App\Models\NotificationLog;
 use App\Models\NotificationQueue;
 use App\Models\NotificationTemplate;
+use App\Models\OnboardingStep;
 use App\Models\OrganRegistration;
 use App\Models\PaymentDetail;
 use App\Models\PestSighting;
@@ -1536,6 +1538,23 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'autor_nome' => 'Autor '.$marca,
                 'valores_antes' => ['name' => 'Antigo '.$marca],
                 'valores_depois' => ['name' => 'Cliente '.$marca],
+            ]);
+
+            // Convite e passo de onboarding (Plano 8). Nenhum dos dois tem rota
+            // de CRUD direta ainda (só migrations e models na Task 8.1), então
+            // não entram em basesDeRecurso(): o objetivo aqui é só o model de
+            // domínio ter dado no cenário, mesmo critério já usado para
+            // deviceReplacement acima.
+            $dados['invitation'] = Invitation::create([
+                'email' => "convite-{$baixo}@exemplo.test",
+                'nome' => 'Convidado '.$marca,
+                'papel' => 'tecnico',
+                'convidado_por' => $autor->id,
+                'expira_em' => now()->addDays(7)->toDateString(),
+            ]);
+
+            $dados['onboardingStep'] = OnboardingStep::create([
+                'chave' => 'passo_'.$baixo,
             ]);
 
             return $dados;

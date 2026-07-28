@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Services\AssumirTenantService;
 use App\Services\LimitesDoPlanoService;
 use App\Services\ModuleService;
+use App\Services\OnboardingService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -58,6 +59,7 @@ class HandleInertiaRequests extends Middleware
             'suporte' => $this->estadoDoSuporte($request),
             'avisos' => fn () => $this->avisosDeLimite($request),
             'modulos' => $this->modulosAtivos($request),
+            'onboarding' => fn () => $this->onboardingDoTenant($request),
         ]);
     }
 
@@ -152,5 +154,42 @@ class HandleInertiaRequests extends Middleware
         }
 
         return app(ModuleService::class)->ativosPara($empresa);
+    }
+
+    /**
+     * Trilha de primeiros passos do tenant novo (Task 8.5), para o bloco do
+     * dashboard da Task 8.9.
+     *
+     * Fica em closure, no mesmo padrão de `avisos`: só é calculada em
+     * navegação completa (ou parcial que peça `onboarding` no `only`), nunca
+     * em toda requisição. Some de vez (devolve `null`) assim que a trilha
+     * está concluída, e a partir daí para de custar até a consulta de
+     * existência de `OnboardingService::concluida()` já paga aqui: o
+     * `avaliar()`, mais caro, só roda enquanto sobrar passo pendente.
+     *
+     * Sem usuário autenticado (tela de login) ou sem tenant resolvido,
+     * devolve nulo: não há empresa para calcular trilha nenhuma.
+     */
+    private function onboardingDoTenant(Request $request): ?array
+    {
+        if ($request->user() === null) {
+            return null;
+        }
+
+        try {
+            $empresa = Company::current();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $onboarding = app(OnboardingService::class);
+
+        if ($onboarding->concluida($empresa)) {
+            return null;
+        }
+
+        $onboarding->avaliar($empresa);
+
+        return $onboarding->situacao($empresa);
     }
 }

@@ -59,4 +59,40 @@ return [
 
     'dias_de_cobranca' => [1, 3, 5],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Duração do período de avaliação
+    |--------------------------------------------------------------------------
+    |
+    | Dias corridos, contados no fuso do negócio, entre o início da avaliação
+    | (`AvaliacaoService::iniciar()`) e `companies.trial_ends_at`. Quatorze dias
+    | é o padrão do Plano 8: tempo suficiente para o tenant emitir uma OS e um
+    | certificado de verdade antes de decidir.
+    |
+    | A contagem é por dia, nunca por instante: quem está decidindo comprar não
+    | pode perder o último dia porque a rotina rodou às 21h de Brasília em vez
+    | de à meia-noite (ver `App\Support\BusinessDate`).
+    |
+    */
+
+    'dias_de_avaliacao' => (int) env('ASSINATURA_DIAS_DE_AVALIACAO', 14),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Avisos antes do fim da avaliação
+    |--------------------------------------------------------------------------
+    |
+    | Dias ANTES de `trial_ends_at` em que `AvaliacaoService::avaliarVencimentos()`
+    | registra o aviso de "sua avaliação está terminando". Mesmo critério de
+    | `dias_de_aviso`: cada marco avisa uma vez, no dia exato em que faltam
+    | aqueles dias, não a contagem regressiva inteira.
+    |
+    | Não vai para `env()` pelo mesmo motivo de `dias_de_aviso`: é lista, e
+    | lista em variável de ambiente vira string que alguém precisa lembrar de
+    | explodir.
+    |
+    */
+
+    'dias_de_aviso_da_avaliacao' => [7, 3, 1],
+
 ];

@@ -8,16 +8,16 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 8.1 | Migrations e models de convite e trilha | backend-estrutura | ⏳ | baixa |
-| 8.2 | Catálogo compartilhado dos cadastros iniciais | backend-estrutura | ⏳ | média |
-| 8.3 | Service de provisionamento do tenant | backend-logica | ⏳ | média |
-| 8.4 | Service e endpoints de convite de usuário | backend-endpoint | ⏳ | alta |
-| 8.5 | Trilha de primeiros passos | backend-logica | ⏳ | média |
-| 8.6 | Período de avaliação e transição para plano pago | backend-logica | ⏳ | média |
-| 8.7 | Fluxo de criação autônoma de tenant | backend-endpoint | ⏳ | média |
-| 8.8 | Telas de cadastro de empresa e aceite de convite | frontend-pagina | ⏳ | alta |
-| 8.9 | Trilha de primeiros passos no dashboard | frontend-componente | ⏳ | média |
-| 8.10 | Teste de tenant novo emitindo OS sem ajuste manual | teste | ⏳ | alta |
+| 8.1 | Migrations e models de convite e trilha | backend-estrutura | ✅ | baixa |
+| 8.2 | Catálogo compartilhado dos cadastros iniciais | backend-estrutura | ✅ | média |
+| 8.3 | Service de provisionamento do tenant | backend-logica | ✅ | média |
+| 8.4 | Service e endpoints de convite de usuário | backend-endpoint | ✅ | alta |
+| 8.5 | Trilha de primeiros passos | backend-logica | ✅ | média |
+| 8.6 | Período de avaliação e transição para plano pago | backend-logica | ✅ | média |
+| 8.7 | Fluxo de criação autônoma de tenant | backend-endpoint | ✅ | média |
+| 8.8 | Telas de cadastro de empresa e aceite de convite | frontend-pagina | ✅ | alta |
+| 8.9 | Trilha de primeiros passos no dashboard | frontend-componente | ✅ | média |
+| 8.10 | Teste de tenant novo emitindo OS sem ajuste manual | teste | ✅ | alta |
 
 ## Ordem de execução
 

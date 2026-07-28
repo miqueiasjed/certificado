@@ -19,11 +19,11 @@ use Throwable;
  * log). Com `RuntimeException` genérico, o `catch` do controller pegaria junto
  * falhas que ele não sabe tratar.
  *
- * Quem lança: `App\Services\TenantService::suspender()` e
- * `App\Services\SubscriptionService`, sempre antes de qualquer escrita e antes
- * de qualquer chamada ao provedor de pagamento. Lançar depois de um `update()`
- * parcial, ou depois de já ter criado a assinatura no gateway, seria pior que
- * não lançar.
+ * Quem lança: `App\Services\TenantService::suspender()`,
+ * `App\Services\SubscriptionService` e `App\Services\AvaliacaoService`, sempre
+ * antes de qualquer escrita e antes de qualquer chamada ao provedor de
+ * pagamento. Lançar depois de um `update()` parcial, ou depois de já ter
+ * criado a assinatura no gateway, seria pior que não lançar.
  */
 class TenantInternoException extends RuntimeException
 {
@@ -87,6 +87,24 @@ class TenantInternoException extends RuntimeException
             $nomeDaEmpresa,
             'O tenant interno não tem assinatura a alterar: ele não é cobrado, porque é o cliente que sustenta a operação atual do sistema.',
             'A empresa "%s" é o tenant interno e não tem assinatura a alterar: ela não é cobrada, porque é o cliente que sustenta a operação atual do sistema.'
+        ));
+    }
+
+    /**
+     * Recusa de entrada em avaliação (`AvaliacaoService::iniciar()` e
+     * `AvaliacaoService::converter()`).
+     *
+     * O tenant interno já opera sem limite e sem cobrança: colocá-lo em
+     * avaliação o exporia à suspensão de `AvaliacaoService::avaliarVencimentos()`
+     * quando o prazo vencesse, e é exatamente o bloqueio que este tenant não
+     * pode sofrer.
+     */
+    public static function naoEntraEmAvaliacao(?string $nomeDaEmpresa = null): self
+    {
+        return new self(self::comEmpresa(
+            $nomeDaEmpresa,
+            'O tenant interno não entra em avaliação: ele é o cliente que sustenta a operação atual do sistema.',
+            'A empresa "%s" é o tenant interno: ela não entra em avaliação, porque é o cliente que sustenta a operação atual do sistema.'
         ));
     }
 

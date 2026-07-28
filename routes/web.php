@@ -9,6 +9,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BaitTypeController;
 use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\CadastroEmpresaController;
 use App\Http\Controllers\CadastrosController;
 use App\Http\Controllers\CashFlowController;
 use App\Http\Controllers\CertificateController;
@@ -28,8 +29,10 @@ use App\Http\Controllers\FinancialDashboardController;
 use App\Http\Controllers\FinancialEntryController;
 use App\Http\Controllers\FinancialWithdrawalController;
 use App\Http\Controllers\GatewayWebhookController;
+use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationQueueController;
 use App\Http\Controllers\NotificationTemplateController;
+use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OrganRegistrationController;
 use App\Http\Controllers\PaymentDetailController;
 use App\Http\Controllers\PestSightingController;
@@ -57,11 +60,14 @@ use Illuminate\Support\Facades\Route;
 
 // Rotas públicas, sem login.
 //
-// São duas, e cada uma tem a própria forma de autorizar, porque em nenhuma delas
-// existe usuário autenticado de quem exigir papel ou permissão: o recibo é
-// autorizado pela assinatura da URL, e o webhook do gateway pela assinatura que
-// o provedor de pagamento manda no cabeçalho. Nenhuma outra rota do sistema
-// responde sem sessão.
+// São quatro, e cada uma tem a própria forma de autorizar, porque em nenhuma
+// delas existe usuário autenticado de quem exigir papel ou permissão: o recibo é
+// autorizado pela assinatura da URL, o webhook do gateway pela assinatura que
+// o provedor de pagamento manda no cabeçalho, e o aceite de convite pelo token
+// de 64 caracteres da URL. O cadastro de empresa é a exceção sem credencial
+// nenhuma: ele é aberto por definição, e o que o protege é o `throttle` e o
+// fato de o formulário não aceitar nenhum campo que conceda privilégio.
+// Nenhuma outra rota do sistema responde sem sessão.
 
 // Webhook do gateway de pagamento (Plano 7, Task 7.6).
 //
@@ -95,6 +101,73 @@ Route::get('/service-orders/{workOrder}/receipt', [WorkOrderController::class, '
     ->middleware('signed')
     ->name('service-orders.receipt');
 
+// Aceite de convite de usuário (Plano 8, Task 8.4).
+//
+// A rota mais sensível deste arquivo depois do cadastro público: ela cria um
+// usuário dentro de uma empresa existente, sem sessão nenhuma. Três decisões
+// sustentam isso, e nenhuma delas está aqui por acaso.
+//
+// 1. **A autorização é o token.** 64 caracteres aleatórios, único no banco, de
+//    uso único, gerado em `Invitation::booted()`. `InvitationController` não
+//    consulta `Auth` nem `Company::current()` nestes dois métodos: fora do
+//    grupo `auth` não existe tenant resolvido, e a empresa do usuário criado é
+//    sempre a do convite, aplicada com `TenantAtual::comTenant()` dentro do
+//    `InvitationService`.
+//
+// 2. **O papel vem do convite.** O formulário manda nome e senha, e mais nada.
+//    Um campo de papel aqui entregaria administrador para quem tivesse o link.
+//
+// 3. **`throttle` nas duas.** Rota pública que grava usuário, mesmo critério
+//    do cadastro de empresa (Task 8.7). Adivinhar o token não é o risco que
+//    isso cobre (64 caracteres aleatórios não se descobrem por tentativa), e
+//    sim o abuso automatizado da rota. Por isso a folga: várias pessoas da
+//    mesma empresa aceitando o convite de trás do mesmo IP, cada uma errando a
+//    confirmação de senha uma ou duas vezes, precisa caber no minuto.
+//
+// O `{token}` é string livre, nunca Model Binding: token inválido, de outra
+// empresa ou truncado precisa cair na mesma tela com a mensagem do que
+// aconteceu, e o 404 automático do binding devolveria uma página crua para
+// quem só clicou no link que recebeu. A restrição alfanumérica cobre o formato
+// que `Str::random()` produz.
+Route::get('/convite/{token}', [InvitationController::class, 'show'])
+    ->where('token', '[A-Za-z0-9]+')
+    ->middleware('throttle:30,1')
+    ->name('convite.show');
+Route::post('/convite/{token}', [InvitationController::class, 'aceitar'])
+    ->where('token', '[A-Za-z0-9]+')
+    ->middleware('throttle:20,1')
+    ->name('convite.aceitar');
+
+// Cadastro público de empresa (Plano 8, Task 8.7).
+//
+// A rota mais sensível deste arquivo: uma requisição anônima cria uma empresa,
+// um usuário administrador e algumas dezenas de cadastros de catálogo. Fica
+// fora do grupo autenticado, fora de `tenant.ativo` e fora de qualquer
+// `module:<chave>`, e tem que ficar: quem chega aqui não tem sessão, não tem
+// empresa resolvida e não tem plano do qual derivar módulo. O detalhamento do
+// que sustenta a segurança dela está no cabeçalho de `CadastroEmpresaController`.
+//
+// Os dois `throttle` são por IP e por minuto, e os limites são diferentes de
+// propósito:
+//
+// - `20,1` no GET: é só a página do formulário, e quem recarrega, volta do
+//   login e recarrega de novo não pode esbarrar em bloqueio.
+// - `5,1` no POST: é o mais apertado do sistema (o aceite de convite, que
+//   também grava usuário, tem 20). Cinco tentativas por minuto sobram para
+//   quem erra a confirmação de senha duas ou três vezes, e não sobram para
+//   quem quer povoar a tabela de tenants por script. A conta de tentativas
+//   inclui as recusadas na validação: o custo que se está limitando é o da
+//   requisição, não o do cadastro concluído.
+//
+// Se um dia várias pessoas legítimas passarem a se cadastrar de trás do mesmo
+// IP (evento, coworking), o limite do POST é o que precisa subir, nunca sair.
+Route::get('/cadastro', [CadastroEmpresaController::class, 'create'])
+    ->middleware('throttle:20,1')
+    ->name('cadastro.create');
+Route::post('/cadastro', [CadastroEmpresaController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('cadastro.store');
+
 Route::get('/login', function () {
     return inertia('Auth/Login');
 })->name('login');
@@ -125,6 +198,13 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
     // papel enxerga dentro do dashboard é decidido no controller.
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+
+    // Trilha de primeiros passos (Plano 8, Task 8.9): as duas ações que o
+    // bloco `TrilhaDePrimeirosPassos` do dashboard dispara, sempre voltando
+    // para a página de origem (`back()`). Sem permissão própria: quem já vê o
+    // dashboard já pode decidir o que fazer com a própria trilha.
+    Route::post('/onboarding/ignorar/{chave}', [OnboardingController::class, 'ignorar'])->name('onboarding.ignorar');
+    Route::post('/onboarding/retomar/{chave}', [OnboardingController::class, 'retomar'])->name('onboarding.retomar');
 
     // Página "Módulo indisponível" (Plano 6, Task 6.4): destino do
     // redirecionamento de `EnsureModuleIsActive` quando uma requisição Inertia
@@ -621,6 +701,30 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
     Route::post('/settings/users', [UserController::class, 'store'])->middleware('permission:usuario-criar')->name('settings.users.store');
     Route::put('/settings/users/{user}', [UserController::class, 'update'])->middleware('permission:usuario-editar')->name('settings.users.update');
     Route::patch('/settings/users/{user}/status', [UserController::class, 'alterarStatus'])->middleware('permission:usuario-desativar')->name('settings.users.status');
+
+    // Convites de usuário (Plano 8, Task 8.4).
+    //
+    // As quatro exigem `usuario-criar`, inclusive a listagem: convidar é criar
+    // usuário por outro caminho, e quem não pode criar não precisa da tela.
+    // Nenhuma permissão nova nasce aqui, então não há nada a acrescentar em
+    // `SyncPermissions`.
+    //
+    // `settings.convites.index` é o nome que a trilha de primeiros passos já
+    // aponta desde a Task 8.5 (`PassosDeOnboarding`, passo `equipe`), e é onde
+    // a tela da Task 8.8 vai morar.
+    //
+    // `{convite}` é resolvido com o escopo global de `Invitation` ativo:
+    // convite de outra empresa não é encontrado e a resposta é 404, sem
+    // verificação extra em cada ação.
+    //
+    // O par cancelar/reenviar é POST e DELETE, nunca GET: os dois mudam estado
+    // (reenviar troca o token e invalida o link anterior), e ação disparada por
+    // prefetch do navegador ou por varredura de link não pode derrubar o
+    // convite de ninguém.
+    Route::get('/settings/convites', [InvitationController::class, 'index'])->middleware('permission:usuario-criar')->name('settings.convites.index');
+    Route::post('/settings/convites', [InvitationController::class, 'store'])->middleware('permission:usuario-criar')->name('settings.convites.store');
+    Route::delete('/settings/convites/{convite}', [InvitationController::class, 'destroy'])->middleware('permission:usuario-criar')->name('settings.convites.destroy');
+    Route::post('/settings/convites/{convite}/reenviar', [InvitationController::class, 'reenviar'])->middleware('permission:usuario-criar')->name('settings.convites.reenviar');
 
     // Rota de Histórico de Auditoria
     // {tipo} é um apelido de uma lista fechada de models auditados (ver

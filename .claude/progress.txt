@@ -1062,3 +1062,61 @@ especificação pediu como "portão de subida". Regra geral: teste de
 invariante crítico de negócio ("X nunca acontece, nunca, em lugar nenhum")
 justifica duplicar asserção que já existe alhures — o valor está em ser
 o único arquivo que alguém precisa abrir para confiar na regra inteira.
+
+## Plano 8 - Onboarding e provisionamento de tenant
+
+### Catálogo inicial sem fonte real de tenant 1 para copiar
+
+A especificação da Task 8.2 pedia dados reais do tenant 1, exportados e
+revisados. O banco de desenvolvimento consultado tinha o tenant 1 quase
+vazio: zero tipo de evento, zero tipo de isca, zero cadastro regulatório.
+O subagente montou o catálogo em cima de prática operacional real de
+empresas licenciadas (RDC 52/2009) e de ficha técnica pública de produtos
+comerciais de verdade (Klerat, D'FIM, K-Othrine), documentando a fonte por
+item no cabeçalho da classe. Regra que fica: quando a premissa de uma task
+("copie o dado real de X") não se sustenta porque X não tem o dado, a
+correção é buscar fonte real equivalente e documentar a substituição, nunca
+inventar placeholder genérico.
+
+### Duas tasks paralelas com dependência conceitual não declarada no plano
+
+`INDEX.md` do plano marcava 8.3 e 8.5 como lote paralelo, mas 8.3
+(provisionamento) precisa criar os `OnboardingStep` com as chaves que 8.5
+(trilha) declara em `PassosDeOnboarding::catalogo()`. Nenhuma das duas
+dependia da outra pela tabela de dependências internas, e as duas rodaram
+ao mesmo tempo. O subagente de 8.3 começou com uma constante provisória e,
+ao notar que 8.5 criou `PassosDeOnboarding.php` no meio da execução, refez
+a leitura para consumir a fonte única sem duplicar a lista. Os dois
+subagentes foram orientados no prompt a checar a existência do arquivo um
+do outro antes de escrever, e funcionou sem o orquestrador precisar
+arbitrar. Regra que fica: quando duas tasks do mesmo lote paralelo
+compartilham um catálogo de chaves ou de nomes, vale avisar os dois
+subagentes da existência um do outro no prompt de despacho, mesmo que a
+tabela de dependências do plano não marque a relação.
+
+### Rota sem link de navegação, achada só na revisão de frontend
+
+A Task 8.5 (backend) já apontava o passo `equipe` da trilha para a rota
+`settings.convites.index`, e a Task 8.8 criou a tela `Settings/Convites.vue`
+que essa rota renderiza. Nenhuma das duas tasks tinha no escopo acrescentar
+o link no menu lateral, e sem ele a tela só era alcançável enquanto o passo
+da trilha estivesse pendente, ou seja, ficaria inacessível para quem já
+tivesse dispensado ou concluído aquele passo. Corrigido pelo orquestrador
+direto no `Sidebar.vue`, fora de qualquer task, seguindo o padrão exato do
+link de "Usuários" já existente. Regra que fica: task de tela nova sempre
+merece checar se algum menu de navegação leva até ela, porque "criar a
+página" e "torná-la alcançável" costumam estar em arquivos diferentes que
+nenhuma task individual lista.
+
+### Lacunas do catálogo inicial só apareceram no teste de ponta a ponta
+
+A Task 8.10 é quem provou, rodando o fluxo real de OS e certificado por
+rota HTTP, que o catálogo da Task 8.2 estava incompleto: faltava `Service`
+(o cadastro que a tela de nova OS lista, diferente de `ServiceType`, que
+não é usado em nenhum fluxo) e `Product` (que depende dos quatro cadastros
+regulatórios já existentes). A correção foi no catálogo, nunca no teste,
+conforme a regra que a própria Task 8.10 registra. Regra que fica: um
+catálogo de seed só se prova completo rodando o fluxo de ponta a ponta que
+depende dele, nunca por inspeção visual da lista de cadastros; `ServiceType`
+existir no schema não significa que ele é o cadastro que o formulário
+realmente consulta.
