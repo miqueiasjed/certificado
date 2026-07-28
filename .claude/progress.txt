@@ -900,3 +900,61 @@ passar sem afrouxar nenhuma asserção.
   disponível neste ambiente). A leitura de código, o desligamento da câmera e
   os três estados de permissão foram verificados só por leitura cuidadosa do
   código-fonte do ciclo de vida do `Html5Qrcode`.
+
+## Plano 6 - Liberação de módulos por plano (27-28/07/2026)
+
+Concluído, as 9 tasks previstas, nenhuma nasceu no meio da execução. Único
+lote paralelo real do plano foi 6.3/6.5 (o resto é cadeia sequencial:
+migration -> catálogo -> service -> middleware/endpoints -> frontend ->
+teste).
+
+### O aprendizado central
+
+`ModuleService::$cache` é uma propriedade estática pensada para durar só o
+ciclo de uma requisição HTTP real (processo novo a cada request). A suíte de
+testes inteira roda no mesmo processo PHP, então esse cache vazava entre
+classes de teste: um teste que criava usuário na empresa 1 sem semear o
+catálogo de módulos "contaminava" o resultado para o próximo teste que
+consultasse a mesma empresa. Corrigido zerando o cache em `tests/TestCase::setUp()`
+(Task 6.9), o equivalente de teste ao "processo novo por request" que a
+produção já tem de graça. **Regra que fica:** todo Service com memoização
+estática pensada para o ciclo de request precisa desse mesmo cuidado na base
+de teste, não só documentado no docblock da classe.
+
+### Subagente travado, trabalho recuperado sem redespachar
+
+A Task 6.5 (`LimitesDoPlanoService`) travou (`stalled`, sem progresso por
+600s), provavelmente durante a suíte completa de testes. Em vez de
+redespachar do zero, o orquestrador conferiu `git status`: o service e a
+alteração em `HandleInertiaRequests`/`UserService` já estavam completos e
+corretos. Rodou os testes relacionados e validou os dois cenários da task
+(limite de cliente estourado gera aviso sem bloquear; limite de usuário
+bloqueia) manualmente via tinker, dentro de transação com rollback, antes de
+marcar a task como concluída. **Regra que fica:** falha de `stalled` não é
+sinônimo de trabalho perdido; vale inspecionar o working tree antes de gastar
+outro subagente inteiro refazendo o que já foi feito.
+
+### Correção do orquestrador: catálogo de módulos duplicado no frontend
+
+A Task 6.8 criou `ModuloIndisponivel.vue` com uma cópia inteira de
+`CatalogoDeModulos` (nome e frase de cada um dos 13 módulos) em JavaScript,
+porque a rota `modulo-indisponivel` (Task 6.4) só mandava a chave. Isso
+contrariava o próprio critério de aceitação da Task 6.2 ("`CatalogoDeModulos::catalogo()`
+é a única lista no código"). Corrigido pelo orquestrador: acrescentada a
+coluna `descricao` ao catálogo e ao seeder (antes só gravava `nome`), e a
+rota passou a mandar `nome`/`descricao` lidos do banco; o componente Vue
+ficou só com os dois textos prontos, sem redeclarar nada. Regra geral: página
+de erro/estado que precisa de texto de exibição deve receber esse texto do
+backend, nunca redeclarar catálogo de domínio no frontend.
+
+### Ajuste deliberado num critério de teste da Task 6.9
+
+A especificação pedia descobrir as rotas financeiras "pelo middleware
+`module:financeiro`, não uma lista escrita à mão". O subagente notou o
+problema: filtrar pelo próprio middleware que o teste cobra faz uma rota que
+perdesse esse middleware desaparecer da varredura, sem derrubar teste nenhum
+(o oposto do pedido). Trocou o critério de descoberta para padrão de URL
+(mesmo já usado em `AcessoFinanceiroTest`), mantendo a asserção de que cada
+rota achada carrega o middleware. Confirmou removendo o middleware de uma
+rota de verdade e vendo o teste cair, depois desfez a remoção. Documentado no
+docblock da classe de teste.

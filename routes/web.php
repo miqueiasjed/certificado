@@ -42,6 +42,7 @@ use App\Http\Controllers\NotificationTemplateController;
 use App\Http\Controllers\NotificationQueueController;
 use App\Http\Controllers\Plataforma\AssumirTenantController;
 use App\Http\Controllers\Plataforma\DashboardController as PlataformaDashboardController;
+use App\Http\Controllers\Plataforma\ModuleController as PlataformaModuleController;
 use App\Http\Controllers\Plataforma\PlanController as PlataformaPlanController;
 use App\Http\Controllers\Plataforma\TenantController as PlataformaTenantController;
 use App\Http\Controllers\Plataforma\UsageController as PlataformaUsageController;
@@ -92,6 +93,28 @@ Route::middleware(['auth'])->group(function () {
     // papel enxerga dentro do dashboard é decidido no controller.
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+
+    // Página "Módulo indisponível" (Plano 6, Task 6.4): destino do
+    // redirecionamento de `EnsureModuleIsActive` quando uma requisição Inertia
+    // esbarra em módulo inativo. Fica de propósito fora de qualquer grupo com
+    // `module:*`: se ela própria caísse em outro bloqueio de módulo, o
+    // redirecionamento nunca teria para onde ir. O componente Vue
+    // `ModuloIndisponivel` nasce só na Task 6.8; até lá, a rota aponta para
+    // uma página Inertia que ainda não existe, o que é esperado aqui.
+    //
+    // Nome e descrição vêm do banco (fonte única em `CatalogoDeModulos`, via
+    // seeder), não redeclarados aqui nem no componente Vue: a chave sozinha
+    // não é o suficiente para a tela, e duplicar nome/descrição no frontend
+    // divergiria assim que o catálogo mudasse.
+    Route::get('/modulo-indisponivel/{modulo}', function (string $modulo) {
+        $info = \App\Models\Module::query()->where('chave', $modulo)->first();
+
+        return inertia('ModuloIndisponivel', [
+            'modulo' => $modulo,
+            'nome' => $info->nome ?? 'Este módulo',
+            'descricao' => $info->descricao ?? 'Um recurso adicional do sistema.',
+        ]);
+    })->name('modulo-indisponivel');
 
     // Rotas de Clientes
     Route::resource('clients', ClientController::class)
@@ -175,7 +198,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/addresses/client/{clientId}', [AddressController::class, 'getByClient'])->middleware('permission:endereco-ver')->name('addresses.by-client');
     Route::get('/addresses/city/{city}', [AddressController::class, 'getByCity'])->middleware('permission:endereco-ver')->name('addresses.by-city');
     Route::get('/addresses/state/{state}', [AddressController::class, 'getByState'])->middleware('permission:endereco-ver')->name('addresses.by-state');
-    Route::get('/addresses/{address}/contract/pdf', [ContractController::class, 'generatePDF'])->middleware('permission:contrato-ver')->name('addresses.contract.pdf');
+    Route::get('/addresses/{address}/contract/pdf', [ContractController::class, 'generatePDF'])->middleware(['permission:contrato-ver', 'module:contratos'])->name('addresses.contract.pdf');
 
     // Rotas para gerenciar dispositivos em endereços
     // O recurso editado aqui é o endereço, por isso a permissão é endereco-*.
@@ -186,34 +209,42 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/addresses/{address}/rooms/{room}', [AddressController::class, 'deleteRoom'])->middleware('permission:comodo-gerenciar')->name('addresses.rooms.delete');
 
     // Rotas de Contratos
+    // Todas as rotas deste bloco, mais as três "addresses.contract(s).*"
+    // registradas junto de Endereços/Dispositivos, acumulam `module:contratos`
+    // (Plano 6, Task 6.4) com a permissão já existente: tenant sem o módulo
+    // fica barrado mesmo tendo `contrato-ver`/`contrato-editar`.
+    //
     // O painel de pendências (Task 9.7) precisa ser registrado antes do
     // resource: GET /contracts/{contract} (show) casaria com
     // /contracts/pendencias primeiro, tentando bindar um contrato com id
     // "pendencias" e devolvendo 404 em vez do painel.
-    Route::get('/contracts/pendencias', [ContractVisitController::class, 'pendencias'])->middleware('permission:contrato-ver')->name('contracts.pendencias');
+    Route::get('/contracts/pendencias', [ContractVisitController::class, 'pendencias'])->middleware(['permission:contrato-ver', 'module:contratos'])->name('contracts.pendencias');
 
     Route::resource('contracts', ContractController::class)
         ->middlewareFor(['index', 'show'], 'permission:contrato-ver')
         ->middlewareFor(['create', 'store'], 'permission:contrato-criar')
         ->middlewareFor(['edit', 'update'], 'permission:contrato-editar')
-        ->middlewareFor('destroy', 'permission:contrato-excluir');
-    Route::get('/addresses/{address}/contracts/create', [ContractController::class, 'create'])->middleware('permission:contrato-criar')->name('addresses.contracts.create');
-    Route::post('/addresses/{address}/contracts', [ContractController::class, 'store'])->middleware('permission:contrato-criar')->name('addresses.contracts.store');
+        ->middlewareFor('destroy', 'permission:contrato-excluir')
+        ->middleware('module:contratos');
+    Route::get('/addresses/{address}/contracts/create', [ContractController::class, 'create'])->middleware(['permission:contrato-criar', 'module:contratos'])->name('addresses.contracts.create');
+    Route::post('/addresses/{address}/contracts', [ContractController::class, 'store'])->middleware(['permission:contrato-criar', 'module:contratos'])->name('addresses.contracts.store');
     // POST /contracts declarado de novo aqui: por ser registrado depois, ele
     // substitui o store do resource na tabela de rotas. Sem esta permissão a do
-    // resource seria ignorada e a criação de contrato ficaria aberta.
-    Route::post('/contracts', [ContractController::class, 'store'])->middleware('permission:contrato-criar')->name('contracts.store');
+    // resource seria ignorada e a criação de contrato ficaria aberta. Pelo
+    // mesmo motivo, `module:contratos` precisa se repetir aqui: sem ele, esta
+    // sobrescrita reabriria a criação de contrato para tenant sem o módulo.
+    Route::post('/contracts', [ContractController::class, 'store'])->middleware(['permission:contrato-criar', 'module:contratos'])->name('contracts.store');
 
     // Encerramento do contrato: cancela as visitas futuras não executadas e
     // fecha a vigência, com efeito cascata na agenda igual ao de
     // `atualizar()` quando muda o calendário. Mesma permissão de editar, por
     // isso: não pode ficar mais frouxo do que editar o contrato.
-    Route::post('/contracts/{contract}/encerrar', [ContractController::class, 'encerrar'])->middleware('permission:contrato-editar')->name('contracts.encerrar');
+    Route::post('/contracts/{contract}/encerrar', [ContractController::class, 'encerrar'])->middleware(['permission:contrato-editar', 'module:contratos'])->name('contracts.encerrar');
 
     // Visitas do contrato (Task 9.7): leitura exige contrato-ver, geração sob
     // demanda exige contrato-editar por ser escrita na agenda.
-    Route::get('/contracts/{contrato}/visitas', [ContractVisitController::class, 'index'])->middleware('permission:contrato-ver')->name('contracts.visitas.index');
-    Route::post('/contracts/{contrato}/visitas/gerar', [ContractVisitController::class, 'gerar'])->middleware('permission:contrato-editar')->name('contracts.visitas.gerar');
+    Route::get('/contracts/{contrato}/visitas', [ContractVisitController::class, 'index'])->middleware(['permission:contrato-ver', 'module:contratos'])->name('contracts.visitas.index');
+    Route::post('/contracts/{contrato}/visitas/gerar', [ContractVisitController::class, 'gerar'])->middleware(['permission:contrato-editar', 'module:contratos'])->name('contracts.visitas.gerar');
 
     // Justificativa de data prevista que não virou visita: é o que tira a
     // pendência de conformidade do painel sem criar OS retroativa. Mesma
@@ -222,8 +253,8 @@ Route::middleware(['auth'])->group(function () {
     // não pode ser mais fácil do que gerar a visita que o alerta pede.
     // Remover a justificativa devolve a pendência ao painel, que é a direção
     // segura, e por isso não exige permissão mais forte que registrar.
-    Route::post('/contracts/{contrato}/visitas/justificativas', [ContractVisitController::class, 'justificar'])->middleware('permission:contrato-editar')->name('contracts.visitas.justificativas.store');
-    Route::delete('/contracts/{contrato}/visitas/justificativas/{justificativa}', [ContractVisitController::class, 'removerJustificativa'])->middleware('permission:contrato-editar')->name('contracts.visitas.justificativas.destroy');
+    Route::post('/contracts/{contrato}/visitas/justificativas', [ContractVisitController::class, 'justificar'])->middleware(['permission:contrato-editar', 'module:contratos'])->name('contracts.visitas.justificativas.store');
+    Route::delete('/contracts/{contrato}/visitas/justificativas/{justificativa}', [ContractVisitController::class, 'removerJustificativa'])->middleware(['permission:contrato-editar', 'module:contratos'])->name('contracts.visitas.justificativas.destroy');
 
     // Rotas de Cômodos
     Route::resource('rooms', RoomController::class)
@@ -388,45 +419,75 @@ Route::middleware(['auth'])->group(function () {
         ->middlewareFor(['create', 'store', 'edit', 'update', 'destroy'], 'permission:tipo-evento-gerenciar');
 
     // Rotas de Detalhes de Pagamento
+    // Daqui até o Dashboard Financeiro, todo o bloco acumula `module:financeiro`
+    // (Plano 6, Task 6.4) com a permissão já existente: os dois precisam
+    // passar. Inclui as duas rotas aninhadas em /work-orders/{workOrder}/...:
+    // mesmo com o prefixo de URL diferente, `payment-details.by-work-order` e
+    // `work-orders.financial-info.update` leem/escrevem o mesmo dado de
+    // pagamento que o resource abaixo, e ficariam abertas em tenant sem o
+    // módulo se fossem esquecidas aqui.
     Route::resource('payment-details', PaymentDetailController::class)
         ->only(['store', 'show', 'update', 'destroy'])
         ->middlewareFor('show', 'permission:pagamento-ver')
         ->middlewareFor('store', 'permission:pagamento-registrar')
         ->middlewareFor('update', 'permission:pagamento-editar')
-        ->middlewareFor('destroy', 'permission:pagamento-excluir');
-    Route::get('/work-orders/{workOrder}/payment-details', [PaymentDetailController::class, 'getByWorkOrder'])->middleware('permission:pagamento-ver')->name('payment-details.by-work-order');
-    Route::post('/payment-details/{paymentDetail}/reopen', [PaymentDetailController::class, 'reopen'])->middleware('permission:pagamento-reabrir')->name('payment-details.reopen');
-    Route::put('/work-orders/{workOrder}/financial-info', [WorkOrderFinancialController::class, 'updateFinancialInfo'])->middleware('permission:pagamento-editar')->name('work-orders.financial-info.update');
+        ->middlewareFor('destroy', 'permission:pagamento-excluir')
+        ->middleware('module:financeiro');
+    Route::get('/work-orders/{workOrder}/payment-details', [PaymentDetailController::class, 'getByWorkOrder'])->middleware(['permission:pagamento-ver', 'module:financeiro'])->name('payment-details.by-work-order');
+    Route::post('/payment-details/{paymentDetail}/reopen', [PaymentDetailController::class, 'reopen'])->middleware(['permission:pagamento-reabrir', 'module:financeiro'])->name('payment-details.reopen');
+    Route::put('/work-orders/{workOrder}/financial-info', [WorkOrderFinancialController::class, 'updateFinancialInfo'])->middleware(['permission:pagamento-editar', 'module:financeiro'])->name('work-orders.financial-info.update');
 
     // Rotas de Entradas Financeiras
     // A rota de estatísticas precisa vir antes do resource: declarada depois,
     // {financial_entry} captura a string "stats" e o endpoint nunca responde.
-    Route::get('/financial-entries/stats', [FinancialEntryController::class, 'getStats'])->middleware('permission:financeiro-ver')->name('financial-entries.stats');
+    Route::get('/financial-entries/stats', [FinancialEntryController::class, 'getStats'])->middleware(['permission:financeiro-ver', 'module:financeiro'])->name('financial-entries.stats');
     Route::resource('financial-entries', FinancialEntryController::class)
         ->only(['index', 'store', 'show', 'update', 'destroy'])
         ->middlewareFor(['index', 'show'], 'permission:financeiro-ver')
         ->middlewareFor('store', 'permission:financeiro-lancamento-criar')
         ->middlewareFor('update', 'permission:financeiro-lancamento-editar')
-        ->middlewareFor('destroy', 'permission:financeiro-lancamento-excluir');
-    Route::post('/payment-details/{paymentDetail}/create-financial-entry', [FinancialEntryController::class, 'createFromPayment'])->middleware('permission:pagamento-registrar')->name('financial-entries.create-from-payment');
+        ->middlewareFor('destroy', 'permission:financeiro-lancamento-excluir')
+        ->middleware('module:financeiro');
+    Route::post('/payment-details/{paymentDetail}/create-financial-entry', [FinancialEntryController::class, 'createFromPayment'])->middleware(['permission:pagamento-registrar', 'module:financeiro'])->name('financial-entries.create-from-payment');
 
     // Rotas de Saídas Financeiras
     // Mesma armadilha das entradas: "stats" antes do resource.
-    Route::get('/financial-withdrawals/stats', [FinancialWithdrawalController::class, 'getStats'])->middleware('permission:financeiro-ver')->name('financial-withdrawals.stats');
+    Route::get('/financial-withdrawals/stats', [FinancialWithdrawalController::class, 'getStats'])->middleware(['permission:financeiro-ver', 'module:financeiro'])->name('financial-withdrawals.stats');
     Route::resource('financial-withdrawals', FinancialWithdrawalController::class)
         ->only(['index', 'store', 'update', 'destroy'])
         ->middlewareFor('index', 'permission:financeiro-ver')
         ->middlewareFor('store', 'permission:financeiro-saida-criar')
         ->middlewareFor('update', 'permission:financeiro-saida-editar')
-        ->middlewareFor('destroy', 'permission:financeiro-saida-excluir');
+        ->middlewareFor('destroy', 'permission:financeiro-saida-excluir')
+        ->middleware('module:financeiro');
 
     // Rotas de Fluxo de Caixa
-    Route::get('/cash-flow', [CashFlowController::class, 'index'])->middleware('permission:financeiro-ver')->name('cash-flow');
-    Route::get('/cash-flow/stats', [CashFlowController::class, 'getStats'])->middleware('permission:financeiro-ver')->name('cash-flow.stats');
-    Route::get('/cash-flow/export', [CashFlowController::class, 'export'])->middleware('permission:financeiro-exportar')->name('cash-flow.export');
+    Route::get('/cash-flow', [CashFlowController::class, 'index'])->middleware(['permission:financeiro-ver', 'module:financeiro'])->name('cash-flow');
+    Route::get('/cash-flow/stats', [CashFlowController::class, 'getStats'])->middleware(['permission:financeiro-ver', 'module:financeiro'])->name('cash-flow.stats');
+    Route::get('/cash-flow/export', [CashFlowController::class, 'export'])->middleware(['permission:financeiro-exportar', 'module:financeiro'])->name('cash-flow.export');
 
     // Dashboard Financeiro
-    Route::get('/financial-dashboard', [FinancialDashboardController::class, 'index'])->middleware('permission:financeiro-ver')->name('financial-dashboard');
+    Route::get('/financial-dashboard', [FinancialDashboardController::class, 'index'])->middleware(['permission:financeiro-ver', 'module:financeiro'])->name('financial-dashboard');
+
+    // `/daily-cash-balances` está listado como rota do módulo financeiro na
+    // especificação desta task, mas `DailyCashBalanceController` não tem
+    // nenhuma rota registrada neste arquivo hoje (o controller existe, órfão,
+    // de antes deste plano). Nada para proteger aqui até essa rota nascer;
+    // quando nascer, entra neste mesmo bloco com `module:financeiro`.
+
+    // Módulos ainda sem nenhuma rota no sistema (`estoque`, `portal_cliente`,
+    // `app_tecnico`, `roteirizacao`, `nfse`, `laudo_ia`): seguem só
+    // declarados em `CatalogoDeModulos` e ganham `module:<chave>` na task que
+    // implementar o respectivo plano.
+    //
+    // `notificacoes` (Plano 14) e `monitoramento` (Plano 21) são exceções
+    // diferentes uma da outra: notificações já tem rota registrada (grupo
+    // "Rotas de Notificações", abaixo) mas ainda sem `module:notificacoes` -
+    // fica para quando o módulo entrar no escopo de uma task dedicada, para
+    // não gatilhar bloqueio sem o resto do fluxo (telas, aviso de plano)
+    // pronto. Monitoramento não tem rota nenhuma ainda; a rota de relatório
+    // de monitoramento nasce só no Plano 21, com `module:monitoramento` desde
+    // o primeiro deploy dela.
 
     // Rotas para criação rápida
     // Registradas depois dos resources, estas quatro substituem o store de cada
@@ -580,4 +641,23 @@ Route::prefix('plataforma')->name('plataforma.')->middleware(['auth', 'platform.
     // acima porque não é uma ação de CRUD do cadastro, é uma tela de
     // consulta à parte.
     Route::get('/tenants/{company}/uso', [PlataformaUsageController::class, 'show'])->name('tenants.uso');
+
+    // Gestão de módulos por plano e por tenant (Plano 6, Task 6.7): liga o
+    // catálogo de módulos ao que cada plano libera e à exceção pontual de
+    // cada tenant. Nenhuma delas apaga dado de domínio, só a visibilidade do
+    // módulo (ver o cabeçalho de `ModuleService`).
+    //
+    // `{plano}`/`{empresa}` (e não `{plan}`/`{company}`, como no restante
+    // deste grupo) porque `ModuleController` usa esses nomes de variável em
+    // português: o binding implícito exige que o nome do parâmetro na rota
+    // bata com o nome do argumento no método.
+    Route::get('/modulos', [PlataformaModuleController::class, 'index'])->name('modulos.index');
+
+    Route::get('/planos/{plano}/modulos', [PlataformaModuleController::class, 'porPlano'])->name('planos.modulos.edit');
+    Route::put('/planos/{plano}/modulos', [PlataformaModuleController::class, 'salvarPlano'])->name('planos.modulos.update');
+
+    Route::get('/tenants/{empresa}/modulos', [PlataformaModuleController::class, 'porTenant'])->name('tenants.modulos.index');
+    Route::post('/tenants/{empresa}/modulos/liberar', [PlataformaModuleController::class, 'liberarNoTenant'])->name('tenants.modulos.liberar');
+    Route::post('/tenants/{empresa}/modulos/bloquear', [PlataformaModuleController::class, 'bloquearNoTenant'])->name('tenants.modulos.bloquear');
+    Route::post('/tenants/{empresa}/modulos/remover', [PlataformaModuleController::class, 'removerRegraNoTenant'])->name('tenants.modulos.remover');
 });

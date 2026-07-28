@@ -113,6 +113,9 @@ final class DominioMultiempresa
         'migrations' => 'Controle de versão do schema.',
         'password_reset_tokens' => 'Autenticação: chaveada por e-mail, que é global.',
         'plans' => 'Catálogo de planos comerciais da plataforma, compartilhado entre tenants.',
+        'modules' => 'Catálogo de módulos controláveis da plataforma, compartilhado entre tenants.',
+        'plan_module' => 'Pivot de plans x modules: catálogo de plataforma, sem tenant a herdar.',
+        'company_modules' => 'Liberação pontual de módulo por tenant, gerida pelo super admin, que precisa ver todos os tenants na mesma tela.',
         'scheduled_task_runs' => 'Diagnóstico das rotinas agendadas da plataforma, roda fora de tenant.',
         'sessions' => 'Sessão do framework: vínculo por usuário.',
         'tenant_usages' => 'Apuração de uso lida pelo super admin entre todos os tenants; o tenant que quiser ver o próprio uso filtra explicitamente por company_id.',
@@ -180,6 +183,8 @@ final class DominioMultiempresa
      */
     public const MODELS_FORA_DO_ESCOPO = [
         \App\Models\Company::class => 'É o próprio tenant.',
+        \App\Models\CompanyModule::class => 'Liberação pontual de módulo por tenant, gerida pelo super admin, que precisa ver todos os tenants na mesma tela; tem company_id mas não usa o escopo global.',
+        \App\Models\Module::class => 'Catálogo de módulos controláveis da plataforma, compartilhado entre tenants.',
         \App\Models\PestSightingItem::class => 'Filha de PestSighting, alcançada só pelo relacionamento: escopo herdado.',
         \App\Models\Plan::class => 'Catálogo de planos comerciais da plataforma, compartilhado entre tenants.',
         \App\Models\ScheduledTaskRun::class => 'Diagnóstico de rotina agendada da plataforma, roda fora de tenant.',

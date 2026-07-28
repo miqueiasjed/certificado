@@ -1,6 +1,6 @@
 # INDEX - Planos do Sistema de Certificados
 
-> Última atualização: 26/07/2026
+> Última atualização: 28/07/2026
 > Fonte de requisitos: `.claude/prd/` (índice em `.claude/prd/README.md`)
 
 ## Legenda
@@ -34,7 +34,7 @@ bloqueio.
 |---|------|--------|------------|-------|
 | 4 | Fundação multiempresa | ✅ | 1, 2 | 12 |
 | 5 | Painel do super admin | ✅ | 3, 4 | 12 |
-| 6 | Liberação de módulos por plano | ⏳ | 5 | 9 |
+| 6 | Liberação de módulos por plano | ✅ | 5 | 9 |
 | 7 | Assinaturas e cobrança dos tenants (PagBank) | ⏳ | 6 | 11 |
 | 8 | Onboarding e provisionamento de tenant | ⏳ | 7 | 10 |
 

@@ -34,6 +34,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
+            // `module:<chave>` barra rota de módulo que o tenant não tem ativo
+            // (Plano 6, Task 6.4). Independente de `permission`: um acumula
+            // sobre o outro, e os dois precisam passar. Ver EnsureModuleIsActive.
+            'module' => \App\Http\Middleware\EnsureModuleIsActive::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {

@@ -360,6 +360,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { usePermissoes } from '@/Composables/usePermissoes';
+import { useModulos } from '@/Composables/useModulos';
 
 const emit = defineEmits(['toggle-collapse']);
 
@@ -374,6 +375,7 @@ const $page = usePage();
 const userMenuOpen = ref(false);
 
 const { pode } = usePermissoes();
+const { temModulo } = useModulos();
 
 // Gestão de Clientes
 const podeVerClientes = computed(() => pode('cliente-ver'));
@@ -387,13 +389,13 @@ const mostrarBlocoClientes = computed(() =>
 const podeVerCadastros = computed(() => pode('cadastro-ver'));
 const podeVerOrdensServico = computed(() => pode('ordem-servico-ver'));
 const podeVerCertificados = computed(() => pode('certificado-ver'));
-const podeVerContratos = computed(() => pode('contrato-ver'));
+const podeVerContratos = computed(() => pode('contrato-ver') && temModulo('contratos'));
 const mostrarBlocoOperacional = computed(() =>
   podeVerCadastros.value || podeVerOrdensServico.value || podeVerCertificados.value || podeVerContratos.value
 );
 
 // Gestão Financeira
-const podeVerFinanceiro = computed(() => pode('financeiro-ver'));
+const podeVerFinanceiro = computed(() => pode('financeiro-ver') && temModulo('financeiro'));
 
 // Configurações da empresa
 const podeConfigurarEmpresa = computed(() => pode('empresa-configurar'));

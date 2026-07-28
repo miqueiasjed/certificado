@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
@@ -52,6 +53,17 @@ class Plan extends Model
     public function companies(): HasMany
     {
         return $this->hasMany(Company::class);
+    }
+
+    /**
+     * Módulos (Plano 6) que este plano libera. Inverso de `Module::plans()`,
+     * pela mesma pivot `plan_module`. Quem sincroniza este vínculo é
+     * `Plataforma\ModuleController::salvarPlano()` (Task 6.7); a decisão de
+     * quais módulos ficam ativos por tenant continua em `ModuleService`.
+     */
+    public function modules(): BelongsToMany
+    {
+        return $this->belongsToMany(Module::class, 'plan_module');
     }
 
     /**

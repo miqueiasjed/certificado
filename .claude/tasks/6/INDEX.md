@@ -8,15 +8,15 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 6.1 | Migrations e models de módulos | backend-estrutura | ⏳ | média |
-| 6.2 | Catálogo dos módulos controláveis | backend-estrutura | ⏳ | baixa |
-| 6.3 | Service de módulos ativos por tenant | backend-logica | ⏳ | média |
-| 6.4 | Middleware de módulo e aplicação nas rotas | backend-endpoint | ⏳ | média |
-| 6.5 | Limites quantitativos do plano | backend-logica | ⏳ | média |
-| 6.6 | Módulos ativos no frontend e menu filtrado | frontend-componente | ⏳ | média |
-| 6.7 | Endpoints de gestão de módulos por plano e tenant | backend-endpoint | ⏳ | média |
-| 6.8 | Telas de módulos, indisponível e aviso de limite | frontend-pagina | ⏳ | alta |
-| 6.9 | Testes de bloqueio de módulo e de limites | teste | ⏳ | alta |
+| 6.1 | Migrations e models de módulos | backend-estrutura | ✅ | média |
+| 6.2 | Catálogo dos módulos controláveis | backend-estrutura | ✅ | baixa |
+| 6.3 | Service de módulos ativos por tenant | backend-logica | ✅ | média |
+| 6.4 | Middleware de módulo e aplicação nas rotas | backend-endpoint | ✅ | média |
+| 6.5 | Limites quantitativos do plano | backend-logica | ✅ | média |
+| 6.6 | Módulos ativos no frontend e menu filtrado | frontend-componente | ✅ | média |
+| 6.7 | Endpoints de gestão de módulos por plano e tenant | backend-endpoint | ✅ | média |
+| 6.8 | Telas de módulos, indisponível e aviso de limite | frontend-pagina | ✅ | alta |
+| 6.9 | Testes de bloqueio de módulo e de limites | teste | ✅ | alta |
 
 ## Ordem de execução
 

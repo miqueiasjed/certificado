@@ -11,6 +11,7 @@ use App\Services\PendenciasDeContratoService;
 use App\Support\BusinessDate;
 use Carbon\Carbon;
 use Database\Factories\AddressFactory;
+use Database\Seeders\ModulesSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -216,6 +217,9 @@ class ContractEncerramentoTest extends TestCase
     public function test_usuario_com_permissao_contrato_editar_encerra_o_contrato_pela_rota(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
+        // Task 6.4: a rota acumula `module:contratos`. Sem o catálogo
+        // semeado, ninguém passa por ela, nem quem tem `contrato-editar`.
+        $this->seed(ModulesSeeder::class);
 
         $contrato = $this->criarContrato(['end_date' => self::ATE_TRES_MESES]);
         $this->geracao->gerarPara($contrato, self::ATE_TRES_MESES);
@@ -284,7 +288,11 @@ class ContractEncerramentoTest extends TestCase
 
     private function criarUsuarioComPapel(string $papel): User
     {
-        $usuario = User::factory()->create();
+        // `company_id` explícito: sem tenant fixado no momento da criação, o
+        // atributo fica ausente no objeto PHP (só a linha do banco recebe o
+        // default da coluna), e `actingAs()` reaproveita esse mesmo objeto em
+        // toda chamada HTTP do teste.
+        $usuario = User::factory()->create(['company_id' => 1]);
         $usuario->assignRole($papel);
 
         return $usuario;

@@ -42,6 +42,7 @@ use App\Models\WorkOrderPhoto;
 use App\Services\WorkOrderService;
 use App\Support\DominioMultiempresa;
 use App\Support\TenantAtual;
+use Database\Seeders\ModulesSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
@@ -209,6 +210,13 @@ class VazamentoEntreEmpresasTest extends TestCase
         config(['app.debug' => false]);
 
         $this->seed(RolesAndPermissionsSeeder::class);
+
+        // Task 6.4: `/financial-dashboard` e `/cash-flow/stats` acumulam
+        // `module:financeiro`. `ModulesSeeder` vincula o tenant fundador
+        // (empresa 1, preparada logo abaixo) ao "Plano Interno", com todos
+        // os módulos liberados, sem o qual `administradorUm` seria barrado
+        // mesmo tendo a permissão financeira.
+        $this->seed(ModulesSeeder::class);
 
         $this->empresaUm = $this->prepararEmpresaFundadora();
         $this->empresaDois = Company::create([

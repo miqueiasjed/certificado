@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Company;
 use App\Models\Technician;
 use App\Models\User;
 use App\Support\DominioMultiempresa;
@@ -10,12 +11,25 @@ use Illuminate\Support\Str;
 
 class UserService
 {
+    public function __construct(
+        private readonly LimitesDoPlanoService $limitesDoPlanoService,
+    ) {
+    }
+
     /**
      * Cria um usuário, atribui o papel informado e, quando houver
      * technician_id, grava o vínculo em technicians.user_id.
+     *
+     * Antes de criar, checa o limite de usuários do plano (Task 6.5):
+     * usuário é o único recurso com bloqueio duro na criação, porque dar
+     * acesso a mais uma pessoa é ato administrativo consciente, e não fluxo
+     * de trabalho que não pode parar (diferente de cliente e OS, que
+     * continuam sendo criados acima do teto, só com aviso).
      */
     public function criar(array $dados): User
     {
+        $this->recusarSeEstourarLimiteDeUsuarios();
+
         $senha = $dados['password'] ?? Str::password(12);
 
         $usuario = User::create([
@@ -90,6 +104,33 @@ class UserService
         $usuario->save();
 
         return $usuario->fresh();
+    }
+
+    /**
+     * Lança exceção, nomeando o limite e o plano, quando a empresa já está
+     * no teto de usuários do plano contratado.
+     *
+     * `Company::current()` resolve o tenant da requisição, no mesmo padrão
+     * já usado por outros Services do projeto (`CertificateService`,
+     * `BudgetService`, `WorkOrderService`). Teto nulo (plano sem limite, ou
+     * empresa sem plano) nunca recusa: `LimitesDoPlanoService::podeCriar()`
+     * já trata isso.
+     */
+    private function recusarSeEstourarLimiteDeUsuarios(): void
+    {
+        $empresa = Company::current();
+
+        if ($this->limitesDoPlanoService->podeCriar('usuarios', $empresa)) {
+            return;
+        }
+
+        $empresa->loadMissing('plan');
+
+        throw new \RuntimeException(sprintf(
+            'O plano %s permite no máximo %d usuário(s) ativos, e esse limite já foi atingido. Fale com o suporte para ampliar o plano.',
+            $empresa->plan?->nome ?? 'atual',
+            $empresa->plan?->limite_usuarios
+        ));
     }
 
     /**

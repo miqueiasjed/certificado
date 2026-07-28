@@ -62,6 +62,7 @@
 
       <!-- Main content area -->
       <main class="flex-1 overflow-y-auto">
+        <AvisoDeLimite />
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <slot />
         </div>
@@ -84,6 +85,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import Sidebar from '@/Components/Sidebar.vue';
 import FaixaDeSuporte from '@/Components/FaixaDeSuporte.vue';
+import AvisoDeLimite from '@/Components/AvisoDeLimite.vue';
 
 const $page = usePage();
 const suporteAtivo = computed(() => $page.props.suporte?.ativo === true);

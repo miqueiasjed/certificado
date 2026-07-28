@@ -7,6 +7,7 @@ use App\Models\PaymentDetail;
 use App\Models\User;
 use Database\Factories\PaymentDetailFactory;
 use Database\Factories\WorkOrderFactory;
+use Database\Seeders\ModulesSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -48,6 +49,13 @@ class AcessoFinanceiroTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
+
+        // Task 6.4 acrescentou `module:financeiro` a todas as rotas acima:
+        // sem o catálogo semeado, `ModuleService` não encontra módulo nenhum
+        // e barra até quem tem a permissão certa. `ModulesSeeder` vincula o
+        // tenant fundador (id 1, o mesmo usado por `criarUsuarioComPapel()`)
+        // ao "Plano Interno", com todos os módulos liberados.
+        $this->seed(ModulesSeeder::class);
     }
 
     // -----------------------------------------------------------------
@@ -260,7 +268,12 @@ class AcessoFinanceiroTest extends TestCase
 
     private function criarUsuarioComPapel(string $papel): User
     {
-        $usuario = User::factory()->create();
+        // `company_id` explícito, e não o default temporário da coluna: sem
+        // isto o atributo fica ausente no objeto PHP (só a linha do banco
+        // recebe o default), e `actingAs()` reaproveita esse mesmo objeto em
+        // toda chamada HTTP do teste. `ModuleService`/`Company::current()`
+        // leem o atributo em memória, então precisam encontrá-lo aqui.
+        $usuario = User::factory()->create(['company_id' => 1]);
         $usuario->assignRole($papel);
 
         return $usuario;

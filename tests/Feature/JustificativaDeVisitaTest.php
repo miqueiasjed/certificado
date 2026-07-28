@@ -14,6 +14,7 @@ use App\Support\TenantAtual;
 use Carbon\Carbon;
 use Database\Factories\AddressFactory;
 use Database\Factories\WorkOrderFactory;
+use Database\Seeders\ModulesSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -310,6 +311,9 @@ class JustificativaDeVisitaTest extends TestCase
     public function test_motivo_vazio_pela_rota_devolve_erro_de_validacao_e_nao_grava_nada(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
+        // Task 6.4: a rota acumula `module:contratos`. Sem o catálogo
+        // semeado, o pedido nem chega à validação do FormRequest.
+        $this->seed(ModulesSeeder::class);
 
         $contrato = $this->criarContratoComLacunas();
         $usuario = $this->usuarioComPapel('comercial');
@@ -329,6 +333,7 @@ class JustificativaDeVisitaTest extends TestCase
     public function test_motivo_acima_do_limite_da_coluna_e_recusado_pela_rota(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(ModulesSeeder::class);
 
         $contrato = $this->criarContratoComLacunas();
         $usuario = $this->usuarioComPapel('comercial');
@@ -376,6 +381,7 @@ class JustificativaDeVisitaTest extends TestCase
     public function test_usuario_com_contrato_editar_justifica_e_remove_pela_rota(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(ModulesSeeder::class);
 
         $contrato = $this->criarContratoComLacunas();
         $usuario = $this->usuarioComPapel('comercial', 'Ana Comercial');
@@ -583,7 +589,12 @@ class JustificativaDeVisitaTest extends TestCase
 
     private function usuarioComPapel(string $papel, ?string $nome = null): User
     {
-        $usuario = User::factory()->create($nome === null ? [] : ['name' => $nome]);
+        // `company_id` explícito: sem tenant fixado no momento da criação, o
+        // atributo fica ausente no objeto PHP (só a linha do banco recebe o
+        // default da coluna), e `actingAs()` reaproveita esse mesmo objeto em
+        // toda chamada HTTP do teste.
+        $atributos = array_merge(['company_id' => 1], $nome === null ? [] : ['name' => $nome]);
+        $usuario = User::factory()->create($atributos);
         $usuario->assignRole($papel);
 
         return $usuario;

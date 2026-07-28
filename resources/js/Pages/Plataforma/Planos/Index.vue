@@ -73,7 +73,12 @@
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
-                  <button type="button" class="text-green-600 hover:text-green-800 font-medium" @click="abrirEdicao(plano)">
+                  <Link
+                    :href="route('plataforma.planos.modulos.edit', plano.id)"
+                    class="text-slate-600 hover:text-slate-800 font-medium">
+                    Módulos
+                  </Link>
+                  <button type="button" class="ml-4 text-green-600 hover:text-green-800 font-medium" @click="abrirEdicao(plano)">
                     Editar
                   </button>
                   <button type="button" class="ml-4 text-red-600 hover:text-red-800 font-medium" @click="pedirExclusao(plano)">
@@ -260,7 +265,7 @@
 
 <script setup>
 import { reactive, ref } from 'vue';
-import { router, useForm, usePage } from '@inertiajs/vue3';
+import { Link, router, useForm, usePage } from '@inertiajs/vue3';
 import PlataformaLayout from '@/Layouts/PlataformaLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';

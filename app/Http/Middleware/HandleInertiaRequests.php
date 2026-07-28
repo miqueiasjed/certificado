@@ -2,7 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Company;
 use App\Services\AssumirTenantService;
+use App\Services\LimitesDoPlanoService;
+use App\Services\ModuleService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -53,6 +56,8 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
             ],
             'suporte' => $this->estadoDoSuporte($request),
+            'avisos' => fn () => $this->avisosDeLimite($request),
+            'modulos' => $this->modulosAtivos($request),
         ]);
     }
 
@@ -86,5 +91,66 @@ class HandleInertiaRequests extends Middleware
             'ativo' => $assumido !== null,
             'empresa' => $assumido['nome'] ?? null,
         ];
+    }
+
+    /**
+     * Avisos de limite quantitativo do plano (Task 6.5), para a faixa de
+     * aviso do frontend.
+     *
+     * A prop inteira é uma closure (`fn () => ...`), no mesmo padrão de
+     * `flash` acima: é o que torna a prop "preguiçosa" para a Inertia. Numa
+     * recarga parcial que não pede `avisos` no `only`, a Inertia nem chama
+     * este método, e a consulta de uso por trás dele (a mais cara do
+     * sistema, ver o cabeçalho de `LimitesDoPlanoService`) simplesmente não
+     * roda. Quem está longe do teto, e o tenant interno, não pagam esse
+     * custo em toda requisição.
+     *
+     * Sem usuário autenticado (tela de login) ou sem tenant resolvido,
+     * devolve vazio: não há empresa para calcular limite nenhum.
+     *
+     * @return array<int, string>
+     */
+    private function avisosDeLimite(Request $request): array
+    {
+        if ($request->user() === null) {
+            return [];
+        }
+
+        try {
+            $empresa = Company::current();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return app(LimitesDoPlanoService::class)->avisos($empresa);
+    }
+
+    /**
+     * Chaves dos módulos ativos do tenant corrente (Task 6.3), para o menu
+     * lateral esconder item de módulo indisponível (Task 6.6).
+     *
+     * Diferente de `avisos`, esta prop não é uma closure: o `Sidebar` precisa
+     * dela em toda renderização, inclusive em recarga parcial, e
+     * `ModuleService::ativosPara()` já memoiza por empresa dentro da mesma
+     * requisição, então repetir a leitura aqui não repete a consulta.
+     *
+     * Sem usuário autenticado (tela de login) ou sem tenant resolvido,
+     * devolve vazio: não há empresa para calcular módulo nenhum.
+     *
+     * @return array<int, string>
+     */
+    private function modulosAtivos(Request $request): array
+    {
+        if ($request->user() === null) {
+            return [];
+        }
+
+        try {
+            $empresa = Company::current();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return app(ModuleService::class)->ativosPara($empresa);
     }
 }
