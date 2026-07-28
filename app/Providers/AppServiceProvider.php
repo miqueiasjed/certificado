@@ -11,11 +11,14 @@ use App\Support\TenantAtual;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -37,6 +40,7 @@ class AppServiceProvider extends ServiceProvider
         $this->registrarAuditoriaDeAcesso();
         $this->registrarObservadoresDeNotificacao();
         $this->limparTenantEntreJobsDaFila();
+        $this->registrarLimiteDeSincronizacaoDoAplicativo();
     }
 
     /**
@@ -105,6 +109,29 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Login::class, [RegistraAcesso::class, 'aoEntrar']);
         Event::listen(Failed::class, [RegistraAcesso::class, 'aoFalhar']);
         Event::listen(Logout::class, [RegistraAcesso::class, 'aoSair']);
+    }
+
+    /**
+     * Limite de 60 chamadas por minuto por token nas rotas de sincronização
+     * do aplicativo do técnico (`/api/app/sincronizar` e `/api/app/fotos`,
+     * Plano 12, Task 12.5).
+     *
+     * A chave é o id do token de acesso pessoal (Sanctum) da requisição, e não
+     * o IP: o mesmo IP de rede pode carregar vários aparelhos (Wi-Fi da
+     * empresa), e o mesmo aparelho pode trocar de IP no meio do dia (4G para
+     * Wi-Fi). Sem limite algum, um bug de repetição no aplicativo (reenvio em
+     * laço por timeout) derrubaria o servidor para todos os tenants, não só
+     * para o aparelho com o bug.
+     */
+    private function registrarLimiteDeSincronizacaoDoAplicativo(): void
+    {
+        RateLimiter::for('app-sincronizacao', function (Request $request) {
+            $chave = $request->user()?->currentAccessToken()?->id
+                ?? $request->user()?->id
+                ?? $request->ip();
+
+            return Limit::perMinute(60)->by((string) $chave);
+        });
     }
 
     /**

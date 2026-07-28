@@ -66,6 +66,8 @@ final class DominioMultiempresa
         'service_orders',
         'service_types',
         'services',
+        'sync_conflicts',
+        'sync_operations',
         'technicians',
         'users',
         'work_order_adequations',
@@ -123,6 +125,7 @@ final class DominioMultiempresa
         'scheduled_task_runs' => 'Diagnóstico das rotinas agendadas da plataforma, roda fora de tenant.',
         'subscriptions' => 'Assinatura do tenant administrada pela plataforma; tem company_id mas não usa o escopo global. O tenant vê a própria assinatura por filtro explícito.',
         'sessions' => 'Sessão do framework: vínculo por usuário.',
+        'personal_access_tokens' => 'Sanctum: token do aplicativo do técnico (Plano 12, Task 12.2), vínculo polimórfico por usuário (tokenable), que já é escopado por empresa.',
         'tenant_usages' => 'Apuração de uso lida pelo super admin entre todos os tenants; o tenant que quiser ver o próprio uso filtra explicitamente por company_id.',
     ];
 
@@ -172,6 +175,8 @@ final class DominioMultiempresa
         \App\Models\Service::class,
         \App\Models\ServiceOrder::class,
         \App\Models\ServiceType::class,
+        \App\Models\SyncConflict::class,
+        \App\Models\SyncOperation::class,
         \App\Models\Technician::class,
         \App\Models\User::class,
         \App\Models\WorkOrder::class,
@@ -271,6 +276,13 @@ final class DominioMultiempresa
                 'indice' => 'invitations_token_unique',
                 'colunas' => ['token'],
                 'motivo' => 'Token de convite (Plano 8) é a chave de busca no link de cadastro, resolvida antes de existir tenant no contexto da requisição: quem clica no link ainda não está autenticado, então não há empresa por onde compor. Os 64 caracteres aleatórios de Str::random(64) já tornam a colisão entre tenants desprezível, e é esse espaço grande, e não o company_id, que garante o token de uso único.',
+            ],
+        ],
+        'sync_operations' => [
+            [
+                'indice' => 'sync_operations_operacao_uuid_unique',
+                'colunas' => ['operacao_uuid'],
+                'motivo' => 'UUID gerado no celular no momento do registro (Plano 12): é a chave que torna a sincronização idempotente, reconhecendo o reenvio de uma operação cuja resposta se perdeu na rede. Compor com company_id não separaria tenant nenhum, porque o dispositivo já pertence a uma empresa só; é o espaço grande de um uuid v4, e não o company_id, que torna a colisão entre tenants desprezível, o mesmo raciocínio já registrado para invitations.token.',
             ],
         ],
         // As demais vivem em tabelas fora do escopo e ficam aqui só como registro.

@@ -35,6 +35,8 @@ use App\Models\Room;
 use App\Models\Service;
 use App\Models\ServiceOrder;
 use App\Models\ServiceType;
+use App\Models\SyncConflict;
+use App\Models\SyncOperation;
 use App\Models\Technician;
 use App\Models\User;
 use App\Models\WorkOrder;
@@ -52,6 +54,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -1555,6 +1558,29 @@ class VazamentoEntreEmpresasTest extends TestCase
 
             $dados['onboardingStep'] = OnboardingStep::create([
                 'chave' => 'passo_'.$baixo,
+            ]);
+
+            // Operação e conflito de sincronização do aplicativo do técnico
+            // (Plano 12). Sem rota de CRUD direta ainda (só migrations e
+            // models na Task 12.1), então não entram em basesDeRecurso():
+            // mesmo critério já usado para invitation/onboardingStep acima.
+            $dados['syncOperation'] = SyncOperation::create([
+                'user_id' => $autor->id,
+                'operacao_uuid' => (string) Str::uuid(),
+                'tipo' => 'avistamento',
+                'work_order_id' => $dados['workOrder']->id,
+                'payload' => ['descricao' => 'Operacao '.$marca],
+                'situacao' => 'conflito',
+                'registrada_em' => '2026-07-05 09:00:00',
+            ]);
+
+            $dados['syncConflict'] = SyncConflict::create([
+                'sync_operation_id' => $dados['syncOperation']->id,
+                'work_order_id' => $dados['workOrder']->id,
+                'motivo' => 'registro_alterado',
+                'valor_do_aplicativo' => ['descricao' => 'Versao do aplicativo '.$marca],
+                'valor_do_servidor' => ['descricao' => 'Versao do servidor '.$marca],
+                'situacao' => 'aberto',
             ]);
 
             return $dados;

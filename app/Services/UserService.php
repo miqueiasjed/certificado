@@ -13,6 +13,7 @@ class UserService
 {
     public function __construct(
         private readonly LimitesDoPlanoService $limitesDoPlanoService,
+        private readonly AppSessionService $appSessionService,
     ) {
     }
 
@@ -89,6 +90,11 @@ class UserService
      *
      * $idUsuarioAutenticado é quem está pedindo a operação. O Service não
      * consulta o usuário autenticado sozinho: quem chama informa o id.
+     *
+     * Desativar revoga, no mesmo ato, todos os tokens do aplicativo do
+     * técnico (Plano 12, Task 12.2): usuário desativado não pode continuar
+     * sincronizando pelo celular só porque o token de 30 dias ainda não
+     * venceu.
      */
     public function alterarStatus(User $usuario, bool $ativo, ?int $idUsuarioAutenticado = null): User
     {
@@ -102,6 +108,10 @@ class UserService
 
         $usuario->is_active = $ativo;
         $usuario->save();
+
+        if (! $ativo) {
+            $this->appSessionService->revogarTodas($usuario);
+        }
 
         return $usuario->fresh();
     }

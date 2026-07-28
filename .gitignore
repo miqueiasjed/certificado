@@ -2,6 +2,12 @@
 /node_modules
 /public/build
 /public/hot
+# Service worker do aplicativo do técnico (Plano 12, Task 12.6): gerado por
+# `npm run build` (vite-plugin-pwa) na raiz pública, fora de /public/build,
+# para poder controlar a rota /app. É artefato de build como o resto de
+# /public/build, e não código-fonte: regenerado a cada deploy.
+/public/sw.js
+/public/workbox-*.js
 /public/storage
 /storage/*.key
 /storage/pail

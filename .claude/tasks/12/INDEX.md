@@ -8,18 +8,18 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 12.1 | Migrations e models de sincronização e conflito | backend-estrutura | ⏳ | média |
-| 12.2 | Autenticação do aplicativo do técnico | backend-endpoint | ⏳ | média |
-| 12.3 | Endpoint de carga do dia do técnico | backend-endpoint | ⏳ | alta |
-| 12.4 | Aplicação idempotente e detecção de conflito | backend-logica | ⏳ | alta |
-| 12.5 | Endpoint de sincronização em lote e envio de foto | backend-endpoint | ⏳ | média |
-| 12.6 | PWA instalável com service worker e casca offline | config | ⏳ | média |
-| 12.7 | Armazenamento local em IndexedDB | frontend-componente | ⏳ | alta |
-| 12.8 | Fila de sincronização com repetição e ordem | frontend-componente | ⏳ | alta |
-| 12.9 | Login e lista do dia do aplicativo | frontend-pagina | ⏳ | alta |
-| 12.10 | Indicador de sincronização e resolução de conflito | frontend-componente | ⏳ | alta |
-| 12.11 | Captura e compressão de foto no aparelho | frontend-componente | ⏳ | alta |
-| 12.12 | Testes do ciclo offline completo | teste | ⏳ | alta |
+| 12.1 | Migrations e models de sincronização e conflito | backend-estrutura | ✅ | média |
+| 12.2 | Autenticação do aplicativo do técnico | backend-endpoint | ✅ | média |
+| 12.3 | Endpoint de carga do dia do técnico | backend-endpoint | ✅ | alta |
+| 12.4 | Aplicação idempotente e detecção de conflito | backend-logica | ✅ | alta |
+| 12.5 | Endpoint de sincronização em lote e envio de foto | backend-endpoint | ✅ | média |
+| 12.6 | PWA instalável com service worker e casca offline | config | ✅ | média |
+| 12.7 | Armazenamento local em IndexedDB | frontend-componente | ✅ | alta |
+| 12.8 | Fila de sincronização com repetição e ordem | frontend-componente | ✅ | alta |
+| 12.9 | Login e lista do dia do aplicativo | frontend-pagina | ✅ | alta |
+| 12.10 | Indicador de sincronização e resolução de conflito | frontend-componente | ✅ | alta |
+| 12.11 | Captura e compressão de foto no aparelho | frontend-componente | ✅ | alta |
+| 12.12 | Testes do ciclo offline completo | teste | ✅ | alta |
 
 ## Ordem de execução
 

@@ -183,6 +183,23 @@ Route::get('/csrf-token', function () {
 
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
+// Casca do aplicativo do técnico (Plano 12, Task 12.6).
+//
+// Fora do grupo `auth` de propósito: é a mesma razão da rota `/login` acima.
+// O aplicativo tem autenticação própria por token Sanctum, resolvida dentro
+// dele mesmo contra `/api/app/login` (Task 12.2), e não por sessão de
+// cookie. Esta rota só entrega o HTML/JS/CSS que o service worker guarda em
+// precache (vite.config.js) - inclusive a tela de login do aplicativo -,
+// para que ele abra mesmo sem rede antes de qualquer autenticação.
+//
+// Sem `throttle`: diferente do cadastro público e do aceite de convite, esta
+// rota não grava nada, é leitura pura de um HTML estático de poucos KB, e é
+// exatamente o que o service worker precisa buscar sem fricção na primeira
+// visita e a cada nova versão.
+Route::get('/app', function () {
+    return view('app-tecnico');
+})->name('app-tecnico');
+
 // Rotas protegidas
 //
 // `tenant.ativo` (Plano 7, Task 7.7) entra no grupo inteiro, e não rota a rota

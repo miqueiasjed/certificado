@@ -13,6 +13,10 @@ use Illuminate\Routing\Exceptions\InvalidSignatureException;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        // Rotas do aplicativo do técnico (Plano 12, Task 12.2), sob o prefixo
+        // `/api`. Ganham o grupo de middleware `api` (sem sessão, sem CSRF): a
+        // autenticação delas é `auth:sanctum` por token, não por cookie.
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )

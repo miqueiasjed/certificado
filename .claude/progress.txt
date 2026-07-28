@@ -1120,3 +1120,73 @@ catálogo de seed só se prova completo rodando o fluxo de ponta a ponta que
 depende dele, nunca por inspeção visual da lista de cadastros; `ServiceType`
 existir no schema não significa que ele é o cadastro que o formulário
 realmente consulta.
+
+## Plano 12 - App do técnico: fundação offline (28/07/2026)
+
+Concluído: 12 tasks, backend (Sanctum, carga do dia, sincronização
+idempotente, conflito) e frontend (PWA, IndexedDB via Dexie, fila com
+repetição, telas de Login/Dia/Pendências) entregues e testados. A execução
+do plano de teste automatizado (frontend sem Jest/Vitest configurado) ficou
+limitada ao backend; o roteiro manual em dispositivo real continua condição
+de aceite antes do deploy, conforme o próprio `INDEX.md` da task já previa.
+
+### Model de domínio novo quebra silenciosamente o teste de vazamento entre empresas
+
+A Task 12.1 criou `SyncOperation`/`SyncConflict` com a trait
+`BelongsToCompany` corretamente aplicada, mas `VazamentoEntreEmpresasTest`
+tem um teste dedicado (`o cenario cobre todos os models de dominio`) que
+falha se o cenário de fixtures do arquivo não incluir uma instância de todo
+model novo. Isso só apareceu ao rodar a suíte completa depois da task, não
+no teste isolado dela. Regra que fica: toda vez que uma task cria um model
+de domínio novo, rodar a suíte completa (não só o filtro da task) antes de
+aprovar o lote, porque esse teste em particular é o único lugar que barra
+model esquecido no cenário de multiempresa.
+
+### Bug de tipagem só apareceu no teste de volume, não nos testes funcionais
+
+A Task 12.3 (carga do dia) implementava eager loading de `devices` com um
+closure tipado `Builder $q`, mas o Laravel injeta uma instância de
+`Relations\BelongsToMany` nesse ponto, não `Builder` puro - `TypeError` em
+tempo de execução. Os testes funcionais simples não pegaram isso por
+coincidência de dados; só o teste de 200 ordens (pedido explicitamente
+pelo critério de desempenho da task) acionou o eager loading de verdade e
+expôs o erro. Regra que fica: não pular o teste de volume/desempenho de uma
+task só porque parece "não essencial" - ele frequentemente é o único que
+exercita o caminho de código raramente percorrido pelos testes unitários
+pequenos.
+
+### Task de "criar testes" pode encontrar os arquivos já existentes
+
+A Task 12.12 pedia para "criar" três arquivos de teste que na verdade já
+tinham sido criados pelas tasks 12.3, 12.4 e 12.5 (cada uma cobrindo o
+próprio teste de aceitação). Tratar a task como criação do zero teria
+sobrescrito e potencialmente perdido testes já corretos. A abordagem que
+funcionou foi orientar o subagente a auditar lacunas contra os critérios da
+12.12 e só acrescentar o que faltava (o teste de fuso às 22h de Brasília e
+o teste de isolamento por `company_id` em `AppSyncService`), preservando o
+resto. Regra que fica: quando uma task de "teste" chega depois de tasks que
+já passaram pelos mesmos arquivos, tratar como auditoria de gap, não como
+criação, e dizer isso explicitamente no prompt do subagente.
+
+### Subagente "stalled" pode já ter terminado o trabalho
+
+Duas tasks em paralelo (12.3 e 12.4) retornaram `status: failed` por
+travamento no stream (sem progresso por 600s), não por erro de lógica.
+Inspecionar o estado do repositório antes de relançar mostrou que os dois
+tinham completado quase tudo - só faltava o arquivo de teste da 12.3 (que
+foi escrito manualmente pelo orquestrador) e um ajuste de estilo do Pint na
+12.4 (que só precisou rodar `pint`). Regra que fica: um agente marcado como
+"failed" por travamento de stream não significa trabalho perdido; sempre
+checar `git status` e rodar a suíte antes de decidir relançar do zero.
+
+### PWA sem Vue Router, por decisão deliberada
+
+O aplicativo do técnico (Tasks 12.6 e 12.9) não usa Vue Router nem
+roteamento por URL: o Blade serve uma única rota (`GET /app`), e o service
+worker só cacheia essa casca. Trocar de tela é só trocar qual componente
+aparece dentro do mesmo documento, em estado de memória (`App.vue`), nunca
+uma navegação de verdade - é o que torna a troca de tela segura em modo
+avião, sem depender de nenhuma rota adicional existir no servidor. Vale
+manter esse padrão em telas futuras do mesmo aplicativo (Plano 13):
+introduzir Vue Router quebraria essa garantia sem ganho evidente, dado que
+o aplicativo inteiro cabe em poucas telas.
