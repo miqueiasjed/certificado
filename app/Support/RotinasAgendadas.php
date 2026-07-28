@@ -42,6 +42,22 @@ final class RotinasAgendadas
         // por foto), mas ainda assim custa I/O, e a purga é a rotina mais
         // pesada da janela.
         'plataforma:apurar-uso' => '03:00',
+        // 04:00, depois da apuração de uso (03:00) e antes dos avisos diários
+        // (07:00). É a única rotina da janela que fala com um provedor externo
+        // e que grava cobrança: fica sozinha na hora dela para que uma
+        // lentidão do gateway não empurre nenhuma outra, e com três horas de
+        // folga até os avisos, que precisam sair com a fatura do dia já
+        // emitida. Diária, e não mensal, porque cada tenant assina no dia em
+        // que assina e por isso tem o próprio dia de vencimento.
+        'plataforma:gerar-faturas' => '04:00',
+        // 05:00, obrigatoriamente depois da geração de faturas (04:00). A régua
+        // decide atraso e bloqueio a partir de `invoices.vencimento`, então
+        // precisa enxergar o que a rotina de faturas do mesmo dia já gerou ou
+        // atualizou. Invertida a ordem, o tenant seria avaliado com a foto de
+        // ontem, e uma hora de folga é o que cobre a lentidão do gateway na
+        // rotina anterior. Antes dos avisos diários (07:00), que é quando a
+        // central de notificações do Plano 14 leva o aviso ao cliente.
+        'plataforma:inadimplencia' => '05:00',
         // 07:00: depois de tudo que muda o dado que ela lê (status de
         // certificado, status de pagamento e geração de visitas, entre 00:10 e
         // 01:00), e antes das 08:00, que é a hora padrão de envio da central de

@@ -116,7 +116,10 @@ final class DominioMultiempresa
         'modules' => 'Catálogo de módulos controláveis da plataforma, compartilhado entre tenants.',
         'plan_module' => 'Pivot de plans x modules: catálogo de plataforma, sem tenant a herdar.',
         'company_modules' => 'Liberação pontual de módulo por tenant, gerida pelo super admin, que precisa ver todos os tenants na mesma tela.',
+        'gateway_events' => 'Evento recebido do gateway de pagamento, sem company_id: quem identifica o tenant é o conteúdo do payload, processado pela plataforma.',
+        'invoices' => 'Fatura de assinatura administrada pela plataforma; tem company_id mas não usa o escopo global. O tenant vê as próprias faturas por filtro explícito.',
         'scheduled_task_runs' => 'Diagnóstico das rotinas agendadas da plataforma, roda fora de tenant.',
+        'subscriptions' => 'Assinatura do tenant administrada pela plataforma; tem company_id mas não usa o escopo global. O tenant vê a própria assinatura por filtro explícito.',
         'sessions' => 'Sessão do framework: vínculo por usuário.',
         'tenant_usages' => 'Apuração de uso lida pelo super admin entre todos os tenants; o tenant que quiser ver o próprio uso filtra explicitamente por company_id.',
     ];
@@ -184,10 +187,13 @@ final class DominioMultiempresa
     public const MODELS_FORA_DO_ESCOPO = [
         \App\Models\Company::class => 'É o próprio tenant.',
         \App\Models\CompanyModule::class => 'Liberação pontual de módulo por tenant, gerida pelo super admin, que precisa ver todos os tenants na mesma tela; tem company_id mas não usa o escopo global.',
+        \App\Models\GatewayEvent::class => 'Evento recebido do gateway de pagamento, sem company_id: quem identifica o tenant é o conteúdo do payload, processado pela plataforma.',
+        \App\Models\Invoice::class => 'Fatura de assinatura administrada pela plataforma; tem company_id mas não usa o escopo global. O tenant vê as próprias faturas por filtro explícito.',
         \App\Models\Module::class => 'Catálogo de módulos controláveis da plataforma, compartilhado entre tenants.',
         \App\Models\PestSightingItem::class => 'Filha de PestSighting, alcançada só pelo relacionamento: escopo herdado.',
         \App\Models\Plan::class => 'Catálogo de planos comerciais da plataforma, compartilhado entre tenants.',
         \App\Models\ScheduledTaskRun::class => 'Diagnóstico de rotina agendada da plataforma, roda fora de tenant.',
+        \App\Models\Subscription::class => 'Assinatura do tenant administrada pela plataforma; tem company_id mas não usa o escopo global. O tenant vê a própria assinatura por filtro explícito.',
         \App\Models\TenantUsage::class => 'Apuração de uso lida pelo super admin entre todos os tenants; o tenant que quiser ver o próprio uso filtra explicitamente por company_id.',
     ];
 

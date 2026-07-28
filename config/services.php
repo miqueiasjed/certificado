@@ -35,4 +35,75 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Gateway de assinatura (Plano 7)
+    |--------------------------------------------------------------------------
+    |
+    | Classe que implementa App\Contracts\GatewayAssinatura, ligada pelo
+    | AppServiceProvider. PagBank (App\Services\Gateway\PagBankGateway) é o
+    | provedor de hoje, implementado na Task 7.3; a variável de ambiente
+    | existe para permitir trocar de provedor, ou usar um dublê em ambiente
+    | sem credencial, sem mudar código.
+    |
+    */
+
+    'gateway_assinatura' => env('GATEWAY_ASSINATURA_DRIVER', \App\Services\Gateway\PagBankGateway::class),
+
+    /*
+    |--------------------------------------------------------------------------
+    | PagBank (Plano 7, Task 7.3)
+    |--------------------------------------------------------------------------
+    |
+    | Credencial e endereços do provedor de hoje. Nada aqui vai para log, para
+    | mensagem de erro ou para resposta de API: `PagBankGateway` registra só o
+    | caminho do endpoint, o status e o tempo da chamada.
+    |
+    | São DUAS famílias de API, com hosts diferentes, e não é escolha do
+    | projeto: assinatura recorrente vive em `api.assinaturas.pagseguro.com`,
+    | e a cobrança avulsa de uma fatura (Pix e boleto) vive em
+    | `api.pagseguro.com`, no recurso `/orders`. A API de assinaturas não
+    | oferece Pix nem emite cobrança sob demanda, então as duas precisam
+    | coexistir.
+    |
+    | `sandbox` é `true` por padrão de propósito: ambiente sem a variável
+    | definida é ambiente de desenvolvimento, e o erro de esquecer a chave
+    | precisa cair no lado que não cobra ninguém de verdade. Subir produção
+    | com sandbox ligado é erro de configuração, e o comando de diagnóstico do
+    | Plano 7 mostra o valor efetivo.
+    |
+    */
+
+    'pagbank' => [
+        // Assinatura recorrente: /plans, /customers, /subscriptions.
+        'base_url_sandbox' => env('PAGBANK_BASE_URL_SANDBOX', 'https://sandbox.api.assinaturas.pagseguro.com'),
+        'base_url_producao' => env('PAGBANK_BASE_URL_PRODUCAO', 'https://api.assinaturas.pagseguro.com'),
+
+        // Cobrança avulsa de fatura (Pix e boleto): /orders.
+        'base_url_pedidos_sandbox' => env('PAGBANK_BASE_URL_PEDIDOS_SANDBOX', 'https://sandbox.api.pagseguro.com'),
+        'base_url_pedidos_producao' => env('PAGBANK_BASE_URL_PEDIDOS_PRODUCAO', 'https://api.pagseguro.com'),
+
+        'token' => env('PAGBANK_TOKEN'),
+
+        // Token de autenticidade do webhook. O PagBank manda no cabeçalho
+        // `x-authenticity-token` o SHA-256 de `token + "-" + corpo cru`; sem
+        // este valor configurado, `validarWebhook()` recusa tudo, que é o
+        // comportamento desejado: sem validação, qualquer um confirma
+        // pagamento por POST.
+        'webhook_token' => env('PAGBANK_WEBHOOK_TOKEN'),
+
+        // Para onde o PagBank avisa a mudança de estado de uma cobrança
+        // avulsa. Vai no corpo do pedido (`notification_urls`), diferente do
+        // webhook de assinatura, que é cadastrado no painel do provedor.
+        // Nulo em desenvolvimento: sem URL pública não há o que notificar.
+        'webhook_url' => env('PAGBANK_WEBHOOK_URL'),
+
+        'sandbox' => (bool) env('PAGBANK_SANDBOX', true),
+
+        // Segundos. Explícito porque o padrão do cliente HTTP é esperar
+        // indefinidamente, e requisição de checkout presa é pior que
+        // requisição que falha rápido e é repetida.
+        'timeout' => (int) env('PAGBANK_TIMEOUT', 20),
+    ],
+
 ];

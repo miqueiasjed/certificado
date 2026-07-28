@@ -19,8 +19,11 @@ use Throwable;
  * log). Com `RuntimeException` genérico, o `catch` do controller pegaria junto
  * falhas que ele não sabe tratar.
  *
- * Quem lança: `App\Services\TenantService::suspender()`, antes de qualquer
- * escrita. Lançar depois de um `update()` parcial seria pior que não lançar.
+ * Quem lança: `App\Services\TenantService::suspender()` e
+ * `App\Services\SubscriptionService`, sempre antes de qualquer escrita e antes
+ * de qualquer chamada ao provedor de pagamento. Lançar depois de um `update()`
+ * parcial, ou depois de já ter criado a assinatura no gateway, seria pior que
+ * não lançar.
  */
 class TenantInternoException extends RuntimeException
 {
@@ -50,5 +53,55 @@ class TenantInternoException extends RuntimeException
             'A empresa "%s" é o tenant interno e não pode ser suspensa: ela é o cliente que sustenta a operação atual do sistema.',
             trim($nomeDaEmpresa)
         ));
+    }
+
+    /**
+     * Recusa de contratação de plano (`SubscriptionService::assinar()`).
+     *
+     * O tenant interno usa o plano interno, que libera tudo e não é cobrado.
+     * Criar assinatura para ele significaria mandar o cliente que sustenta a
+     * operação para dentro da régua de inadimplência, onde uma fatura não paga
+     * termina em bloqueio de acesso.
+     */
+    public static function naoPodeAssinar(?string $nomeDaEmpresa = null): self
+    {
+        return new self(self::comEmpresa(
+            $nomeDaEmpresa,
+            'O tenant interno não contrata plano e não é cobrado: ele é o cliente que sustenta a operação atual do sistema.',
+            'A empresa "%s" é o tenant interno: ela não contrata plano e não é cobrada, porque é o cliente que sustenta a operação atual do sistema.'
+        ));
+    }
+
+    /**
+     * Recusa de qualquer operação sobre assinatura de um tenant interno:
+     * troca de plano, troca de forma de pagamento, cancelamento.
+     *
+     * Defesa em profundidade. O tenant interno não deveria ter assinatura
+     * nenhuma, já que `assinar()` o recusa; se uma linha aparecer por
+     * importação, correção manual em banco ou bug futuro, mexer nela pelo
+     * caminho normal continua barrado.
+     */
+    public static function naoTemAssinatura(?string $nomeDaEmpresa = null): self
+    {
+        return new self(self::comEmpresa(
+            $nomeDaEmpresa,
+            'O tenant interno não tem assinatura a alterar: ele não é cobrado, porque é o cliente que sustenta a operação atual do sistema.',
+            'A empresa "%s" é o tenant interno e não tem assinatura a alterar: ela não é cobrada, porque é o cliente que sustenta a operação atual do sistema.'
+        ));
+    }
+
+    /**
+     * Monta a mensagem citando a empresa quando o nome é conhecido.
+     *
+     * `$comNome` recebe o nome em `%s`; `$semNome` é usado inteiro quando não
+     * há nome que valha a pena citar.
+     */
+    private static function comEmpresa(?string $nomeDaEmpresa, string $semNome, string $comNome): string
+    {
+        if ($nomeDaEmpresa === null || trim($nomeDaEmpresa) === '') {
+            return $semNome;
+        }
+
+        return sprintf($comNome, trim($nomeDaEmpresa));
     }
 }

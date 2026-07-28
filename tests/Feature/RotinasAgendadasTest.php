@@ -3,10 +3,8 @@
 namespace Tests\Feature;
 
 use App\Listeners\RegistraExecucaoAgendada;
-use App\Models\Certificate;
 use App\Models\PaymentDetail;
 use App\Models\ScheduledTaskRun;
-use App\Models\WorkOrder;
 use App\Support\RotinasAgendadas;
 use Carbon\Carbon;
 use Database\Factories\CertificateFactory;
@@ -478,7 +476,7 @@ class RotinasAgendadasTest extends TestCase
 
         $eventos = collect($this->app->make(Schedule::class)->events());
 
-        $this->assertCount(8, RotinasAgendadas::DIARIAS, 'a lista de rotinas diárias mudou de tamanho');
+        $this->assertCount(10, RotinasAgendadas::DIARIAS, 'a lista de rotinas diárias mudou de tamanho');
 
         foreach (RotinasAgendadas::DIARIAS as $assinatura => $horario) {
             $agendados = $eventos->filter(

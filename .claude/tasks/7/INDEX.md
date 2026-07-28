@@ -8,17 +8,18 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 7.1 | Migrations e models de assinatura, fatura e evento | backend-estrutura | ⏳ | média |
-| 7.2 | Interface GatewayAssinatura e objetos de transporte | backend-estrutura | ⏳ | média |
-| 7.3 | Implementação PagBank do gateway | backend-logica | ⏳ | alta |
-| 7.4 | Service de assinatura do tenant | backend-logica | ⏳ | média |
-| 7.5 | Geração de faturas por período | backend-logica | ⏳ | média |
-| 7.6 | Webhook idempotente do gateway | backend-endpoint | ⏳ | alta |
-| 7.7 | Régua de inadimplência com bloqueio reversível | backend-logica | ⏳ | alta |
-| 7.8 | Endpoints do plano do tenant e do painel de receita | backend-endpoint | ⏳ | média |
-| 7.9 | Tela de plano e faturas do tenant | frontend-pagina | ⏳ | alta |
-| 7.10 | Painel de receita da plataforma | frontend-pagina | ⏳ | média |
-| 7.11 | Testes de assinatura, webhook e imunidade do interno | teste | ⏳ | alta |
+| 7.1 | Migrations e models de assinatura, fatura e evento | backend-estrutura | ✅ | média |
+| 7.2 | Interface GatewayAssinatura e objetos de transporte | backend-estrutura | ✅ | média |
+| 7.2b | Fix: registrar meio de pagamento (cartão) no contrato do gateway | backend-estrutura | ✅ | baixa |
+| 7.3 | Implementação PagBank do gateway | backend-logica | ✅ | alta |
+| 7.4 | Service de assinatura do tenant | backend-logica | ✅ | média |
+| 7.5 | Geração de faturas por período | backend-logica | ✅ | média |
+| 7.6 | Webhook idempotente do gateway | backend-endpoint | ✅ | alta |
+| 7.7 | Régua de inadimplência com bloqueio reversível | backend-logica | ✅ | alta |
+| 7.8 | Endpoints do plano do tenant e do painel de receita | backend-endpoint | ✅ | média |
+| 7.9 | Tela de plano e faturas do tenant | frontend-pagina | ✅ | alta |
+| 7.10 | Painel de receita da plataforma | frontend-pagina | ✅ | média |
+| 7.11 | Testes de assinatura, webhook e imunidade do interno | teste | ✅ | alta |
 
 ## Ordem de execução
 
@@ -76,3 +77,20 @@ Lote 9:             7.11
 - O plano estimava ~8 tasks. A decomposição chegou a 11: gateway (contrato e implementação), assinatura, fatura, webhook e régua são responsabilidades distintas, e nenhuma cabe agrupada com outra sem virar um arquivo grande demais para um subagente.
 - `TenantInternoImuneTest` é o portão de subida deste plano. Ele existe porque um erro na régua custa a receita atual do negócio.
 - A permissão `assinatura-gerenciar` precisa entrar no catálogo do comando `permissions:sync` (Plano 2).
+
+## Encerramento (28/07/2026)
+
+Plano concluído: as 11 tasks mais uma task extra (7.2b), aberta durante a
+revisão da 7.3 para fechar uma lacuna de contrato que a pesquisa da API real
+do PagBank revelou (assinatura no cartão exige cadastrar o meio de pagamento
+antes de criar a assinatura, e a interface da Task 7.2 não tinha método para
+isso). Suíte de testes foi de 448 para 570; `npm run build` limpo.
+Aprendizados completos, incluindo o achado de que o PagBank não avisa boleto
+vencido por webhook (a régua da Task 7.7 é quem decide isso na prática) e a
+dependência circular evitada entre `InvoiceService` e `InadimplenciaService`,
+estão em `.claude/progress.txt`.
+
+Antes de configurar credencial de produção, revisar os pontos que a Task 7.3
+marcou como inferência (não confirmados contra sandbox real): formato exato
+do corpo de `PUT /customers/{id}/billing_info` e o mecanismo de assinatura do
+webhook de pedidos (`/orders`), que pode não trazer `x-authenticity-token`.

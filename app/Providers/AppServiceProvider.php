@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Contracts\GatewayAssinatura;
 use App\Listeners\RegistraAcesso;
 use App\Listeners\RegistraExecucaoAgendada;
 use App\Models\WorkOrder;
@@ -24,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->registrarGatewayDeAssinatura();
     }
 
     /**
@@ -104,5 +105,24 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(Login::class, [RegistraAcesso::class, 'aoEntrar']);
         Event::listen(Failed::class, [RegistraAcesso::class, 'aoFalhar']);
         Event::listen(Logout::class, [RegistraAcesso::class, 'aoSair']);
+    }
+
+    /**
+     * Liga `App\Contracts\GatewayAssinatura` à implementação escolhida em
+     * `config('services.gateway_assinatura')` (Plano 7, Task 7.2).
+     *
+     * A resolução é por configuração, e não por uma classe fixa aqui, porque
+     * essa é a única forma de trocar de provedor de gateway sem tocar em
+     * `SubscriptionService`, `InvoiceService` ou em qualquer outro
+     * consumidor da interface: eles dependem só do contrato, nunca desta
+     * ligação. `$app->make()`, e não `new`, porque a implementação concreta
+     * pode ter dependências próprias (cliente HTTP, log) que também
+     * precisam passar pelo container.
+     */
+    private function registrarGatewayDeAssinatura(): void
+    {
+        $this->app->bind(GatewayAssinatura::class, function ($app) {
+            return $app->make(config('services.gateway_assinatura'));
+        });
     }
 }

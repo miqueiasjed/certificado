@@ -1,60 +1,85 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ClientController;
-use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ActiveIngredientController;
-use App\Http\Controllers\ChemicalGroupController;
-use App\Http\Controllers\AntidoteController;
-use App\Http\Controllers\OrganRegistrationController;
-use App\Http\Controllers\CertificateController;
-use App\Http\Controllers\ServiceOrderController;
-use App\Http\Controllers\CadastrosController;
-use App\Http\Controllers\TechnicianController;
-use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\AddressController;
-use App\Http\Controllers\RoomController;
+use App\Http\Controllers\AgendaController;
+use App\Http\Controllers\AntidoteController;
+use App\Http\Controllers\AssinaturaController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BaitTypeController;
+use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\CadastrosController;
+use App\Http\Controllers\CashFlowController;
+use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\ChemicalGroupController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ContaSuspensaController;
+use App\Http\Controllers\ContractController;
+use App\Http\Controllers\ContractVisitController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
+use App\Http\Controllers\DeviceEventController;
 use App\Http\Controllers\DeviceLabelController;
 use App\Http\Controllers\DeviceReplacementController;
 use App\Http\Controllers\DeviceScanController;
-use App\Http\Controllers\WorkOrderController;
-use App\Http\Controllers\AgendaController;
-use App\Http\Controllers\DeviceEventController;
-use App\Http\Controllers\WorkOrderAdequationController;
-use App\Http\Controllers\WorkOrderPhotoController;
-use App\Http\Controllers\PestSightingController;
-use App\Http\Controllers\PaymentDetailController;
-use App\Http\Controllers\ContractController;
-use App\Http\Controllers\ContractVisitController;
-use App\Http\Controllers\WorkOrderFinancialController;
+use App\Http\Controllers\EventTypeController;
+use App\Http\Controllers\FinancialDashboardController;
 use App\Http\Controllers\FinancialEntryController;
 use App\Http\Controllers\FinancialWithdrawalController;
-use App\Http\Controllers\CashFlowController;
-use App\Http\Controllers\FinancialDashboardController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\EventTypeController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\AuditLogController;
-use App\Http\Controllers\NotificationTemplateController;
+use App\Http\Controllers\GatewayWebhookController;
 use App\Http\Controllers\NotificationQueueController;
+use App\Http\Controllers\NotificationTemplateController;
+use App\Http\Controllers\OrganRegistrationController;
+use App\Http\Controllers\PaymentDetailController;
+use App\Http\Controllers\PestSightingController;
 use App\Http\Controllers\Plataforma\AssumirTenantController;
 use App\Http\Controllers\Plataforma\DashboardController as PlataformaDashboardController;
 use App\Http\Controllers\Plataforma\ModuleController as PlataformaModuleController;
 use App\Http\Controllers\Plataforma\PlanController as PlataformaPlanController;
+use App\Http\Controllers\Plataforma\ReceitaController as PlataformaReceitaController;
 use App\Http\Controllers\Plataforma\TenantController as PlataformaTenantController;
 use App\Http\Controllers\Plataforma\UsageController as PlataformaUsageController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\RoomController;
+use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\ServiceOrderController;
+use App\Http\Controllers\TechnicianController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\WorkOrderAdequationController;
+use App\Http\Controllers\WorkOrderController;
+use App\Http\Controllers\WorkOrderFinancialController;
+use App\Http\Controllers\WorkOrderPhotoController;
+use App\Http\Middleware\EnsureTenantIsActive;
 use App\Models\Client;
-use App\Models\Product;
-use App\Models\Technician;
 use App\Models\Service;
-use App\Models\ServiceOrder;
-use App\Models\Certificate;
-use App\Http\Controllers\BudgetController;
+use Illuminate\Support\Facades\Route;
 
-// Recibo de pagamento: única rota do sistema que responde sem login.
+// Rotas públicas, sem login.
+//
+// São duas, e cada uma tem a própria forma de autorizar, porque em nenhuma delas
+// existe usuário autenticado de quem exigir papel ou permissão: o recibo é
+// autorizado pela assinatura da URL, e o webhook do gateway pela assinatura que
+// o provedor de pagamento manda no cabeçalho. Nenhuma outra rota do sistema
+// responde sem sessão.
+
+// Webhook do gateway de pagamento (Plano 7, Task 7.6).
+//
+// Fora do grupo autenticado, fora de qualquer resolução de tenant e fora da
+// verificação de CSRF (a exclusão está em `bootstrap/app.php`): quem chama é o
+// provedor, que não tem sessão nem token. A autenticidade é conferida no
+// controller, por `GatewayAssinatura::validarWebhook()`, antes de qualquer
+// gravação; requisição sem assinatura válida sai com 401 sem deixar rastro no
+// banco.
+//
+// `{gateway}` existe para que um segundo provedor entre depois sem mexer no que
+// já está publicado no painel do PagBank. O nome é confirmado no controller
+// contra a lista conhecida, e o que não estiver nela recebe 404.
+Route::post('/webhooks/gateway/{gateway}', [GatewayWebhookController::class, 'handle'])
+    ->where('gateway', '[a-z0-9_-]+')
+    ->name('webhooks.gateway');
+
+// Recibo de pagamento.
 //
 // Quem abre é o cliente final, que não tem conta aqui, então a autorização não
 // pode vir de papel nem de permissão. Ela vem da assinatura da URL: o link é
@@ -69,7 +94,6 @@ use App\Http\Controllers\BudgetController;
 Route::get('/service-orders/{workOrder}/receipt', [WorkOrderController::class, 'generateReceipt'])
     ->middleware('signed')
     ->name('service-orders.receipt');
-
 
 Route::get('/login', function () {
     return inertia('Auth/Login');
@@ -87,7 +111,15 @@ Route::get('/csrf-token', function () {
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 
 // Rotas protegidas
-Route::middleware(['auth'])->group(function () {
+//
+// `tenant.ativo` (Plano 7, Task 7.7) entra no grupo inteiro, e não rota a rota
+// como o `module:<chave>` do Plano 6: suspensão por falta de pagamento bloqueia
+// o sistema todo do tenant, não um módulo dele. Aplicado aqui, e não como append
+// global em `bootstrap/app.php`, para não alcançar as rotas públicas nem a área
+// `/plataforma` (o motivo completo está no comentário do alias, em
+// `bootstrap/app.php`). As poucas rotas que continuam abertas ao tenant suspenso
+// estão em `EnsureTenantIsActive::ROTAS_LIBERADAS`, por nome.
+Route::middleware(['auth', 'tenant.ativo'])->group(function () {
     // Dashboard principal
     // Sem permissão específica: qualquer usuário autenticado entra. O que cada
     // papel enxerga dentro do dashboard é decidido no controller.
@@ -115,6 +147,38 @@ Route::middleware(['auth'])->group(function () {
             'descricao' => $info->descricao ?? 'Um recurso adicional do sistema.',
         ]);
     })->name('modulo-indisponivel');
+
+    // Página "Conta suspensa" (Plano 7, Task 7.7): destino do redirecionamento
+    // de `EnsureTenantIsActive` quando a empresa está suspensa por falta de
+    // pagamento. Continua dentro do grupo `tenant.ativo`, e não é bloqueada por
+    // ele porque o nome dela está em `EnsureTenantIsActive::ROTAS_LIBERADAS`;
+    // fora da lista, o redirecionamento apontaria para si mesmo em laço.
+    //
+    // Sem permissão específica: quem precisa ver por que o acesso parou é
+    // qualquer usuário da empresa, inclusive o técnico que não mexe em
+    // financeiro.
+    Route::get('/conta-suspensa', [ContaSuspensaController::class, 'show'])
+        ->name(EnsureTenantIsActive::ROTA_CONTA_SUSPENSA);
+
+    // Tela de assinatura do tenant (Plano 7, Task 7.8): o próprio plano, a
+    // situação da cobrança e as faturas dos últimos 12 meses.
+    //
+    // As três rotas nascem nomeadas `assinatura.faturas*` de propósito: é o
+    // padrão que `EnsureTenantIsActive::ROTAS_LIBERADAS` já libera para o
+    // tenant suspenso (Task 7.7), e nomear diferente aqui bloquearia a
+    // própria tela que precisa mostrar o boleto para o tenant pagar. Por
+    // isso continuam dentro deste grupo, e não fora dele: fora perderiam o
+    // `auth`, que a rota também precisa.
+    //
+    // Sem permissão em `show`/`faturaShow`: qualquer usuário autenticado da
+    // empresa vê o próprio plano e as próprias faturas, mesmo critério de
+    // `/conta-suspensa`. Só a troca de forma de pagamento exige
+    // `assinatura-gerenciar`, por ser a única escrita deste grupo.
+    Route::get('/assinatura', [AssinaturaController::class, 'show'])->name('assinatura.faturas.index');
+    Route::get('/assinatura/faturas/{invoice}', [AssinaturaController::class, 'faturaShow'])->name('assinatura.faturas.show');
+    Route::post('/assinatura/forma-pagamento', [AssinaturaController::class, 'trocarFormaDePagamento'])
+        ->middleware('permission:assinatura-gerenciar')
+        ->name('assinatura.faturas.forma-pagamento');
 
     // Rotas de Clientes
     Route::resource('clients', ClientController::class)
@@ -660,4 +724,10 @@ Route::prefix('plataforma')->name('plataforma.')->middleware(['auth', 'platform.
     Route::post('/tenants/{empresa}/modulos/liberar', [PlataformaModuleController::class, 'liberarNoTenant'])->name('tenants.modulos.liberar');
     Route::post('/tenants/{empresa}/modulos/bloquear', [PlataformaModuleController::class, 'bloquearNoTenant'])->name('tenants.modulos.bloquear');
     Route::post('/tenants/{empresa}/modulos/remover', [PlataformaModuleController::class, 'removerRegraNoTenant'])->name('tenants.modulos.remover');
+
+    // Painel de receita da plataforma (Plano 7, Task 7.8): contadores de
+    // assinatura, receita recorrente mensal, faturas em aberto e a série de
+    // cancelamentos dos últimos 6 meses. Sem permissão própria: `platform.admin`
+    // já é a barreira, mesmo critério do painel geral acima.
+    Route::get('/receita', [PlataformaReceitaController::class, 'index'])->name('receita.index');
 });

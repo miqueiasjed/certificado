@@ -18,6 +18,13 @@ class RolesAndPermissionsSeeder extends Seeder
      * Garante os cinco papéis do sistema e sincroniza as permissões de cada
      * um a partir do catálogo único de SyncPermissions::catalogo(). Nenhuma
      * permissão é redeclarada aqui, e nenhum papel é atribuído a usuário.
+     *
+     * `assinatura-gerenciar` (Task 7.8) não entra em nenhum dos filtros por
+     * prefixo ou sufixo abaixo (não termina em "-ver" nem começa com
+     * "financeiro-"/"pagamento-"), então só `administrador` recebe a
+     * permissão, mesmo critério de `financeiro-ver`/`pagamento-ver`: mudar a
+     * forma de pagamento da empresa perante o provedor não é ação de papel
+     * nenhum além do administrativo.
      */
     public function run(): void
     {

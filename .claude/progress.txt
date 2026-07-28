@@ -958,3 +958,107 @@ perdesse esse middleware desaparecer da varredura, sem derrubar teste nenhum
 rota achada carrega o middleware. Confirmou removendo o middleware de uma
 rota de verdade e vendo o teste cair, depois desfez a remoção. Documentado no
 docblock da classe de teste.
+
+## Plano 7 - Assinaturas e cobrança dos tenants (PagBank) (28/07/2026)
+
+Concluído. Estimado em ~8 tasks, decompôs em 11, fechou com 12: uma nasceu
+durante a execução para fechar uma lacuna de contrato encontrada na revisão
+da Task 7.3. Suíte de testes foi de 448 (antes do plano) para 570 ao final;
+`npm run build` limpo. `TenantInternoImuneTest` (Task 7.11) passa e o
+experimento de "comentar a checagem de `is_internal` e ver o teste cair" foi
+executado de verdade, não só documentado.
+
+### O aprendizado central: a API real do gateway não é a API que o plano supôs
+
+A Task 7.2 desenhou `GatewayAssinatura::criarAssinatura(Company, Plan,
+string $formaPagamento): RespostaDeAssinatura` presumindo que bastava chamar
+o provedor com a forma de pagamento escolhida. A pesquisa da documentação
+real do PagBank, feita durante a Task 7.3, revelou duas coisas que a
+especificação não previa:
+
+1. O PagBank não cobra assinatura recorrente por Pix (só cartão e boleto);
+   Pix funciona por fatura avulsa, via API diferente (`/orders`, não
+   `/subscriptions`), com host diferente.
+2. Assinatura no cartão exige que o assinante já tenha o cartão cifrado
+   cadastrado no provedor **antes** de criar a assinatura, e a interface da
+   Task 7.2 não tinha método nenhum para isso.
+
+Consertado com uma task extra (fora da numeração 7.1-7.11, rastreada como
+"Fix - registrar meio de pagamento") que acrescentou
+`registrarMeioDePagamento(Company, string $cartaoCifrado): void` ao
+contrato, entre `criarAssinatura` e o resto, e ajustou `SubscriptionService`
+para chamá-lo primeiro quando a forma é cartão. **Regra que fica:** ao
+integrar com uma API de pagamento externa, a Task que só "desenha o
+contrato" (sem pesquisar a API real) corre o risco concreto de faltar
+método; vale pesquisar a documentação oficial *antes* de fechar a interface,
+não só na task de implementação.
+
+### Achado que virou desenho de arquitetura: `cobranca_vencida` nunca chega por webhook
+
+Ainda na pesquisa da Task 7.3: o PagBank não avisa boleto vencido por
+webhook para PIX/boleto avulso. Isso significa que `InadimplenciaService::
+avaliar()` (Task 7.7), e não o caminho de webhook (Task 7.6), é o único
+lugar do sistema que de fato transiciona uma fatura de `aberta` para
+`vencida`, comparando `Invoice.vencimento` com hoje no fuso do negócio. O
+ramo `cobranca_vencida` em `GatewayEventService` continua existindo por
+completude de contrato (e para gateway futuro que avise), mas é
+efetivamente código morto com o PagBank de hoje. Documentado no cabeçalho de
+`InadimplenciaService` para não ser removido por engano como "código não
+usado".
+
+### Dependência circular evitada entre `InvoiceService` e `InadimplenciaService`
+
+A Task 7.7 pedia `InadimplenciaService::reativarPorPagamento()` "chamado
+por `InvoiceService::marcarComoPaga()`", e ao mesmo tempo `avaliar()`
+precisaria de `InvoiceService::marcarComoVencida()`. Injetar os dois
+Services um no outro é dependência circular que o container do Laravel não
+resolve (estouraria em runtime, na baixa de um pagamento real). Resolvido
+com uma direção só: `InvoiceService -> InadimplenciaService ->
+TenantService`; `InadimplenciaService` nunca injeta `InvoiceService`, e faz
+a transição trivial de `Invoice.situacao` para `vencida` direto no Model
+(a única "perda" de não ter esse dependência é reimplementar um `update()`
+de duas linhas). **Regra que fica:** antes de aceitar literalmente uma frase
+de especificação como "Service A chama Service B", desenhar o grafo de
+dependência das duas pontas; se B também precisar de A por outro motivo, a
+especificação tem uma direção errada escondida.
+
+### Subagente travado na Task 7.6, trabalho recuperado sem redespachar
+
+Mesmo padrão do Plano 6 (Task 6.5): o subagente da Task 7.6 (webhook)
+travou (`stalled`, sem progresso por 600s) durante a escrita do relatório
+final, depois de o trabalho em si estar pronto. `git status` mostrou
+`GatewayWebhookController`, `GatewayEventService`,
+`ReprocessarEventosDeGateway.php` e os testes já criados; a suíte completa
+já passava (537 testes). O orquestrador revisou o código diretamente (sem o
+resumo do subagente) e confirmou os critérios de aceitação por leitura,
+evitando redespachar a task inteira.
+
+### Tasks que exigiram extensão além do arquivo listado na especificação
+
+Duas tasks descobriram, no meio da implementação, que o método que a
+especificação pedia não bastava sozinho:
+
+- Task 7.7 precisava que `EnsureTenantIsActive` liberasse a rota de faturas
+  do tenant (Task 7.9, que ainda não existia); a exceção foi deixada
+  pré-cadastrada por nome de rota (`assinatura.faturas*`), e a Task 7.8
+  precisou nomear as rotas dela exatamente com esse prefixo para herdar a
+  liberação.
+- Task 7.10 (frontend do painel de receita) descobriu que
+  `InvoiceService::faturasEmAberto()` (Task 7.8) só devolvia agregados
+  (`quantidade`, `valor_total`), sem lista de faturas individuais — a
+  tabela pedida pela própria Task 7.10 era impossível sem isso. Corrigido
+  na hora, acrescentando a chave `lista` sem alterar as agregações
+  existentes, seguindo a regra do projeto de consertar bug na hora em vez
+  de registrar como dívida.
+
+### Teste dedicado de invariante, com sobreposição deliberada
+
+`TenantInternoImuneTest` (Task 7.11) repete cobertura que já existe
+espalhada em `SubscriptionServiceTest`, `InvoiceServiceTest`,
+`InadimplenciaTest` e `TenantServiceTest`. A sobreposição foi mantida de
+propósito: cada teste de Service trava aquele Service isolado, e o arquivo
+dedicado trava a regra de ponta a ponta num lugar só, que é o que a
+especificação pediu como "portão de subida". Regra geral: teste de
+invariante crítico de negócio ("X nunca acontece, nunca, em lugar nenhum")
+justifica duplicar asserção que já existe alhures — o valor está em ser
+o único arquivo que alguém precisa abrir para confiar na regra inteira.

@@ -163,6 +163,9 @@ class SyncPermissions extends Command
                 'notificacao-ver',
                 'notificacao-gerenciar',
             ],
+            'assinatura' => [
+                'assinatura-gerenciar',
+            ],
         ];
     }
 

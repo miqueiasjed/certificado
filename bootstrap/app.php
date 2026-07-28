@@ -22,6 +22,27 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
+        // Webhook do gateway de pagamento (Plano 7, Task 7.6), fora do CSRF.
+        //
+        // Token CSRF pressupõe sessão e formulário renderizado por nós. Quem
+        // chama esta rota é o provedor de pagamento: não tem sessão, não tem
+        // token e não teria como obter um. Mantê-la sob a verificação faria toda
+        // confirmação de pagamento voltar 419, e a fatura do tenant nunca seria
+        // baixada.
+        //
+        // A troca é consciente: a autorização desta rota não vem do CSRF, vem da
+        // assinatura que o provedor manda no cabeçalho, conferida em
+        // `GatewayAssinatura::validarWebhook()` antes de qualquer gravação
+        // (`GatewayWebhookController`). Requisição sem assinatura válida sai com
+        // 401 sem gravar nem o payload.
+        //
+        // O curinga cobre o `{gateway}` da rota, e só ele: o padrão é comparado
+        // com o caminho, então `webhooks/gateway/*` não alcança nenhuma outra
+        // rota do sistema.
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/gateway/*',
+        ]);
+
         // Aliases dos middlewares do Spatie Permission. O pacote não os
         // registra sozinho no Laravel 11, e sem isto "permission:financeiro-ver"
         // na rota estoura como classe inexistente em vez de barrar o acesso.
@@ -38,6 +59,21 @@ return Application::configure(basePath: dirname(__DIR__))
             // (Plano 6, Task 6.4). Independente de `permission`: um acumula
             // sobre o outro, e os dois precisam passar. Ver EnsureModuleIsActive.
             'module' => \App\Http\Middleware\EnsureModuleIsActive::class,
+
+            // `tenant.ativo` barra o tenant suspenso por falta de pagamento
+            // (Plano 7, Task 7.7) e o manda para a página de conta suspensa.
+            //
+            // É alias aplicado ao grupo autenticado das empresas em
+            // `routes/web.php`, e deliberadamente NÃO entra no
+            // `$middleware->web(append: [...])` acima. A diferença importa: o
+            // append global rodaria também na área `/plataforma` e nas rotas
+            // públicas (webhook do gateway, recibo assinado). Na plataforma isso
+            // barraria o super admin que assumiu um tenant suspenso, que é
+            // exatamente o tenant que ele mais precisa abrir para dar suporte; e
+            // no webhook faria a confirmação de pagamento passar por uma
+            // verificação de acesso que não tem nada a ver com ela. Preso ao
+            // grupo `auth`, o alcance é exatamente o mundo das empresas.
+            'tenant.ativo' => \App\Http\Middleware\EnsureTenantIsActive::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {
