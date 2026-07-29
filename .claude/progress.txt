@@ -1352,3 +1352,105 @@ arquivo (13.2 e 13.5 apenas o liam, chamando métodos já existentes), então
 rodar em paralelo foi seguro - mas a checagem de "quem realmente escreve em
 qual arquivo" teve que ser feita task por task antes de decidir, a tabela
 de disputa sozinha não bastava para essa decisão.
+
+## Plano 16 - Agendamento online e pesquisa de satisfação (29/07/2026)
+
+Concluído. 8 tasks, sem estourar a estimativa. Suíte fechou em 831 testes
+passando (7672 assertions), partindo de 749 no início do plano.
+
+### Duas superfícies públicas novas, um único grupo de middleware
+
+A Task 16.3 criou a primeira rota do sistema sem autenticação nenhuma
+(`/agendar/{slug}`), e a Task 16.5 acrescentou a segunda (`/pesquisa/{token}`)
+no mesmo arquivo `routes/publico.php`. As duas dividem um grupo de middleware
+`publico` próprio (registrado em `bootstrap/app.php`), que é cópia do grupo
+`web` do framework trocando só a ponte Inertia por
+`HandleInertiaPublicoRequests`. O motivo de não reaproveitar o `web` direto:
+`HandleInertiaRequests` do painel compartilha `auth.user`, `modulos`,
+`onboarding` e `solicitacoesAbertas` por sessão, e a página pública abre no
+mesmo navegador em que um funcionário pode estar logado no painel - sem a
+ponte própria, aquele payload vazaria numa rota que qualquer pessoa alcança.
+**Regra que fica:** toda rota pública nova deste sistema entra em
+`routes/publico.php`/grupo `publico`, nunca em `web` mesmo que pareça
+inofensivo à primeira vista.
+
+### Limite de taxa por IP tem um limite conhecido, documentado em vez de escondido
+
+O sistema roda com `trustProxies(at: '*')`, então `$request->ip()` sai de
+`X-Forwarded-For`, que o visitante pode forjar - contar por IP sozinho não
+barra quem quer contornar de propósito. A Task 16.3 não tentou consertar
+`trustProxies` (mudança global, fora do escopo, arriscada em produção) e em
+vez disso apostou em defesa em profundidade: limite por IP (barra
+marretada), limite por telefone contado em `PublicSchedulingService`
+(sobrevive a IP forjado), campo armadilha e tempo mínimo de preenchimento.
+A limitação ficou documentada em comentário no limitador
+(`AppServiceProvider::registrarLimitesDoAgendamentoPublico()`), não
+escondida. **Candidato a dívida técnica real:** revisar `trustProxies` para
+uma lista de proxies conhecidos, se o volume de tráfego suspeito nas duas
+rotas públicas justificar.
+
+### `WorkOrder::serviceType()` é relação morta
+
+Descoberto na Task 16.5: a coluna de tipo de serviço foi removida de
+`work_orders` numa migration de 2025-10-14, mas a relação `serviceType()` no
+model continua declarada, apontando para uma coluna que não existe mais.
+Nada quebra porque nenhum código a chama hoje. A pesquisa de satisfação
+resolve o tipo de serviço avaliado pelo `service_type_id` do
+`AppointmentRequest` de origem, não pela OS. Vale revisitar se algum plano
+futuro reintroduzir tipo de serviço na OS diretamente, para não empilhar em
+cima de uma relação já morta.
+
+### Correção de convenção: papel "coordenador" não existe
+
+A especificação da Task 16.4 pedia permissões para "administrador e
+coordenador", mas o projeto só tem cinco papéis (`administrador`,
+`financeiro`, `comercial`, `tecnico`, `leitura`) e o catálogo usa
+`recurso-acao` com hífen, não `recurso.acao` com ponto. Mesmo desvio já
+registrado na Task 14.6 para `notificacao-ver`/`notificacao-gerenciar`. As
+duas correções seguiram o mesmo critério: permissão de responder fica só
+com administrador (automático), e a de ver entra em `leitura` pelo filtro
+genérico de permissão terminada em `-ver`. **Regra que fica:** ao ler
+"coordenador" ou papel parecido em qualquer especificação de task antiga,
+tratar como o mesmo desvio de nomenclatura, não criar papel novo.
+
+### Caminhos de frontend na especificação da task não bateram com a convenção real
+
+As Tasks 16.6 e 16.7 tinham caminhos de arquivo desatualizados em
+`.claude/tasks/16/16.6.md` (`resources/js/Publico/Pages/...` e
+`resources/js/Publico/Layouts/...`), mas o resolver do Inertia
+(`resources/js/app.js`) usa `./Pages/${name}.vue` sem prefixo por área, e os
+layouts do projeto ficam todos direto em `resources/js/Layouts/`
+(`PortalLayout.vue` é a referência mais próxima). Descoberto pelo
+orquestrador antes de despachar, checando o resolver e o diretório real, e
+corrigido no prompt de despacho antes do subagente escrever qualquer
+arquivo. **Regra que fica:** antes de despachar task de frontend, conferir
+o resolver de páginas (`app.js`) e a estrutura real de `resources/js/`
+contra os caminhos que a especificação da task lista - specs escritas antes
+da implementação de um plano vizinho (aqui, o Plano 15) podem prever um
+caminho que a implementação real não seguiu.
+
+### Comentário de teste fica desatualizado dentro do próprio plano, não só entre planos
+
+A Task 16.1 registrou em `VazamentoEntreEmpresasTest.php` que pedido de
+horário e pesquisa "não têm rota de CRUD direta ainda", verdade naquele
+momento. A Task 16.4 e a 16.7, mais adiante no mesmo plano, criaram exatamente
+essas rotas. A Task 16.8 (revisão de testes) encontrou o comentário
+desatualizado ao auditar cobertura; não era um furo de teste (o isolamento
+entre tenants dos endpoints novos já tinha teste dedicado em
+`AppointmentRequestTest`/`SatisfactionSurveyAdminTest`), só um comentário que
+parou de descrever a realidade. Corrigido pelo orquestrador ao fechar o
+plano. **Regra que fica:** comentário que descreve "isto ainda não existe"
+datado de uma task específica precisa ser conferido de novo no fechamento do
+próprio plano, não só quando um plano futuro mexe no arquivo.
+
+### Coordenação de arquivo disputado por três tasks sequenciais
+
+`app/Support/EventosDeNotificacao.php` foi tocado por 16.3, 16.4 e 16.5, cada
+uma acrescentando evento próprio (`solicitacao_horario_recebida`,
+`solicitacao_horario_confirmada`/`solicitacao_horario_recusada`,
+`pesquisa_satisfacao`/`nota_baixa_recebida`). O `INDEX.md` do plano já
+marcava a regra "uma por vez" para este arquivo mesmo classificando 16.4 e
+16.5 como lote paralelo na tabela de ordem de execução - mesma divergência
+entre "arquivos disputados" e "ordem de execução" já registrada no Plano 13.
+As três tasks rodaram em sequência (16.3, depois 16.4, depois 16.5), e
+nenhum conflito de edição ocorreu.

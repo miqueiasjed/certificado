@@ -8,14 +8,14 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 16.1 | Migrations e models de solicitação e pesquisa | backend-estrutura | ⏳ | média |
-| 16.2 | Grade de horários com capacidade dos técnicos | backend-logica | ⏳ | média |
-| 16.3 | Página pública de pedido de horário | backend-endpoint | ⏳ | média |
-| 16.4 | Confirmação e recusa do pedido pela empresa | backend-endpoint | ⏳ | média |
-| 16.5 | Disparo e resposta da pesquisa de satisfação | backend-endpoint | ⏳ | alta |
-| 16.6 | Páginas públicas de agendamento e de pesquisa | frontend-pagina | ⏳ | alta |
-| 16.7 | Telas internas de pedidos e painel de satisfação | frontend-pagina | ⏳ | alta |
-| 16.8 | Testes de rota pública, agendamento e pesquisa | teste | ⏳ | alta |
+| 16.1 | Migrations e models de solicitação e pesquisa | backend-estrutura | ✅ | média |
+| 16.2 | Grade de horários com capacidade dos técnicos | backend-logica | ✅ | média |
+| 16.3 | Página pública de pedido de horário | backend-endpoint | ✅ | média |
+| 16.4 | Confirmação e recusa do pedido pela empresa | backend-endpoint | ✅ | média |
+| 16.5 | Disparo e resposta da pesquisa de satisfação | backend-endpoint | ✅ | alta |
+| 16.6 | Páginas públicas de agendamento e de pesquisa | frontend-pagina | ✅ | alta |
+| 16.7 | Telas internas de pedidos e painel de satisfação | frontend-pagina | ✅ | alta |
+| 16.8 | Testes de rota pública, agendamento e pesquisa | teste | ✅ | alta |
 
 ## Ordem de execução
 

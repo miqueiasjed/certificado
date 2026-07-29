@@ -52,4 +52,33 @@ return [
 
     'dias_aviso_orcamento_a_expirar' => (int) env('NOTIFICACOES_DIAS_AVISO_ORCAMENTO_A_EXPIRAR', 3),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Envio automático da pesquisa de satisfação
+    |--------------------------------------------------------------------------
+    |
+    | Chave de liga e desliga da rotina `pesquisas:enviar` (Plano 16, Task
+    | 16.5). Desligada, a rotina roda, informa que o envio está desligado e não
+    | cria pesquisa nenhuma.
+    |
+    | Nasce desligada de propósito, e isto é exigência da ordem de aplicação em
+    | produção do plano: o Deploy 3 sobe a pesquisa com o envio desligado, e a
+    | empresa confere a fila gerada antes de ligar. Sem a chave, a primeira
+    | passada do cron depois do deploy mandaria e-mail para todos os clientes
+    | com visita concluída no dia anterior, sem ninguém ter visto uma mensagem
+    | antes. Para conferir sem enviar nada, rode a rotina com o envio desligado
+    | e leia a contagem, ou chame `SatisfactionSurveyService::criarParaVisita()`
+    | em uma visita escolhida.
+    |
+    | Limitação conhecida, mesma de `dias_aviso_contrato_vencer`: o valor é
+    | global da aplicação, não por tenant. Não existe coluna nem tela para uma
+    | chave por empresa, e criá-las está fora do escopo desta task. Quando a
+    | configuração por tenant entrar (o lugar natural é
+    | `company_availability_settings`, junto de `aceita_agendamento_online`),
+    | esta chave vira o padrão de quem não configurou.
+    |
+    */
+
+    'pesquisa_satisfacao_ativa' => (bool) env('NOTIFICACOES_PESQUISA_SATISFACAO_ATIVA', false),
+
 ];

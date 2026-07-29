@@ -4,6 +4,7 @@ use App\Http\Controllers\ActiveIngredientController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\AntidoteController;
+use App\Http\Controllers\AppointmentRequestController;
 use App\Http\Controllers\AssinaturaController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AuthController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ChemicalGroupController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientRequestAdminController;
+use App\Http\Controllers\CompanyAvailabilitySettingController;
 use App\Http\Controllers\ContaSuspensaController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractVisitController;
@@ -46,6 +48,7 @@ use App\Http\Controllers\Plataforma\TenantController as PlataformaTenantControll
 use App\Http\Controllers\Plataforma\UsageController as PlataformaUsageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\SatisfactionSurveyController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\TechnicianController;
@@ -731,9 +734,44 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
         ->middleware('permission:solicitacao-responder')
         ->name('solicitacoes.situacao');
 
+    // Pedidos de horário do agendamento online (Plano 16, Task 16.4).
+    // agendamento-responder cobre tanto confirmar quanto recusar: as duas são
+    // resposta da empresa ao mesmo pedido, mesmo critério de
+    // solicitacao-responder acima.
+    Route::get('/solicitacoes-de-horario', [AppointmentRequestController::class, 'index'])
+        ->middleware('permission:agendamento-ver')
+        ->name('solicitacoes-de-horario.index');
+    Route::post('/solicitacoes-de-horario/{pedido}/confirmar', [AppointmentRequestController::class, 'confirmar'])
+        ->middleware('permission:agendamento-responder')
+        ->name('solicitacoes-de-horario.confirmar');
+    Route::post('/solicitacoes-de-horario/{pedido}/recusar', [AppointmentRequestController::class, 'recusar'])
+        ->middleware('permission:agendamento-responder')
+        ->name('solicitacoes-de-horario.recusar');
+
+    // Painel de satisfação (Plano 16, Task 16.7): indicadores por período,
+    // técnico e tipo de serviço, e a fila de notas baixas com pendência de
+    // contato. Mesmas permissões da Task 16.4 - ver o docblock do
+    // controller.
+    Route::get('/satisfacao', [SatisfactionSurveyController::class, 'index'])
+        ->middleware('permission:agendamento-ver')
+        ->name('satisfacao.index');
+    Route::post('/satisfacao/{pesquisa}/contato-feito', [SatisfactionSurveyController::class, 'marcarContatoFeito'])
+        ->middleware('permission:agendamento-responder')
+        ->name('satisfacao.contato-feito');
+
     // Configurações da Empresa
     Route::get('/settings/company', [\App\Http\Controllers\CompanyController::class, 'edit'])->middleware('permission:empresa-configurar')->name('settings.company.edit');
     Route::post('/settings/company', [\App\Http\Controllers\CompanyController::class, 'update'])->middleware('permission:empresa-configurar')->name('settings.company.update');
+
+    // Configuração de disponibilidade e agendamento online (Plano 16, Task
+    // 16.7): dias de atendimento, teto por período, antecedência, janela,
+    // chave da página pública e o slug dela.
+    Route::get('/settings/disponibilidade', [CompanyAvailabilitySettingController::class, 'edit'])
+        ->middleware('permission:empresa-configurar')
+        ->name('settings.disponibilidade.edit');
+    Route::put('/settings/disponibilidade', [CompanyAvailabilitySettingController::class, 'update'])
+        ->middleware('permission:empresa-configurar')
+        ->name('settings.disponibilidade.update');
 
     // Rotas de Gestão de Usuários
     // O `{user}` destas rotas é resolvido por `User::resolveRouteBindingQuery()`,

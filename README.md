@@ -33,6 +33,7 @@ As rotinas são executadas pelo agendador do Laravel e configuradas em `bootstra
 | `contratos:gerar-visitas` | 01:00 | Gera as visitas previstas dos contratos periódicos vigentes dentro da janela configurada, sem duplicar visita já existente. |
 | `auditoria:purge` | 02:00 | Apaga de `audit_logs` e `access_logs` os registros mais antigos que o período de retenção. Horário fora da janela das outras porque é a mais pesada: percorre e apaga em lotes as tabelas de auditoria inteiras. |
 | `notificacoes:avisos-diarios` | 07:00 | Enfileira os avisos que dependem da passagem do tempo: véspera de visita, certificado e contrato a vencer, pagamento vencido, orçamento a expirar e visita periódica não gerada. Uma hora antes das 08:00, que é a hora padrão de envio, para o lembrete da véspera já estar na fila quando o despachante passar. |
+| `pesquisas:enviar` | 07:30 | Cria e enfileira a pesquisa de satisfação das ordens de serviço concluídas **no dia anterior**, no fuso do negócio. Nasce desligada: depende de `NOTIFICACOES_PESQUISA_SATISFACAO_ATIVA=true`. |
 | `notificacoes:despachar` | a cada 5 minutos | Envia os avisos vencidos da fila de notificações, registra cada tentativa em `notification_logs` e reagenda as falhas temporárias. A cada 5 minutos, e não a cada minuto, porque aviso de visita não é tempo real. |
 | `rotinas:verificar` | a cada 60 minutos | Descobre qual rotina desta tabela falhou ou parou de executar e avisa por e-mail o administrador de cada empresa. É a rotina que transforma "silêncio no histórico" em aviso. |
 
@@ -54,6 +55,17 @@ As rotinas são executadas pelo agendador do Laravel e configuradas em `bootstra
 - **Erro em um registro não cala os demais:** cada disparo tem o próprio tratamento de erro, e o resumo do comando mostra quantos registros falharam. Erro em uma empresa também não interrompe as outras.
 - **Certificado a vencer e pagamento vencido saem duas vezes**, uma para o cliente, com o texto do template (editável pelo tenant), e uma para a empresa, com um texto interno fixo. O template tem uma linha por evento e canal, escrita para o cliente; mandar esse mesmo texto para a equipe entregaria uma mensagem endereçada a quem não é o leitor.
 - **Prazos configuráveis** em `config/notificacoes.php`: `NOTIFICACOES_DIAS_AVISO_CONTRATO_VENCER` (padrão 30) e `NOTIFICACOES_DIAS_AVISO_ORCAMENTO_A_EXPIRAR` (padrão 3). São globais da aplicação, não por empresa.
+
+### Pesquisa de satisfação
+
+`pesquisas:enviar` roda uma passada por empresa, dentro do tenant de cada uma, e cria a pesquisa das visitas concluídas no dia anterior. O cliente responde em `/pesquisa/{token}`, sem login: o token de 64 caracteres é a única credencial, e vale 30 dias.
+
+- **Chave de liga e desliga:** `NOTIFICACOES_PESQUISA_SATISFACAO_ATIVA` (padrão `false`). Desligada, a rotina roda, informa e não cria nada. Ela nasce assim para o deploy subir sem mandar e-mail para a base inteira antes de alguém conferir a fila.
+- **Nunca no mesmo dia da conclusão.** Pesquisa que chega com o técnico ainda saindo do local mede o atendimento, não o resultado do serviço.
+- **Um envio por visita e no máximo um por cliente a cada 30 dias.** Cliente com visita semanal receberia quatro por mês, pararia de responder e o indicador morreria junto. Cliente que desligou os canais de aviso não recebe pesquisa nenhuma.
+- **Nota 1 ou 2 marca pendência de contato e avisa a empresa**, com o comentário (evento `nota_baixa_recebida`). Nenhuma resposta automática vai ao cliente: quem resolve insatisfação é pessoa.
+- **Média com menos de 3 respostas é omitida** em todo corte do painel (geral, por mês, por técnico e por tipo de serviço), e a contagem continua visível. Técnico avaliado por uma nota isolada é injustiça, e o indicador perde a credibilidade.
+- **Opções:** `--company=ID` roda em uma empresa só, e `--todas` deixa explícito o comportamento padrão. Rodar duas vezes no mesmo dia não duplica nada.
 
 ### Despacho das notificações
 

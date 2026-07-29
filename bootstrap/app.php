@@ -7,6 +7,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
 use Illuminate\Support\Facades\Route;
@@ -33,12 +34,60 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->prefix('portal')
                 ->name('portal.')
                 ->group(base_path('routes/portal.php'));
+
+            // Páginas públicas, sem autenticação nenhuma (Plano 16, Task
+            // 16.3): pedido de horário e, na Task 16.5, resposta da pesquisa de
+            // satisfação.
+            //
+            // Sem prefixo de URL, ao contrário do portal: o endereço é
+            // divulgado ao cliente final da empresa, e `/agendar/{slug}` é o
+            // que alguém consegue digitar. O prefixo de nome (`publico.`)
+            // continua existindo, e é por ele que o teste de segurança
+            // reconhece o conjunto de rotas expostas.
+            //
+            // O grupo é `publico`, e não `web`: ele tem a mesma sessão, cookies
+            // e CSRF, mas troca a ponte Inertia do painel por
+            // `HandleInertiaPublicoRequests`, que não compartilha nada de quem
+            // está autenticado. Ver o grupo em withMiddleware() abaixo.
+            Route::middleware('publico')
+                ->name('publico.')
+                ->group(base_path('routes/publico.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
+        ]);
+
+        // Grupo das páginas públicas (Plano 16, Task 16.3), usado só por
+        // routes/publico.php.
+        //
+        // É a cópia do grupo `web` do framework (cookies, sessão, erros de
+        // validação na sessão, CSRF e binding de rota), com uma diferença
+        // deliberada: a ponte Inertia é `HandleInertiaPublicoRequests`, e não a
+        // do painel.
+        //
+        // O motivo de não ser `web` + append: o grupo `web` já recebe
+        // `HandleInertiaRequests` acima, e aquele middleware compartilha
+        // `auth.user` (e-mail, papéis, permissões), `modulos`, `onboarding`,
+        // `solicitacoesAbertas` e a marca do portal, tudo derivado da sessão do
+        // navegador. Como a página pública é aberta no mesmo navegador em que o
+        // funcionário está logado no painel, aquelas props apareceriam no
+        // payload de uma rota que qualquer pessoa alcança. Nenhuma tela pública
+        // as leria, e é justamente por isso que o vazamento passaria em branco.
+        //
+        // Sessão e CSRF continuam necessários: o formulário público precisa de
+        // token, os erros de validação voltam pela sessão e a confirmação de
+        // recebimento é mensagem de flash.
+        $middleware->group('publico', [
+            \Illuminate\Cookie\Middleware\EncryptCookies::class,
+            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+            \Illuminate\Session\Middleware\StartSession::class,
+            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+            \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\HandleInertiaPublicoRequests::class,
         ]);
 
         // Webhook do gateway de pagamento (Plano 7, Task 7.6), fora do CSRF.
@@ -173,5 +222,34 @@ return Application::configure(basePath: dirname(__DIR__))
                 'titulo' => 'Link expirado ou inválido',
                 'mensagem' => $mensagem,
             ], 403);
+        });
+
+        // Limite de taxa estourado numa página pública (Plano 16, Task 16.3).
+        //
+        // Só para as rotas de routes/publico.php (`publico.*`): quem cai aqui é
+        // o cliente final de uma empresa, numa página sem login, e a resposta
+        // padrão do framework é a página crua "Too Many Requests" em inglês. O
+        // resto do sistema segue com o tratamento padrão, inclusive o login do
+        // portal e a sincronização do aplicativo do técnico, que são consumidos
+        // por código e não por gente.
+        //
+        // A mensagem não diz qual limite foi atingido nem quanto falta: é rota
+        // pública, e detalhar o limite ajuda quem está tentando contorná-lo.
+        $exceptions->renderable(function (ThrottleRequestsException $e, Request $request) {
+            if (! $request->routeIs('publico.*')) {
+                return null;
+            }
+
+            $mensagem = 'Recebemos pedidos demais deste dispositivo nos últimos minutos. '
+                .'Aguarde um pouco e tente de novo, ou ligue para a empresa.';
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $mensagem], 429);
+            }
+
+            return response()->view('publico.aviso', [
+                'titulo' => 'Muitas tentativas',
+                'mensagem' => $mensagem,
+            ], 429);
         });
     })->create();

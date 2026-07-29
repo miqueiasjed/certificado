@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AppointmentRequest;
 use App\Models\ClientRequest;
 use App\Models\Company;
 use App\Services\AssumirTenantService;
@@ -59,6 +60,7 @@ class HandleInertiaRequests extends Middleware
             'modulos' => $this->modulosAtivos($request),
             'onboarding' => fn () => $this->onboardingDoTenant($request),
             'solicitacoesAbertas' => fn () => $this->contagemDeSolicitacoesAbertas($request),
+            'pedidosDeHorarioPendentes' => fn () => $this->contagemDePedidosDeHorarioPendentes($request),
 
             // Portal do cliente (Plano 15, Task 15.6): identidade visual do
             // tenant e nome de quem está logado, para o cabeçalho e o rodapé
@@ -232,6 +234,36 @@ class HandleInertiaRequests extends Middleware
 
         return ClientRequest::query()
             ->whereIn('situacao', [ClientRequest::SITUACAO_ABERTA, ClientRequest::SITUACAO_EM_ATENDIMENTO])
+            ->count();
+    }
+
+    /**
+     * Quantidade de pedidos de horário pendentes do tenant corrente (Plano
+     * 16, Task 16.4), para o contador no menu do painel. Mesmo padrão de
+     * `contagemDeSolicitacoesAbertas()` acima, incluindo o motivo de cada
+     * checagem.
+     *
+     * Sem usuário autenticado (tela de login), sem tenant resolvido, ou sem
+     * a permissão `agendamento-ver`, devolve zero: mostrar a contagem para
+     * quem não pode abrir a tela correspondente vazaria a existência de
+     * pendências que o usuário não tem acesso a ver.
+     */
+    private function contagemDePedidosDeHorarioPendentes(Request $request): int
+    {
+        $usuario = $request->user();
+
+        if ($usuario === null || ! $usuario->can('agendamento-ver')) {
+            return 0;
+        }
+
+        try {
+            Company::current();
+        } catch (\Throwable) {
+            return 0;
+        }
+
+        return AppointmentRequest::query()
+            ->where('situacao', AppointmentRequest::SITUACAO_PENDENTE)
             ->count();
     }
 

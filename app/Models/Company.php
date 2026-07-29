@@ -44,6 +44,12 @@ class Company extends Model
         'cor_primaria',
         'cor_destaque',
 
+        // Identificador estável na URL da página pública de agendamento
+        // (Plano 16, Task 16.1). Nasce nulo e só é preenchido quando o
+        // tenant ativa a página pública: ver o docblock da migration
+        // `add_slug_publico_to_companies_table`.
+        'slug_publico',
+
         // Campos de plataforma (Plano 5). Só a área do super admin escreve
         // neles; o único endpoint de autoatendimento que atualiza a empresa
         // (`CompanyController::update`) valida com whitelist explícita, então

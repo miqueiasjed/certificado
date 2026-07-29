@@ -6,6 +6,7 @@ use App\Models\AccessLog;
 use App\Models\ActiveIngredient;
 use App\Models\Address;
 use App\Models\Antidote;
+use App\Models\AppointmentRequest;
 use App\Models\AuditLog;
 use App\Models\BaitType;
 use App\Models\Budget;
@@ -15,6 +16,7 @@ use App\Models\Client;
 use App\Models\ClientRequest;
 use App\Models\ClientUser;
 use App\Models\Company;
+use App\Models\CompanyAvailabilitySetting;
 use App\Models\Contract;
 use App\Models\ContractVisitJustification;
 use App\Models\DailyCashBalance;
@@ -34,6 +36,7 @@ use App\Models\PestSighting;
 use App\Models\Procedure;
 use App\Models\Product;
 use App\Models\Room;
+use App\Models\SatisfactionSurvey;
 use App\Models\Service;
 use App\Models\ServiceOrder;
 use App\Models\ServiceType;
@@ -1624,6 +1627,48 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'descricao' => 'Descricao da solicitacao '.$marca,
                 'situacao' => ClientRequest::SITUACAO_ABERTA,
                 'prioridade' => ClientRequest::PRIORIDADE_NORMAL,
+            ]);
+
+            // Pedido de horário e pesquisa de satisfação (Plano 16). Não
+            // entram em basesDeRecurso(): o isolamento entre empresas dos
+            // endpoints de listar/confirmar/recusar (Task 16.4) e de listar/
+            // marcar contato feito (Task 16.7) já tem teste dedicado em
+            // AppointmentRequestTest e SatisfactionSurveyAdminTest. Aqui o
+            // objetivo continua sendo só o model de domínio ter dado no
+            // cenário, mesmo critério já usado para clientRequest/
+            // onboardingStep acima.
+            $dados['appointmentRequest'] = AppointmentRequest::create([
+                'client_id' => $dados['client']->id,
+                'client_user_id' => $dados['clientUser']->id,
+                'address_id' => $dados['address']->id,
+                'nome' => 'Solicitante '.$marca,
+                'email' => "agendamento-{$baixo}@exemplo.test",
+                'telefone' => '11911110000',
+                'service_type_id' => $dados['serviceType']->id,
+                'data_preferida' => '2026-08-10',
+                'periodo' => AppointmentRequest::PERIODO_MANHA,
+                'observacao' => 'Pedido de horario '.$marca,
+                'situacao' => AppointmentRequest::SITUACAO_PENDENTE,
+                'origem' => AppointmentRequest::ORIGEM_PAGINA_PUBLICA,
+            ]);
+
+            $dados['satisfactionSurvey'] = SatisfactionSurvey::create([
+                'work_order_id' => $dados['workOrder']->id,
+                'client_id' => $dados['client']->id,
+                'technician_id' => $dados['technician']->id,
+                'service_type_id' => $dados['serviceType']->id,
+                'token' => str_repeat($this->sufixo($marca), 32),
+                'expira_em' => '2026-08-05',
+            ]);
+
+            // Configuração de agendamento online (Plano 16, Task 16.2). Sem
+            // rota de CRUD direta ainda (só a Task 16.2 introduz o model),
+            // então não entra em basesDeRecurso(): o objetivo aqui é só o
+            // model de domínio ter dado no cenário, mesmo critério já usado
+            // para appointmentRequest/satisfactionSurvey acima.
+            $dados['companyAvailabilitySetting'] = CompanyAvailabilitySetting::create([
+                'dias_da_semana' => [1, 2, 3, 4, 5],
+                'visitas_por_periodo' => 4,
             ]);
 
             return $dados;

@@ -42,6 +42,8 @@ class AppServiceProvider extends ServiceProvider
         $this->limparTenantEntreJobsDaFila();
         $this->registrarLimiteDeSincronizacaoDoAplicativo();
         $this->registrarLimiteDeLoginDoPortal();
+        $this->registrarLimitesDoAgendamentoPublico();
+        $this->registrarLimitesDaPesquisaPublica();
     }
 
     /**
@@ -161,6 +163,83 @@ class AppServiceProvider extends ServiceProvider
                 Limit::perMinute(5)->by('portal-login-ip:'.$request->ip()),
             ];
         });
+    }
+
+    /**
+     * Guarda de entrada da página pública de agendamento (Plano 16, Task 16.3).
+     *
+     * Dois limitadores de rota, porque ler e escrever têm risco diferente:
+     *
+     * - `agendamento-publico` (POST do pedido): 10 por minuto e 30 por hora, por
+     *   IP. Este é o limite de **requisição**, e o que ele impede é a marretada:
+     *   robô mandando POST em laço, cada um deles custando validação e um
+     *   cálculo de grade.
+     * - `agendamento-publico-leitura` (a página e a grade): 30 por minuto por
+     *   IP. Folgado para quem abre a página, troca de mês e recarrega, e
+     *   apertado para quem varre slug atrás de tenant.
+     *
+     * O limite do plano (3 pedidos por hora por IP e 1 por hora por telefone)
+     * **não** está aqui, de propósito: middleware de throttle conta requisição,
+     * e não pedido gravado. Com o limite apertado aqui, um visitante que errasse
+     * o e-mail duas vezes queimaria as três chances da hora, e no caso do
+     * telefone (1 por hora) a primeira recusa de validação o deixaria sem
+     * nenhuma. Aquela contagem é regra de negócio, conta só pedido que virou
+     * linha na tabela e vive em `PublicSchedulingService::registrar()`.
+     *
+     * Limitação conhecida das duas camadas por IP: o sistema roda com
+     * `trustProxies(at: '*')`, então `$request->ip()` sai do cabeçalho
+     * `X-Forwarded-For`, que o cliente pode inventar. Quem quer contornar
+     * contagem por IP consegue. É por isso que a contagem por telefone existe, e
+     * por isso o campo armadilha e o tempo mínimo de preenchimento não são
+     * opcionais nesta rota.
+     */
+    private function registrarLimitesDoAgendamentoPublico(): void
+    {
+        RateLimiter::for('agendamento-publico', fn (Request $request) => [
+            Limit::perMinute(10)->by('agendamento-publico-minuto:'.$request->ip()),
+            Limit::perHour(30)->by('agendamento-publico-hora:'.$request->ip()),
+        ]);
+
+        RateLimiter::for(
+            'agendamento-publico-leitura',
+            fn (Request $request) => Limit::perMinute(30)
+                ->by('agendamento-publico-leitura:'.$request->ip())
+        );
+    }
+
+    /**
+     * Guarda de entrada da página pública de pesquisa de satisfação (Plano 16,
+     * Task 16.5).
+     *
+     * Mesmo par de limitadores da página de agendamento, e limitadores próprios de
+     * propósito: reaproveitar as chaves de lá faria o cliente que responde uma
+     * pesquisa consumir a cota de quem está pedindo horário, e a leitura do log
+     * mentiria sobre qual página está sendo martelada.
+     *
+     * - `pesquisa-publica-leitura` (a página): 30 por minuto por IP. Folgado para
+     *   quem abre o link e recarrega, e apertado para quem varre token. Varredura
+     *   de token já é inviável pelo espaço de 64 caracteres sorteados; o limite
+     *   existe para que a tentativa não custe consulta nem banda.
+     * - `pesquisa-publica` (o envio da nota): 10 por minuto e 30 por hora por IP.
+     *   Uma pessoa responde uma pesquisa uma vez, então o limite só encosta em
+     *   robô.
+     *
+     * Vale a mesma limitação conhecida do agendamento: com `trustProxies(at: '*')`
+     * o IP sai de `X-Forwarded-For`, que o cliente pode inventar. Aqui isso pesa
+     * menos, porque sem o token não há nada a fazer nesta rota.
+     */
+    private function registrarLimitesDaPesquisaPublica(): void
+    {
+        RateLimiter::for('pesquisa-publica', fn (Request $request) => [
+            Limit::perMinute(10)->by('pesquisa-publica-minuto:'.$request->ip()),
+            Limit::perHour(30)->by('pesquisa-publica-hora:'.$request->ip()),
+        ]);
+
+        RateLimiter::for(
+            'pesquisa-publica-leitura',
+            fn (Request $request) => Limit::perMinute(30)
+                ->by('pesquisa-publica-leitura:'.$request->ip())
+        );
     }
 
     /**

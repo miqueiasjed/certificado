@@ -97,6 +97,75 @@
           </Link>
         </li>
 
+        <!-- Atendimento e Agendamento Online -->
+        <li v-if="!collapsed && mostrarBlocoAtendimento" class="mt-4">
+          <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Atendimento</div>
+        </li>
+        <li v-if="podeVerSolicitacoes">
+          <Link
+            :href="'/solicitacoes'"
+            :class="[
+              isCurrentRoute('/solicitacoes')
+                ? 'bg-green-700 text-white'
+                : 'text-green-100 hover:bg-green-700 hover:text-white',
+              'group flex items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+            ]">
+            <svg :class="[
+              isCurrentRoute('/solicitacoes') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              'h-5 w-5 shrink-0 transition-colors'
+            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+            </svg>
+            <span v-if="!collapsed" class="flex-1">Solicitações</span>
+            <span
+              v-if="!collapsed && solicitacoesAbertas > 0"
+              class="inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-xs font-semibold">
+              {{ solicitacoesAbertas }}
+            </span>
+          </Link>
+        </li>
+        <li v-if="podeVerAgendamentos">
+          <Link
+            :href="'/solicitacoes-de-horario'"
+            :class="[
+              isCurrentRoute('/solicitacoes-de-horario')
+                ? 'bg-green-700 text-white'
+                : 'text-green-100 hover:bg-green-700 hover:text-white',
+              'group flex items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+            ]">
+            <svg :class="[
+              isCurrentRoute('/solicitacoes-de-horario') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              'h-5 w-5 shrink-0 transition-colors'
+            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <span v-if="!collapsed" class="flex-1">Agendamentos</span>
+            <span
+              v-if="!collapsed && pedidosDeHorarioPendentes > 0"
+              class="inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-xs font-semibold">
+              {{ pedidosDeHorarioPendentes }}
+            </span>
+          </Link>
+        </li>
+        <li v-if="podeVerAgendamentos">
+          <Link
+            :href="'/satisfacao'"
+            :class="[
+              isCurrentRoute('/satisfacao')
+                ? 'bg-green-700 text-white'
+                : 'text-green-100 hover:bg-green-700 hover:text-white',
+              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+            ]">
+            <svg :class="[
+              isCurrentRoute('/satisfacao') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              'h-5 w-5 shrink-0 transition-colors'
+            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"></path>
+            </svg>
+            <span v-if="!collapsed">Satisfação</span>
+          </Link>
+        </li>
+
         <!-- Gestão Operacional -->
         <li v-if="!collapsed && mostrarBlocoOperacional" class="mt-4">
           <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Gestão Operacional</div>
@@ -316,6 +385,15 @@
                       Configurações
                     </Link>
                     <Link
+                      v-if="podeConfigurarDisponibilidade"
+                      :href="route('settings.disponibilidade.edit')"
+                      class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                      <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                      </svg>
+                      Disponibilidade
+                    </Link>
+                    <Link
                       v-if="podeVerUsuarios"
                       :href="route('settings.users.index')"
                       class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
@@ -395,6 +473,13 @@ const mostrarBlocoClientes = computed(() =>
   podeVerClientes.value || podeVerEnderecos.value || podeVerOrcamentos.value
 );
 
+// Atendimento e Agendamento Online
+const podeVerSolicitacoes = computed(() => pode('solicitacao-ver'));
+const podeVerAgendamentos = computed(() => pode('agendamento-ver'));
+const mostrarBlocoAtendimento = computed(() => podeVerSolicitacoes.value || podeVerAgendamentos.value);
+const solicitacoesAbertas = computed(() => $page.props.solicitacoesAbertas || 0);
+const pedidosDeHorarioPendentes = computed(() => $page.props.pedidosDeHorarioPendentes || 0);
+
 // Gestão Operacional
 const podeVerCadastros = computed(() => pode('cadastro-ver'));
 const podeVerOrdensServico = computed(() => pode('ordem-servico-ver'));
@@ -409,6 +494,7 @@ const podeVerFinanceiro = computed(() => pode('financeiro-ver') && temModulo('fi
 
 // Configurações da empresa
 const podeConfigurarEmpresa = computed(() => pode('empresa-configurar'));
+const podeConfigurarDisponibilidade = computed(() => pode('empresa-configurar'));
 const podeVerUsuarios = computed(() => pode('usuario-ver'));
 const podeConvidarUsuarios = computed(() => pode('usuario-criar'));
 

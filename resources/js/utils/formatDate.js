@@ -265,6 +265,20 @@ export function formatarDataExtensa(valor) {
 }
 
 /**
+ * Converte um dia (campo `date`, sem hora) no valor de <input type="date">
+ * (yyyy-MM-dd). Aceita tanto "2026-08-12" quanto o formato que o Laravel
+ * serializa um cast `date` ("2026-08-12T00:00:00.000000Z"): nos dois casos o
+ * dia já é o dia certo, e não passa por conversão de fuso - conversão é o
+ * que rouba um dia num campo que não tem hora relevante. Devolve '' para
+ * entrada inválida.
+ */
+export function paraInputDate(valor) {
+    const partes = analisar(valor);
+
+    return partes ? `${partes.ano}-${partes.mes}-${partes.dia}` : '';
+}
+
+/**
  * Formata a hora como HH:mm. Aceita ISO com hora e também "14:30:00".
  */
 export function formatarHora(valor) {
@@ -438,4 +452,5 @@ export default {
     agoraInputDateTime,
     paraInputDateTime,
     inputDateTimeParaUtc,
+    paraInputDate,
 };

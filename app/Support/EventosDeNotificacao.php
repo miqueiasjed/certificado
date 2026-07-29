@@ -28,9 +28,11 @@ use InvalidArgumentException;
  * vazio e ainda gera aviso em log a cada envio, então declarar "por precaução"
  * cobra o preço depois.
  *
- * Canal por evento não é uniforme de propósito. Os quatro eventos internos
- * (contrato a vencer, orçamento a expirar, visita periódica não gerada e rotina
- * agendada falhou) aceitam apenas e-mail: eles vão para a própria empresa, e o
+ * Canal por evento não é uniforme de propósito. Os eventos internos (contrato a
+ * vencer, orçamento a expirar, visita periódica não gerada, rotina agendada
+ * falhou, solicitação de atendimento recebida, pedido de horário recebido e nota
+ * baixa na pesquisa de satisfação)
+ * aceitam apenas e-mail: eles vão para a própria empresa, e o
  * fluxo de WhatsApp desta entrega é o link `wa.me` que alguém da empresa abre
  * para falar com o cliente, o que não faz sentido apontando para o número dela
  * mesma.
@@ -105,7 +107,79 @@ final class EventosDeNotificacao
     public const SOLICITACAO_RESPONDIDA = 'solicitacao_respondida';
 
     /**
-     * Os catorze eventos do plano.
+     * Pedido de horário aberto na página pública de agendamento (Plano 16,
+     * Task 16.3): a empresa recebe o aviso de que alguém pediu um horário e
+     * precisa confirmar ou recusar.
+     *
+     * O aviso é interno, e por isso só aceita e-mail, mesmo critério de
+     * `SOLICITACAO_RECEBIDA`. O pedido não gera ordem de serviço nenhuma: quem
+     * decide se tem técnico na região naquele dia é a empresa, na
+     * confirmação (Task 16.4).
+     */
+    public const SOLICITACAO_HORARIO_RECEBIDA = 'solicitacao_horario_recebida';
+
+    /**
+     * Resposta da empresa confirmando um pedido de horário (Plano 16, Task
+     * 16.4): o solicitante é avisado de que a visita foi agendada.
+     *
+     * `destinatario` é `usuario`, e não `cliente`, embora o pedido confirmado
+     * sempre tenha um cliente vinculado (a própria confirmação cria ou
+     * reaproveita um): `AppointmentRequestService::avisarConfirmacao()` força
+     * `destino` com o e-mail que o solicitante informou *neste* pedido, não o
+     * e-mail geral de notificação do cadastro do cliente (que pode divergir,
+     * por exemplo quando quem preencheu o formulário público não é a mesma
+     * pessoa do cadastro). Mesmo critério de `CONVITE_PORTAL`.
+     */
+    public const SOLICITACAO_HORARIO_CONFIRMADA = 'solicitacao_horario_confirmada';
+
+    /**
+     * Resposta da empresa recusando um pedido de horário (Plano 16, Task
+     * 16.4): o motivo vai ao solicitante.
+     *
+     * `destinatario` é `usuario` pelo mesmo motivo de
+     * {@see self::SOLICITACAO_HORARIO_CONFIRMADA}, com um agravante aqui: a
+     * recusa nunca cria cliente (ao contrário da confirmação), então o pedido
+     * pode não ter `client_id` nenhum. Usar `cliente` como destinatário
+     * bloquearia o aviso inteiro nesse caso (`NotificationService::enfileirar`
+     * devolve `sem_destino` sem cliente resolvido), e a recusa sem aviso é
+     * exatamente o que o Plano 16 corrige.
+     */
+    public const SOLICITACAO_HORARIO_RECUSADA = 'solicitacao_horario_recusada';
+
+    /**
+     * Convite da pesquisa de satisfação (Plano 16, Task 16.5), enfileirado pela
+     * rotina `pesquisas:enviar` no dia seguinte à conclusão da visita.
+     *
+     * O evento existe porque o link da pesquisa precisa chegar ao cliente, e a
+     * central do Plano 14 é o único caminho de mensagem do sistema. Sem ele, a
+     * pesquisa nasceria com um token que ninguém recebe.
+     *
+     * `destinatario` é `cliente`, e não `usuario`: aqui a preferência de canal do
+     * cadastro (`aceita_email`/`aceita_whatsapp`) **deve** valer, ao contrário do
+     * convite do portal. Pesquisa é contato opcional, e cliente que pediu para
+     * não receber aviso não pode receber pedido de avaliação. Quem confere isso
+     * antes, e nem cria a pesquisa quando os dois canais estão desligados, é
+     * `SatisfactionSurveyService::criarParaVisita()`; a checagem de
+     * `NotificationService` continua valendo como segunda barreira.
+     *
+     * Aceita WhatsApp além de e-mail porque é mensagem curta com um link, que é
+     * exatamente o que o cliente final responde do celular.
+     */
+    public const PESQUISA_SATISFACAO = 'pesquisa_satisfacao';
+
+    /**
+     * Nota 1 ou 2 recebida na pesquisa de satisfação (Plano 16, Task 16.5).
+     *
+     * Aviso interno, só para a empresa, mesmo critério de `SOLICITACAO_RECEBIDA`:
+     * quem resolve insatisfação é pessoa, e não e-mail automático. Nenhuma
+     * resposta automática vai ao cliente que deu a nota baixa, por regra do
+     * plano; o que o sistema faz é marcar `pendencia_de_contato` na pesquisa e
+     * avisar a empresa, com o comentário, para alguém ligar.
+     */
+    public const NOTA_BAIXA_RECEBIDA = 'nota_baixa_recebida';
+
+    /**
+     * Os eventos do plano.
      *
      * Estrutura de cada entrada:
      * - `rotulo`: nome em português, para tela e para relatório.
@@ -520,6 +594,164 @@ final class EventosDeNotificacao
                     'corpo' => 'Olá, {{cliente_nome}}. Sua solicitação {{solicitacao_numero}} '
                         .'("{{solicitacao_assunto}}") recebeu uma resposta: {{solicitacao_resposta}} '
                         .'Acompanhe pelo portal. {{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::SOLICITACAO_HORARIO_RECEBIDA => [
+            'rotulo' => 'Novo pedido de horário pelo agendamento online',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            // `cliente_nome` de propósito fora da lista: o pedido pode vir de
+            // quem ainda não é cliente da empresa, e nesse caso a variável
+            // renderizaria vazia. Quem pediu o horário está em
+            // `solicitante_nome`, que existe em todo pedido.
+            'variaveis' => [
+                'empresa_nome',
+                'solicitante_nome',
+                'solicitante_telefone',
+                'solicitante_email',
+                'data_preferida',
+                'periodo',
+                'endereco',
+                'tipo_de_servico',
+                'observacao',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Novo pedido de horário: {{solicitante_nome}} para {{data_preferida}}',
+                    'corpo' => "{{solicitante_nome}} pediu um horário pelo agendamento online.\n\n"
+                        ."Data preferida: {{data_preferida}}, no período da {{periodo}}\n"
+                        ."Serviço: {{tipo_de_servico}}\n"
+                        ."Endereço informado: {{endereco}}\n"
+                        ."Telefone: {{solicitante_telefone}}\n"
+                        ."E-mail: {{solicitante_email}}\n"
+                        ."Observação: {{observacao}}\n\n"
+                        .'O pedido está pendente e ainda não gerou ordem de serviço. '
+                        .'Confirme ou recuse pelo painel para o solicitante ser avisado.',
+                ],
+            ],
+        ],
+
+        self::SOLICITACAO_HORARIO_CONFIRMADA => [
+            'rotulo' => 'Pedido de horário confirmado pela empresa',
+            'destinatario' => NotificationQueue::DESTINATARIO_USUARIO,
+            'canais' => [self::CANAL_EMAIL],
+            // `solicitante_nome`, e não `cliente_nome`, mesmo critério de
+            // SOLICITACAO_HORARIO_RECEBIDA: quem preencheu o pedido pode não
+            // ser exatamente o nome gravado no cadastro do cliente vinculado.
+            'variaveis' => [
+                'empresa_nome',
+                'empresa_telefone',
+                'solicitante_nome',
+                'data_confirmada',
+                'periodo_confirmado',
+                'endereco',
+                'tecnico_nome',
+                'os_numero',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Seu horário foi confirmado para {{data_confirmada}}',
+                    'corpo' => "Olá, {{solicitante_nome}}.\n\n"
+                        .'Seu pedido de horário foi confirmado pela {{empresa_nome}}.'
+                        ."\n\n"
+                        ."Data: {{data_confirmada}}, período da {{periodo_confirmado}}\n"
+                        ."Endereço: {{endereco}}\n"
+                        ."Técnico responsável: {{tecnico_nome}}\n"
+                        ."Ordem de serviço: {{os_numero}}\n\n"
+                        .'Qualquer dúvida ou necessidade de remarcação, fale com a gente pelo telefone '
+                        ."{{empresa_telefone}}.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::SOLICITACAO_HORARIO_RECUSADA => [
+            'rotulo' => 'Pedido de horário recusado pela empresa',
+            'destinatario' => NotificationQueue::DESTINATARIO_USUARIO,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'empresa_telefone',
+                'solicitante_nome',
+                'data_preferida',
+                'periodo',
+                'motivo_recusa',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Sobre seu pedido de horário para {{data_preferida}}',
+                    'corpo' => "Olá, {{solicitante_nome}}.\n\n"
+                        .'Não foi possível confirmar seu pedido de horário para {{data_preferida}}, '
+                        ."no período da {{periodo}}.\n\n"
+                        ."Motivo: {{motivo_recusa}}\n\n"
+                        .'Se quiser tentar outra data, é só enviar um novo pedido ou falar com a gente '
+                        ."pelo telefone {{empresa_telefone}}.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::PESQUISA_SATISFACAO => [
+            'rotulo' => 'Pesquisa de satisfação depois da visita',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL, self::CANAL_WHATSAPP],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'empresa_telefone',
+                'os_numero',
+                'data_execucao',
+                'tecnico_nome',
+                'link_pesquisa',
+                'dias_de_validade',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Como foi o atendimento de {{data_execucao}}?',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\n"
+                        .'Nosso atendimento da ordem de serviço {{os_numero}} foi concluído em '
+                        ."{{data_execucao}}, com o técnico {{tecnico_nome}}.\n\n"
+                        ."Dá uma nota de 1 a 5 para a gente? Leva menos de um minuto:\n"
+                        ."{{link_pesquisa}}\n\n"
+                        ."O link vale por {{dias_de_validade}} dias e não pede senha nenhuma.\n\n"
+                        ."Se preferir falar com uma pessoa, o telefone é {{empresa_telefone}}.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+                self::CANAL_WHATSAPP => [
+                    'assunto' => null,
+                    'corpo' => 'Olá, {{cliente_nome}}. Nosso atendimento da ordem de serviço {{os_numero}} '
+                        .'foi concluído em {{data_execucao}}. Dá uma nota de 1 a 5 para a gente? '
+                        .'{{link_pesquisa}} (o link vale por {{dias_de_validade}} dias). {{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::NOTA_BAIXA_RECEBIDA => [
+            'rotulo' => 'Nota baixa na pesquisa de satisfação',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'nota',
+                'comentario',
+                'os_numero',
+                'tecnico_nome',
+                'tipo_de_servico',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Nota {{nota}} de {{cliente_nome}} na pesquisa de satisfação',
+                    'corpo' => 'O cliente {{cliente_nome}} deu nota {{nota}} para o atendimento da ordem de '
+                        ."serviço {{os_numero}}.\n\n"
+                        ."Comentário: {{comentario}}\n"
+                        ."Técnico: {{tecnico_nome}}\n"
+                        ."Serviço: {{tipo_de_servico}}\n\n"
+                        .'A pesquisa está marcada como pendência de contato no painel de satisfação. '
+                        .'Ligue para o cliente antes de encerrar a pendência: nenhuma mensagem automática '
+                        .'foi enviada a ele sobre esta nota.',
                 ],
             ],
         ],

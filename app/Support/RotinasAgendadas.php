@@ -74,6 +74,15 @@ final class RotinasAgendadas
         // véspera já esteja na fila quando o despachante passar às 08:00; às
         // 08:10 os avisos do dia só sairiam na passada seguinte.
         'notificacoes:avisos-diarios' => '07:00',
+        // 07:30: depois dos avisos diários (07:00), que ela não depende, e antes
+        // das 08:00, que é a hora padrão de envio da central de notificações. A
+        // ordem entre as duas é higiene de janela, não dependência de dado: cada
+        // uma lê o que a outra não escreve. Ficar antes das 08:00 é o que importa,
+        // porque o convite da pesquisa é enfileirado para o dia de hoje e sai na
+        // passada do despachante daquele horário; agendada às 08:10, a pesquisa
+        // do dia esperaria a manhã inteira. Meia hora de folga cobre uma passada
+        // de avisos diários mais lenta que o normal.
+        'pesquisas:enviar' => '07:30',
     ];
 
     /**

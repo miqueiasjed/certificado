@@ -187,6 +187,26 @@ class SyncPermissions extends Command
             'assinatura' => [
                 'assinatura-gerenciar',
             ],
+            // Pedidos de horário do agendamento online (Plano 16, Task
+            // 16.4). O arquivo da task pedia "agendamentos.ver"/
+            // "agendamentos.responder" para os papéis "administrador e
+            // coordenador", mas este projeto não tem papel "coordenador"
+            // (os cinco existentes são administrador, financeiro, comercial,
+            // tecnico, leitura - ver `RolesAndPermissionsSeeder`) e o
+            // catálogo inteiro usa o padrão "recurso-acao" com hífen, não
+            // ponto (a família "os.*" das Tasks 13.3/13.4 é a única exceção,
+            // por um motivo documentado ali). Mesma correção já aplicada à
+            // Task 14.6 (`notificacao-ver`/`notificacao-gerenciar` em vez de
+            // "notificacoes.ver"): nome no padrão do restante do catálogo, e
+            // "agendamento-responder" fica só com administrador (automático,
+            // ele recebe o catálogo inteiro); "agendamento-ver" entra em
+            // leitura pelo filtro genérico de permissão terminada em "-ver"
+            // que já existe em RolesAndPermissionsSeeder, sem precisar tocar
+            // no seeder.
+            'agendamentos' => [
+                'agendamento-ver',
+                'agendamento-responder',
+            ],
         ];
     }
 
