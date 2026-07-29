@@ -1190,3 +1190,80 @@ avião, sem depender de nenhuma rota adicional existir no servidor. Vale
 manter esse padrão em telas futuras do mesmo aplicativo (Plano 13):
 introduzir Vue Router quebraria essa garantia sem ganho evidente, dado que
 o aplicativo inteiro cabe em poucas telas.
+
+## Plano 15 - Portal do cliente (28/07/2026)
+
+Concluído: 9 tasks, primeiro acesso externo do sistema. Escopo duplo
+(empresa + cliente) auditado com o mesmo rigor de um controle de acesso
+bancário, incluindo teste de "escopo global desligado" e varredura
+automática de todas as rotas do portal antes da liberação (Task 15.9,
+condição de deploy, não item opcional).
+
+### Arquivo disputado dentro do mesmo lote paralelo: seguir a tabela de disputa, não a ordem de execução
+
+`tasks/15/INDEX.md` marcava 15.4 e 15.5 como lote paralelo, mas a própria
+tabela de arquivos disputados do mesmo documento listava `routes/portal.php`
+como compartilhado entre 15.2, 15.4 e 15.5 "nesta ordem, uma por vez" - as
+duas seções se contradiziam. Rodar as duas em paralelo de verdade arriscaria
+dois subagentes escrevendo no mesmo arquivo ao mesmo tempo. Rodadas em
+sequência (15.4 primeiro, revisão, depois 15.5), sem problema. Regra que
+fica: quando a tabela de "arquivos disputados" e a "ordem de execução" do
+mesmo plano divergem, a tabela de disputa vence - ela existe justamente para
+casos como este.
+
+### Caminho de arquivo Vue desatualizado na spec de tasks de página Inertia
+
+As Tasks 15.6, 15.7 e 15.8 (`.md`) pediam arquivos em `resources/js/Portal/
+Pages/X.vue`, mas o Inertia deste projeto resolve `Inertia::render('Portal/
+X/Y')` para `resources/js/Pages/Portal/X/Y.vue` (`resolvePageComponent`
+relativo a `resources/js/Pages/`, ver `resources/js/app.js`). As tasks de
+frontend foram escritas antes de as tasks de backend (15.4/15.5) definirem
+os nomes reais passados a `Inertia::render()`, e o caminho literal do `.md`
+ficou desatualizado. Regra que fica: numa task de página Inertia, o nome
+real do arquivo Vue é o que o controller já chama em `Inertia::render()`,
+não o que o `.md` da task lista - conferir o controller primeiro sempre que
+uma task de frontend depender de um backend já implementado.
+
+### Lacuna de produto, não de implementação: login do portal não identifica a empresa antes da senha
+
+A Task 15.6 pedia que a tela de login "deixe claro de qual empresa é o
+portal", mas a Task 15.2 decidiu (corretamente, para o problema que ela
+resolvia) que `client_users.email` é único por empresa, não globalmente, e
+`autenticarPorCredenciais()` testa a senha contra toda conta ativa com
+aquele e-mail em qualquer empresa - o tenant só é conhecido depois de a
+senha bater. Não existe hoje identificador de tenant na URL de login (sem
+subdomínio, sem slug). As duas decisões são individualmente corretas e
+mutuamente incompatíveis com o critério de aceitação da 15.6. Não resolvido
+nesta execução: é decisão de produto (subdomínio por tenant? campo de
+"código da empresa" no login?), registrada como lacuna conhecida no
+código (`HandleInertiaRequests`, `Login.vue`), não como bug escondido.
+
+### Lacunas de dado documentadas em vez de inventadas
+
+Duas tasks de frontend (15.7, 15.8) encontraram campos que a especificação
+presumia existir no backend e não existem: "próximas visitas do contrato"
+(resolvida depois, ver abaixo) e "foto da adequação"/"endereço no formulário
+de nova solicitação" (não resolvidas, documentadas em comentário no Vue).
+Em nenhum dos três casos o subagente inventou um cálculo ou um campo
+fictício para fingir que o critério de aceitação passava - cada lacuna
+ficou registrada com o motivo exato (qual arquivo do backend não expõe o
+quê) e o que falta para fechá-la. "Próximas visitas do contrato" foi
+resolvida pelo orquestrador depois de revisar as duas tasks, relacionando
+`PortalService::proximasVisitas()` e `::contratos()` pelo texto do endereço
+formatado (`Address::full_address`) dentro do controller, sem reabrir o
+contrato de retorno do Service (que já tinha teste fixando o formato desde
+a Task 15.3). As outras duas (foto, endereço no formulário) exigem estender
+`CamposVisiveisAoCliente`/`ClientRequestController` e ficaram como dívida
+técnica, não bloqueiam a liberação do módulo.
+
+### O teste que enumera rotas automaticamente é o que vale mais que os outros
+
+A Task 15.9 pedia um teste que lê `Route::getRoutes()`, filtra por
+`portal.*` e obriga toda rota a estar classificada (pública/listagem/
+detalhe) numa constante do próprio arquivo de teste. Rota nova em
+`routes/portal.php` sem entrar em nenhuma das três classificações derruba
+esse teste com uma mensagem que diz exatamente o que fazer. É o único
+mecanismo do plano que sobrevive a alguém adicionar uma rota nova ao portal
+meses depois sem reler toda a task 15.9 - os testes de isolamento
+"rota a rota, escritos à mão" (Tasks 15.2 a 15.5) protegem o que já existe,
+mas não avisam quando algo novo nasce descoberto.

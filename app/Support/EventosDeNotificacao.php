@@ -74,7 +74,38 @@ final class EventosDeNotificacao
     public const ROTINA_AGENDADA_FALHOU = 'rotina_agendada_falhou';
 
     /**
-     * Os dez eventos do plano.
+     * Convite de acesso ao portal do cliente (Plano 15, Task 15.2).
+     */
+    public const CONVITE_PORTAL = 'convite_portal';
+
+    /**
+     * Recuperação de senha do portal do cliente (Plano 15, Task 15.2).
+     *
+     * Evento distinto de `CONVITE_PORTAL`, embora os dois consumam o mesmo par
+     * de colunas em `client_users` (`convite_token`/`convite_expira_em`) e o
+     * mesmo `ClientUserService::definirSenha()`: o texto de um é acolhimento
+     * ("a empresa liberou seu acesso"), o do outro é segurança ("alguém pediu
+     * para redefinir sua senha"), e misturar os dois num evento só impediria o
+     * tenant de customizar cada template pela tela de notificações.
+     */
+    public const RECUPERACAO_SENHA_PORTAL = 'recuperacao_senha_portal';
+
+    /**
+     * Solicitação de atendimento aberta pelo cliente no portal (Plano 15,
+     * Task 15.5): a empresa recebe o aviso de que uma pendência nova chegou.
+     */
+    public const SOLICITACAO_RECEBIDA = 'solicitacao_recebida';
+
+    /**
+     * Resposta da empresa a uma solicitação, avisando o cliente (Plano 15,
+     * Task 15.5). A resposta em si fica registrada e visível no portal (ver
+     * `ClientRequestService::responder()`); este evento é só o aviso de que
+     * ela existe.
+     */
+    public const SOLICITACAO_RESPONDIDA = 'solicitacao_respondida';
+
+    /**
+     * Os catorze eventos do plano.
      *
      * Estrutura de cada entrada:
      * - `rotulo`: nome em português, para tela e para relatório.
@@ -365,6 +396,130 @@ final class EventosDeNotificacao
                         ."Última execução bem-sucedida: {{ultima_execucao}}.\n"
                         ."Mensagem registrada: {{mensagem_erro}}\n\n"
                         .'Enquanto isso não for resolvido, os dados que dependem dela deixam de ser atualizados.',
+                ],
+            ],
+        ],
+
+        self::CONVITE_PORTAL => [
+            'rotulo' => 'Convite de acesso ao portal do cliente',
+            // DESTINATARIO_USUARIO, e não DESTINATARIO_CLIENTE, de propósito:
+            // quem recebe é um ClientUser específico, com e-mail próprio
+            // (informado em `destino`/`destinatario_id` no disparo), e não o
+            // e-mail de notificação cadastrado no Client. Com
+            // DESTINATARIO_CLIENTE, `NotificationService::enfileirar()`
+            // aplicaria a preferência de canal do cliente
+            // (`aceita_email`/`aceita_whatsapp`) a este envio, e o convite -
+            // que é a única forma de o cliente entrar no portal - ficaria
+            // bloqueado por uma preferência pensada para lembrete de visita e
+            // aviso de cobrança, não para o próprio acesso.
+            'destinatario' => NotificationQueue::DESTINATARIO_USUARIO,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'empresa_telefone',
+                'link_convite',
+                'dias_de_validade',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Acesso ao portal de {{empresa_nome}}',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\n"
+                        .'A {{empresa_nome}} liberou um acesso para você acompanhar visitas, certificados e '
+                        ."contratos pelo portal do cliente.\n\n"
+                        ."Para definir sua senha e entrar, acesse: {{link_convite}}\n"
+                        ."Este link vale por {{dias_de_validade}} dias.\n\n"
+                        ."Dúvidas? Fale com a gente pelo telefone {{empresa_telefone}}.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::RECUPERACAO_SENHA_PORTAL => [
+            'rotulo' => 'Recuperação de senha do portal do cliente',
+            // Mesmo motivo do evento acima: o destino é o e-mail deste
+            // ClientUser específico, forçado no disparo, não o e-mail (nem a
+            // preferência de canal) do Client.
+            'destinatario' => NotificationQueue::DESTINATARIO_USUARIO,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'empresa_telefone',
+                'link_redefinir_senha',
+                'dias_de_validade',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Redefinição de senha do portal',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\n"
+                        .'Recebemos um pedido para redefinir a senha do seu acesso ao portal de '
+                        ."{{empresa_nome}}.\n\n"
+                        ."Para escolher uma senha nova, acesse: {{link_redefinir_senha}}\n"
+                        ."Este link vale por {{dias_de_validade}} dias.\n\n"
+                        ."Se você não pediu essa redefinição, ignore este e-mail: sua senha continua a mesma.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::SOLICITACAO_RECEBIDA => [
+            'rotulo' => 'Nova solicitação de atendimento do cliente',
+            // DESTINATARIO_EMPRESA, mesmo critério de CONTRATO_A_VENCER e
+            // ORCAMENTO_A_EXPIRAR: o aviso é interno, só para a empresa saber
+            // que uma pendência nova chegou pelo portal, e por isso só aceita
+            // e-mail (o fluxo de WhatsApp desta entrega é o link `wa.me` para
+            // falar com o cliente, sem sentido apontando para o número da
+            // própria empresa).
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'solicitacao_numero',
+                'solicitacao_assunto',
+                'solicitacao_descricao',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Nova solicitação de {{cliente_nome}}: {{solicitacao_assunto}}',
+                    'corpo' => 'O cliente {{cliente_nome}} abriu a solicitação {{solicitacao_numero}} '
+                        ."pelo portal.\n\n"
+                        ."Assunto: {{solicitacao_assunto}}\n"
+                        ."Descrição: {{solicitacao_descricao}}\n\n"
+                        .'Acesse o painel para responder.',
+                ],
+            ],
+        ],
+
+        self::SOLICITACAO_RESPONDIDA => [
+            'rotulo' => 'Resposta da empresa a uma solicitação de atendimento',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL, self::CANAL_WHATSAPP],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'empresa_telefone',
+                'solicitacao_numero',
+                'solicitacao_assunto',
+                'solicitacao_resposta',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Resposta da {{empresa_nome}} à sua solicitação',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\n"
+                        .'Sua solicitação {{solicitacao_numero}} ("{{solicitacao_assunto}}") '
+                        ."recebeu uma resposta:\n\n"
+                        ."{{solicitacao_resposta}}\n\n"
+                        .'Acompanhe pelo portal. Qualquer dúvida, ligue para {{empresa_telefone}}.'
+                        ."\n\n"
+                        .'{{empresa_nome}}',
+                ],
+                self::CANAL_WHATSAPP => [
+                    'assunto' => null,
+                    'corpo' => 'Olá, {{cliente_nome}}. Sua solicitação {{solicitacao_numero}} '
+                        .'("{{solicitacao_assunto}}") recebeu uma resposta: {{solicitacao_resposta}} '
+                        .'Acompanhe pelo portal. {{empresa_nome}}',
                 ],
             ],
         ],

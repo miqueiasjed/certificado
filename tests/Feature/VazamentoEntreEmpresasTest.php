@@ -12,6 +12,8 @@ use App\Models\Budget;
 use App\Models\Certificate;
 use App\Models\ChemicalGroup;
 use App\Models\Client;
+use App\Models\ClientRequest;
+use App\Models\ClientUser;
 use App\Models\Company;
 use App\Models\Contract;
 use App\Models\ContractVisitJustification;
@@ -1581,6 +1583,30 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'valor_do_aplicativo' => ['descricao' => 'Versao do aplicativo '.$marca],
                 'valor_do_servidor' => ['descricao' => 'Versao do servidor '.$marca],
                 'situacao' => 'aberto',
+            ]);
+
+            // Usuário do portal do cliente e a solicitação de atendimento que
+            // ele abre (Plano 15). Nenhum dos dois tem rota de CRUD direta
+            // ainda (só migrations e models na Task 15.1), então não entram
+            // em basesDeRecurso(): o objetivo aqui é só o model de domínio ter
+            // dado no cenário, mesmo critério já usado para
+            // invitation/onboardingStep acima.
+            $dados['clientUser'] = ClientUser::create([
+                'client_id' => $dados['client']->id,
+                'nome' => 'Usuario do portal '.$marca,
+                'email' => "portal-{$baixo}@exemplo.test",
+                'telefone' => '11900000000',
+                'ativo' => true,
+            ]);
+
+            $dados['clientRequest'] = ClientRequest::create([
+                'client_id' => $dados['client']->id,
+                'client_user_id' => $dados['clientUser']->id,
+                'address_id' => $dados['address']->id,
+                'assunto' => 'Duvida sobre visita '.$marca,
+                'descricao' => 'Descricao da solicitacao '.$marca,
+                'situacao' => ClientRequest::SITUACAO_ABERTA,
+                'prioridade' => ClientRequest::PRIORIDADE_NORMAL,
             ]);
 
             return $dados;

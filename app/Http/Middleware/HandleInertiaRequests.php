@@ -2,12 +2,14 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\ClientRequest;
 use App\Models\Company;
 use App\Services\AssumirTenantService;
 use App\Services\LimitesDoPlanoService;
 use App\Services\ModuleService;
 use App\Services\OnboardingService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -23,8 +25,6 @@ class HandleInertiaRequests extends Middleware
      * Determines the current asset version.
      *
      * @see https://inertiajs.com/asset-versioning
-     * @param  \Illuminate\Http\Request  $request
-     * @return string|null
      */
     public function version(Request $request): ?string
     {
@@ -35,8 +35,6 @@ class HandleInertiaRequests extends Middleware
      * Defines the props that are shared by default.
      *
      * @see https://inertiajs.com/shared-data
-     * @param  \Illuminate\Http\Request  $request
-     * @return array
      */
     public function share(Request $request): array
     {
@@ -60,6 +58,17 @@ class HandleInertiaRequests extends Middleware
             'avisos' => fn () => $this->avisosDeLimite($request),
             'modulos' => $this->modulosAtivos($request),
             'onboarding' => fn () => $this->onboardingDoTenant($request),
+            'solicitacoesAbertas' => fn () => $this->contagemDeSolicitacoesAbertas($request),
+
+            // Portal do cliente (Plano 15, Task 15.6): identidade visual do
+            // tenant e nome de quem está logado, para o cabeçalho e o rodapé
+            // de `PortalLayout.vue`. As duas ficam em closure, no mesmo
+            // padrão de `avisos`/`modulos` acima: só custam a leitura em
+            // navegação do portal, e a tela de login do portal (antes da
+            // autenticação) recebe sempre `null` nas duas, porque não há
+            // tenant resolvido ainda.
+            'empresa' => fn () => $this->brandingDoPortalCliente($request),
+            'clienteLogado' => fn () => $this->clienteLogadoNoPortal($request),
         ]);
     }
 
@@ -191,5 +200,93 @@ class HandleInertiaRequests extends Middleware
         $onboarding->avaliar($empresa);
 
         return $onboarding->situacao($empresa);
+    }
+
+    /**
+     * Quantidade de solicitações de atendimento abertas ou em atendimento do
+     * tenant corrente (Plano 15, Task 15.5), para o contador no menu do
+     * painel.
+     *
+     * Fica em closure, no mesmo padrão de `avisos`: só é calculada em
+     * navegação completa (ou parcial que peça a prop no `only`), nunca em
+     * toda requisição.
+     *
+     * Sem usuário autenticado (tela de login), sem tenant resolvido, ou sem
+     * a permissão `solicitacao-ver`, devolve zero: mostrar a contagem para
+     * quem não pode abrir a tela correspondente vazaria a existência de
+     * pendências que o usuário não tem acesso a ver.
+     */
+    private function contagemDeSolicitacoesAbertas(Request $request): int
+    {
+        $usuario = $request->user();
+
+        if ($usuario === null || ! $usuario->can('solicitacao-ver')) {
+            return 0;
+        }
+
+        try {
+            Company::current();
+        } catch (\Throwable) {
+            return 0;
+        }
+
+        return ClientRequest::query()
+            ->whereIn('situacao', [ClientRequest::SITUACAO_ABERTA, ClientRequest::SITUACAO_EM_ATENDIMENTO])
+            ->count();
+    }
+
+    /**
+     * Identidade visual e de contato da empresa do portal (Plano 15, Task
+     * 15.6), a partir do `ClientUser` autenticado no guard `cliente`.
+     *
+     * `null` fora do portal (guard `cliente` sem usuário) ou quando o tenant
+     * não resolve por qualquer motivo: `PortalLayout.vue` trata os dois casos
+     * caindo no verde padrão do sistema e num cabeçalho sem nome de empresa,
+     * nunca quebrando a página.
+     *
+     * Lacuna conhecida, documentada na Task 15.6: a tela de login do portal
+     * (`Portal/Auth/Login.vue`) é anterior à autenticação, então esta prop
+     * também sai `null` ali. Hoje não existe nenhum identificador de tenant na
+     * URL de `/portal/login` (sem subdomínio, sem slug), e o próprio desenho
+     * do login (Task 15.2, `PortalAuthController::autenticarPorCredenciais()`)
+     * testa a senha contra toda conta ativa com aquele e-mail em qualquer
+     * empresa - ou seja, nem o backend sabe qual é a empresa antes da senha
+     * ser conferida. Mostrar a marca certa *antes* do envio do formulário
+     * exigiria uma decisão de produto fora do escopo desta task (subdomínio
+     * ou slug por tenant na URL do portal).
+     */
+    private function brandingDoPortalCliente(Request $request): ?array
+    {
+        $clienteUser = Auth::guard('cliente')->user();
+
+        if ($clienteUser === null) {
+            return null;
+        }
+
+        try {
+            $empresa = Company::current();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $empresa->brandingDoPortal();
+    }
+
+    /**
+     * Nome do `ClientUser` autenticado no portal, para o cabeçalho de
+     * `PortalLayout.vue` ("nome do cliente logado" da Task 15.6). `null` fora
+     * do portal, mesmo critério de {@see self::brandingDoPortalCliente()}.
+     *
+     * @return array{nome: string}|null
+     */
+    private function clienteLogadoNoPortal(Request $request): ?array
+    {
+        $clienteUser = Auth::guard('cliente')->user();
+
+        if ($clienteUser === null) {
+            return null;
+        }
+
+        return ['nome' => $clienteUser->nome];
     }
 }

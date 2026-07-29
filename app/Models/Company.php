@@ -6,6 +6,7 @@ use App\Support\TenantAtual;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Company extends Model
 {
@@ -36,6 +37,12 @@ class Company extends Model
         'signature_operational_path',
         'signature_chemical_path',
         'signature_responsible_path',
+
+        // Identidade visual do portal do cliente (Plano 15, Task 15.6).
+        // Nenhum formulário grava aqui ainda: ver o docblock da migration
+        // `add_cores_de_marca_to_companies_table`.
+        'cor_primaria',
+        'cor_destaque',
 
         // Campos de plataforma (Plano 5). Só a área do super admin escreve
         // neles; o único endpoint de autoatendimento que atualiza a empresa
@@ -113,21 +120,56 @@ class Company extends Model
     }
 
     /**
+     * Identidade visual e dados de contato deste tenant, para o portal do
+     * cliente (Plano 15, Task 15.6).
+     *
+     * Duas chamadoras: o compartilhamento Inertia de toda página autenticada
+     * do portal (`HandleInertiaRequests`, prop `empresa`) e a tela pública de
+     * definir senha, que já resolve o tenant pelo token antes mesmo do login
+     * (`PortalAuthController::showDefinirSenha()`).
+     *
+     * `cor_primaria`/`cor_destaque` saem exatamente como estão no banco, sem
+     * validação de formato aqui: quem decide se é hexadecimal válido e cai no
+     * verde padrão do sistema é o frontend
+     * (`resources/js/utils/corDoPortal.js`), a única camada que de fato
+     * interpola o valor em CSS. Validar aqui não reduziria risco nenhum, e só
+     * duplicaria a regra.
+     *
+     * @return array{nome: string, logo_url: string|null, cor_primaria: string|null, cor_destaque: string|null, telefone: string|null, email: string|null}
+     */
+    public function brandingDoPortal(): array
+    {
+        return [
+            'nome' => $this->name,
+            'logo_url' => filled($this->logo_path) ? Storage::disk('public')->url($this->logo_path) : null,
+            'cor_primaria' => $this->cor_primaria,
+            'cor_destaque' => $this->cor_destaque,
+            'telefone' => $this->phone,
+            'email' => $this->email,
+        ];
+    }
+
+    /**
      * Get full formatted address
      */
     public function getFullAddressAttribute()
     {
         $parts = [];
-        if ($this->street)
+        if ($this->street) {
             $parts[] = $this->street;
-        if ($this->number)
+        }
+        if ($this->number) {
             $parts[] = $this->number;
-        if ($this->district)
+        }
+        if ($this->district) {
             $parts[] = $this->district;
-        if ($this->city)
+        }
+        if ($this->city) {
             $parts[] = "{$this->city}/{$this->state}";
-        if ($this->zip)
+        }
+        if ($this->zip) {
             $parts[] = "CEP: {$this->zip}";
+        }
 
         return implode(', ', $parts);
     }

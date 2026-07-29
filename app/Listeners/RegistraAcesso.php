@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Models\AccessLog;
+use App\Models\User;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Logout;
@@ -21,6 +22,15 @@ use Throwable;
  * nem dentro de detalhes. Os eventos nativos do Laravel (Login, Failed, Logout)
  * são disparados pelo próprio Auth::attempt()/Auth::logout() usados no
  * AuthController, então este listener é o único ponto de captura.
+ *
+ * Desde o Plano 15, o guard `cliente` (App\Models\ClientUser) também dispara
+ * Login/Logout, e `aoEntrar()`/`aoSair()` ignoram esse caso de propósito:
+ * `access_logs.user_id` é chave estrangeira para `users`, e o id de um
+ * ClientUser não corresponde a nenhuma linha lá. Sem a checagem de tipo, o
+ * insert ora falharia por violação de chave estrangeira (engolido em silêncio
+ * por `registrar()`), ora, pior, coincidiria por acaso com o id de um
+ * funcionário e atribuiria o acesso de um cliente a ele. Auditoria do acesso
+ * do portal é histórico próprio, de outro plano; não é este.
  */
 class RegistraAcesso
 {
@@ -33,6 +43,10 @@ class RegistraAcesso
 
     public function aoEntrar(Login $evento): void
     {
+        if (! $evento->user instanceof User) {
+            return;
+        }
+
         $this->registrar([
             'user_id' => $evento->user->getAuthIdentifier(),
             'email' => $evento->user->email,
@@ -57,6 +71,15 @@ class RegistraAcesso
 
     public function aoSair(Logout $evento): void
     {
+        // Diferente de Login, o Logout do Laravel dispara mesmo sem usuário
+        // (chamada de Auth::logout() sem sessão ativa) - esse caso continua
+        // sendo registrado como sempre foi, com user_id nulo. O que esta
+        // checagem ignora é só o outro Authenticatable do sistema
+        // (ClientUser, guard `cliente`), pelo motivo no cabeçalho da classe.
+        if ($evento->user !== null && ! $evento->user instanceof User) {
+            return;
+        }
+
         $this->registrar([
             'user_id' => $evento->user?->getAuthIdentifier(),
             'email' => $evento->user?->email ?? '',

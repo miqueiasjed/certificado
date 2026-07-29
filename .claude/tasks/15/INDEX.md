@@ -8,15 +8,15 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 15.1 | Migrations e models do acesso do cliente | backend-estrutura | ⏳ | média |
-| 15.2 | Autenticação: convite, senha e recuperação | backend-logica | ⏳ | alta |
-| 15.3 | Service do portal com escopo duplo | backend-logica | ⏳ | alta |
-| 15.4 | Endpoints de visitas, documentos, contratos e faturas | backend-endpoint | ⏳ | média |
-| 15.5 | Solicitação de atendimento e pendência na empresa | backend-endpoint | ⏳ | média |
-| 15.6 | Layout com identidade do tenant e telas de acesso | frontend-componente | ⏳ | alta |
-| 15.7 | Telas de visitas, documentos e contratos | frontend-pagina | ⏳ | alta |
-| 15.8 | Telas de pendências, faturas e solicitação | frontend-pagina | ⏳ | alta |
-| 15.9 | Testes de isolamento do portal | teste | ⏳ | alta |
+| 15.1 | Migrations e models do acesso do cliente | backend-estrutura | ✅ | média |
+| 15.2 | Autenticação: convite, senha e recuperação | backend-logica | ✅ | alta |
+| 15.3 | Service do portal com escopo duplo | backend-logica | ✅ | alta |
+| 15.4 | Endpoints de visitas, documentos, contratos e faturas | backend-endpoint | ✅ | média |
+| 15.5 | Solicitação de atendimento e pendência na empresa | backend-endpoint | ✅ | média |
+| 15.6 | Layout com identidade do tenant e telas de acesso | frontend-componente | ✅ | alta |
+| 15.7 | Telas de visitas, documentos e contratos | frontend-pagina | ✅ | alta |
+| 15.8 | Telas de pendências, faturas e solicitação | frontend-pagina | ✅ | alta |
+| 15.9 | Testes de isolamento do portal | teste | ✅ | alta |
 
 ## Ordem de execução
 

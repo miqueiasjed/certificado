@@ -15,6 +15,7 @@ use App\Http\Controllers\CashFlowController;
 use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\ChemicalGroupController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ClientRequestAdminController;
 use App\Http\Controllers\ContaSuspensaController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractVisitController;
@@ -703,6 +704,20 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
     Route::get('/notificacoes/{item}/whatsapp', [NotificationQueueController::class, 'whatsapp'])
         ->middleware('permission:notificacao-ver')
         ->name('notificacoes.whatsapp');
+
+    // Solicitações de atendimento abertas pelo cliente no portal (Plano 15,
+    // Task 15.5). solicitacao-responder cobre tanto responder quanto mudar a
+    // situação: as duas são ação de atendimento da mesma fila, e não faz
+    // sentido quem responde não poder marcar como resolvida (ou o inverso).
+    Route::get('/solicitacoes', [ClientRequestAdminController::class, 'index'])
+        ->middleware('permission:solicitacao-ver')
+        ->name('solicitacoes.index');
+    Route::post('/solicitacoes/{solicitacao}/responder', [ClientRequestAdminController::class, 'responder'])
+        ->middleware('permission:solicitacao-responder')
+        ->name('solicitacoes.responder');
+    Route::post('/solicitacoes/{solicitacao}/situacao', [ClientRequestAdminController::class, 'situacao'])
+        ->middleware('permission:solicitacao-responder')
+        ->name('solicitacoes.situacao');
 
     // Configurações da Empresa
     Route::get('/settings/company', [\App\Http\Controllers\CompanyController::class, 'edit'])->middleware('permission:empresa-configurar')->name('settings.company.edit');

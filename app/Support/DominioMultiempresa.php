@@ -43,6 +43,8 @@ final class DominioMultiempresa
         'budgets',
         'certificates',
         'chemical_groups',
+        'client_requests',
+        'client_users',
         'clients',
         'contract_visit_justifications',
         'contracts',
@@ -153,6 +155,8 @@ final class DominioMultiempresa
         \App\Models\Certificate::class,
         \App\Models\ChemicalGroup::class,
         \App\Models\Client::class,
+        \App\Models\ClientRequest::class,
+        \App\Models\ClientUser::class,
         \App\Models\Contract::class,
         \App\Models\ContractVisitJustification::class,
         \App\Models\DailyCashBalance::class,
@@ -473,6 +477,7 @@ final class DominioMultiempresa
         foreach (self::UNIQUES_A_COMPOR as $tabela => $esperada) {
             if (! self::tabelaExiste($tabela)) {
                 $naoEncontradas[] = "{$tabela}: tabela não existe";
+
                 continue;
             }
 
@@ -488,7 +493,7 @@ final class DominioMultiempresa
             }
 
             if (! $encontrada) {
-                $naoEncontradas[] = "{$tabela}: unique em (" . implode(', ', $global) . ') não encontrada';
+                $naoEncontradas[] = "{$tabela}: unique em (".implode(', ', $global).') não encontrada';
             }
         }
 
@@ -510,7 +515,7 @@ final class DominioMultiempresa
                     continue;
                 }
 
-                $naoDeclaradas[] = "{$tabela}.{$indice['name']} (" . implode(', ', $indice['columns']) . ')';
+                $naoDeclaradas[] = "{$tabela}.{$indice['name']} (".implode(', ', $indice['columns']).')';
             }
         }
 

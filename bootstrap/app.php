@@ -9,6 +9,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\InvalidSignatureException;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -19,6 +20,20 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
+        then: function () {
+            // Portal do cliente (Plano 15, Task 15.2): arquivo de rotas
+            // próprio, sob o prefixo `/portal`. Precisa ser registrado aqui, e
+            // não como um quarto parâmetro nomeado de withRouting(): só
+            // web/api/commands/channels/pages têm esse atalho embutido no
+            // framework. O grupo `web` dá a routes/portal.php a mesma sessão,
+            // cookies e verificação de CSRF que routes/web.php ganha sozinho
+            // pelo parâmetro `web:` acima - o guard muda (`cliente`, não
+            // `web`), mas o transporte por trás da sessão é o mesmo.
+            Route::middleware('web')
+                ->prefix('portal')
+                ->name('portal.')
+                ->group(base_path('routes/portal.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
@@ -78,6 +93,19 @@ return Application::configure(basePath: dirname(__DIR__))
             // verificação de acesso que não tem nada a ver com ela. Preso ao
             // grupo `auth`, o alcance é exatamente o mundo das empresas.
             'tenant.ativo' => \App\Http\Middleware\EnsureTenantIsActive::class,
+
+            // Portão único das rotas protegidas do portal do cliente (Plano
+            // 15, Task 15.2). routes/portal.php referencia a classe
+            // diretamente; o alias existe só para consistência com o resto
+            // desta lista.
+            'auth.cliente' => \App\Http\Middleware\AutenticarCliente::class,
+
+            // Módulo `portal_cliente` desligado para a empresa (Plano 15,
+            // Task 15.4): mesmo papel de `module`, mas com destino e texto
+            // endereçados ao cliente final, nunca ao funcionário (ver
+            // EnsurePortalModuleIsActive). routes/portal.php também referencia
+            // a classe diretamente; o alias existe só para consistência.
+            'module.portal' => \App\Http\Middleware\EnsurePortalModuleIsActive::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule) {

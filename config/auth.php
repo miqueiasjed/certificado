@@ -40,6 +40,13 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Portal do cliente (Plano 15): autentica contra client_users, uma
+        // tabela separada de users. O cliente final não é usuário do tenant.
+        'cliente' => [
+            'driver' => 'session',
+            'provider' => 'clientes',
+        ],
     ],
 
     /*
@@ -69,6 +76,13 @@ return [
         //     'driver' => 'database',
         //     'table' => 'users',
         // ],
+
+        // Provider do guard 'cliente' (Plano 15): aponta para client_users,
+        // nunca para users.
+        'clientes' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\ClientUser::class,
+        ],
     ],
 
     /*

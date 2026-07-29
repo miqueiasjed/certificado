@@ -41,6 +41,7 @@ class AppServiceProvider extends ServiceProvider
         $this->registrarObservadoresDeNotificacao();
         $this->limparTenantEntreJobsDaFila();
         $this->registrarLimiteDeSincronizacaoDoAplicativo();
+        $this->registrarLimiteDeLoginDoPortal();
     }
 
     /**
@@ -131,6 +132,34 @@ class AppServiceProvider extends ServiceProvider
                 ?? $request->ip();
 
             return Limit::perMinute(60)->by((string) $chave);
+        });
+    }
+
+    /**
+     * Limite de 5 tentativas de login por minuto, por e-mail E por IP, no
+     * portal do cliente (Plano 15, Task 15.2).
+     *
+     * As duas chaves valem ao mesmo tempo: `RateLimiter::for()` aceita
+     * devolver um array de `Limit`, e o Laravel exige que todos passem. Por
+     * e-mail, sozinho, deixaria um IP variar o e-mail tentado e nunca travar;
+     * por IP, sozinho, deixaria alguém atrás de um NAT compartilhado (rede de
+     * escritório, provedor móvel) travar sem ter feito nada. Juntas, cobrem o
+     * caso comum de força bruta (um IP testando muitos e-mails, ou um e-mail
+     * sendo testado de muitos IPs) sem punir o vizinho de rede de quem errou a
+     * própria senha duas vezes.
+     *
+     * Mesmo padrão de `registrarLimiteDeSincronizacaoDoAplicativo()`: limiter
+     * nomeado, aplicado nas rotas com `throttle:portal-login`.
+     */
+    private function registrarLimiteDeLoginDoPortal(): void
+    {
+        RateLimiter::for('portal-login', function (Request $request) {
+            $email = mb_strtolower(trim((string) $request->input('email')));
+
+            return [
+                Limit::perMinute(5)->by('portal-login-email:'.$email),
+                Limit::perMinute(5)->by('portal-login-ip:'.$request->ip()),
+            ];
         });
     }
 
