@@ -48,4 +48,14 @@ class Client extends Model
     {
         return $this->hasMany(WorkOrder::class);
     }
+
+    /**
+     * Títulos a receber deste cliente (Plano 18). O lado inverso de
+     * `Receivable::client()`, usado pela tela de contas a receber para montar
+     * o seletor só com quem tem cobrança.
+     */
+    public function receivables(): HasMany
+    {
+        return $this->hasMany(Receivable::class);
+    }
 }

@@ -6,6 +6,7 @@ use App\Models\Concerns\Auditavel;
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Log;
 
 class FinancialEntry extends Model
 {

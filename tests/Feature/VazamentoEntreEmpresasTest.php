@@ -11,6 +11,7 @@ use App\Models\AuditLog;
 use App\Models\BaitType;
 use App\Models\Budget;
 use App\Models\Certificate;
+use App\Models\ChartOfAccount;
 use App\Models\ChemicalGroup;
 use App\Models\Client;
 use App\Models\ClientRequest;
@@ -33,11 +34,15 @@ use App\Models\NotificationQueue;
 use App\Models\NotificationTemplate;
 use App\Models\OnboardingStep;
 use App\Models\OrganRegistration;
+use App\Models\Payable;
+use App\Models\PayableInstallment;
 use App\Models\PaymentDetail;
 use App\Models\PestSighting;
 use App\Models\Procedure;
 use App\Models\Product;
 use App\Models\ProductBatch;
+use App\Models\Receivable;
+use App\Models\ReceivableInstallment;
 use App\Models\Room;
 use App\Models\SatisfactionSurvey;
 use App\Models\Service;
@@ -46,6 +51,7 @@ use App\Models\ServiceType;
 use App\Models\StockBalance;
 use App\Models\StockLocation;
 use App\Models\StockMovement;
+use App\Models\Supplier;
 use App\Models\SyncConflict;
 use App\Models\SyncOperation;
 use App\Models\Technician;
@@ -1738,6 +1744,66 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'product_id' => $dados['product']->id,
                 'product_batch_id' => $dados['productBatch']->id,
                 'saldo_sistema' => '10.0000',
+            ]);
+
+            // Contas a receber e a pagar (Plano 18, Task 18.1). Sem rota de
+            // CRUD direta ainda (só migrations, models e ReceivableService na
+            // Task 18.3; os endpoints são a Task 18.7), então não entram em
+            // basesDeRecurso(): o objetivo aqui é só o model de domínio ter
+            // dado no cenário, mesmo critério já usado para
+            // stockLocation/productBatch acima. O código do plano de contas é
+            // propositalmente **igual** nos dois tenants, mesma razão do
+            // stockLocation: prova que a unique composta com company_id não
+            // impede a outra empresa de usar o mesmo código.
+            $dados['chartOfAccount'] = ChartOfAccount::create([
+                'codigo' => '1.1',
+                'nome' => 'Servicos '.$marca,
+                'tipo' => 'receita',
+                'ativo' => true,
+            ]);
+
+            $dados['supplier'] = Supplier::create([
+                'nome' => 'Fornecedor '.$marca,
+                'documento' => '44.444.444/0001-'.$this->sufixo($marca),
+                'email' => "fornecedor-{$baixo}@exemplo.test",
+                'telefone' => '11922220000',
+                'ativo' => true,
+            ]);
+
+            $dados['receivable'] = Receivable::create([
+                'client_id' => $dados['client']->id,
+                'work_order_id' => $dados['workOrder']->id,
+                'chart_of_account_id' => $dados['chartOfAccount']->id,
+                'descricao' => 'Titulo a receber '.$marca,
+                'valor_total' => '500.00',
+                'emitido_em' => '2026-07-05',
+                'situacao' => 'aberto',
+            ]);
+
+            $dados['receivableInstallment'] = ReceivableInstallment::create([
+                'receivable_id' => $dados['receivable']->id,
+                'numero' => 1,
+                'valor' => '500.00',
+                'vencimento' => '2026-08-05',
+                'situacao' => 'aberta',
+            ]);
+
+            $dados['payable'] = Payable::create([
+                'supplier_id' => $dados['supplier']->id,
+                'chart_of_account_id' => $dados['chartOfAccount']->id,
+                'descricao' => 'Titulo a pagar '.$marca,
+                'valor_total' => '300.00',
+                'emitido_em' => '2026-07-05',
+                'situacao' => 'aberto',
+                'recorrencia' => 'nenhuma',
+            ]);
+
+            $dados['payableInstallment'] = PayableInstallment::create([
+                'payable_id' => $dados['payable']->id,
+                'numero' => 1,
+                'valor' => '300.00',
+                'vencimento' => '2026-08-05',
+                'situacao' => 'aberta',
             ]);
 
             return $dados;

@@ -138,6 +138,50 @@ class SyncPermissions extends Command
                 'financeiro-saida-criar',
                 'financeiro-saida-editar',
                 'financeiro-saida-excluir',
+                // Estorno de recebimento já lançado no caixa (Plano 18, Task
+                // 18.4, `SettlementService::estornar()`). O arquivo da task
+                // pedia "financeiro.estornar", com ponto; vale o nome no
+                // padrão "recurso-acao" do resto do catálogo, mesma correção
+                // já aplicada às Tasks 14.6, 16.4 e 17.7. Por começar com
+                // "financeiro-", entra no papel `financeiro` pelo filtro por
+                // prefixo do RolesAndPermissionsSeeder, e no `administrador`,
+                // que recebe o catálogo inteiro; nenhum outro papel alcança
+                // dinheiro já lançado.
+                'financeiro-estornar',
+                // Títulos a receber e a pagar, e o plano de contas (Plano 18,
+                // Task 18.7). O arquivo da task pedia "financeiro.titulos" e
+                // "financeiro.plano_de_contas", com ponto; valem os nomes
+                // abaixo, no padrão "recurso-acao" do resto do catálogo, mesma
+                // correção já aplicada às Tasks 14.6, 16.4, 17.7 e 18.4.
+                //
+                // Três permissões e não uma, pelo alcance de cada ação:
+                //
+                // - `financeiro-titulos` cobre listar, criar e cancelar título
+                //   dos dois lados (receber e pagar) e alterar o valor de um
+                //   recorrente. Mexe no que a empresa tem a cobrar e a pagar,
+                //   sem tocar em dinheiro já lançado.
+                // - `financeiro-baixar` cobre a baixa, que é o que transforma
+                //   "o cliente pagou" em dinheiro no caixa. Separada de
+                //   `financeiro-titulos` porque quem cadastra a cobrança não é
+                //   necessariamente quem confirma o recebimento no extrato.
+                // - `financeiro-plano-de-contas` cobre a categorização. Mudar
+                //   a árvore de categorias reescreve todo relatório por
+                //   categoria, e por isso não anda junto do cadastro de título.
+                //
+                // O estorno reaproveita `financeiro-estornar`, já criado na
+                // Task 18.4: é a mesma ação (desfazer dinheiro já lançado) dos
+                // dois lados do caixa, e duplicar o nome só criaria a chance de
+                // um dos dois ficar de fora de um papel.
+                //
+                // As três começam com "financeiro-", então entram no papel
+                // `financeiro` pelo filtro por prefixo do
+                // `RolesAndPermissionsSeeder`, e no `administrador`, que recebe
+                // o catálogo inteiro. Nenhuma termina em "-ver", então o papel
+                // `leitura` não alcança nenhuma delas, pelo mesmo critério que
+                // já mantém `financeiro-ver` fora da leitura.
+                'financeiro-titulos',
+                'financeiro-baixar',
+                'financeiro-plano-de-contas',
             ],
             'pagamentos' => [
                 'pagamento-ver',

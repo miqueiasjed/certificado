@@ -1543,3 +1543,69 @@ ponto em nome de permissão está descrevendo a intenção, não a convenção
 real do `SyncPermissions::catalogo()`. Terceira vez que isso se repete;
 próximo plano que criar permissão nova pode passar direto para o formato
 hifenizado sem precisar redescobrir.
+
+## Plano 18 - Contas a receber e a pagar (29/07/2026)
+
+Concluído, 10 tasks, execução sequencial nos pontos críticos (18.1 → 18.3 →
+18.4 → 18.2 → 18.7) e paralela só onde as tasks não disputavam arquivo (18.5
+com 18.6; 18.8 com 18.9). Suíte fechou em 1028 testes, de 938 no início do
+plano.
+
+### A decisão mais importante do plano: nenhum painel financeiro trocou de fonte
+
+A Task 18.7 previa trocar a leitura dos painéis do `FinancialDashboardController`
+para o modelo novo de títulos. O subagente analisou os cinco painéis e decidiu
+**não trocar nenhum**, com prova: os painéis medem caixa (`financial_entries`,
+entradas e saídas por dia/forma/mês), e o modelo de título mede cobrança. As
+duas leituras divergem em três casos reais (parcela reaberta e paga de novo,
+recebimento antigo sem lançamento vinculado, lançamento manual sem título), e
+a Task escreveu dois testes que provam a divergência exata em vez de deixar a
+observação solta em texto. **Fica registrado para os Planos 19, 20 e 23** (que
+partem do título criado aqui): o caixa continua sendo `financial_entries`, e
+qualquer leitura nova de "quanto entrou/saiu" deve continuar vindo de lá, não
+dos títulos, até que a cauda legada (exceções da migração, reaberturas
+antigas) seja zerada e `IntegracaoComCaixa` ganhe uma origem própria por
+título - o que é uma migration em etapas sobre tabela com dado de produção,
+não uma troca de leitura simples.
+
+### Aritmética monetária centralizada em `App\Support\Dinheiro`
+
+Toda soma e divisão de dinheiro do plano (parcelamento, baixa parcial,
+conferência de totais, aging, previsão) passa por essa classe nova, sempre em
+centavos (inteiro), nunca em ponto flutuante. Ela nasceu na Task 18.4 e as
+tasks seguintes reaproveitaram em vez de reimplementar - vale como referência
+para qualquer cálculo de dinheiro em planos futuros (Plano 19, 20, 23).
+
+### `ConferenciaDeTotais` como padrão de migração financeira
+
+A Task 18.2 capturou um retrato de todos os totais visíveis antes de migrar,
+e comparou centavo a centavo depois, abortando com rollback em qualquer
+divergência. Esse padrão (retrato antes, comparação depois, abortar sem
+"quase bater") é candidato a reaproveitar em qualquer plano futuro que migre
+dado financeiro ou fiscal (Plano 20, nota fiscal).
+
+### Bug pego durante a Task 18.4: `FinancialEntry::updateDailyBalance()` sem import de `Log`
+
+`Log::error(...)` dentro do catch resolvia para `App\Models\Log` (inexistente),
+virando exceção fatal não capturável bem no caminho que deveria só registrar
+erro e seguir. Corrigido na hora (import de `Illuminate\Support\Facades\Log`),
+achado ao testar a integração com o caixa de ponta a ponta.
+
+### Teste de fuso com relógio ao meio-dia não prova nada sobre fronteira de dia
+
+A Task 18.10 encontrou que todos os testes de `AgingServiceTest` fixavam o
+relógio às 12:00:00, horário que nunca cruza a virada de dia entre UTC (fuso
+do servidor de teste) e América/São Paulo (UTC-3). Um teste assim não prova que
+a faixa é decidida pelo dia do negócio, só que bate por coincidência. **Regra
+que fica:** teste de comparação de data por fuso de negócio precisa fixar o
+relógio perto da virada de dia (ex.: `01:00:00` UTC, que já é o dia anterior
+em América/São Paulo), não num horário "seguro" que mascara o bug.
+
+### Convenção de permissão com hífen, quarta vez
+
+`financeiro-titulos`, `financeiro-baixar`, `financeiro-plano-de-contas` e
+`financeiro-estornar` (esta já existia da Task 18.4) seguem o padrão
+hifenizado de `SyncPermissions::catalogo()`, apesar de `.claude/tasks/18/*.md`
+escrever "financeiro.estornar" com ponto em mais de um arquivo. Mesma
+correção das Tasks 14.6, 16.4 e 17.7 - já são quatro planos seguidos com o
+mesmo desvio entre a especificação e o catálogo real.

@@ -21,10 +21,15 @@ class Technician extends Model
         'is_active',
         'notes',
         'user_id',
+        // Custo/hora (Plano 18, Task 18.6): base do custo de mão de obra na
+        // margem por OS. Nullable: sem o valor, WorkOrderMarginService zera o
+        // componente e marca a margem como parcial, em vez de inventar custo.
+        'custo_hora',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'custo_hora' => 'decimal:2',
     ];
 
     public function certificates(): HasMany

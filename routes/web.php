@@ -14,6 +14,7 @@ use App\Http\Controllers\CadastroEmpresaController;
 use App\Http\Controllers\CadastrosController;
 use App\Http\Controllers\CashFlowController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\ChartOfAccountController;
 use App\Http\Controllers\ChemicalGroupController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientRequestAdminController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\DeviceScanController;
 use App\Http\Controllers\EventTypeController;
 use App\Http\Controllers\FinancialDashboardController;
 use App\Http\Controllers\FinancialEntryController;
+use App\Http\Controllers\FinancialReportController;
 use App\Http\Controllers\FinancialWithdrawalController;
 use App\Http\Controllers\GatewayWebhookController;
 use App\Http\Controllers\InventoryController;
@@ -38,6 +40,7 @@ use App\Http\Controllers\NotificationQueueController;
 use App\Http\Controllers\NotificationTemplateController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OrganRegistrationController;
+use App\Http\Controllers\PayableController;
 use App\Http\Controllers\PaymentDetailController;
 use App\Http\Controllers\PestSightingController;
 use App\Http\Controllers\Plataforma\AssumirTenantController;
@@ -49,6 +52,7 @@ use App\Http\Controllers\Plataforma\TenantController as PlataformaTenantControll
 use App\Http\Controllers\Plataforma\UsageController as PlataformaUsageController;
 use App\Http\Controllers\ProductBatchController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ReceivableController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SatisfactionSurveyController;
 use App\Http\Controllers\ServiceController;
@@ -648,6 +652,97 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
 
     // Dashboard Financeiro
     Route::get('/financial-dashboard', [FinancialDashboardController::class, 'index'])->middleware(['permission:financeiro-ver', 'module:financeiro'])->name('financial-dashboard');
+
+    // Contas a receber, contas a pagar, plano de contas, inadimplência e
+    // previsão de caixa (Plano 18, Task 18.7).
+    //
+    // O `module:financeiro` fica no grupo, e não repetido rota a rota como no
+    // bloco financeiro acima: aqui o bloco inteiro nasce nesta task, então a
+    // garantia estrutural ("rota nova dentro do grupo já nasce bloqueada para
+    // tenant sem o módulo") vale mais que o paralelismo com as rotas antigas,
+    // que cresceram aos poucos e por isso carregam o middleware uma a uma.
+    // Mesmo arranjo já usado no bloco de estoque, abaixo.
+    //
+    // Quatro permissões, cada uma com um alcance diferente:
+    //
+    // - `financeiro-titulos`: listar, criar e cancelar título dos dois lados,
+    //   e alterar o valor de um recorrente. Mexe no que a empresa tem a cobrar
+    //   e a pagar, sem tocar em dinheiro já lançado.
+    // - `financeiro-baixar`: a baixa, que é o que transforma "o cliente pagou"
+    //   em dinheiro no caixa. Quem cadastra a cobrança não é necessariamente
+    //   quem confirma o recebimento no extrato.
+    // - `financeiro-estornar`: só o estorno, e ela já existia desde a Task
+    //   18.4. Rota separada da baixa de propósito: é a única ação que altera
+    //   caixa já fechado, e por isso não pode viajar junto da permissão que
+    //   qualquer operador de cobrança recebe.
+    // - `financeiro-ver`: a inadimplência e a previsão, que são leitura pura
+    //   do mesmo dinheiro que o painel financeiro e o fluxo de caixa já
+    //   mostram. Exigir permissão de título para *olhar* a inadimplência
+    //   deixaria de fora quem hoje já vê o painel.
+    //
+    // O plano de contas fica com `financeiro-plano-de-contas`, separada das
+    // demais: mudar a árvore de categorias reescreve todo relatório por
+    // categoria, e não anda junto do cadastro de título.
+    //
+    // As rotas de parcela ficam sob `/parcelas/{parcela}` (quatro segmentos) e
+    // não colidem com `/{titulo}/...` (três segmentos), então a ordem de
+    // registro aqui não importa, diferente do caso de `/contracts/pendencias`.
+    Route::middleware('module:financeiro')->group(function () {
+        Route::get('/contas-a-receber', [ReceivableController::class, 'index'])
+            ->middleware('permission:financeiro-titulos')
+            ->name('contas-a-receber.index');
+        Route::post('/contas-a-receber', [ReceivableController::class, 'store'])
+            ->middleware('permission:financeiro-titulos')
+            ->name('contas-a-receber.store');
+        Route::post('/contas-a-receber/{titulo}/cancelar', [ReceivableController::class, 'cancelar'])
+            ->middleware('permission:financeiro-titulos')
+            ->name('contas-a-receber.cancelar');
+        Route::post('/contas-a-receber/parcelas/{parcela}/baixar', [ReceivableController::class, 'baixar'])
+            ->middleware('permission:financeiro-baixar')
+            ->name('contas-a-receber.baixar');
+        Route::post('/contas-a-receber/parcelas/{parcela}/estornar', [ReceivableController::class, 'estornar'])
+            ->middleware('permission:financeiro-estornar')
+            ->name('contas-a-receber.estornar');
+
+        Route::get('/contas-a-pagar', [PayableController::class, 'index'])
+            ->middleware('permission:financeiro-titulos')
+            ->name('contas-a-pagar.index');
+        Route::post('/contas-a-pagar', [PayableController::class, 'store'])
+            ->middleware('permission:financeiro-titulos')
+            ->name('contas-a-pagar.store');
+        Route::post('/contas-a-pagar/{titulo}/cancelar', [PayableController::class, 'cancelar'])
+            ->middleware('permission:financeiro-titulos')
+            ->name('contas-a-pagar.cancelar');
+        Route::post('/contas-a-pagar/{titulo}/valor', [PayableController::class, 'alterarValor'])
+            ->middleware('permission:financeiro-titulos')
+            ->name('contas-a-pagar.valor');
+        Route::post('/contas-a-pagar/parcelas/{parcela}/baixar', [PayableController::class, 'baixar'])
+            ->middleware('permission:financeiro-baixar')
+            ->name('contas-a-pagar.baixar');
+        Route::post('/contas-a-pagar/parcelas/{parcela}/estornar', [PayableController::class, 'estornar'])
+            ->middleware('permission:financeiro-estornar')
+            ->name('contas-a-pagar.estornar');
+
+        Route::get('/financeiro/inadimplencia', [FinancialReportController::class, 'inadimplencia'])
+            ->middleware('permission:financeiro-ver')
+            ->name('financeiro.inadimplencia');
+        Route::get('/financeiro/previsao', [FinancialReportController::class, 'previsao'])
+            ->middleware('permission:financeiro-ver')
+            ->name('financeiro.previsao');
+
+        Route::get('/contas', [ChartOfAccountController::class, 'index'])
+            ->middleware('permission:financeiro-plano-de-contas')
+            ->name('contas.index');
+        Route::post('/contas', [ChartOfAccountController::class, 'store'])
+            ->middleware('permission:financeiro-plano-de-contas')
+            ->name('contas.store');
+        Route::put('/contas/{conta}', [ChartOfAccountController::class, 'update'])
+            ->middleware('permission:financeiro-plano-de-contas')
+            ->name('contas.update');
+        Route::delete('/contas/{conta}', [ChartOfAccountController::class, 'destroy'])
+            ->middleware('permission:financeiro-plano-de-contas')
+            ->name('contas.destroy');
+    });
 
     // `/daily-cash-balances` está listado como rota do módulo financeiro na
     // especificação desta task, mas `DailyCashBalanceController` não tem

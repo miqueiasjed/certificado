@@ -8,16 +8,16 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 18.1 | Migrations e models de título, fornecedor e contas | backend-estrutura | ⏳ | média |
-| 18.2 | Migração do financeiro atual com conferência | backend-logica | ⏳ | alta |
-| 18.3 | Geração de título a partir de OS e de contrato | backend-logica | ⏳ | alta |
-| 18.4 | Baixa total e parcial integrada ao caixa | backend-logica | ⏳ | alta |
-| 18.5 | Contas a pagar com recorrência | backend-logica | ⏳ | alta |
-| 18.6 | Aging, previsão de caixa e margem por OS | backend-logica | ⏳ | alta |
-| 18.7 | Endpoints e troca da leitura dos painéis | backend-endpoint | ⏳ | alta |
-| 18.8 | Telas de contas a receber e inadimplência | frontend-pagina | ⏳ | alta |
-| 18.9 | Telas de contas a pagar, contas e previsão | frontend-pagina | ⏳ | alta |
-| 18.10 | Testes financeiros e conferência da migração | teste | ⏳ | alta |
+| 18.1 | Migrations e models de título, fornecedor e contas | backend-estrutura | ✅ | média |
+| 18.2 | Migração do financeiro atual com conferência | backend-logica | ✅ | alta |
+| 18.3 | Geração de título a partir de OS e de contrato | backend-logica | ✅ | alta |
+| 18.4 | Baixa total e parcial integrada ao caixa | backend-logica | ✅ | alta |
+| 18.5 | Contas a pagar com recorrência | backend-logica | ✅ | alta |
+| 18.6 | Aging, previsão de caixa e margem por OS | backend-logica | ✅ | alta |
+| 18.7 | Endpoints e troca da leitura dos painéis | backend-endpoint | ✅ | alta |
+| 18.8 | Telas de contas a receber e inadimplência | frontend-pagina | ✅ | alta |
+| 18.9 | Telas de contas a pagar, contas e previsão | frontend-pagina | ✅ | alta |
+| 18.10 | Testes financeiros e conferência da migração | teste | ✅ | alta |
 
 ## Ordem de execução
 

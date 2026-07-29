@@ -61,7 +61,7 @@ bloqueio.
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
 | 17 | Estoque de produtos com lote, validade e custo | ✅ | 6, 13 | 10 |
-| 18 | Contas a receber e a pagar | ⏳ | 6, 17 | 10 |
+| 18 | Contas a receber e a pagar | ✅ | 6, 17 | 10 |
 | 19 | Cobrança recorrente dos clientes finais | ⏳ | 14, 15, 18 | 8 |
 | 20 | Nota fiscal de serviço | ⏳ | 18 | 7 |
 
