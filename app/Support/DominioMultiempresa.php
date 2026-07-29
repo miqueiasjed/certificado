@@ -75,6 +75,7 @@ final class DominioMultiempresa
         'work_order_adequations',
         'work_order_device_events',
         'work_order_photos',
+        'work_order_signatures',
         'work_orders',
     ];
 
@@ -187,6 +188,7 @@ final class DominioMultiempresa
         \App\Models\WorkOrderAdequation::class,
         \App\Models\WorkOrderDeviceEvent::class,
         \App\Models\WorkOrderPhoto::class,
+        \App\Models\WorkOrderSignature::class,
     ];
 
     /**
@@ -266,6 +268,13 @@ final class DominioMultiempresa
                 'indice' => 'technicians_user_id_unique',
                 'colunas' => ['user_id'],
                 'motivo' => 'Vínculo 1:1 com users. Como o usuário pertence a uma empresa só, o unique global não bloqueia o segundo tenant.',
+            ],
+        ],
+        'work_order_signatures' => [
+            [
+                'indice' => 'work_order_signatures_work_order_id_unique',
+                'colunas' => ['work_order_id'],
+                'motivo' => 'Vínculo 1:1 com work_orders (Plano 13): uma assinatura válida por OS. Como a OS já pertence a uma empresa só, o unique global não bloqueia o segundo tenant, mesmo raciocínio já registrado para technicians.user_id_unique.',
             ],
         ],
         'notification_queue' => [

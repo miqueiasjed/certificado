@@ -335,3 +335,80 @@ export async function aplicarResultados(resultados) {
         await removerDaFila(paraRemover);
     }
 }
+
+// -----------------------------------------------------------------------
+// Leitura por ordem e tipo (Task 13.8: adequações registradas nesta visita)
+// -----------------------------------------------------------------------
+
+/**
+ * Operações de um tipo específico já registradas para uma ordem, em qualquer
+ * situação da fila (`pendente`, `enviando`, `conflito` ou `falha`) - a lista
+ * "desta visita" que uma tela como `ListaDeAdequacoes.vue` (Task 13.8) mostra
+ * inclui tudo que ainda não foi confirmado pelo servidor, não só o que está
+ * pronto para envio agora.
+ *
+ * Uma vez sincronizada (`aplicada`/`duplicada`), a operação sai da fila e
+ * passa a existir só no servidor - esta função para de listá-la, por design:
+ * o papel dela é mostrar o que ainda é só local nesta visita, não o
+ * histórico completo da ordem (que pertence ao painel web).
+ */
+export async function listarPorOrdemETipo(workOrderId, tipo) {
+    const registros = await db.fila.where('work_order_id').equals(workOrderId).toArray();
+
+    return ordenarPorRegistradaEm(registros.filter((registro) => registro.tipo === tipo));
+}
+
+// -----------------------------------------------------------------------
+// Leitura por ordem, qualquer tipo (Task 13.6: pelo menos um registro nesta
+// visita, para liberar "Concluir visita")
+// -----------------------------------------------------------------------
+
+/**
+ * Todas as operações desta ordem, de qualquer tipo, em qualquer situação da
+ * fila. Mesma regra de `listarPorOrdemETipo()` acima (uma vez sincronizada, a
+ * operação sai da fila e desta lista) - usada pela tela de Execução (Task
+ * 13.6) para saber se a OS já tem pelo menos um registro do técnico nesta
+ * visita, condição para liberar "Concluir visita", e para saber se a
+ * execução já foi iniciada localmente antes de qualquer sincronização.
+ */
+export async function listarPelaOrdem(workOrderId) {
+    const registros = await db.fila.where('work_order_id').equals(workOrderId).toArray();
+
+    return ordenarPorRegistradaEm(registros);
+}
+
+// -----------------------------------------------------------------------
+// Edição de uma operação ainda não enviada (Task 13.6)
+// -----------------------------------------------------------------------
+
+/**
+ * Atualiza o payload de uma operação que ainda está `pendente` (nunca chegou
+ * a sair para o servidor), no lugar, sem trocar o uuid nem mexer em
+ * `registrada_em`.
+ *
+ * Existe para "reabrir um registro já feito nesta visita e editar", sem criar
+ * um segundo: o aplicador do servidor (`AplicadorDeEventoDeDispositivo`, por
+ * exemplo) sempre GRAVA um registro novo a cada operação aplicada, nunca faz
+ * upsert, então reenviar como uma segunda operação criaria uma duplicata do
+ * lado de lá. Enquanto a operação segue `pendente` neste aparelho, ela ainda
+ * não existe no servidor, e por isso pode ser corrigida em paz.
+ *
+ * Devolve `false`, sem tocar em nada, quando a operação não existe mais ou já
+ * não está mais `pendente` (`enviando`, `conflito`, `falha`, ou já foi
+ * confirmada e saiu da fila): nesses casos, quem chama precisa enfileirar uma
+ * operação nova em vez de editar - lacuna aceita nesta task (documentada em
+ * `RegistroDeEvento.vue`), porque o aplicador atual não tem como fazer upsert
+ * num registro que o servidor já recebeu.
+ */
+export async function atualizarPendente(uuid, payload) {
+    const registro = await db.fila.get(uuid);
+
+    if (!registro || registro.situacao !== 'pendente') {
+        return false;
+    }
+
+    await db.fila.update(uuid, { payload });
+    notificar();
+
+    return true;
+}

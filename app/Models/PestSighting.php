@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PestSighting extends Model
 {
-    use HasFactory, BelongsToCompany;
+    use BelongsToCompany, HasFactory;
 
     protected $fillable = [
         'address_id',
@@ -25,11 +25,22 @@ class PestSighting extends Model
         'control_measures_applied',
         'technician_notes',
         'active',
+        // Plano 13, Task 13.2: quantidade estimada da praga, produto aplicado
+        // e instante do celular, gravados pelo aplicativo do técnico via
+        // sincronização.
+        'estimated_quantity',
+        'applied_product',
+        'applied_product_quantity',
+        'registrada_em',
     ];
 
     protected $casts = [
         'sighting_date' => 'datetime',
         'active' => 'boolean',
+        // Instante do celular: gravado em UTC e convertido na exibição.
+        'registrada_em' => 'datetime',
+        'estimated_quantity' => 'integer',
+        'applied_product_quantity' => 'decimal:2',
     ];
 
     /**
@@ -61,7 +72,7 @@ class PestSighting extends Model
      */
     public function getPestTypeTextAttribute(): string
     {
-        return match($this->pest_type) {
+        return match ($this->pest_type) {
             'rats' => 'Ratos',
             'mice' => 'Camundongos',
             'cockroaches' => 'Baratas',
@@ -84,7 +95,7 @@ class PestSighting extends Model
      */
     public function getSeverityLevelTextAttribute(): string
     {
-        return match($this->severity_level) {
+        return match ($this->severity_level) {
             'low' => 'Baixa',
             'medium' => 'Média',
             'high' => 'Alta',
@@ -98,7 +109,7 @@ class PestSighting extends Model
      */
     public function getSeverityLevelColorAttribute(): string
     {
-        return match($this->severity_level) {
+        return match ($this->severity_level) {
             'low' => 'green',
             'medium' => 'yellow',
             'high' => 'orange',

@@ -2,13 +2,85 @@
 
 namespace App\Services;
 
+use App\Exceptions\OsTravadaException;
 use App\Models\WorkOrder;
+use App\Support\BusinessDate;
+use Closure;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\URL;
 use RuntimeException;
 
 class WorkOrderService
 {
+    /**
+     * Nível de aninhamento do modo que ignora o travamento de OS assinada.
+     *
+     * Contador, e não booleano, no mesmo padrão de
+     * `App\Support\TenantAtual::$nivelSemEscopo`: uma chamada aninhada a
+     * `comTravamentoIgnorado()` (por exemplo, um `$alteracao` que por sua vez
+     * chama outro método guardado) não pode religar a guarda cedo demais ao
+     * sair do nível mais interno.
+     *
+     * Estático de propósito: `WorkOrderSignatureService::corrigirComJustificativa()`
+     * e o método que ela guarda (`updateWorkOrder()`, por exemplo) podem
+     * chegar por instâncias diferentes deste Service, resolvidas cada uma
+     * pelo container. Um sinalizador de instância não seria visto pela outra
+     * instância; o estado estático é visto por todas, no mesmo processo.
+     */
+    private static int $nivelIgnorandoTravamento = 0;
+
+    /**
+     * PORTA DE EMERGÊNCIA: executa o callback com a guarda de OS travada
+     * temporariamente desligada para os métodos deste Service.
+     *
+     * Único chamador autorizado: `WorkOrderSignatureService::corrigirComJustificativa()`,
+     * que já exige a permissão `os.corrigir_assinada` e a justificativa
+     * registrada em auditoria antes de chegar aqui. Nenhum controller, job ou
+     * outro Service deve chamar isto diretamente.
+     *
+     * Mecanismo escolhido (documentado na Task 13.3): em vez de acrescentar um
+     * parâmetro `bool $ignorarTravamento = false` em cada método guardado, um
+     * "modo" temporário deixa o callback de `corrigirComJustificativa()` livre
+     * para chamar `updateWorkOrder()`/`updateStatus()`/`markAsCompleted()` com
+     * a assinatura normal, sem o chamador precisar saber deste detalhe.
+     *
+     * Desliga-se sozinho ao sair do callback, inclusive em caso de exceção.
+     */
+    public static function comTravamentoIgnorado(Closure $callback): mixed
+    {
+        self::$nivelIgnorandoTravamento++;
+
+        try {
+            return $callback();
+        } finally {
+            self::$nivelIgnorandoTravamento--;
+        }
+    }
+
+    /**
+     * Recusa alterar uma OS travada pelo caminho comum (Task 13.3).
+     *
+     * Escopo desta guarda: só os métodos de **atualização** de uma OS já
+     * existente (`updateWorkOrder`, `updateStatus`, `markAsCompleted`), como
+     * a Task 13.3 e o teste que percorre esses métodos (Task 13.10) declaram.
+     * `deleteWorkOrder()` fica deliberadamente fora: excluir é "exclusão", não
+     * "atualização", tem a própria permissão (`ordem-servico-excluir`) e hoje
+     * roda sem `try/catch` em `WorkOrderController::destroy()` (uma exceção
+     * ali viraria erro 500 cru, não uma mensagem tratada). Vale revisitar se
+     * excluir uma OS assinada também deveria passar por correção justificada,
+     * mas isso é decisão para outra task, não para esta.
+     */
+    private function garantirQueNaoEstaTravada(WorkOrder $workOrder): void
+    {
+        if (self::$nivelIgnorandoTravamento > 0) {
+            return;
+        }
+
+        if ($workOrder->estaTravada()) {
+            throw OsTravadaException::paraOrdem($workOrder);
+        }
+    }
+
     /**
      * Validade do link assinado do recibo, em dias.
      *
@@ -23,6 +95,7 @@ class WorkOrderService
      * `ordem-servico-ver` reabre a OS e o botão emite um link novo.
      */
     public const DIAS_DE_VALIDADE_DO_LINK_DO_RECIBO = 7;
+
     /**
      * Create a new work order.
      */
@@ -39,12 +112,12 @@ class WorkOrderService
         $workOrder = $this->criarComNumeroDeOrdemUnico($data);
 
         // Sincronizar técnicos
-        if (!empty($technicians)) {
+        if (! empty($technicians)) {
             $technicians = array_filter($technicians, function ($id) {
-                return !empty($id);
+                return ! empty($id);
             });
 
-            if (!empty($technicians)) {
+            if (! empty($technicians)) {
                 $syncData = [];
                 foreach ($technicians as $index => $technicianId) {
                     $syncData[$technicianId] = ['is_primary' => $index === 0];
@@ -54,14 +127,14 @@ class WorkOrderService
         }
 
         // Sincronizar produtos
-        if (!empty($products)) {
+        if (! empty($products)) {
             $syncData = [];
             foreach ($products as $product) {
-                if (!empty($product['id'])) {
+                if (! empty($product['id'])) {
                     $syncData[$product['id']] = [
                         'quantity' => $product['quantity'] ?? null,
                         'unit' => $product['unit'] ?? null,
-                        'observations' => $product['observations'] ?? null
+                        'observations' => $product['observations'] ?? null,
                     ];
                 }
             }
@@ -69,12 +142,12 @@ class WorkOrderService
         }
 
         // Sincronizar serviços
-        if (!empty($services)) {
+        if (! empty($services)) {
             $syncData = [];
             foreach ($services as $service) {
-                if (!empty($service['id'])) {
+                if (! empty($service['id'])) {
                     $syncData[$service['id']] = [
-                        'observations' => $service['observations'] ?? null
+                        'observations' => $service['observations'] ?? null,
                     ];
                 }
             }
@@ -82,10 +155,10 @@ class WorkOrderService
         }
 
         // Sincronizar cômodos
-        if (!empty($rooms)) {
+        if (! empty($rooms)) {
             $syncData = [];
             foreach ($rooms as $room) {
-                if (!empty($room['id'])) {
+                if (! empty($room['id'])) {
                     $syncData[$room['id']] = [
                         'observation' => $room['observation'] ?? null,
                         'event_type_id' => $room['event_type'] ?? null,
@@ -104,20 +177,20 @@ class WorkOrderService
         }
 
         // Processar dispositivos e seus eventos
-        if (!empty($devices)) {
+        if (! empty($devices)) {
             foreach ($devices as $deviceData) {
-                if (!empty($deviceData['id'])) {
+                if (! empty($deviceData['id'])) {
                     // Salvar dispositivo na OS (mesmo sem eventos)
                     $workOrder->devices()->syncWithoutDetaching([
                         $deviceData['id'] => [
-                            'observation' => $deviceData['observation'] ?? null
-                        ]
+                            'observation' => $deviceData['observation'] ?? null,
+                        ],
                     ]);
 
                     // Salvar eventos do dispositivo (se houver)
-                    if (!empty($deviceData['device_events']) && is_array($deviceData['device_events'])) {
+                    if (! empty($deviceData['device_events']) && is_array($deviceData['device_events'])) {
                         foreach ($deviceData['device_events'] as $deviceEvent) {
-                            if (!empty($deviceEvent['event_type']) && !empty($deviceEvent['event_date'])) {
+                            if (! empty($deviceEvent['event_type']) && ! empty($deviceEvent['event_date'])) {
                                 \App\Models\WorkOrderDeviceEvent::create([
                                     'work_order_id' => $workOrder->id,
                                     'device_id' => $deviceData['id'],
@@ -185,6 +258,8 @@ class WorkOrderService
      */
     public function updateWorkOrder(WorkOrder $workOrder, array $data): bool
     {
+        $this->garantirQueNaoEstaTravada($workOrder);
+
         $technicians = $data['technicians'] ?? [];
         $products = $data['products'] ?? [];
         $services = $data['services'] ?? [];
@@ -196,12 +271,12 @@ class WorkOrderService
         $result = $workOrder->update($data);
 
         // Sincronizar técnicos
-        if (!empty($technicians)) {
+        if (! empty($technicians)) {
             $technicians = array_filter($technicians, function ($id) {
-                return !empty($id);
+                return ! empty($id);
             });
 
-            if (!empty($technicians)) {
+            if (! empty($technicians)) {
                 $syncData = [];
                 foreach ($technicians as $index => $technicianId) {
                     $syncData[$technicianId] = ['is_primary' => $index === 0];
@@ -211,14 +286,14 @@ class WorkOrderService
         }
 
         // Sincronizar produtos
-        if (!empty($products)) {
+        if (! empty($products)) {
             $syncData = [];
             foreach ($products as $product) {
-                if (!empty($product['id'])) {
+                if (! empty($product['id'])) {
                     $syncData[$product['id']] = [
                         'quantity' => $product['quantity'] ?? null,
                         'unit' => $product['unit'] ?? null,
-                        'observations' => $product['observations'] ?? null
+                        'observations' => $product['observations'] ?? null,
                     ];
                 }
             }
@@ -226,12 +301,12 @@ class WorkOrderService
         }
 
         // Sincronizar serviços
-        if (!empty($services)) {
+        if (! empty($services)) {
             $syncData = [];
             foreach ($services as $service) {
-                if (!empty($service['id'])) {
+                if (! empty($service['id'])) {
                     $syncData[$service['id']] = [
-                        'observations' => $service['observations'] ?? null
+                        'observations' => $service['observations'] ?? null,
                     ];
                 }
             }
@@ -239,10 +314,10 @@ class WorkOrderService
         }
 
         // Sincronizar cômodos
-        if (!empty($rooms)) {
+        if (! empty($rooms)) {
             $syncData = [];
             foreach ($rooms as $room) {
-                if (!empty($room['id'])) {
+                if (! empty($room['id'])) {
                     $syncData[$room['id']] = [
                         'observation' => $room['observation'] ?? null,
                         'event_type_id' => $room['event_type'] ?? null,
@@ -261,13 +336,13 @@ class WorkOrderService
         }
 
         // Processar dispositivos e seus eventos
-        if (!empty($devices)) {
+        if (! empty($devices)) {
             $syncData = [];
             foreach ($devices as $deviceData) {
-                if (!empty($deviceData['id'])) {
+                if (! empty($deviceData['id'])) {
                     // Preparar dados para sincronização
                     $syncData[$deviceData['id']] = [
-                        'observation' => $deviceData['observation'] ?? null
+                        'observation' => $deviceData['observation'] ?? null,
                     ];
                 }
             }
@@ -279,9 +354,9 @@ class WorkOrderService
 
             // Processar eventos dos dispositivos
             foreach ($devices as $deviceData) {
-                if (!empty($deviceData['id']) && !empty($deviceData['device_events']) && is_array($deviceData['device_events'])) {
+                if (! empty($deviceData['id']) && ! empty($deviceData['device_events']) && is_array($deviceData['device_events'])) {
                     foreach ($deviceData['device_events'] as $deviceEvent) {
-                        if (!empty($deviceEvent['event_type']) && !empty($deviceEvent['event_date'])) {
+                        if (! empty($deviceEvent['event_type']) && ! empty($deviceEvent['event_date'])) {
                             \App\Models\WorkOrderDeviceEvent::create([
                                 'work_order_id' => $workOrder->id,
                                 'device_id' => $deviceData['id'],
@@ -439,12 +514,12 @@ class WorkOrderService
 
         do {
             $nextId = $maiorNumero + 1 + $attempts;
-            $orderNumber = 'OS' . str_pad($nextId, 6, '0', STR_PAD_LEFT);
+            $orderNumber = 'OS'.str_pad($nextId, 6, '0', STR_PAD_LEFT);
 
             // Check if this order number already exists
             $exists = WorkOrder::where('order_number', $orderNumber)->exists();
 
-            if (!$exists) {
+            if (! $exists) {
                 return $orderNumber;
             }
 
@@ -452,12 +527,12 @@ class WorkOrderService
 
             // Se atingir o limite de tentativas, usar timestamp para garantir unicidade
             if ($attempts >= $maxAttempts) {
-                return 'OS' . str_pad($nextId, 6, '0', STR_PAD_LEFT) . '-' . time();
+                return 'OS'.str_pad($nextId, 6, '0', STR_PAD_LEFT).'-'.time();
             }
         } while ($attempts < $maxAttempts);
 
         // Fallback: usar timestamp
-        return 'OS' . date('YmdHis');
+        return 'OS'.date('YmdHis');
     }
 
     /**
@@ -490,17 +565,18 @@ class WorkOrderService
      */
     public function updateStatus(WorkOrder $workOrder, string $status): bool
     {
+        $this->garantirQueNaoEstaTravada($workOrder);
+
         return $workOrder->update(['status' => $status]);
     }
 
     /**
      * Mark work order as completed.
      */
-    /**
-     * Mark work order as completed.
-     */
     public function markAsCompleted(WorkOrder $workOrder, array $data = []): bool
     {
+        $this->garantirQueNaoEstaTravada($workOrder);
+
         $data['status'] = 'completed';
         $data['end_time'] = now();
 
@@ -518,6 +594,7 @@ class WorkOrderService
             'address.client',
             'technician',
             'technicians',
+            'signature',
             'products' => function ($query) {
                 $query->withPivot(['quantity', 'unit', 'observations']);
             },
@@ -533,7 +610,7 @@ class WorkOrderService
                     'pest_sighting_date',
                     'pest_location',
                     'pest_quantity',
-                    'pest_observation'
+                    'pest_observation',
                 ]);
             },
             'devices' => function ($query) {
@@ -581,6 +658,8 @@ class WorkOrderService
         }
         $roomEventPhotosByRoomId = $roomEventPhotos->groupBy('room_id');
 
+        $assinaturaCliente = $this->prepararAssinaturaClienteParaPdf($workOrder);
+
         return [
             'workOrder' => $workOrder,
             'roomEventPhotosByRoomId' => $roomEventPhotosByRoomId,
@@ -590,6 +669,68 @@ class WorkOrderService
             'logoSrc' => $this->convertStorageFileToBase64($company->logo_path),
             'chemSrc' => $this->convertStorageFileToBase64($company->signature_chemical_path),
             'opSrc' => $this->convertStorageFileToBase64($company->signature_operational_path),
+            'assinaturaClienteSrc' => $assinaturaCliente['src'],
+            'assinaturaClienteDataHora' => $assinaturaCliente['dataHora'],
+            'assinaturaClienteRecusaData' => $assinaturaCliente['recusaData'],
+            'assinaturaClienteCoordenadas' => $assinaturaCliente['coordenadas'],
+        ];
+    }
+
+    /**
+     * Dados já formatados da assinatura do cliente para o rodapé do PDF da OS
+     * (Task 13.5).
+     *
+     * A imagem sai do disco pelo `imagem_path`, no mesmo padrão de
+     * `convertStorageFileToBase64()` já usado para a assinatura do responsável
+     * técnico (nunca base64 embutido a partir de uma leitura ad-hoc). Data e
+     * hora saem já formatadas no fuso do negócio (`BusinessDate`): a view
+     * Blade nunca formata data, conforme a skill `datas-timezone`.
+     *
+     * Devolve tudo nulo quando a OS não tem assinatura coletada
+     * (`situacao_assinatura === 'nao_coletada'`), para que o bloco de
+     * assinatura do cliente no PDF permaneça exatamente como era antes desta
+     * task.
+     *
+     * @return array{src: ?string, dataHora: ?string, recusaData: ?string, coordenadas: ?string}
+     */
+    private function prepararAssinaturaClienteParaPdf(WorkOrder $workOrder): array
+    {
+        $assinatura = $workOrder->signature;
+
+        $src = null;
+        $dataHora = null;
+
+        if ($workOrder->situacao_assinatura === 'assinada' && $assinatura) {
+            $src = $this->convertStorageFileToBase64($assinatura->imagem_path);
+
+            if ($assinatura->coletada_em) {
+                $instante = BusinessDate::paraFusoNegocio($assinatura->coletada_em);
+                $dataHora = $instante->format('d/m/Y').' às '.$instante->format('H\hi');
+            }
+        }
+
+        $recusaData = null;
+
+        if ($workOrder->situacao_assinatura === 'recusada' && $workOrder->recusa_registrada_em) {
+            $recusaData = BusinessDate::paraFusoNegocio($workOrder->recusa_registrada_em)->format('d/m/Y');
+        }
+
+        $coordenadas = null;
+
+        if ($assinatura && $assinatura->latitude !== null && $assinatura->longitude !== null) {
+            $lat = number_format((float) $assinatura->latitude, 4);
+            $lng = number_format((float) $assinatura->longitude, 4);
+
+            $coordenadas = $assinatura->precisao_metros !== null
+                ? sprintf('Coleta registrada em %s, %s (precisão de %s m)', $lat, $lng, $assinatura->precisao_metros)
+                : sprintf('Coleta registrada em %s, %s', $lat, $lng);
+        }
+
+        return [
+            'src' => $src,
+            'dataHora' => $dataHora,
+            'recusaData' => $recusaData,
+            'coordenadas' => $coordenadas,
         ];
     }
 
@@ -658,11 +799,11 @@ class WorkOrderService
             'address',
             'paymentDetails' => function ($query) {
                 $query->whereNotNull('payment_date')->orderBy('payment_date', 'desc');
-            }
+            },
         ]);
 
         $totalPaid = $workOrder->paymentDetails->sum('amount_paid');
-        $receiptNumber = 'REC-' . str_pad($workOrder->id, 6, '0', STR_PAD_LEFT) . '-' . date('Ymd');
+        $receiptNumber = 'REC-'.str_pad($workOrder->id, 6, '0', STR_PAD_LEFT).'-'.date('Ymd');
         $company = \App\Models\Company::current();
 
         return [
@@ -680,13 +821,13 @@ class WorkOrderService
      */
     private function convertStorageFileToBase64(?string $path): ?string
     {
-        if (!$path) {
+        if (! $path) {
             return null;
         }
 
-        $fullPath = storage_path('app/public/' . $path);
+        $fullPath = storage_path('app/public/'.$path);
 
-        if (!file_exists($fullPath)) {
+        if (! file_exists($fullPath)) {
             return null;
         }
 
@@ -702,7 +843,7 @@ class WorkOrderService
             default => 'application/octet-stream',
         };
 
-        return 'data:' . $mime . ';base64,' . base64_encode($data);
+        return 'data:'.$mime.';base64,'.base64_encode($data);
     }
 
     /**
@@ -710,13 +851,13 @@ class WorkOrderService
      */
     private function convertStorageFileToPdfPhotoBase64(?string $path): ?string
     {
-        if (!$path || !extension_loaded('gd')) {
+        if (! $path || ! extension_loaded('gd')) {
             return $this->convertStorageFileToBase64($path);
         }
 
-        $fullPath = storage_path('app/public/' . $path);
+        $fullPath = storage_path('app/public/'.$path);
 
-        if (!file_exists($fullPath)) {
+        if (! file_exists($fullPath)) {
             return null;
         }
 
@@ -728,7 +869,7 @@ class WorkOrderService
             default => false,
         };
 
-        if (!$source) {
+        if (! $source) {
             return $this->convertStorageFileToBase64($path);
         }
 
@@ -778,7 +919,7 @@ class WorkOrderService
         imagedestroy($source);
         imagedestroy($thumb);
 
-        return $data ? 'data:image/jpeg;base64,' . base64_encode($data) : null;
+        return $data ? 'data:image/jpeg;base64,'.base64_encode($data) : null;
     }
 
     private function applyImageOrientation(\GdImage $image, string $path): \GdImage

@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class WorkOrder extends Model
 {
-    use HasFactory, Auditavel, BelongsToCompany;
+    use Auditavel, BelongsToCompany, HasFactory;
 
     protected $fillable = [
         'client_id',
@@ -38,6 +39,10 @@ class WorkOrder extends Model
         'payment_status',
         'completion_notes',
         'active',
+        'situacao_assinatura',
+        'assinada_em',
+        'recusa_motivo',
+        'recusa_registrada_em',
     ];
 
     protected $casts = [
@@ -54,6 +59,10 @@ class WorkOrder extends Model
         'total_cost' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'final_amount' => 'decimal:2',
+        // Instantes da assinatura: gravados em UTC, convertidos para o fuso
+        // do negócio só na exibição, via BusinessDate.
+        'assinada_em' => 'datetime',
+        'recusa_registrada_em' => 'datetime',
     ];
 
     protected $appends = [
@@ -165,19 +174,19 @@ class WorkOrder extends Model
     public function rooms(): BelongsToMany
     {
         return $this->belongsToMany(Room::class, 'work_order_room')
-                    ->withPivot([
-                        'observation',
-                        'event_type_id',
-                        'event_date',
-                        'event_description',
-                        'event_observations',
-                        'pest_type',
-                        'pest_sighting_date',
-                        'pest_location',
-                        'pest_quantity',
-                        'pest_observation'
-                    ])
-                    ->withTimestamps();
+            ->withPivot([
+                'observation',
+                'event_type_id',
+                'event_date',
+                'event_description',
+                'event_observations',
+                'pest_type',
+                'pest_sighting_date',
+                'pest_location',
+                'pest_quantity',
+                'pest_observation',
+            ])
+            ->withTimestamps();
     }
 
     /**
@@ -208,13 +217,57 @@ class WorkOrder extends Model
         return $this->hasMany(WorkOrderPhoto::class);
     }
 
+    /**
+     * Assinatura do cliente coletada em campo para esta OS (Plano 13).
+     */
+    public function signature(): HasOne
+    {
+        return $this->hasOne(WorkOrderSignature::class);
+    }
+
+    /**
+     * A OS está travada para edição pelo caminho comum?
+     *
+     * Verdadeiro só quando a assinatura foi coletada (`situacao_assinatura ===
+     * 'assinada'`). OS com assinatura recusada não entra aqui: recusa é
+     * situação própria, o serviço foi prestado e o documento ainda precisa ser
+     * fechado pelo escritório (ver `WorkOrderSignatureService::registrarRecusa`,
+     * Task 13.3).
+     */
+    public function estaTravada(): bool
+    {
+        return $this->situacao_assinatura === 'assinada';
+    }
+
+    /**
+     * A OS pode ser editada pelo caminho comum de atualização?
+     *
+     * É o oposto lógico de `estaTravada()`: falso só com assinatura coletada.
+     * Decisão registrada aqui porque não é óbvia à primeira vista: OS com
+     * assinatura **recusada** continua editável de propósito, mesmo já tendo
+     * passado pela tentativa de coleta, porque a recusa não trava (a mesma
+     * regra de `estaTravada()`) e o escritório ainda precisa fechar o
+     * atendimento. Não existe nuance adicional além dessa: nenhum outro campo
+     * (status, active, etc.) participa desta decisão, porque o travamento
+     * desta task é especificamente o da assinatura.
+     *
+     * A liberação de edição de uma OS assinada existe, mas não é esta: é o
+     * caminho de correção com justificativa
+     * (`WorkOrderSignatureService::corrigirComJustificativa`, Task 13.3), que
+     * grava na auditoria quem alterou, o antes, o depois e o motivo. Este
+     * acessor reflete só o caminho comum de edição, não o de correção.
+     */
+    public function getPodeSerEditadaAttribute(): bool
+    {
+        return ! $this->estaTravada();
+    }
 
     /**
      * Get the order type as a readable string.
      */
     public function getOrderTypeTextAttribute(): string
     {
-        return match($this->order_type) {
+        return match ($this->order_type) {
             'preventive' => 'Preventiva',
             'corrective' => 'Corretiva',
             'emergency' => 'Emergência',
@@ -230,7 +283,7 @@ class WorkOrder extends Model
      */
     public function getPriorityLevelTextAttribute(): string
     {
-        return match($this->priority_level) {
+        return match ($this->priority_level) {
             'low' => 'Baixa',
             'medium' => 'Média',
             'high' => 'Alta',
@@ -245,7 +298,7 @@ class WorkOrder extends Model
      */
     public function getPriorityLevelColorAttribute(): string
     {
-        return match($this->priority_level) {
+        return match ($this->priority_level) {
             'low' => 'green',
             'medium' => 'yellow',
             'high' => 'orange',
@@ -260,7 +313,7 @@ class WorkOrder extends Model
      */
     public function getStatusTextAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'Pendente',
             'scheduled' => 'Agendada',
             'in_progress' => 'Em Andamento',
@@ -276,7 +329,7 @@ class WorkOrder extends Model
      */
     public function getStatusColorAttribute(): string
     {
-        return match($this->status) {
+        return match ($this->status) {
             'pending' => 'gray',
             'scheduled' => 'blue',
             'in_progress' => 'yellow',
@@ -292,7 +345,7 @@ class WorkOrder extends Model
      */
     public function getPaymentStatusTextAttribute(): string
     {
-        return match($this->payment_status) {
+        return match ($this->payment_status) {
             'pending' => 'Pendente',
             'partial' => 'Parcial',
             'paid' => 'Pago',
@@ -307,7 +360,7 @@ class WorkOrder extends Model
      */
     public function getPaymentStatusColorAttribute(): string
     {
-        return match($this->payment_status) {
+        return match ($this->payment_status) {
             'pending' => 'yellow',
             'partial' => 'orange',
             'paid' => 'green',
@@ -322,7 +375,7 @@ class WorkOrder extends Model
      */
     public function getDurationHoursAttribute(): float
     {
-        if (!$this->start_time || !$this->end_time) {
+        if (! $this->start_time || ! $this->end_time) {
             return 0;
         }
 
@@ -337,6 +390,7 @@ class WorkOrder extends Model
 
         // Calcular diferença em minutos e converter para horas para maior precisão
         $minutes = $start->diffInMinutes($end, true);
+
         return round($minutes / 60, 2);
     }
 
@@ -345,7 +399,7 @@ class WorkOrder extends Model
      */
     public function getDurationTextAttribute(): string
     {
-        if (!$this->start_time || !$this->end_time) {
+        if (! $this->start_time || ! $this->end_time) {
             return 'Não informado';
         }
 
@@ -360,12 +414,12 @@ class WorkOrder extends Model
             $start = \Carbon\Carbon::parse($this->start_time);
             $end = \Carbon\Carbon::parse($this->end_time);
             $minutes = $start->diffInMinutes($end, true);
-            
+
             if ($minutes == 1) {
                 return '1 minuto';
             }
-            
-            return $minutes . ' minutos';
+
+            return $minutes.' minutos';
         }
 
         // Se for exatamente 1 hora
@@ -377,19 +431,19 @@ class WorkOrder extends Model
         $start = \Carbon\Carbon::parse($this->start_time);
         $end = \Carbon\Carbon::parse($this->end_time);
         $totalMinutes = $start->diffInMinutes($end, true);
-        
+
         $hoursInt = floor($totalMinutes / 60);
         $minutesInt = $totalMinutes % 60;
 
         if ($minutesInt == 0) {
-            return $hoursInt . ' horas';
+            return $hoursInt.' horas';
         }
 
         if ($hoursInt == 1) {
-            return '1 hora e ' . $minutesInt . ' minuto' . ($minutesInt > 1 ? 's' : '');
+            return '1 hora e '.$minutesInt.' minuto'.($minutesInt > 1 ? 's' : '');
         }
 
-        return $hoursInt . ' horas e ' . $minutesInt . ' minuto' . ($minutesInt > 1 ? 's' : '');
+        return $hoursInt.' horas e '.$minutesInt.' minuto'.($minutesInt > 1 ? 's' : '');
     }
 
     // Accessors removidos - agora os campos total_cost, discount_amount e final_amount
@@ -416,6 +470,7 @@ class WorkOrder extends Model
     {
         $finalAmount = (float) ($this->final_amount ?? 0);
         $totalPaid = (float) $this->total_paid;
+
         return max(0, $finalAmount - $totalPaid);
     }
 
@@ -497,7 +552,7 @@ class WorkOrder extends Model
     public function scopeOverdue($query)
     {
         return $query->where('scheduled_date', '<', now())
-                    ->whereIn('status', ['pending', 'scheduled']);
+            ->whereIn('status', ['pending', 'scheduled']);
     }
 
     /**
@@ -515,7 +570,7 @@ class WorkOrder extends Model
     {
         return $query->whereBetween('scheduled_date', [
             now()->startOfWeek(),
-            now()->endOfWeek()
+            now()->endOfWeek(),
         ]);
     }
 
@@ -525,6 +580,6 @@ class WorkOrder extends Model
     public function scopeThisMonth($query)
     {
         return $query->whereMonth('scheduled_date', now()->month)
-                    ->whereYear('scheduled_date', now()->year);
+            ->whereYear('scheduled_date', now()->year);
     }
 }

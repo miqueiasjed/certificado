@@ -86,6 +86,23 @@ class SyncPermissions extends Command
                 'ordem-servico-editar',
                 'ordem-servico-excluir',
                 'ordem-servico-executar',
+                // Fora do padrão "recurso-acao" das demais linhas deste
+                // arquivo, de propósito: nome definido no Plano 13 (Task 13.3)
+                // para a família de permissões de assinatura em campo, com
+                // "os." como prefixo. Única porta de correção de uma OS já
+                // assinada (WorkOrderSignatureService::corrigirComJustificativa);
+                // fica reservada ao papel administrador, sem tratamento
+                // especial no RolesAndPermissionsSeeder, porque o
+                // administrador já recebe automaticamente todo o catálogo.
+                // A Task 13.4 acrescenta a irmã desta, `os.assinar`, com
+                // atribuição explícita ao papel técnico.
+                'os.corrigir_assinada',
+                // Task 13.4: libera a coleta da assinatura do cliente
+                // (`WorkOrderSignatureService::coletar`) e o registro da
+                // recusa (`registrarRecusa`), pelo painel. Técnico recebe
+                // esta permissão explicitamente no RolesAndPermissionsSeeder;
+                // administrador já a recebe por ter o catálogo inteiro.
+                'os.assinar',
             ],
             'servicos_agendados' => [
                 'servico-agendado-ver',

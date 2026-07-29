@@ -46,7 +46,7 @@ bloqueio.
 | 10 | Agenda em calendário | ✅ | 2, 9 | 8 |
 | 11 | QR code e identificação de dispositivos | ✅ | 4 | 9 |
 | 12 | App do técnico: fundação offline | ✅ | 2, 4, 10 | 12 |
-| 13 | App do técnico: execução e assinatura em campo | ⏳ | 3, 11, 12 | 10 |
+| 13 | App do técnico: execução e assinatura em campo | ✅ | 3, 11, 12 | 10 |
 
 ### Relacionamento com o cliente
 

@@ -1267,3 +1267,88 @@ mecanismo do plano que sobrevive a alguém adicionar uma rota nova ao portal
 meses depois sem reler toda a task 15.9 - os testes de isolamento
 "rota a rota, escritos à mão" (Tasks 15.2 a 15.5) protegem o que já existe,
 mas não avisam quando algo novo nasce descoberto.
+
+## Plano 13 - App do técnico: execução e assinatura em campo (29/07/2026)
+
+Concluído: 10 tasks, execução completa da OS no aplicativo (evento de
+dispositivo, avistamento, adequação com foto, conclusão) e assinatura do
+cliente em campo, com travamento e correção justificada. 749 testes verdes
+ao final, PWA compilando sem erro.
+
+### Duas lacunas reais de integração frontend/backend, encontradas e fechadas pelo orquestrador
+
+Duas tasks de frontend do Plano 13 (13.8 e 13.9), rodando contra um backend
+já implementado em tasks anteriores, encontraram e documentaram (sem
+inventar solução) contratos que não fechavam de ponta a ponta:
+
+1. **Foto de adequação por uuid.** O técnico gera o uuid da adequação no
+   aparelho e tira a foto dela antes de a adequação ter `id` no servidor (os
+   dois são offline, sem ordem garantida entre as duas operações). Mas
+   `AplicadorDeFoto` (Plano 12) sempre gravou `entity_id` cru do payload numa
+   coluna inteira - um uuid ali nunca faria sentido. Corrigido acrescentando
+   `work_order_adequations.uuid` (migration aditiva) e fazendo
+   `AplicadorDeFoto::resolverEntityIdDeAdequacao()` traduzir uuid para id real
+   quando o valor recebido não é numérico, escopado à mesma OS.
+2. **Recusa de assinatura sem canal de sincronização.** A Task 13.3 criou
+   `WorkOrderSignatureService::registrarRecusa()`, mas só o painel web
+   (`WorkOrderSignatureController::recusar()`, rota autenticada por sessão)
+   chamava esse método. O aplicativo (Sanctum, offline-first) não tinha
+   nenhuma operação de sincronização que levasse a uma recusa registrada em
+   campo até esse método - a recusa do técnico simplesmente não teria como
+   chegar ao servidor. Corrigido com `AplicadorDeRecusaDeAssinatura`, tipo de
+   operação novo (`recusa_assinatura`), registrado no mapa de aplicadores de
+   `AppSyncService`.
+
+Regra que fica: quando um plano divide trabalho em tasks de backend e de
+frontend separadas (limite de dimensionamento do projeto), a integração de
+ponta a ponta entre as duas nunca é garantida automaticamente só porque cada
+lado implementou a própria parte contra a especificação. Vale a pena, ao
+revisar o último lote de frontend de um plano, perguntar explicitamente "todo
+dado que este frontend produz tem, hoje, um jeito real de chegar ao
+servidor?" - as duas lacunas acima só apareceram porque os subagentes de
+frontend leram o aplicador real antes de assumir que o campo previsto na
+especificação existia.
+
+### Terceira lacuna, menor: campo que o frontend precisa não chegava na carga do dia
+
+O app abre a tela de execução em modo leitura quando a OS já está assinada,
+mas `AppDayLoadService::mapearOrdem()` nunca incluía `situacao_assinatura`
+no retorno (nem na lista de `select()` da consulta, nem no array mapeado) -
+o campo existia no model desde a Task 13.1, mas nunca saiu no JSON da carga.
+Corrigido nas duas pontas (query e mapeamento) e coberto pelo teste de
+volume já existente de `AppDayLoadTest` (a suíte inteira, não só a do
+plano, precisa rodar depois de mexer num Service tão central).
+
+### Um incidente de `git stash` durante execução paralela, sem perda de trabalho
+
+Duas tasks em paralelo (13.2 e 13.3) compartilhavam o mesmo working tree
+(sem isolamento de worktree). Um dos subagentes rodou `git stash -u` no
+meio do próprio trabalho (motivo não totalmente claro pelo relato), o que
+varreu para o stash tanto o próprio trabalho quanto o do outro subagente
+em andamento. Nenhum dos dois tinha sido instruído a evitar comandos git
+destrutivos no prompt de despacho. Os dois perceberam pela ausência dos
+próprios arquivos em disco e recuperaram via `stash pop` antes de qualquer
+perda real, mas o resultado poderia ter sido bem pior com um terceiro
+subagente no meio ou um `git stash drop` acidental depois.
+
+A partir do Lote 3 deste mesmo plano, todo prompt de subagente em lote
+paralelo passou a incluir, de forma explícita: nunca rodar `git stash`,
+`git checkout .`, `git reset --hard`, `git clean`; nunca "limpar" arquivo
+que não reconhece (não é seu, é de outro subagente); rodar só o teste
+filtrado da própria task durante a execução (não a suíte completa, que
+colide no mesmo banco `testing` com o outro processo rodando em paralelo).
+Nenhum incidente se repetiu depois disso. Regra que fica: paralelismo de
+subagentes no mesmo working tree (sem isolamento de worktree) exige avisos
+explícitos de segurança git no prompt de despacho, não é seguro assumir que
+um subagente nunca teria motivo para rodar um comando destrutivo.
+
+### Auditoria de "arquivos disputados" pode divergir da "ordem de execução" do mesmo plano
+
+Mesmo padrão já visto no Plano 15: a tabela de arquivos disputados do
+`tasks/13/INDEX.md` listava `app/Services/WorkOrderService.php` entre as
+Tasks 13.2, 13.3 e 13.5 "nesta ordem", mas a tabela de ordem de execução
+marcava 13.2 e 13.3 como lote paralelo. Na prática, só 13.3 tocava aquele
+arquivo (13.2 e 13.5 apenas o liam, chamando métodos já existentes), então
+rodar em paralelo foi seguro - mas a checagem de "quem realmente escreve em
+qual arquivo" teve que ser feita task por task antes de decidir, a tabela
+de disputa sozinha não bastava para essa decisão.

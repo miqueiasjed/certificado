@@ -45,6 +45,7 @@ use App\Models\WorkOrder;
 use App\Models\WorkOrderAdequation;
 use App\Models\WorkOrderDeviceEvent;
 use App\Models\WorkOrderPhoto;
+use App\Models\WorkOrderSignature;
 use App\Services\WorkOrderService;
 use App\Support\DominioMultiempresa;
 use App\Support\TenantAtual;
@@ -1461,6 +1462,22 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'event_type_id' => $dados['eventType']->id,
                 'event_date' => '2026-07-05',
                 'event_description' => 'Evento na OS '.$marca,
+            ]);
+
+            // Assinatura da OS coletada em campo (Plano 13). Sem rota de CRUD
+            // direta ainda (só migration e model na Task 13.1; a coleta passa
+            // a existir no WorkOrderSignatureService da Task 13.3), então não
+            // entra em basesDeRecurso(): o objetivo aqui é só o model de
+            // domínio ter dado no cenário, mesmo critério já usado para
+            // deviceReplacement/invitation acima.
+            $dados['workOrderSignature'] = WorkOrderSignature::create([
+                'work_order_id' => $dados['workOrder']->id,
+                'assinante_nome' => 'Assinante '.$marca,
+                'assinante_documento' => '000.000.000-00',
+                'assinante_vinculo' => 'Responsavel',
+                'coletada_em' => '2026-07-05 10:00:00',
+                'user_id' => $autor->id,
+                'origem' => 'aplicativo',
             ]);
 
             $dados['accessLog'] = AccessLog::create([

@@ -37,7 +37,11 @@
       </p>
     </div>
 
-    <div v-if="!arquivoSelecionado" class="flex flex-wrap gap-2">
+    <p v-if="limiteDoContextoAtingido" class="text-sm text-gray-600">
+      Limite de {{ limiteDeFotos }} fotos atingido para este registro.
+    </p>
+
+    <div v-else-if="!arquivoSelecionado" class="flex flex-wrap gap-2">
       <button type="button" class="btn-primary" :disabled="limiteAtingido" @click="abrirCamera">
         Tirar foto
       </button>
@@ -187,6 +191,14 @@ const props = defineProps({
         type: [Number, String],
         default: null,
     },
+    // Teto de fotos deste contexto específico (não o teto de 200 do aparelho
+    // inteiro, esse já coberto por `LIMITE_DE_FOTOS_PENDENTES` acima). `null`
+    // (padrão) mantém o comportamento original, sem limite - usado pela Task
+    // 13.8 para travar em 3 fotos por adequação.
+    limiteDeFotos: {
+        type: Number,
+        default: null,
+    },
 });
 
 const emit = defineEmits(['capturada']);
@@ -213,6 +225,9 @@ let pararDeEscutar = null;
 
 const avisoDeLimite = computed(() => contagemNaoEnviadas.value >= AVISO_DE_FOTOS_PENDENTES);
 const limiteAtingido = computed(() => contagemNaoEnviadas.value >= LIMITE_DE_FOTOS_PENDENTES);
+const limiteDoContextoAtingido = computed(
+    () => props.limiteDeFotos !== null && fotos.value.length >= props.limiteDeFotos,
+);
 
 function abrirCamera() {
     inputCameraRef.value?.click();

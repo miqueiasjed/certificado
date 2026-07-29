@@ -122,6 +122,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'endereco-ver',
             'certificado-ver',
             'cadastro-ver',
+            // Task 13.4: o técnico coleta a assinatura do cliente e registra
+            // a recusa. `os.corrigir_assinada` (a correção de uma OS já
+            // assinada) fica só com administrador, e por isso não entra
+            // aqui: técnico corrigir a própria OS assinada anularia o
+            // efeito do travamento.
+            'os.assinar',
         ];
     }
 

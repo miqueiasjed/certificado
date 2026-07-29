@@ -7,8 +7,14 @@ use App\Models\SyncConflict;
 use App\Models\SyncOperation;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Services\Sync\AplicadorDeAdequacao;
+use App\Services\Sync\AplicadorDeAssinatura;
+use App\Services\Sync\AplicadorDeAvistamento;
+use App\Services\Sync\AplicadorDeEventoDeDispositivo;
+use App\Services\Sync\AplicadorDeExecucao;
 use App\Services\Sync\AplicadorDeFoto;
 use App\Services\Sync\AplicadorDeOperacao;
+use App\Services\Sync\AplicadorDeRecusaDeAssinatura;
 use App\Services\Sync\ResultadoDeSincronizacao;
 use App\Support\TenantAtual;
 use Carbon\Carbon;
@@ -36,10 +42,10 @@ use Throwable;
  *    `valor_do_aplicativo`, nunca um erro genérico nem uma perda silenciosa.
  *
  * Cada tipo de operação (`sync_operations.tipo`) tem um aplicador próprio, que
- * implementa `AplicadorDeOperacao` e é resolvido pelo mapa `$aplicadores`.
- * Nesta task só `foto` está implementado; os aplicadores de evento de
- * dispositivo, avistamento, adequação e conclusão de OS entram no Plano 13,
- * cada um somando a própria entrada a este construtor e ao mapa.
+ * implementa `AplicadorDeOperacao` e é resolvido pelo mapa `$aplicadores`:
+ * `foto` (Task 12.4), `evento_dispositivo`, `avistamento`, `adequacao` e
+ * `execucao` (Task 13.2, esta última cobrindo início e conclusão da OS), e
+ * `assinatura` (Task 13.3, coleta de assinatura do cliente em campo).
  *
  * A ordem de aplicação das operações do mesmo aparelho (pela `registrada_em`)
  * e o isolamento entre falhas de operações diferentes são responsabilidade de
@@ -64,9 +70,21 @@ class AppSyncService
     public function __construct(
         private readonly WorkOrderAccessService $workOrderAccessService,
         AplicadorDeFoto $aplicadorDeFoto,
+        AplicadorDeEventoDeDispositivo $aplicadorDeEventoDeDispositivo,
+        AplicadorDeAvistamento $aplicadorDeAvistamento,
+        AplicadorDeAdequacao $aplicadorDeAdequacao,
+        AplicadorDeExecucao $aplicadorDeExecucao,
+        AplicadorDeAssinatura $aplicadorDeAssinatura,
+        AplicadorDeRecusaDeAssinatura $aplicadorDeRecusaDeAssinatura,
     ) {
         $this->aplicadores = [
             $aplicadorDeFoto->tipo() => $aplicadorDeFoto,
+            $aplicadorDeEventoDeDispositivo->tipo() => $aplicadorDeEventoDeDispositivo,
+            $aplicadorDeAvistamento->tipo() => $aplicadorDeAvistamento,
+            $aplicadorDeAdequacao->tipo() => $aplicadorDeAdequacao,
+            $aplicadorDeExecucao->tipo() => $aplicadorDeExecucao,
+            $aplicadorDeAssinatura->tipo() => $aplicadorDeAssinatura,
+            $aplicadorDeRecusaDeAssinatura->tipo() => $aplicadorDeRecusaDeAssinatura,
         ];
     }
 
@@ -241,6 +259,11 @@ class AppSyncService
             $payload['work_order_id'] = $workOrder->id;
         }
 
+        // Instante do celular, o mesmo gravado em `sync_operations.registrada_em`:
+        // todo aplicador de campo da Task 13.2 precisa dele para preservar a
+        // hora real do registro, e não a de chegada ao servidor.
+        $payload['registrada_em'] = $operacao['registrada_em'] ?? null;
+
         try {
             $registro = $aplicador->aplicar($payload, $usuario);
         } catch (ValidationException $excecao) {
@@ -286,15 +309,16 @@ class AppSyncService
      * A ordem de serviço já foi assinada pelo cliente e está travada para
      * alterações de campo?
      *
-     * A coluna que vai marcar a assinatura ainda não existe: nasce no
-     * Plano 13, junto com o fluxo de assinatura do técnico em campo. Este
-     * método já fica pronto para aquele plano só trocar o corpo por uma
-     * leitura real, sem espalhar o motivo `os_travada` por mais de um lugar
-     * do código.
+     * Delega a `WorkOrder::estaTravada()` (Task 13.1): é o único lugar deste
+     * fluxo que decide o motivo `os_travada`, para o critério não se espalhar
+     * por mais de um lugar do código. O caminho de resolução de conflito
+     * (`resolver()` -> `aplicarLadoDoAplicativo()`) não passa por aqui, e por
+     * isso cada aplicador de campo da Task 13.2 repete esta mesma checagem
+     * (via `OperacaoDeCampo::workOrderDestravada()`) como última barreira.
      */
     private function osEstaTravada(WorkOrder $workOrder): bool
     {
-        return false;
+        return $workOrder->estaTravada();
     }
 
     private function registrarConflito(
@@ -342,7 +366,10 @@ class AppSyncService
         $payload = $operacao['payload'] ?? [];
 
         return array_merge(
-            ['work_order_id' => $operacao['work_order_id'] ?? null],
+            [
+                'work_order_id' => $operacao['work_order_id'] ?? null,
+                'registrada_em' => $operacao['registrada_em'] ?? null,
+            ],
             is_array($payload) ? $payload : []
         );
     }

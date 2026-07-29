@@ -54,6 +54,7 @@ use App\Http\Controllers\WorkOrderAdequationController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\WorkOrderFinancialController;
 use App\Http\Controllers\WorkOrderPhotoController;
+use App\Http\Controllers\WorkOrderSignatureController;
 use App\Http\Middleware\EnsureTenantIsActive;
 use App\Models\Client;
 use App\Models\Service;
@@ -564,6 +565,17 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
     // Rotas de Fotos da OS
     Route::post('/work-orders/{workOrder}/photos', [WorkOrderPhotoController::class, 'store'])->middleware('permission:ordem-servico-executar')->name('work-orders.photos.store');
     Route::delete('/work-orders/{workOrder}/photos/{photo}', [WorkOrderPhotoController::class, 'destroy'])->middleware('permission:ordem-servico-executar')->name('work-orders.photos.destroy');
+
+    // Rotas de Assinatura da OS (Plano 13, Task 13.4): coleta feita no
+    // computador do escritório e recusa. A coleta pelo aplicativo em campo
+    // não tem rota própria de propósito: ela chega pelo lote de
+    // sincronização (AplicadorDeAssinatura, Task 13.3), para manter a mesma
+    // garantia de idempotência das demais operações offline.
+    Route::post('/work-orders/{workOrder}/signature', [WorkOrderSignatureController::class, 'store'])->middleware('permission:os.assinar')->name('work-orders.signature.store');
+    Route::post('/work-orders/{workOrder}/signature/refusal', [WorkOrderSignatureController::class, 'recusar'])->middleware('permission:os.assinar')->name('work-orders.signature.refuse');
+    // Correção justificada de OS já assinada, reservada ao administrador:
+    // técnico corrigir a própria OS assinada anularia o efeito do travamento.
+    Route::post('/work-orders/{workOrder}/correction', [WorkOrderSignatureController::class, 'corrigir'])->middleware('permission:os.corrigir_assinada')->name('work-orders.correction.store');
 
     // Rotas de Eventos de Dispositivos
     Route::resource('device-events', DeviceEventController::class)

@@ -8,16 +8,16 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 13.1 | Migration e model de assinatura e travamento | backend-estrutura | ⏳ | média |
-| 13.2 | Aplicadores de evento, avistamento, adequação e conclusão | backend-logica | ⏳ | alta |
-| 13.3 | Service de assinatura, recusa e correção justificada | backend-logica | ⏳ | alta |
-| 13.4 | Endpoints de assinatura, recusa e correção | backend-endpoint | ⏳ | média |
-| 13.5 | Assinatura do cliente no PDF da OS | backend-endpoint | ⏳ | média |
-| 13.6 | Tela de execução e roteiro de dispositivos | frontend-pagina | ⏳ | alta |
-| 13.7 | Registro por cômodo: praga e produto | frontend-pagina | ⏳ | alta |
-| 13.8 | Adequações com foto no aplicativo | frontend-pagina | ⏳ | média |
-| 13.9 | Assinatura do cliente e registro de recusa | frontend-pagina | ⏳ | alta |
-| 13.10 | Testes de execução, assinatura e travamento | teste | ⏳ | alta |
+| 13.1 | Migration e model de assinatura e travamento | backend-estrutura | ✅ | média |
+| 13.2 | Aplicadores de evento, avistamento, adequação e conclusão | backend-logica | ✅ | alta |
+| 13.3 | Service de assinatura, recusa e correção justificada | backend-logica | ✅ | alta |
+| 13.4 | Endpoints de assinatura, recusa e correção | backend-endpoint | ✅ | média |
+| 13.5 | Assinatura do cliente no PDF da OS | backend-endpoint | ✅ | média |
+| 13.6 | Tela de execução e roteiro de dispositivos | frontend-pagina | ✅ | alta |
+| 13.7 | Registro por cômodo: praga e produto | frontend-pagina | ✅ | alta |
+| 13.8 | Adequações com foto no aplicativo | frontend-pagina | ✅ | média |
+| 13.9 | Assinatura do cliente e registro de recusa | frontend-pagina | ✅ | alta |
+| 13.10 | Testes de execução, assinatura e travamento | teste | ✅ | alta |
 
 ## Ordem de execução
 

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkOrderDeviceEvent extends Model
 {
-    use HasFactory, BelongsToCompany;
+    use BelongsToCompany, HasFactory;
 
     protected $fillable = [
         'work_order_id',
@@ -19,10 +19,18 @@ class WorkOrderDeviceEvent extends Model
         'event_date',
         'event_description',
         'event_observations',
+        // Plano 13, Task 13.2: consumo de isca, praga encontrada e instante do
+        // celular, gravados pelo aplicativo do técnico via sincronização.
+        'bait_consumption_status',
+        'pest_found',
+        'registrada_em',
     ];
 
     protected $casts = [
+        // Dia sem hora relevante: nunca sofre conversão de fuso.
         'event_date' => 'date',
+        // Instante do celular: gravado em UTC e convertido na exibição.
+        'registrada_em' => 'datetime',
     ];
 
     /**

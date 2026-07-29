@@ -170,6 +170,23 @@ const props = defineProps({
     type: [Number, String],
     default: null,
   },
+  // Fábrica do composable de resolução do código lido. Por padrão, o mesmo
+  // `useLeituraDeDispositivo` de sempre (consulta online, `/api/devices/ler`),
+  // usado pelo painel principal.
+  //
+  // O aplicativo do técnico (Plano 12/13) injeta aqui um composable próprio
+  // que resolve o código offline, pelo IndexedDB local
+  // (`useLeituraDeDispositivoOffline`, em `app-tecnico/Composables`): em
+  // campo, sem sinal, é exatamente quando o técnico mais precisa ler um QR
+  // code, e depender de rede aqui inutilizaria a leitura. O contrato exigido
+  // é o mesmo objeto reativo devolvido por `useLeituraDeDispositivo`
+  // (`situacao`, `dispositivo`, `carregando`, `erro`, `mensagemDaSituacao`,
+  // `podeAbrirMesmoAssim`, `podeAbrirOAtual`, `abrirMesmoAssim`,
+  // `abrirOAtual`, `ler`, `limpar`).
+  useLeitura: {
+    type: Function,
+    default: useLeituraDeDispositivo,
+  },
 });
 
 const emit = defineEmits(['lido', 'fechado']);
@@ -186,7 +203,7 @@ const mostrarDigitacaoManual = ref(false);
 const codigoDigitado = ref('');
 const inputCodigoRef = ref(null);
 
-const leitura = useLeituraDeDispositivo();
+const leitura = props.useLeitura();
 
 // Instância do leitor de câmera. Fora do reativo de propósito: é um objeto de
 // infraestrutura com ciclo de vida próprio (start/stop), não estado de tela.

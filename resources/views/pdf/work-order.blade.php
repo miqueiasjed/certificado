@@ -398,6 +398,34 @@
             color: #666;
         }
 
+        /* Assinatura do cliente coletada em campo (Task 13.5): altura fixa e
+           largura proporcional, para uma assinatura larga não empurrar o
+           rodapé para a página seguinte. */
+        .client-signature-image {
+            height: 55px;
+            width: auto;
+            max-width: 100%;
+        }
+
+        .sig-recusa {
+            font-weight: bold;
+            font-size: 10px;
+            color: #b91c1c;
+        }
+
+        .sig-recusa-motivo {
+            font-size: 9px;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        .sig-coleta-local {
+            text-align: center;
+            font-size: 9px;
+            color: #999;
+            margin: 4px 0 0 0;
+        }
+
         .footer-info {
             text-align: center;
             font-size: 10px;
@@ -501,6 +529,10 @@
 
         body.compact-mode .signature-image {
             width: 60px;
+        }
+
+        body.compact-mode .client-signature-image {
+            height: 40px;
         }
 
         body.compact-mode .footer-info {
@@ -1055,12 +1087,40 @@
             <div class="sig-name">{{ $company->technical_responsible_name }}</div>
         </div>
         <div class="signature-box">
-            <div class="sig-image-area"></div>
-            <div class="sig-line"></div>
-            <div class="sig-role">Responsável pelo Local</div>
-            <div class="sig-hint">Nome e CPF</div>
+            @if($workOrder->situacao_assinatura === 'assinada' && $workOrder->signature)
+                <div class="sig-image-area">
+                    @if(isset($assinaturaClienteSrc) && $assinaturaClienteSrc)
+                        <img src="{{ $assinaturaClienteSrc }}" alt="Assinatura do cliente" class="client-signature-image">
+                    @endif
+                </div>
+                <div class="sig-line"></div>
+                <div class="sig-name">{{ $workOrder->signature->assinante_nome }}</div>
+                @if($workOrder->signature->assinante_documento)
+                <div class="sig-hint">{{ $workOrder->signature->assinante_documento }}</div>
+                @endif
+                @if($workOrder->signature->assinante_vinculo)
+                <div class="sig-hint">{{ $workOrder->signature->assinante_vinculo }}</div>
+                @endif
+                <div class="sig-hint">Assinado em {{ $assinaturaClienteDataHora }}</div>
+            @elseif($workOrder->situacao_assinatura === 'recusada')
+                <div class="sig-image-area"></div>
+                <div class="sig-line"></div>
+                <div class="sig-recusa">Assinatura recusada pelo cliente em {{ $assinaturaClienteRecusaData }}</div>
+                @if($workOrder->recusa_motivo)
+                <div class="sig-recusa-motivo">{{ $workOrder->recusa_motivo }}</div>
+                @endif
+            @else
+                <div class="sig-image-area"></div>
+                <div class="sig-line"></div>
+                <div class="sig-role">Responsável pelo Local</div>
+                <div class="sig-hint">Nome e CPF</div>
+            @endif
         </div>
     </div>
+
+    @if(!empty($assinaturaClienteCoordenadas))
+    <p class="sig-coleta-local">{{ $assinaturaClienteCoordenadas }}</p>
+    @endif
 
     <!-- Rodapé -->
     <div class="footer-info">

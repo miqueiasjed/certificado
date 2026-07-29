@@ -297,6 +297,7 @@ class AppDayLoadService
                 'work_orders.observations',
                 'work_orders.completion_notes',
                 'work_orders.active',
+                'work_orders.situacao_assinatura',
                 'work_orders.updated_at',
             ])
             ->whereBetween('scheduled_date', [$periodo['de']->toDateString(), $periodo['ate']->toDateString()])
@@ -353,6 +354,10 @@ class AppDayLoadService
             'status' => $ordem->status,
             'prioridade' => $ordem->priority_level,
             'ativa' => (bool) $ordem->active,
+            // Plano 13: o aplicativo do técnico usa isto para abrir a tela de
+            // execução em modo leitura quando a OS já foi assinada
+            // (Task 13.6). Sem custo/margem: é só o estado do travamento.
+            'situacao_assinatura' => $ordem->situacao_assinatura,
             'data_agendada' => optional($ordem->scheduled_date)->toDateString(),
             'inicio' => optional($ordem->start_time)->toIso8601String(),
             'fim' => optional($ordem->end_time)->toIso8601String(),

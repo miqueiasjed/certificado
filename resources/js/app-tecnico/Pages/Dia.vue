@@ -60,7 +60,11 @@
                     <article
                         v-for="ordem in secao.ordens"
                         :key="ordem.id"
-                        class="bg-white rounded-lg border border-gray-200 shadow-sm p-4"
+                        class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 cursor-pointer"
+                        role="button"
+                        tabindex="0"
+                        @click="$emit('abrir-ordem', ordem.id)"
+                        @keydown.enter="$emit('abrir-ordem', ordem.id)"
                     >
                         <div class="flex items-start justify-between gap-2 mb-2">
                             <h3 class="text-sm font-semibold text-gray-900 truncate">
@@ -93,6 +97,13 @@ import { useCargaDoDia } from '../Composables/useCargaDoDia';
 import { obterMeta } from '../db/repositorio';
 import { aoMudar, listarOrdensComPendencia } from '../sync/fila';
 import { formatarData, formatarDataExtensa, formatarHora, hojeISO } from '@/utils/formatDate';
+
+// Tocar num cartão abre a execução daquela OS (`Execucao.vue`, Task 13.6).
+// `App.vue` é quem decide o que fazer com o id emitido aqui - esta tela não
+// sabe nada sobre a existência de `Execucao.vue`, mantendo o mesmo
+// desacoplamento por evento já usado no restante do aplicativo (sem Vue
+// Router).
+defineEmits(['abrir-ordem']);
 
 const {
     todasAsOrdens,
