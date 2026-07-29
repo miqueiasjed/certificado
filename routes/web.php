@@ -32,6 +32,7 @@ use App\Http\Controllers\FinancialDashboardController;
 use App\Http\Controllers\FinancialEntryController;
 use App\Http\Controllers\FinancialWithdrawalController;
 use App\Http\Controllers\GatewayWebhookController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationQueueController;
 use App\Http\Controllers\NotificationTemplateController;
@@ -46,11 +47,13 @@ use App\Http\Controllers\Plataforma\PlanController as PlataformaPlanController;
 use App\Http\Controllers\Plataforma\ReceitaController as PlataformaReceitaController;
 use App\Http\Controllers\Plataforma\TenantController as PlataformaTenantController;
 use App\Http\Controllers\Plataforma\UsageController as PlataformaUsageController;
+use App\Http\Controllers\ProductBatchController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SatisfactionSurveyController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ServiceOrderController;
+use App\Http\Controllers\StockController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkOrderAdequationController;
@@ -652,7 +655,85 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
     // de antes deste plano). Nada para proteger aqui até essa rota nascer;
     // quando nascer, entra neste mesmo bloco com `module:financeiro`.
 
-    // Módulos ainda sem nenhuma rota no sistema (`estoque`, `portal_cliente`,
+    // Rotas de Estoque, Lotes e Inventário (Plano 17, Task 17.7)
+    //
+    // Primeiro bloco do sistema sob `module:estoque`. O middleware fica no
+    // grupo, e não repetido rota a rota como no financeiro: aqui o bloco nasce
+    // inteiro nesta task, então a garantia estrutural ("rota nova dentro do
+    // grupo já nasce bloqueada para tenant sem o módulo") vale mais que o
+    // paralelismo com as rotas financeiras, que cresceram aos poucos e por isso
+    // carregam o middleware uma a uma. `gatherMiddleware()` e
+    // `php artisan route:list` mostram os dois empilhados do mesmo jeito.
+    //
+    // Três permissões, cada uma com um alcance diferente: `estoque-ver` para a
+    // leitura do saldo e para a rastreabilidade (em incidente, a informação
+    // precisa sair rápido, e por isso ela é a permissão mais larga das três);
+    // `estoque-movimentar` para o que altera o razão (entrada, transferência,
+    // descarte e o cadastro de lote, que carrega a entrada inicial); e
+    // `estoque-inventariar` para a contagem física, que reescreve o saldo.
+    // O técnico não recebe nenhuma das três nesta entrega: o consumo em campo é
+    // a baixa automática pela OS (Task 17.4), que não passa por estas rotas.
+    Route::middleware('module:estoque')->group(function () {
+        Route::get('/estoque', [StockController::class, 'index'])
+            ->middleware('permission:estoque-ver')
+            ->name('estoque.index');
+        Route::post('/estoque/entrada', [StockController::class, 'entrada'])
+            ->middleware('permission:estoque-movimentar')
+            ->name('estoque.entrada');
+        Route::post('/estoque/transferencia', [StockController::class, 'transferencia'])
+            ->middleware('permission:estoque-movimentar')
+            ->name('estoque.transferencia');
+        Route::post('/estoque/descarte', [StockController::class, 'descarte'])
+            ->middleware('permission:estoque-movimentar')
+            ->name('estoque.descarte');
+
+        // Lotes. `/lotes/{lote}/rastreabilidade` tem três segmentos e não
+        // colide com nenhuma das rotas de dois segmentos abaixo, então a ordem
+        // de registro aqui não importa (diferente do caso de
+        // `/contracts/pendencias`).
+        Route::get('/lotes', [ProductBatchController::class, 'index'])
+            ->middleware('permission:estoque-ver')
+            ->name('lotes.index');
+        Route::get('/lotes/{lote}/rastreabilidade', [ProductBatchController::class, 'rastreabilidade'])
+            ->middleware('permission:estoque-ver')
+            ->name('lotes.rastreabilidade');
+        Route::get('/lotes/{lote}/rastreabilidade/pdf', [ProductBatchController::class, 'rastreabilidadePdf'])
+            ->middleware('permission:estoque-ver')
+            ->name('lotes.rastreabilidade.pdf');
+        Route::post('/lotes', [ProductBatchController::class, 'store'])
+            ->middleware('permission:estoque-movimentar')
+            ->name('lotes.store');
+        Route::put('/lotes/{lote}', [ProductBatchController::class, 'update'])
+            ->middleware('permission:estoque-movimentar')
+            ->name('lotes.update');
+        Route::delete('/lotes/{lote}', [ProductBatchController::class, 'destroy'])
+            ->middleware('permission:estoque-movimentar')
+            ->name('lotes.destroy');
+
+        // Inventário. Contar, finalizar e cancelar são o mesmo fluxo de
+        // contagem física e ficam todos sob `estoque-inventariar`: quem conta
+        // precisa poder fechar o que contou.
+        Route::get('/inventarios', [InventoryController::class, 'index'])
+            ->middleware('permission:estoque-inventariar')
+            ->name('inventarios.index');
+        Route::post('/inventarios', [InventoryController::class, 'store'])
+            ->middleware('permission:estoque-inventariar')
+            ->name('inventarios.store');
+        Route::get('/inventarios/{inventario}', [InventoryController::class, 'show'])
+            ->middleware('permission:estoque-inventariar')
+            ->name('inventarios.show');
+        Route::put('/inventarios/{inventario}/itens/{item}', [InventoryController::class, 'contar'])
+            ->middleware('permission:estoque-inventariar')
+            ->name('inventarios.itens.update');
+        Route::post('/inventarios/{inventario}/finalizar', [InventoryController::class, 'finalizar'])
+            ->middleware('permission:estoque-inventariar')
+            ->name('inventarios.finalizar');
+        Route::post('/inventarios/{inventario}/cancelar', [InventoryController::class, 'cancelar'])
+            ->middleware('permission:estoque-inventariar')
+            ->name('inventarios.cancelar');
+    });
+
+    // Módulos ainda sem nenhuma rota no sistema (`portal_cliente`,
     // `app_tecnico`, `roteirizacao`, `nfse`, `laudo_ia`): seguem só
     // declarados em `CatalogoDeModulos` e ganham `module:<chave>` na task que
     // implementar o respectivo plano.

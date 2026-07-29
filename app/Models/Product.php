@@ -18,7 +18,20 @@ class Product extends Model
         'active_ingredient_id',
         'chemical_group_id',
         'antidote_id',
-        'organ_registration_id'
+        'organ_registration_id',
+        'controla_estoque',
+        'estoque_minimo',
+        'unidade',
+    ];
+
+    protected $casts = [
+        // Nasce false: o produto atual continua sendo ficha técnica, sem exigir
+        // saldo. O tenant liga o controle produto por produto (Plano 17).
+        'controla_estoque' => 'boolean',
+        // Mesmas 4 casas das quantidades de estoque: fração de mililitro é o
+        // dia a dia da aplicação. Nulo significa sem ponto de reposição
+        // definido, diferente de zero.
+        'estoque_minimo' => 'decimal:4',
     ];
 
     public function activeIngredient(): BelongsTo
@@ -46,4 +59,27 @@ class Product extends Model
         return $this->belongsToMany(Certificate::class, 'certificate_product');
     }
 
+    /**
+     * Lotes comprados deste produto, com validade e custo (Plano 17).
+     */
+    public function batches(): HasMany
+    {
+        return $this->hasMany(ProductBatch::class);
+    }
+
+    /**
+     * Saldo corrente por lote e local.
+     */
+    public function stockBalances(): HasMany
+    {
+        return $this->hasMany(StockBalance::class);
+    }
+
+    /**
+     * Razão de movimentos deste produto.
+     */
+    public function stockMovements(): HasMany
+    {
+        return $this->hasMany(StockMovement::class);
+    }
 }

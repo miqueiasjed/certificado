@@ -1454,3 +1454,92 @@ marcava a regra "uma por vez" para este arquivo mesmo classificando 16.4 e
 entre "arquivos disputados" e "ordem de execução" já registrada no Plano 13.
 As três tasks rodaram em sequência (16.3, depois 16.4, depois 16.5), e
 nenhum conflito de edição ocorreu.
+
+## Plano 17 - Estoque de produtos com lote, validade e custo (29/07/2026)
+
+Concluído. Decomposto em 10 tasks, todas fechadas na ordem prevista
+(estrutura -> saldo -> lote/FEFO -> lote paralelo de integrações -> endpoints
+-> telas -> testes).
+
+### A OS concluída pelo painel nunca dava baixa de estoque
+
+A Task 17.4 ligou a baixa automática em `WorkOrderService::markAsCompleted()`,
+achando que era "o funil das duas portas de conclusão (painel e app do
+técnico)". Não é: o painel marca a OS como concluída pela tela de edição
+comum (`WorkOrderController::update()` -> `WorkOrderService::updateWorkOrder()`,
+com `status` como campo do formulário), que nunca passa por
+`markAsCompleted()`. Só o app do técnico, via `AplicadorDeExecucao`, chama
+esse método. Sem o gancho também em `updateWorkOrder()`, toda OS fechada pelo
+escritório no painel (que é o caminho mais antigo e provavelmente o mais
+usado hoje) ficaria com o estoque intocado, silenciosamente. Descoberto pelo
+orquestrador na revisão, seguindo a cadeia real de chamadas
+(`grep` por `markAsCompleted`/`updateStatus` em controllers e rotas, que não
+achou nenhuma) em vez de confiar no comentário do subagente. Corrigido
+acrescentando o mesmo gancho (`baixarEstoqueDaOs()`) ao fim de
+`updateWorkOrder()`, guardado por `status === 'completed'` - o que também
+cobre, de graça, a correção de quantidade aplicada numa OS já concluída,
+reeditada pelo painel. **Regra que fica:** quando uma task descreve "os dois
+caminhos que levam a X", conferir com grep se os dois caminhos realmente
+passam pelo método citado, em vez de aceitar a afirmação do subagente. Painel
+e app costumam divergir porque foram implementados em plantas diferentes.
+
+### `StockService::ajustar()` não liga o estorno à OS que o originou
+
+A Task 17.4 reaproveitou `ajustar()` (Task 17.2) para estornar a baixa
+anterior de uma OS refeita, mas `ajustar()` só aceita `inventoryId`, não
+`work_order_id` - o estorno vira um movimento de `ajuste` com
+`work_order_id = null`, reconhecível só pelo prefixo do motivo
+("Estorno da baixa de estoque da OS #N:"). Decisão deliberada do subagente
+(documentada no código) para não alargar a assinatura do Service fora do
+escopo da task. Efeito colateral real, testado no fechamento do plano: uma
+consulta por `work_order_id` no razão não traz o estorno, só as saídas de
+verdade. Não é falha da rastreabilidade central do plano (lote -> OS
+aplicada continua exato, porque isso vem das saídas, que têm
+`work_order_id`), mas quem construir relatório futuro de "todo movimento
+desta OS" com filtro literal por `work_order_id` vai perder os estornos.
+**Regra que fica:** se um plano futuro precisar mostrar o histórico completo
+de estoque de uma OS incluindo estornos, ou criar `work_order_id` em
+`ajustar()` (mexendo em 17.2 e 17.5 juntas) ou trocar o reconhecimento para
+o prefixo do motivo, documentado aqui.
+
+### Contenção real de banco com subagentes em paralelo
+
+Três e depois duas tasks rodaram em paralelo (17.4/17.5/17.6, depois
+17.8/17.9), cada uma com `RefreshDatabase` batendo no mesmo banco MySQL
+`testing`. Isso gerou fila de "Waiting for table metadata lock" real,
+travando conexões por quase uma hora até o orquestrador matar as conexões
+presas (`KILL` por id, via `information_schema.processlist`). Os próprios
+subagentes já se protegiam rodando a verificação final num banco MySQL
+isolado (`CREATE DATABASE nome_novo`, `DB_DATABASE=nome_novo php artisan
+test`, `DROP DATABASE` ao final), mas a contenção ainda acontecia durante a
+execução, só a prova final ficava limpa. **Regra que fica:** ao despachar
+mais de uma task em paralelo que roda suíte de teste com `RefreshDatabase`,
+orientar cada subagente a usar banco MySQL isolado desde o início da rodada
+inteira (não só na checagem final), e o orquestrador deve checar
+`information_schema.processlist` por conexões presas em `testing` antes de
+rodar sua própria verificação de fechamento.
+
+### `ProductRequest` não validava os campos de estoque do produto
+
+A Task 17.1 acrescentou `controla_estoque`, `estoque_minimo` e `unidade` ao
+model `Product` (fillable e migration), mas nenhuma task alterou
+`app/Http/Requests/ProductRequest.php`. Sem a regra de validação, os três
+campos seriam descartados silenciosamente por `$request->validated()` antes
+de chegar ao Service, e o toggle de "ligar controle de estoque" na tela de
+produto (Task 17.8) não teria efeito nenhum. Encontrado e corrigido na hora
+pelo subagente da Task 17.8, ao testar o formulário de produto de ponta a
+ponta. **Regra que fica:** toda vez que uma migration acrescenta coluna
+fillable a um model que já tem FormRequest de CRUD, conferir se a regra de
+validação entrou junto - migration e Request nascem em tasks diferentes
+neste plano, e é fácil uma task de estrutura esquecer a outra ponta.
+
+### Convenção de permissão com hífen, de novo
+
+O catálogo de permissões da Task 17.7 usa `estoque-ver`,
+`estoque-movimentar`, `estoque-inventariar`, hifenizado, apesar da
+especificação da task escrever "estoque.ver" com ponto. Mesmo desvio já
+registrado nas Tasks 14.6 e 16.4: toda especificação de task antiga que usa
+ponto em nome de permissão está descrevendo a intenção, não a convenção
+real do `SyncPermissions::catalogo()`. Terceira vez que isso se repete;
+próximo plano que criar permissão nova pode passar direto para o formato
+hifenizado sem precisar redescobrir.

@@ -8,16 +8,16 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 17.1 | Migrations e models de estoque, lote e local | backend-estrutura | ⏳ | média |
-| 17.2 | Service de movimentação e saldo | backend-logica | ⏳ | alta |
-| 17.3 | Regras de lote: validade, FEFO e bloqueio | backend-logica | ⏳ | média |
-| 17.4 | Baixa automática pelo campo e custo da OS | backend-logica | ⏳ | alta |
-| 17.5 | Inventário com ajuste justificado | backend-logica | ⏳ | alta |
-| 17.6 | Alertas de estoque mínimo e de validade | backend-logica | ⏳ | média |
-| 17.7 | Endpoints de estoque, lote e rastreabilidade | backend-endpoint | ⏳ | alta |
-| 17.8 | Telas de saldo, lote e movimentação | frontend-pagina | ⏳ | alta |
-| 17.9 | Telas de inventário e rastreabilidade | frontend-pagina | ⏳ | alta |
-| 17.10 | Testes de saldo, lote vencido e rastreabilidade | teste | ⏳ | alta |
+| 17.1 | Migrations e models de estoque, lote e local | backend-estrutura | ✅ | média |
+| 17.2 | Service de movimentação e saldo | backend-logica | ✅ | alta |
+| 17.3 | Regras de lote: validade, FEFO e bloqueio | backend-logica | ✅ | média |
+| 17.4 | Baixa automática pelo campo e custo da OS | backend-logica | ✅ | alta |
+| 17.5 | Inventário com ajuste justificado | backend-logica | ✅ | alta |
+| 17.6 | Alertas de estoque mínimo e de validade | backend-logica | ✅ | média |
+| 17.7 | Endpoints de estoque, lote e rastreabilidade | backend-endpoint | ✅ | alta |
+| 17.8 | Telas de saldo, lote e movimentação | frontend-pagina | ✅ | alta |
+| 17.9 | Telas de inventário e rastreabilidade | frontend-pagina | ✅ | alta |
+| 17.10 | Testes de saldo, lote vencido e rastreabilidade | teste | ✅ | alta |
 
 ## Ordem de execução
 

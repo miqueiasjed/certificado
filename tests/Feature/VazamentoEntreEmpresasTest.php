@@ -25,6 +25,8 @@ use App\Models\DeviceEvent;
 use App\Models\DeviceReplacement;
 use App\Models\EventType;
 use App\Models\FinancialEntry;
+use App\Models\Inventory;
+use App\Models\InventoryItem;
 use App\Models\Invitation;
 use App\Models\NotificationLog;
 use App\Models\NotificationQueue;
@@ -35,11 +37,15 @@ use App\Models\PaymentDetail;
 use App\Models\PestSighting;
 use App\Models\Procedure;
 use App\Models\Product;
+use App\Models\ProductBatch;
 use App\Models\Room;
 use App\Models\SatisfactionSurvey;
 use App\Models\Service;
 use App\Models\ServiceOrder;
 use App\Models\ServiceType;
+use App\Models\StockBalance;
+use App\Models\StockLocation;
+use App\Models\StockMovement;
 use App\Models\SyncConflict;
 use App\Models\SyncOperation;
 use App\Models\Technician;
@@ -1669,6 +1675,69 @@ class VazamentoEntreEmpresasTest extends TestCase
             $dados['companyAvailabilitySetting'] = CompanyAvailabilitySetting::create([
                 'dias_da_semana' => [1, 2, 3, 4, 5],
                 'visitas_por_periodo' => 4,
+            ]);
+
+            // Estoque com lote, validade e custo (Plano 17, Task 17.1). Sem
+            // rota de CRUD direta ainda (os endpoints são a Task 17.7), então
+            // não entram em basesDeRecurso(): o objetivo aqui é só o model de
+            // domínio ter dado no cenário, mesmo critério já usado para
+            // clientRequest/appointmentRequest acima. O nome do local e o
+            // código do lote são propositalmente **iguais** nos dois tenants:
+            // é assim que os uniques compostos com company_id provam que uma
+            // empresa não impede a outra de usar "Deposito" e "L-001".
+            $dados['stockLocation'] = StockLocation::create([
+                'nome' => 'Deposito',
+                'tipo' => 'deposito',
+                'ativo' => true,
+            ]);
+
+            $dados['productBatch'] = ProductBatch::create([
+                'product_id' => $dados['product']->id,
+                'lote' => 'L-001',
+                'validade' => '2027-01-31',
+                'custo_unitario' => '0.0125',
+                'fornecedor' => 'Fornecedor '.$marca,
+                'nota_fiscal' => 'NF-'.$this->sufixo($marca),
+                'recebido_em' => '2026-07-01',
+            ]);
+
+            $dados['stockMovement'] = StockMovement::create([
+                'product_id' => $dados['product']->id,
+                'product_batch_id' => $dados['productBatch']->id,
+                'stock_location_id' => $dados['stockLocation']->id,
+                'tipo' => 'entrada',
+                'quantidade' => '10.0000',
+                'saldo_apos' => '10.0000',
+                'motivo' => 'Compra inicial '.$marca,
+                'user_id' => $autor->id,
+                'ocorrido_em' => '2026-07-01 09:00:00',
+            ]);
+
+            $dados['stockBalance'] = StockBalance::create([
+                'product_id' => $dados['product']->id,
+                'product_batch_id' => $dados['productBatch']->id,
+                'stock_location_id' => $dados['stockLocation']->id,
+                'quantidade' => '10.0000',
+            ]);
+
+            // Inventário com ajuste justificado (Plano 17, Task 17.5). Sem
+            // rota de CRUD direta ainda (os endpoints ficam para tarefa
+            // futura), então não entram em basesDeRecurso(): o objetivo aqui
+            // é só o model de domínio ter dado no cenário, mesmo critério já
+            // usado para stockLocation/productBatch acima.
+            $dados['inventory'] = Inventory::create([
+                'stock_location_id' => $dados['stockLocation']->id,
+                'situacao' => Inventory::SITUACAO_ABERTO,
+                'aberto_por' => $autor->id,
+                'aberto_em' => '2026-07-01 09:00:00',
+                'observacao' => 'Inventario '.$marca,
+            ]);
+
+            $dados['inventoryItem'] = InventoryItem::create([
+                'inventory_id' => $dados['inventory']->id,
+                'product_id' => $dados['product']->id,
+                'product_batch_id' => $dados['productBatch']->id,
+                'saldo_sistema' => '10.0000',
             ]);
 
             return $dados;

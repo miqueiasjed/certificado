@@ -99,12 +99,13 @@ class AplicadorDeExecucao implements AplicadorDeOperacao
     {
         $instante = $this->instanteDoCelular($payload);
 
-        $this->workOrderService->markAsCompleted($workOrder, []);
-
-        // `markAsCompleted()` grava `end_time` com o instante do servidor;
-        // aqui ele é corrigido para o instante do celular, sem repetir a
-        // regra de fechamento em si (que já rodou na linha acima).
-        $workOrder->update(['end_time' => $instante]);
+        // O instante do celular vai junto com o fechamento, e não numa
+        // correção depois: `markAsCompleted()` respeita o `end_time` recebido
+        // e usa esse mesmo instante para a baixa de estoque (Plano 17, Task
+        // 17.4), que precisa saber o dia em que a aplicação aconteceu em campo
+        // para julgar a validade do lote. Corrigir o campo depois deixaria a
+        // baixa registrada no dia da sincronização, que pode ser dias à frente.
+        $this->workOrderService->markAsCompleted($workOrder, ['end_time' => $instante]);
 
         return $workOrder->fresh();
     }

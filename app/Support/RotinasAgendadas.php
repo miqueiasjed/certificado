@@ -67,6 +67,16 @@ final class RotinasAgendadas
         // inadimplência mais lenta que o normal sem empurrar esta para a
         // janela dos avisos diários (07:00).
         'plataforma:encerrar-avaliacoes' => '05:30',
+        // 06:00, sem disputar janela com nenhuma das rotinas acima: os
+        // alertas de estoque (Plano 17, Task 17.6) não dependem de status de
+        // certificado, de pagamento nem de fatura, e o dado que leem
+        // (`stock_balances`, `product_batches`) só muda por movimentação
+        // manual, nunca por outra rotina desta lista. Fica antes das 07:00,
+        // que é a hora padrão de envio da central de notificações, com uma
+        // hora de folga: o suficiente para o aviso já estar na fila quando o
+        // despachante passar, sem competir com a janela mais cheia (00:10 a
+        // 05:30).
+        'estoque:verificar' => '06:00',
         // 07:00: depois de tudo que muda o dado que ela lê (status de
         // certificado, status de pagamento e geração de visitas, entre 00:10 e
         // 01:00), e antes das 08:00, que é a hora padrão de envio da central de

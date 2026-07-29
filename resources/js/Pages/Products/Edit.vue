@@ -158,6 +158,68 @@
           </div>
         </Card>
 
+        <!-- Controle de estoque (Plano 17) -->
+        <Card>
+          <div class="p-4 sm:p-6 space-y-4">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h3 class="text-sm font-medium text-gray-900">Controlar estoque deste produto</h3>
+                <p class="text-sm text-gray-500 mt-1">
+                  Ligar aqui não cria saldo. O saldo entra por lote, na tela de Lotes, depois de conferido por
+                  contagem física.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                :aria-checked="form.controla_estoque"
+                @click="form.controla_estoque = !form.controla_estoque"
+                class="shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                :class="form.controla_estoque ? 'bg-green-600' : 'bg-gray-300'"
+              >
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+                  :class="form.controla_estoque ? 'translate-x-6' : 'translate-x-1'"
+                ></span>
+              </button>
+            </div>
+
+            <div>
+              <label for="unidade" class="block text-sm font-medium text-gray-700 mb-1">
+                Unidade de medida
+              </label>
+              <input
+                type="text"
+                id="unidade"
+                v-model="form.unidade"
+                maxlength="10"
+                class="w-full sm:w-40 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                :class="{ 'border-red-500': errors.unidade }"
+                placeholder="un, kg, L, mL...">
+              <p v-if="errors.unidade" class="mt-1 text-sm text-red-600">{{ errors.unidade }}</p>
+            </div>
+
+            <div v-if="form.controla_estoque">
+              <label for="estoque_minimo" class="block text-sm font-medium text-gray-700 mb-1">
+                Estoque mínimo
+              </label>
+              <input
+                type="number"
+                id="estoque_minimo"
+                v-model="form.estoque_minimo"
+                min="0"
+                step="0.0001"
+                class="w-full sm:w-40 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                :class="{ 'border-red-500': errors.estoque_minimo }"
+                placeholder="Sem mínimo definido">
+              <p class="mt-1 text-xs text-gray-500">
+                Abaixo deste valor, o produto aparece no indicador de estoque baixo da tela de Estoque.
+              </p>
+              <p v-if="errors.estoque_minimo" class="mt-1 text-sm text-red-600">{{ errors.estoque_minimo }}</p>
+            </div>
+          </div>
+        </Card>
+
         <!-- Botões de ação -->
         <div class="flex justify-end gap-4">
           <Link :href="`/products/${product.id}`" class="btn-secondary">
@@ -330,6 +392,9 @@ const form = useForm({
   chemical_group_id: props.product.chemical_group_id ? String(props.product.chemical_group_id) : '',
   antidote_id: props.product.antidote_id ? String(props.product.antidote_id) : '',
   organ_registration_id: props.product.organ_registration_id ? String(props.product.organ_registration_id) : '',
+  controla_estoque: !!props.product.controla_estoque,
+  estoque_minimo: props.product.estoque_minimo ?? '',
+  unidade: props.product.unidade || 'un',
 });
 
 const isSubmitting = ref(false);

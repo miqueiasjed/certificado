@@ -179,6 +179,30 @@ final class EventosDeNotificacao
     public const NOTA_BAIXA_RECEBIDA = 'nota_baixa_recebida';
 
     /**
+     * Produto com controle de estoque cujo saldo somado da empresa caiu
+     * abaixo do mínimo configurado (Plano 17, Task 17.6), enfileirado pela
+     * rotina `estoque:verificar`.
+     *
+     * Aviso interno, mesmo critério de `CONTRATO_A_VENCER`: quem repõe
+     * estoque é a empresa, nunca o cliente final, e por isso só aceita
+     * e-mail.
+     */
+    public const ESTOQUE_ABAIXO_DO_MINIMO = 'estoque_abaixo_do_minimo';
+
+    /**
+     * Lote com saldo perto do vencimento (60, 30 ou 7 dias) ou já vencido
+     * (Plano 17, Task 17.6), enfileirado pela mesma rotina `estoque:verificar`.
+     *
+     * Aviso interno, pelo mesmo motivo do evento acima. O lote vencido é a
+     * exceção de "um aviso por marco" do plano: `VerificarEstoque` reenvia
+     * este evento semanalmente enquanto o lote continuar com saldo, porque é
+     * o único caso com consequência sanitária (produto impróprio na
+     * prateleira). O marco de cada disparo (a janela de 60/30/7 dias, ou a
+     * semana do reenvio) é decidido pela rotina, não por este catálogo.
+     */
+    public const LOTE_PROXIMO_DO_VENCIMENTO = 'lote_proximo_do_vencimento';
+
+    /**
      * Os eventos do plano.
      *
      * Estrutura de cada entrada:
@@ -752,6 +776,55 @@ final class EventosDeNotificacao
                         .'A pesquisa está marcada como pendência de contato no painel de satisfação. '
                         .'Ligue para o cliente antes de encerrar a pendência: nenhuma mensagem automática '
                         .'foi enviada a ele sobre esta nota.',
+                ],
+            ],
+        ],
+
+        self::ESTOQUE_ABAIXO_DO_MINIMO => [
+            'rotulo' => 'Estoque abaixo do mínimo',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'produto_nome',
+                'saldo_atual',
+                'estoque_minimo',
+                'locais',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Estoque abaixo do mínimo: {{produto_nome}}',
+                    'corpo' => 'O produto {{produto_nome}} está com saldo de {{saldo_atual}}, '
+                        ."abaixo do mínimo configurado de {{estoque_minimo}}.\n\n"
+                        ."Saldo por local: {{locais}}.\n\n"
+                        .'O saldo somado é o total da empresa, incluindo o que está com técnico em atendimento. '
+                        .'Programe a reposição antes que falte produto na próxima visita.',
+                ],
+            ],
+        ],
+
+        self::LOTE_PROXIMO_DO_VENCIMENTO => [
+            'rotulo' => 'Lote próximo do vencimento ou já vencido',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'produto_nome',
+                'lote_codigo',
+                'data_vencimento',
+                'dias_para_vencer',
+                'saldo_atual',
+                'locais',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Lote {{lote_codigo}} de {{produto_nome}}: atenção à validade',
+                    'corpo' => 'O lote {{lote_codigo}} do produto {{produto_nome}} tem validade em '
+                        ."{{data_vencimento}} e continua com saldo de {{saldo_atual}} na prateleira.\n\n"
+                        ."Dias até o vencimento: {{dias_para_vencer}} (número negativo indica lote já vencido).\n"
+                        ."Saldo por local: {{locais}}.\n\n"
+                        .'Lote vencido precisa ser descartado com registro; até lá, este aviso é repetido '
+                        .'semanalmente.',
                 ],
             ],
         ],

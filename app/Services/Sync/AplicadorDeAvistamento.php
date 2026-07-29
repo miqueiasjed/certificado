@@ -26,6 +26,23 @@ use Illuminate\Validation\ValidationException;
  * cômodo entra em `location_description` (conferido antes contra o endereço
  * da OS, para um cômodo de outro endereço nunca aparecer como se fosse deste
  * atendimento); sem `room_id`, `location_description` vem direto do payload.
+ *
+ * Por que a baixa de estoque não é chamada aqui (Plano 17, Task 17.4)
+ * -------------------------------------------------------------------
+ * Este aplicador roda a cada avistamento registrado, várias vezes na mesma
+ * visita, e o técnico ainda vai corrigir a quantidade aplicada antes de
+ * fechar. Baixar estoque aqui geraria uma dezena de movimentos de saída e de
+ * correção por OS, e o extrato do razão viraria ruído justamente para quem
+ * precisa auditá-lo. `applied_product` e `applied_product_quantity` desta
+ * tabela também são texto livre, sem vínculo com `products`: não dá para
+ * saber de que produto do catálogo se trata.
+ *
+ * A baixa acontece no fechamento da OS, pelo pivot `work_order_product` (que
+ * tem `product_id` de verdade e quantidade estabilizada), em duas portas
+ * possíveis: `WorkOrderService::markAsCompleted()` (aplicativo do técnico, via
+ * `AplicadorDeExecucao`, ação `concluir`) e `WorkOrderService::updateWorkOrder()`
+ * (edição da OS pelo painel, quando o formulário marca `status = completed`).
+ * As duas chamam o mesmo `baixarEstoqueDaOs()`, sem duplicar a regra.
  */
 class AplicadorDeAvistamento implements AplicadorDeOperacao
 {

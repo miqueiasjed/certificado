@@ -118,11 +118,25 @@ class WorkOrder extends Model
 
     /**
      * Get the products used in this work order.
+     *
+     * `product_batch_id`, `custo_unitario_aplicado` e `quantidade_pendente`
+     * entram no pivot a partir do Plano 17 (Task 17.4): são o lote de onde o
+     * produto saiu, o custo de aquisição congelado no momento da baixa e o que
+     * ficou sem baixa por falta de saldo. Quem escreve neles é
+     * `WorkOrderStockService`, no fechamento da OS; ficam nulos em produto sem
+     * `controla_estoque` e nas ordens anteriores ao controle de estoque.
      */
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'work_order_product', 'work_order_id', 'product_id')
-            ->withPivot(['quantity', 'unit', 'observations'])
+            ->withPivot([
+                'quantity',
+                'unit',
+                'observations',
+                'product_batch_id',
+                'custo_unitario_aplicado',
+                'quantidade_pendente',
+            ])
             ->withTimestamps();
     }
 

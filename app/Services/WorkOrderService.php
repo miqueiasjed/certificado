@@ -7,11 +7,23 @@ use App\Models\WorkOrder;
 use App\Support\BusinessDate;
 use Closure;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use RuntimeException;
+use Throwable;
 
 class WorkOrderService
 {
+    /**
+     * `WorkOrderStockService` entra aqui pelo fechamento da OS (Plano 17, Task
+     * 17.4): é `markAsCompleted()` quem dispara a baixa de estoque do que foi
+     * aplicado. A dependência é de mão única, e é assim que precisa continuar:
+     * o Service de estoque nunca chama de volta o de ordem de serviço.
+     */
+    public function __construct(
+        private readonly WorkOrderStockService $estoqueDaOs,
+    ) {}
+
     /**
      * Nível de aninhamento do modo que ignora o travamento de OS assinada.
      *
@@ -371,6 +383,19 @@ class WorkOrderService
             }
         }
 
+        // A tela de edição do painel marca a OS como concluída por aqui (o
+        // campo `status` do formulário, não por `markAsCompleted()`), e é
+        // também por aqui que o escritório corrige quantidade de produto numa
+        // OS que já está concluída. Os dois casos precisam disparar a baixa de
+        // estoque (Plano 17, Task 17.4): sem este gancho, ordem de serviço
+        // fechada pelo painel nunca dava baixa, só a fechada pelo aplicativo
+        // do técnico via `markAsCompleted()`. `baixarEstoqueDaOs()` já é
+        // seguro para chamar de novo em OS já processada: sem mudança na
+        // quantidade aplicada, não gera movimento nenhum.
+        if ($workOrder->status === 'completed') {
+            $this->baixarEstoqueDaOs($workOrder);
+        }
+
         return $result;
     }
 
@@ -572,15 +597,60 @@ class WorkOrderService
 
     /**
      * Mark work order as completed.
+     *
+     * Dispara a baixa de estoque dos produtos aplicados (Plano 17, Task 17.4).
+     * É a porta de conclusão do aplicativo do técnico (via
+     * `Sync\AplicadorDeExecucao`); a porta do painel é a edição da OS
+     * (`updateWorkOrder()`, quando o formulário marca `status = completed`),
+     * que dispara a mesma baixa depois de sincronizar os produtos, com o
+     * mesmo `baixarEstoqueDaOs()`. Nenhuma das duas duplica a regra de negócio
+     * em si, que vive inteira em `WorkOrderStockService`.
+     *
+     * `end_time` informado é respeitado: o aplicativo do técnico manda o
+     * instante do celular, que é quando a visita realmente terminou, e é esse
+     * instante que decide se o lote estava dentro da validade no dia da
+     * aplicação. Sem ele, vale o instante do servidor.
      */
     public function markAsCompleted(WorkOrder $workOrder, array $data = []): bool
     {
         $this->garantirQueNaoEstaTravada($workOrder);
 
         $data['status'] = 'completed';
-        $data['end_time'] = now();
+        $data['end_time'] = $data['end_time'] ?? now();
 
-        return $workOrder->update($data);
+        $concluida = $workOrder->update($data);
+
+        if ($concluida) {
+            $this->baixarEstoqueDaOs($workOrder);
+        }
+
+        return $concluida;
+    }
+
+    /**
+     * Dá baixa no estoque do que a OS registra como aplicado, sem nunca
+     * impedir a conclusão.
+     *
+     * Falta de saldo já vira pendência dentro do
+     * `WorkOrderStockService`, sem exceção. O `try/catch` aqui é para o resto:
+     * empresa sem depósito cadastrado, OS sem técnico com usuário, falha de
+     * banco no meio da movimentação. Nenhum desses casos pode derrubar o
+     * registro de um serviço que já aconteceu no mundo real, então a falha vai
+     * para o log com o número da OS e o fechamento segue. O estoque desses
+     * casos é acertado depois por inventário, que é o caminho de correção do
+     * módulo.
+     */
+    private function baixarEstoqueDaOs(WorkOrder $workOrder): void
+    {
+        try {
+            $this->estoqueDaOs->baixarProdutosDaOs($workOrder);
+        } catch (Throwable $falha) {
+            Log::error('[estoque] Baixa automática da OS falhou no fechamento.', [
+                'work_order_id' => $workOrder->id,
+                'order_number' => $workOrder->order_number,
+                'erro' => $falha->getMessage(),
+            ]);
+        }
     }
 
     /**

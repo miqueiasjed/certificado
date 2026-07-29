@@ -161,6 +161,27 @@ class SyncPermissions extends Command
                 'evento-dispositivo-gerenciar',
                 'avistamento-praga-gerenciar',
             ],
+            // Estoque com lote, validade e custo (Plano 17, Task 17.7). O
+            // arquivo da task pedia "estoque.ver"/"estoque.movimentar"/
+            // "estoque.inventariar", mas o catálogo inteiro usa "recurso-acao"
+            // com hífen (a família "os.*" das Tasks 13.3/13.4 é a única
+            // exceção, por um motivo documentado ali), então valem os nomes
+            // abaixo. Mesma correção já aplicada às Tasks 14.6 e 16.4.
+            //
+            // Três permissões e não uma: ver o saldo é rotina de quem atende o
+            // telefone; movimentar altera o razão do estoque, que vale perante
+            // fiscalização; e o inventário reescreve o saldo por contagem
+            // física. "estoque-ver" termina em "-ver" e por isso entra no papel
+            // leitura pelo filtro genérico do RolesAndPermissionsSeeder; as
+            // outras duas ficam só com administrador, que recebe o catálogo
+            // inteiro. O técnico não recebe nenhuma das três nesta entrega: o
+            // consumo em campo é baixa automática pela OS (Task 17.4), não
+            // movimentação manual.
+            'estoque' => [
+                'estoque-ver',
+                'estoque-movimentar',
+                'estoque-inventariar',
+            ],
             'tecnicos' => [
                 'tecnico-ver',
                 'tecnico-criar',

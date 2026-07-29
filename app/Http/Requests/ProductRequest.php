@@ -21,6 +21,13 @@ class ProductRequest extends FormRequest
             'chemical_group_id' => 'required|exists:chemical_groups,id',
             'antidote_id' => 'required|exists:antidotes,id',
             'organ_registration_id' => 'nullable|exists:organ_registrations,id',
+            // Dimensão de estoque (Plano 17): ligar o controle não cria saldo,
+            // que só entra por lote. O mínimo é nulo por padrão (sem ponto de
+            // reposição definido), e a unidade é texto livre de propósito
+            // (ver migration `add_stock_fields_to_products_table`).
+            'controla_estoque' => 'nullable|boolean',
+            'estoque_minimo' => 'nullable|numeric|min:0',
+            'unidade' => 'nullable|string|max:10',
         ];
     }
 
@@ -36,6 +43,9 @@ class ProductRequest extends FormRequest
             'antidote_id.required' => 'O antídoto é obrigatório.',
             'antidote_id.exists' => 'O antídoto selecionado não existe.',
             'organ_registration_id.exists' => 'O registro ministerial selecionado não existe.',
+            'estoque_minimo.numeric' => 'O estoque mínimo precisa ser um número.',
+            'estoque_minimo.min' => 'O estoque mínimo não pode ser negativo.',
+            'unidade.max' => 'A unidade não pode passar de 10 caracteres.',
         ];
     }
 }
