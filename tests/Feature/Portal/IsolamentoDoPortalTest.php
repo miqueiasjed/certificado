@@ -92,6 +92,13 @@ class IsolamentoDoPortalTest extends TestCase
         'portal.senha.definir.post' => 'Efetiva a senha nova; token de uso único testado em PortalAuthTest.',
         'portal.modulo-indisponivel' => 'Página estática de aviso, sem consulta a model de domínio.',
         'portal.solicitacoes.store' => 'Ação de criação da própria solicitação; a leitura dela está em solicitacoes.index/solicitacoes.show, que entram na varredura.',
+        // Plano 19, Task 19.6: ação de escrita (gera a cobrança da própria
+        // fatura), mesmo critério de portal.solicitacoes.store acima. O dono
+        // da fatura é conferido por PortalService::parcelaParaCobranca()
+        // antes de qualquer emissão (404 para fatura de outro cliente/outra
+        // empresa, coberto por ChargeEndpointTest); a leitura da fatura em si
+        // já está em portal.faturas, que entra na varredura.
+        'portal.faturas.cobranca' => 'Ação de escrita (gera a cobrança da própria fatura); o dono é conferido antes de emitir, e a leitura da fatura está em portal.faturas, já na varredura.',
     ];
 
     /**

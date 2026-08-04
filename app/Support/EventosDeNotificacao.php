@@ -203,6 +203,52 @@ final class EventosDeNotificacao
     public const LOTE_PROXIMO_DO_VENCIMENTO = 'lote_proximo_do_vencimento';
 
     /**
+     * Boleto ou Pix emitido a partir de uma parcela a receber (Plano 19,
+     * Task 19.3), enfileirado por `App\Services\ChargeService::emitir()`.
+     *
+     * `destinatario` é `cliente`, mesmo critério de `PAGAMENTO_VENCIDO`: é
+     * ele quem precisa do link, da linha digitável ou do QR code para pagar.
+     * `Charge` não tem relação de onde `NotificationService::resolverCliente()`
+     * tire o cliente sozinho (não é `WorkOrder` nem tem `client_id` direto),
+     * então quem dispara passa `destinatario` explícito, e todas as variáveis
+     * abaixo em `variaveis`: `variaveisDaReferencia()` não conhece `Charge` e
+     * devolveria vazio para todas.
+     */
+    public const COBRANCA_EMITIDA = 'cobranca_emitida';
+
+    /**
+     * Régua de cobrança (Plano 19, Task 19.5), disparado por
+     * `App\Services\Payments\ReguaDeCobrancaService`: lembrete 3 dias antes
+     * do vencimento da cobrança ativa da parcela, com o link de pagamento.
+     *
+     * Mesmo critério de destinatário e variáveis de `COBRANCA_EMITIDA`:
+     * `Charge` não tem como `NotificationService::resolverCliente()` chegar
+     * ao cliente sozinho, então quem dispara passa `destinatario` e todas as
+     * variáveis explícitas.
+     */
+    public const COBRANCA_A_VENCER = 'cobranca_a_vencer';
+
+    /**
+     * Régua de cobrança: aviso no próprio dia do vencimento da cobrança
+     * ativa da parcela (Plano 19, Task 19.5).
+     */
+    public const COBRANCA_VENCE_HOJE = 'cobranca_vence_hoje';
+
+    /**
+     * Régua de cobrança: cobrança em atraso (Plano 19, Task 19.5),
+     * disparado em três marcos (3, 7 e 15 dias depois do vencimento) que
+     * compartilham este único evento — mesmo critério de
+     * `LOTE_PROXIMO_DO_VENCIMENTO` e do `CERTIFICADO_A_VENCER` (Task 14.4),
+     * cujos vários marcos também dividem um evento e um template, e se
+     * diferenciam pela opção `marco` de
+     * `NotificationService::enfileirar()`. O texto padrão usa
+     * `dias_em_atraso` para o tom seguir firme e sempre respeitoso nos três
+     * marcos, sem prometer um texto diferente por dia que a tela de
+     * templates (Task 19.7) não teria como editar em separado.
+     */
+    public const COBRANCA_EM_ATRASO = 'cobranca_em_atraso';
+
+    /**
      * Os eventos do plano.
      *
      * Estrutura de cada entrada:
@@ -825,6 +871,161 @@ final class EventosDeNotificacao
                         ."Saldo por local: {{locais}}.\n\n"
                         .'Lote vencido precisa ser descartado com registro; até lá, este aviso é repetido '
                         .'semanalmente.',
+                ],
+            ],
+        ],
+
+        self::COBRANCA_EMITIDA => [
+            'rotulo' => 'Cobrança (boleto ou Pix) emitida',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL, self::CANAL_WHATSAPP],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'empresa_telefone',
+                'tipo_cobranca',
+                'valor',
+                'data_vencimento',
+                'link_pagamento',
+                'linha_digitavel',
+                'qr_code_pix',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => '{{tipo_cobranca}} no valor de {{valor}}, vencimento em {{data_vencimento}}',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\n"
+                        .'Segue a cobrança de {{valor}} referente ao seu atendimento com a {{empresa_nome}}, '
+                        ."por {{tipo_cobranca}}, com vencimento em {{data_vencimento}}.\n\n"
+                        ."Link de pagamento: {{link_pagamento}}\n"
+                        ."Linha digitável: {{linha_digitavel}}\n"
+                        ."Pix copia e cola: {{qr_code_pix}}\n\n"
+                        .'Se já pagou, desconsidere este aviso. Dúvidas, ligue para '
+                        ."{{empresa_telefone}}.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+                self::CANAL_WHATSAPP => [
+                    'assunto' => null,
+                    'corpo' => 'Olá, {{cliente_nome}}. Segue sua cobrança de {{valor}} por {{tipo_cobranca}}, '
+                        .'vencimento em {{data_vencimento}}. Link: {{link_pagamento}} '
+                        .'Linha digitável: {{linha_digitavel}} Pix copia e cola: {{qr_code_pix}} '
+                        .'{{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::COBRANCA_A_VENCER => [
+            'rotulo' => 'Cobrança próxima do vencimento (régua)',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL, self::CANAL_WHATSAPP],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'empresa_telefone',
+                'tipo_cobranca',
+                'valor',
+                'data_vencimento',
+                'dias_para_vencer',
+                'link_pagamento',
+                'linha_digitavel',
+                'qr_code_pix',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Sua {{tipo_cobranca}} de {{valor}} vence em {{data_vencimento}}',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\n"
+                        .'Passando para lembrar que a {{tipo_cobranca}} de {{valor}} vence em '
+                        ."{{data_vencimento}}, daqui a {{dias_para_vencer}} dias.\n\n"
+                        ."Link de pagamento: {{link_pagamento}}\n"
+                        ."Linha digitável: {{linha_digitavel}}\n"
+                        ."Pix copia e cola: {{qr_code_pix}}\n\n"
+                        .'Se já pagou, desconsidere este aviso. Dúvidas, ligue para '
+                        ."{{empresa_telefone}}.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+                self::CANAL_WHATSAPP => [
+                    'assunto' => null,
+                    'corpo' => 'Olá, {{cliente_nome}}. Sua {{tipo_cobranca}} de {{valor}} vence em '
+                        .'{{data_vencimento}}, daqui a {{dias_para_vencer}} dias. Link: {{link_pagamento}} '
+                        .'Linha digitável: {{linha_digitavel}} Pix copia e cola: {{qr_code_pix}} '
+                        .'{{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::COBRANCA_VENCE_HOJE => [
+            'rotulo' => 'Cobrança vence hoje (régua)',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL, self::CANAL_WHATSAPP],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'empresa_telefone',
+                'tipo_cobranca',
+                'valor',
+                'data_vencimento',
+                'link_pagamento',
+                'linha_digitavel',
+                'qr_code_pix',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Sua {{tipo_cobranca}} de {{valor}} vence hoje',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\n"
+                        .'A {{tipo_cobranca}} de {{valor}} vence hoje, {{data_vencimento}}.'
+                        ."\n\n"
+                        ."Link de pagamento: {{link_pagamento}}\n"
+                        ."Linha digitável: {{linha_digitavel}}\n"
+                        ."Pix copia e cola: {{qr_code_pix}}\n\n"
+                        .'Se já pagou, desconsidere este aviso. Dúvidas, ligue para '
+                        ."{{empresa_telefone}}.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+                self::CANAL_WHATSAPP => [
+                    'assunto' => null,
+                    'corpo' => 'Olá, {{cliente_nome}}. Sua {{tipo_cobranca}} de {{valor}} vence hoje, '
+                        .'{{data_vencimento}}. Link: {{link_pagamento}} '
+                        .'Linha digitável: {{linha_digitavel}} Pix copia e cola: {{qr_code_pix}} '
+                        .'{{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::COBRANCA_EM_ATRASO => [
+            'rotulo' => 'Cobrança em atraso (régua)',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL, self::CANAL_WHATSAPP],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'empresa_telefone',
+                'tipo_cobranca',
+                'valor',
+                'data_vencimento',
+                'dias_em_atraso',
+                'link_pagamento',
+                'linha_digitavel',
+                'qr_code_pix',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Pagamento em aberto há {{dias_em_atraso}} dias',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\n"
+                        .'O pagamento de {{valor}}, com vencimento em {{data_vencimento}}, continua em '
+                        ."aberto há {{dias_em_atraso}} dias.\n\n"
+                        .'Regularize o quanto antes para evitar transtornos. '
+                        ."Link de pagamento: {{link_pagamento}}\n"
+                        ."Linha digitável: {{linha_digitavel}}\n"
+                        ."Pix copia e cola: {{qr_code_pix}}\n\n"
+                        .'Já pagou? Desconsidere este aviso e, se possível, avise a gente pelo telefone '
+                        ."{{empresa_telefone}}.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+                self::CANAL_WHATSAPP => [
+                    'assunto' => null,
+                    'corpo' => 'Olá, {{cliente_nome}}. O pagamento de {{valor}}, vencido em '
+                        .'{{data_vencimento}}, continua em aberto há {{dias_em_atraso}} dias. Regularize o '
+                        .'quanto antes. Link: {{link_pagamento}} Linha digitável: {{linha_digitavel}} '
+                        .'Pix copia e cola: {{qr_code_pix}} {{empresa_nome}}',
                 ],
             ],
         ],

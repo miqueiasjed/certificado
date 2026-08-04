@@ -8,14 +8,14 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 19.1 | Migrations e models de credencial e cobrança | backend-estrutura | ⏳ | média |
-| 19.2 | Interface de gateway e implementação por tenant | backend-logica | ⏳ | alta |
-| 19.3 | Emissão de boleto e PIX a partir do título | backend-logica | ⏳ | alta |
-| 19.4 | Webhook idempotente e baixa automática | backend-endpoint | ⏳ | alta |
-| 19.5 | Cobrança recorrente e régua de cobrança | backend-logica | ⏳ | alta |
-| 19.6 | Endpoints, conciliação e pagamento no portal | backend-endpoint | ⏳ | alta |
-| 19.7 | Telas de cobrança, configuração e conciliação | frontend-pagina | ⏳ | alta |
-| 19.8 | Testes de webhook, idempotência e isolamento | teste | ⏳ | alta |
+| 19.1 | Migrations e models de credencial e cobrança | backend-estrutura | ✅ | média |
+| 19.2 | Interface de gateway e implementação por tenant | backend-logica | ✅ | alta |
+| 19.3 | Emissão de boleto e PIX a partir do título | backend-logica | ✅ | alta |
+| 19.4 | Webhook idempotente e baixa automática | backend-endpoint | ✅ | alta |
+| 19.5 | Cobrança recorrente e régua de cobrança | backend-logica | ✅ | alta |
+| 19.6 | Endpoints, conciliação e pagamento no portal | backend-endpoint | ✅ | alta |
+| 19.7 | Telas de cobrança, configuração e conciliação | frontend-pagina | ✅ | alta |
+| 19.8 | Testes de webhook, idempotência e isolamento | teste | ✅ | alta |
 
 ## Ordem de execução
 

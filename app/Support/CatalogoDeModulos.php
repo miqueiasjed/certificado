@@ -36,6 +36,10 @@ final class CatalogoDeModulos
             ['chave' => 'nfse', 'nome' => 'Nota fiscal de serviço', 'descricao' => 'Emissão de nota fiscal de serviço integrada às ordens de serviço.', 'sempre_ativo' => false],
             ['chave' => 'laudo_ia', 'nome' => 'Laudo por IA', 'descricao' => 'Geração assistida por inteligência artificial de laudos técnicos.', 'sempre_ativo' => false],
             ['chave' => 'monitoramento', 'nome' => 'Relatórios de monitoramento', 'descricao' => 'Relatórios consolidados de monitoramento de pragas por período.', 'sempre_ativo' => false],
+            // Cobrança recorrente (Plano 19, Task 19.6): emissão de boleto e
+            // Pix a partir do título a receber, régua de cobrança e
+            // conciliação com o gateway de pagamento do tenant.
+            ['chave' => 'cobranca_recorrente', 'nome' => 'Cobrança recorrente', 'descricao' => 'Emissão de boleto e Pix, régua de cobrança automática e conciliação com o gateway de pagamento.', 'sempre_ativo' => false],
         ];
     }
 }

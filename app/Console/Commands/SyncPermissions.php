@@ -272,6 +272,24 @@ class SyncPermissions extends Command
                 'agendamento-ver',
                 'agendamento-responder',
             ],
+            // Cobrança recorrente (Plano 19, Task 19.6): listagem e
+            // conciliação, emissão/reemissão/cancelamento de boleto e Pix, e a
+            // configuração da credencial do gateway e da régua. O arquivo da
+            // task pedia "cobrancas.ver"/"cobrancas.emitir"/
+            // "cobrancas.configurar", com ponto e no plural; valem os nomes
+            // abaixo, no padrão "recurso-acao" no singular do resto do
+            // catálogo (mesmo critério de "estoque-ver", "agendamento-ver"),
+            // mesma correção já aplicada às Tasks 14.6, 16.4, 17.7 e 18.4.
+            //
+            // `cobranca-configurar` fica de fora do prefixo "cobranca-" que o
+            // papel financeiro recebe (RolesAndPermissionsSeeder): salvar a
+            // credencial do gateway de pagamento do tenant é ação reservada
+            // ao administrador, mesmo critério de `assinatura-gerenciar`.
+            'cobrancas' => [
+                'cobranca-ver',
+                'cobranca-emitir',
+                'cobranca-configurar',
+            ],
         ];
     }
 

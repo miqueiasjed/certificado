@@ -14,10 +14,17 @@ use Inertia\Response;
 
 /**
  * Telas do portal do cliente (Task 15.4): painel, visitas, certificados,
- * contratos, adequações em aberto e faturas. Todo dado vem do `PortalService`
+ * contratos e adequações em aberto. Todo dado vem do `PortalService`
  * (Task 15.3), que já resolve o escopo duplo (empresa + cliente) - nenhum
  * método aqui monta consulta Eloquent própria, a regra de ouro desta task,
  * cobrada por revisão e por grep neste arquivo.
+ *
+ * `faturas()` saiu daqui na Task 19.6 (Plano 19), para
+ * `App\Http\Controllers\Portal\PortalPagamentoController`: a listagem passou
+ * a decorar cada fatura com a cobrança ativa (boleto/Pix), e reunir isso com
+ * a emissão de cobrança pelo cliente no mesmo controller manteve as duas
+ * ações (ver a fatura, pagar a fatura) juntas. A rota nomeada continua a
+ * mesma (`portal.faturas`), só o controller por trás dela mudou.
  *
  * ## `PortalService` não entra pelo container
  *
@@ -134,13 +141,6 @@ class PortalController extends Controller
     {
         return Inertia::render('Portal/Adequacoes/Index', [
             'adequacoes' => $this->paginar($this->portal->adequacoesEmAberto(), $request),
-        ]);
-    }
-
-    public function faturas(Request $request): Response
-    {
-        return Inertia::render('Portal/Faturas/Index', [
-            'faturas' => $this->paginar($this->portal->faturas(), $request),
         ]);
     }
 

@@ -14,6 +14,7 @@ use App\Http\Controllers\CadastroEmpresaController;
 use App\Http\Controllers\CadastrosController;
 use App\Http\Controllers\CashFlowController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\ChargeController;
 use App\Http\Controllers\ChartOfAccountController;
 use App\Http\Controllers\ChemicalGroupController;
 use App\Http\Controllers\ClientController;
@@ -60,6 +61,7 @@ use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\Webhooks\CobrancaWebhookController;
 use App\Http\Controllers\WorkOrderAdequationController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\WorkOrderFinancialController;
@@ -96,6 +98,25 @@ use Illuminate\Support\Facades\Route;
 Route::post('/webhooks/gateway/{gateway}', [GatewayWebhookController::class, 'handle'])
     ->where('gateway', '[a-z0-9_-]+')
     ->name('webhooks.gateway');
+
+// Webhook de cobrança do tenant ao cliente final (Plano 19, Task 19.4).
+//
+// Mesmo motivo do webhook acima para ficar fora do grupo autenticado, fora de
+// qualquer resolução de tenant e fora da verificação de CSRF (exclusão em
+// `bootstrap/app.php`): quem chama é o gateway de pagamento, sem sessão nem
+// token. A diferença é o que identifica o tenant: lá é o nome do provedor
+// (`{gateway}`), aqui é o `{webhookToken}` da URL, específico de cada
+// empresa — `PaymentGatewayConfig::paraToken()` resolve por um hash
+// determinístico, porque a coluna `webhook_token` é cifrada com IV aleatório
+// e não permite `WHERE webhook_token = ?` direto no banco.
+//
+// A autenticidade é conferida no controller, por
+// `GatewayDeCobranca::validarWebhook()`, antes de qualquer gravação;
+// requisição sem assinatura válida sai com 401 sem deixar rastro no banco, e
+// token que não corresponde a tenant nenhum sai com 404.
+Route::post('/webhooks/cobranca/{webhookToken}', [CobrancaWebhookController::class, 'handle'])
+    ->where('webhookToken', '[A-Za-z0-9]+')
+    ->name('webhooks.cobranca');
 
 // Recibo de pagamento.
 //
@@ -826,6 +847,63 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
         Route::post('/inventarios/{inventario}/cancelar', [InventoryController::class, 'cancelar'])
             ->middleware('permission:estoque-inventariar')
             ->name('inventarios.cancelar');
+    });
+
+    // Cobrança recorrente (Plano 19, Task 19.6): emissão de boleto e Pix a
+    // partir do título a receber, conciliação com o gateway e configuração
+    // da credencial e da régua de cobrança.
+    //
+    // `module:cobranca_recorrente` no grupo inteiro, mesmo critério do bloco
+    // de estoque acima: o bloco nasce inteiro nesta task, então a garantia
+    // estrutural ("rota nova dentro do grupo já nasce bloqueada para tenant
+    // sem o módulo") vale mais que o paralelismo com blocos antigos que
+    // cresceram aos poucos.
+    //
+    // Três permissões, cada uma com um alcance diferente: `cobranca-ver`
+    // cobre a listagem e a conciliação (leitura pura); `cobranca-emitir`
+    // cobre emitir, reemitir, cancelar e reprocessar evento pendente (mexe na
+    // cobrança em si, nunca na credencial); `cobranca-configurar` fica
+    // reservada ao administrador (RolesAndPermissionsSeeder) para a
+    // credencial do gateway e a régua - salvar um segredo que fala com o
+    // dinheiro do tenant não pode ficar ao alcance de quem só emite boleto no
+    // dia a dia.
+    Route::middleware('module:cobranca_recorrente')->group(function () {
+        Route::get('/cobrancas', [ChargeController::class, 'index'])
+            ->middleware('permission:cobranca-ver')
+            ->name('cobrancas.index');
+        Route::post('/cobrancas', [ChargeController::class, 'store'])
+            ->middleware('permission:cobranca-emitir')
+            ->name('cobrancas.store');
+        Route::post('/cobrancas/{cobranca}/reemitir', [ChargeController::class, 'reemitir'])
+            ->middleware('permission:cobranca-emitir')
+            ->name('cobrancas.reemitir');
+        Route::post('/cobrancas/{cobranca}/cancelar', [ChargeController::class, 'cancelar'])
+            ->middleware('permission:cobranca-emitir')
+            ->name('cobrancas.cancelar');
+
+        // Conciliação: relatório do período e a ação de reprocessar um
+        // evento pendente. `{eventoId}` nunca é route-model binding - ver o
+        // cabeçalho de `ChargeController` sobre `GatewayEvent` não ter escopo
+        // automático de empresa.
+        Route::get('/cobrancas/conciliacao', [ChargeController::class, 'conciliacao'])
+            ->middleware('permission:cobranca-ver')
+            ->name('cobrancas.conciliacao');
+        Route::post('/cobrancas/conciliacao/eventos/{eventoId}/reprocessar', [ChargeController::class, 'reprocessarEvento'])
+            ->whereNumber('eventoId')
+            ->middleware('permission:cobranca-emitir')
+            ->name('cobrancas.conciliacao.reprocessar');
+
+        Route::get('/cobrancas/configuracao', [ChargeController::class, 'configuracao'])
+            ->middleware('permission:cobranca-configurar')
+            ->name('cobrancas.configuracao.index');
+        Route::put('/cobrancas/configuracao', [ChargeController::class, 'configuracaoAtualizar'])
+            ->middleware('permission:cobranca-configurar')
+            ->name('cobrancas.configuracao.update');
+        // Task 19.7: botão "validar credencial" com resposta imediata, sem
+        // esperar a próxima emissão real para descobrir um token errado.
+        Route::post('/cobrancas/configuracao/validar', [ChargeController::class, 'validarCredencial'])
+            ->middleware('permission:cobranca-configurar')
+            ->name('cobrancas.configuracao.validar');
     });
 
     // Módulos ainda sem nenhuma rota no sistema (`portal_cliente`,

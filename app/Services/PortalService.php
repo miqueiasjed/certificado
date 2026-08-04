@@ -3,9 +3,11 @@
 namespace App\Services;
 
 use App\Models\Certificate;
+use App\Models\Charge;
 use App\Models\ClientUser;
 use App\Models\Contract;
 use App\Models\PaymentDetail;
+use App\Models\ReceivableInstallment;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderAdequation;
 use App\Support\BusinessDate;
@@ -228,6 +230,60 @@ class PortalService
     }
 
     /**
+     * Cobrança ativa (boleto ou Pix, Plano 19) da parcela a receber ligada à
+     * fatura informada, já no formato visível ao cliente, ou `null` quando
+     * não há nenhuma - fatura sem parcela do Plano 18 vinculada (fatura
+     * antiga, pré-migração) ou parcela sem cobrança emitida ainda. Acrescido
+     * na Task 19.6 para `GET /portal/faturas` mostrar link, linha digitável
+     * e QR code de cada fatura, sem o controller do portal precisar montar
+     * consulta Eloquent própria (a regra de ouro desta classe, ver o
+     * cabeçalho).
+     *
+     * `parcela_existe` diferencia "sem cobrança porque ninguém emitiu ainda"
+     * de "sem cobrança porque esta fatura não tem parcela do Plano 18 para
+     * cobrar" - o segundo caso é o que impede `PortalPagamentoController` de
+     * oferecer "gerar cobrança" numa fatura que não tem como virar uma.
+     *
+     * @return array{cobranca: array<string, mixed>|null, parcela_existe: bool}
+     */
+    public function situacaoDeCobrancaDaFatura(int $faturaId): array
+    {
+        $parcela = $this->parcelaDaFatura($faturaId);
+
+        if (! $parcela instanceof ReceivableInstallment) {
+            return ['cobranca' => null, 'parcela_existe' => false];
+        }
+
+        $cobranca = $parcela->charges()
+            ->whereIn('situacao', Charge::SITUACOES_ATIVAS)
+            ->latest('id')
+            ->first();
+
+        return [
+            'cobranca' => $cobranca instanceof Charge ? CamposVisiveisAoCliente::cobranca($cobranca) : null,
+            'parcela_existe' => true,
+        ];
+    }
+
+    /**
+     * Parcela a receber (Plano 18) ligada à fatura informada, pronta para
+     * `App\Services\ChargeService::emitir()` (Task 19.6,
+     * `POST /portal/faturas/{parcela}/cobranca`).
+     *
+     * `parcelaDaFatura()` já é escopada por empresa e cliente (ver
+     * `consultaDeParcelas()`), então fatura de outro cliente ou de outra
+     * empresa não localiza parcela nenhuma aqui, mesmo critério de 404 do
+     * resto da classe.
+     *
+     * @throws ModelNotFoundException Fatura sem parcela do Plano 18 vinculada, ou fatura que não existe, não é do cliente, ou não é da empresa.
+     */
+    public function parcelaParaCobranca(int $faturaId): ReceivableInstallment
+    {
+        return $this->parcelaDaFatura($faturaId)
+            ?? throw (new ModelNotFoundException)->setModel(ReceivableInstallment::class, [$faturaId]);
+    }
+
+    /**
      * Acesso direto a um documento por tipo e id, para a rota que serve ou
      * baixa o arquivo (fora do escopo desta task, Task 15.4/15.5). Ver o
      * cabeçalho da classe para os tipos aceitos e o porquê.
@@ -335,6 +391,34 @@ class PortalService
                 $consulta->where('company_id', $this->clientUser->company_id)
                     ->where('client_id', $this->clientUser->client_id);
             });
+    }
+
+    /**
+     * `receivable_installments` não tem `client_id` próprio: o vínculo passa
+     * por `receivable_id`. Mesmo raciocínio de `consultaDeContratos()`.
+     * Acrescida na Task 19.6 (Plano 19), para achar a parcela a receber por
+     * trás de uma fatura do portal.
+     */
+    private function consultaDeParcelas(): Builder
+    {
+        return ReceivableInstallment::query()
+            ->where('company_id', $this->clientUser->company_id)
+            ->whereHas('receivable', function (Builder $consulta): void {
+                $consulta->where('company_id', $this->clientUser->company_id)
+                    ->where('client_id', $this->clientUser->client_id);
+            });
+    }
+
+    /**
+     * `payment_detail_id` liga a parcela nova (Plano 18) ao dado antigo que o
+     * portal usa como "fatura" (`PaymentDetail`, ver o docblock da classe).
+     * `null` quando a fatura não tem parcela vinculada (fatura anterior à
+     * migração da Task 18.2) - não é erro, só significa "esta fatura não tem
+     * como virar cobrança".
+     */
+    private function parcelaDaFatura(int $faturaId): ?ReceivableInstallment
+    {
+        return $this->consultaDeParcelas()->where('payment_detail_id', $faturaId)->first();
     }
 
     // -----------------------------------------------------------------

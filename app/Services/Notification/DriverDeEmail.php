@@ -5,6 +5,7 @@ namespace App\Services\Notification;
 use App\Mail\NotificacaoDaFila;
 use App\Models\Company;
 use App\Models\NotificationQueue;
+use App\Models\ReceivableInstallment;
 use App\Models\WorkOrder;
 use App\Services\WorkOrderService;
 use App\Support\EventosDeNotificacao;
@@ -39,6 +40,20 @@ use Throwable;
  * 14.9 consiga testar falha de provedor sem rede: basta injetar um mailer que
  * lança a exceção do cenário. `Mail::fake()` continua funcionando, porque a
  * facade e o contrato apontam para o mesmo registro do container.
+ *
+ * ## Segunda checagem da régua de cobrança (Plano 19, Task 19.5)
+ *
+ * `App\Services\Payments\ReguaDeCobrancaService` já confere, no momento do
+ * enfileiramento, que a parcela não está paga nem cancelada. Mas a fila pode
+ * levar minutos (o despachante roda de 5 em 5 minutos) ou até dias (um item
+ * de WhatsApp fica pendente até alguém clicar o link manualmente) até este
+ * driver realmente processar o item, e cobrar quem já pagou nesse intervalo
+ * é o erro mais caro deste fluxo. Por isso `parcelaEncerradaAntesDoEnvio()`
+ * confere de novo, agora com o dado mais recente possível, antes de mandar
+ * qualquer e-mail cujo `contexto` carregue `receivable_installment_id`.
+ * Mesmo padrão de `ordemDeServicoDoContexto()` logo abaixo: o contexto leva
+ * o id do registro relacionado, e o driver decide se ainda faz sentido
+ * enviar.
  */
 class DriverDeEmail implements DriverDeEnvio
 {
@@ -55,6 +70,12 @@ class DriverDeEmail implements DriverDeEnvio
 
     public function enviar(NotificationQueue $item): ResultadoDeEnvio
     {
+        $parcelaEncerrada = $this->parcelaEncerradaAntesDoEnvio($item);
+
+        if ($parcelaEncerrada instanceof ResultadoDeEnvio) {
+            return $parcelaEncerrada;
+        }
+
         $empresa = $this->empresaDoItem($item);
 
         if ($empresa === null) {
@@ -189,6 +210,45 @@ class DriverDeEmail implements DriverDeEnvio
             : 'Aviso';
 
         return $rotulo.' - '.$empresa->name;
+    }
+
+    /**
+     * Segunda checagem da régua de cobrança: a parcela referenciada pelo
+     * `contexto` do item (quando houver) ainda está aberta para receber
+     * lembrete? Ver o cabeçalho da classe.
+     *
+     * Devolve `null` quando o envio pode seguir normalmente: item sem
+     * `receivable_installment_id` no contexto (a grande maioria dos eventos,
+     * que não passam por aqui) ou parcela ainda cobrável. Devolve
+     * `ResultadoDeEnvio::falhaPermanente()` para interromper o envio quando a
+     * parcela já está paga, cancelada, ou não existe mais — os três casos em
+     * que mandar a cobrança seria informação errada para o cliente.
+     */
+    private function parcelaEncerradaAntesDoEnvio(NotificationQueue $item): ?ResultadoDeEnvio
+    {
+        $contexto = is_array($item->contexto) ? $item->contexto : [];
+        $identificador = $contexto['receivable_installment_id'] ?? null;
+
+        if (blank($identificador)) {
+            return null;
+        }
+
+        $parcela = ReceivableInstallment::query()->find((int) $identificador);
+
+        $situacoesQueParamARegua = ['paga', 'cancelada'];
+
+        if ($parcela instanceof ReceivableInstallment && ! in_array($parcela->situacao, $situacoesQueParamARegua, true)) {
+            return null;
+        }
+
+        $motivo = $parcela === null
+            ? "a parcela #{$identificador} não foi encontrada"
+            : "a parcela #{$parcela->id} já está {$parcela->situacao}";
+
+        return ResultadoDeEnvio::falhaPermanente(
+            "Aviso de cobrança não enviado: {$motivo}. "
+            .'A régua de cobrança nunca avisa quem já regularizou a pendência.'
+        );
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Certificate;
+use App\Models\Charge;
 use App\Models\Contract;
 use App\Models\PaymentDetail;
 use App\Models\WorkOrder;
@@ -145,6 +146,25 @@ final class CamposVisiveisAoCliente
     ];
 
     /**
+     * Cobrança (boleto ou Pix, Plano 19) ativa de uma fatura, exibida ao
+     * cliente no portal (Task 19.6) para ele pagar. Nunca inclui
+     * `gateway`/`gateway_charge_id` (referência interna do provedor, sem
+     * valor para o cliente final) nem qualquer dado do gateway em si.
+     *
+     * @var array<int, string>
+     */
+    public const COBRANCA = [
+        'id',
+        'tipo',
+        'situacao',
+        'vencimento',
+        'valor',
+        'link_pagamento',
+        'linha_digitavel',
+        'qr_code_pix',
+    ];
+
+    /**
      * @return array<string, mixed>
      */
     public static function visita(WorkOrder $visita): array
@@ -240,6 +260,23 @@ final class CamposVisiveisAoCliente
             'payment_method_text' => $fatura->payment_method_text,
             'is_partial_payment' => (bool) $fatura->is_partial_payment,
             'visit_order_number' => $fatura->workOrder?->order_number,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function cobranca(Charge $cobranca): array
+    {
+        return [
+            'id' => $cobranca->id,
+            'tipo' => $cobranca->tipo,
+            'situacao' => $cobranca->situacao,
+            'vencimento' => $cobranca->vencimento?->toDateString(),
+            'valor' => (float) $cobranca->valor,
+            'link_pagamento' => $cobranca->link_pagamento,
+            'linha_digitavel' => $cobranca->linha_digitavel,
+            'qr_code_pix' => $cobranca->qr_code_pix,
         ];
     }
 

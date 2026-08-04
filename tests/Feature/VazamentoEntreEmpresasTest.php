@@ -11,6 +11,7 @@ use App\Models\AuditLog;
 use App\Models\BaitType;
 use App\Models\Budget;
 use App\Models\Certificate;
+use App\Models\Charge;
 use App\Models\ChartOfAccount;
 use App\Models\ChemicalGroup;
 use App\Models\Client;
@@ -18,6 +19,7 @@ use App\Models\ClientRequest;
 use App\Models\ClientUser;
 use App\Models\Company;
 use App\Models\CompanyAvailabilitySetting;
+use App\Models\CompanyBillingSetting;
 use App\Models\Contract;
 use App\Models\ContractVisitJustification;
 use App\Models\DailyCashBalance;
@@ -37,6 +39,7 @@ use App\Models\OrganRegistration;
 use App\Models\Payable;
 use App\Models\PayableInstallment;
 use App\Models\PaymentDetail;
+use App\Models\PaymentGatewayConfig;
 use App\Models\PestSighting;
 use App\Models\Procedure;
 use App\Models\Product;
@@ -1804,6 +1807,44 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'valor' => '300.00',
                 'vencimento' => '2026-08-05',
                 'situacao' => 'aberta',
+            ]);
+
+            // Cobrança do tenant ao cliente final (Plano 19, Task 19.1). Sem
+            // rota de CRUD direta ainda (só migrations e models; a emissão é
+            // regra de negócio da Task 19.3), então não entram em
+            // basesDeRecurso(): mesmo critério já usado para
+            // receivable/payable acima. `credenciais` e `webhook_token`
+            // carregam texto carimbado com a marca só para o dado do tenant 2
+            // nunca coincidir com o do tenant 1 nas asserções deste teste.
+            $dados['paymentGatewayConfig'] = PaymentGatewayConfig::create([
+                'gateway' => 'pagbank',
+                'ambiente' => 'sandbox',
+                'credenciais' => [
+                    'client_id' => 'cliente-'.$baixo,
+                    'client_secret' => 'segredo-'.$baixo,
+                ],
+                'webhook_token' => 'webhook-token-'.$baixo.'-0123456789abcdef0123456789abcdef',
+                'ativo' => true,
+            ]);
+
+            $dados['charge'] = Charge::create([
+                'receivable_installment_id' => $dados['receivableInstallment']->id,
+                'tipo' => 'boleto',
+                'gateway' => 'pagbank',
+                'gateway_charge_id' => 'CHG-'.$this->sufixo($marca),
+                'valor' => '500.00',
+                'vencimento' => '2026-08-05',
+                'situacao' => 'emitida',
+            ]);
+
+            // Configuração da régua de cobrança e da emissão recorrente
+            // (Plano 19, Task 19.5). Sem rota de CRUD direta ainda (só a
+            // Task 19.7 introduz a tela), então não entra em
+            // basesDeRecurso(): mesmo critério já usado para
+            // companyAvailabilitySetting acima.
+            $dados['companyBillingSetting'] = CompanyBillingSetting::create([
+                'regua_ativa' => true,
+                'antecedencia_emissao_dias' => 10,
             ]);
 
             return $dados;

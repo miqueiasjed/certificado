@@ -107,8 +107,16 @@ return Application::configure(basePath: dirname(__DIR__))
         // O curinga cobre o `{gateway}` da rota, e só ele: o padrão é comparado
         // com o caminho, então `webhooks/gateway/*` não alcança nenhuma outra
         // rota do sistema.
+        //
+        // `webhooks/cobranca/*` (Plano 19, Task 19.4) é a mesma exceção para o
+        // webhook de cobrança do tenant ao cliente final: quem chama é o
+        // gateway de pagamento configurado por cada empresa, sem sessão e sem
+        // como obter um token CSRF. A autorização vem da assinatura conferida
+        // em `GatewayDeCobranca::validarWebhook()`
+        // (`CobrancaWebhookController`), não do CSRF.
         $middleware->validateCsrfTokens(except: [
             'webhooks/gateway/*',
+            'webhooks/cobranca/*',
         ]);
 
         // Aliases dos middlewares do Spatie Permission. O pacote não os

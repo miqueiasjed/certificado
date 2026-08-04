@@ -81,8 +81,9 @@
           {{ selecionados.size }} parcela(s) selecionada(s) de <strong>{{ clienteDaSelecao }}</strong> ·
           total {{ formatarMoeda(totalSelecionado) }}
         </p>
-        <div class="flex gap-3">
+        <div class="flex flex-wrap gap-3">
           <button type="button" class="btn-secondary-sm" @click="limparSelecao">Limpar seleção</button>
+          <button v-if="podeEmitirCobranca" type="button" class="btn-secondary" @click="abrirEmissao">Emitir cobrança</button>
           <button type="button" class="btn-primary" @click="abrirBaixaEmLote">Baixar selecionadas</button>
         </div>
       </div>
@@ -217,6 +218,63 @@
         </button>
       </template>
     </Modal>
+
+    <!--
+      Emissão de cobrança (Plano 19): mesma seleção múltipla da baixa em lote.
+      Depois de processar, a tela troca para o resumo por parcela (quantas
+      emitidas, quantas com erro e por quê) em vez de fechar sozinha - é
+      exatamente o que a Task 19.7 pede, e o usuário decide quando fechar.
+    -->
+    <Modal :show="mostrarModalEmissao" @close="fecharEmissao">
+      <template #icon>
+        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+      </template>
+      <template #title>Emitir cobrança</template>
+      <template #content>
+        <div v-if="!resultadoEmissao">
+          <p class="text-sm text-gray-700 mb-4">
+            {{ parcelasParaEmissao.length }} parcela(s) selecionada(s), de <strong>{{ clienteDaSelecao }}</strong>,
+            totalizando {{ formatarMoeda(totalParaEmissao) }}. Uma cobrança é gerada para cada parcela.
+          </p>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de cobrança *</label>
+          <div class="flex gap-4">
+            <label class="inline-flex items-center gap-2">
+              <input v-model="tipoEmissao" type="radio" value="boleto" class="text-green-600 focus:ring-green-500" />
+              <span class="text-sm text-gray-700">Boleto</span>
+            </label>
+            <label class="inline-flex items-center gap-2">
+              <input v-model="tipoEmissao" type="radio" value="pix" class="text-green-600 focus:ring-green-500" />
+              <span class="text-sm text-gray-700">Pix</span>
+            </label>
+          </div>
+          <p v-if="erroEmissao" class="mt-3 text-sm text-red-600">{{ erroEmissao }}</p>
+        </div>
+
+        <div v-else>
+          <p class="text-sm text-gray-700 mb-3">
+            {{ resultadoEmissao.emitidas }} de {{ resultadoEmissao.total }} cobrança(s) emitida(s).
+            <span v-if="resultadoEmissao.erros.length"> {{ resultadoEmissao.erros.length }} com erro:</span>
+          </p>
+          <ul v-if="resultadoEmissao.erros.length" class="space-y-2 max-h-64 overflow-y-auto">
+            <li v-for="item in resultadoEmissao.erros" :key="item.parcelaId" class="text-sm bg-red-50 border border-red-200 rounded-md p-2">
+              <span class="font-medium text-red-800">{{ item.descricao }}:</span>
+              <span class="text-red-700"> {{ item.mensagem }}</span>
+            </li>
+          </ul>
+        </div>
+      </template>
+      <template #actions>
+        <template v-if="!resultadoEmissao">
+          <button type="button" class="btn-secondary" :disabled="emitindo" @click="fecharEmissao">Cancelar</button>
+          <button type="button" class="btn-primary ml-3" :disabled="emitindo" @click="confirmarEmissao">
+            {{ emitindo ? 'Emitindo...' : 'Emitir' }}
+          </button>
+        </template>
+        <button v-else type="button" class="btn-primary" @click="fecharEmissao">Fechar</button>
+      </template>
+    </Modal>
   </AuthenticatedLayout>
 </template>
 
@@ -231,6 +289,7 @@ import Alert from '@/Components/Alert.vue';
 import Modal from '@/Components/Modal.vue';
 import BaixaDeParcelaModal from '@/Components/BaixaDeParcelaModal.vue';
 import { usePermissoes } from '@/Composables/usePermissoes';
+import { useModulos } from '@/Composables/useModulos';
 import { formatarData, diasAte } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -242,6 +301,12 @@ const props = defineProps({
 });
 
 const { pode } = usePermissoes();
+const { temModulo } = useModulos();
+
+// Plano 19: emitir cobrança (boleto/Pix) reaproveita a mesma seleção múltipla
+// da baixa em lote, ver `selecionados` mais abaixo. Some da tela para quem
+// não tem o módulo/permissão, mesmo critério do resto do arquivo.
+const podeEmitirCobranca = computed(() => temModulo('cobranca_recorrente') && pode('cobranca-emitir'));
 
 const SITUACAO_LABEL = {
   aberta: 'Aberta',
@@ -470,5 +535,99 @@ async function confirmarEstorno() {
   } finally {
     estornando.value = false;
   }
+}
+
+// -----------------------------------------------------------------
+// Emissão de cobrança (Plano 19, Task 19.7): mesma seleção da baixa em
+// lote, sempre via `POST /cobrancas` em lote (`receivable_installment_ids`),
+// mesmo com uma parcela só - é o único formato de resposta que traz o
+// resultado por parcela (`ChargeController::emitirEmLote()`).
+// -----------------------------------------------------------------
+
+const mostrarModalEmissao = ref(false);
+const parcelasParaEmissao = ref([]);
+const tipoEmissao = ref('boleto');
+const emitindo = ref(false);
+const erroEmissao = ref('');
+const resultadoEmissao = ref(null);
+
+function abrirEmissao() {
+  if (selecionados.value.size === 0) return;
+
+  parcelasParaEmissao.value = props.parcelas.filter((p) => selecionados.value.has(p.id));
+  tipoEmissao.value = 'boleto';
+  erroEmissao.value = '';
+  resultadoEmissao.value = null;
+  mostrarModalEmissao.value = true;
+}
+
+function fecharEmissao() {
+  if (emitindo.value) return;
+
+  const houveEmissao = resultadoEmissao.value !== null;
+
+  mostrarModalEmissao.value = false;
+  resultadoEmissao.value = null;
+
+  if (houveEmissao) {
+    limparSelecao();
+    router.reload({ only: ['parcelas', 'indicadores'] });
+  }
+}
+
+const totalParaEmissao = computed(() => (
+  parcelasParaEmissao.value.reduce((soma, p) => soma + parseFloat(p.saldo || 0), 0)
+));
+
+async function confirmarEmissao() {
+  if (emitindo.value || parcelasParaEmissao.value.length === 0) return;
+
+  emitindo.value = true;
+  erroEmissao.value = '';
+
+  try {
+    const resposta = await fetch('/cobrancas', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        tipo: tipoEmissao.value,
+        receivable_installment_ids: parcelasParaEmissao.value.map((p) => p.id),
+      }),
+    });
+
+    const dados = await resposta.json().catch(() => ({}));
+
+    if (!resposta.ok) {
+      erroEmissao.value = dados.message || Object.values(dados.errors ?? {}).flat()[0] || 'Não foi possível emitir a cobrança.';
+      return;
+    }
+
+    const resultados = dados.resultados || [];
+
+    resultadoEmissao.value = {
+      total: resultados.length,
+      emitidas: resultados.filter((r) => r.situacao === 'emitida').length,
+      erros: resultados
+        .filter((r) => r.situacao === 'erro')
+        .map((r) => ({
+          parcelaId: r.receivable_installment_id,
+          descricao: descricaoDaParcela(r.receivable_installment_id),
+          mensagem: r.mensagem || 'Falha não identificada.',
+        })),
+    };
+  } catch (erro) {
+    erroEmissao.value = 'Não foi possível emitir a cobrança. Tente novamente.';
+  } finally {
+    emitindo.value = false;
+  }
+}
+
+function descricaoDaParcela(parcelaId) {
+  const parcela = props.parcelas.find((p) => p.id === parcelaId);
+  return parcela ? `${parcela.cliente} - ${parcela.descricao}` : `Parcela #${parcelaId}`;
 }
 </script>

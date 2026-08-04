@@ -427,6 +427,9 @@ class PortalEndpointTest extends TestCase
         $arquivos = [
             app_path('Http/Controllers/Portal/PortalController.php'),
             app_path('Http/Controllers/Portal/PortalDocumentController.php'),
+            // Plano 19, Task 19.6: cobrança ativa da fatura e geração de
+            // cobrança pelo cliente, mesma regra de ouro do resto do portal.
+            app_path('Http/Controllers/Portal/PortalPagamentoController.php'),
         ];
 
         // AuditLog é infraestrutura de auditoria, não dado de domínio do
@@ -435,6 +438,8 @@ class PortalEndpointTest extends TestCase
         $modelosDeDominio = [
             'WorkOrder', 'Certificate', 'Contract', 'PaymentDetail',
             'Client', 'Address', 'WorkOrderAdequation',
+            // Plano 19, Task 19.6.
+            'Charge', 'ReceivableInstallment',
         ];
 
         foreach ($arquivos as $arquivo) {

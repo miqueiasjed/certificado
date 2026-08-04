@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Parcela de um título a receber (Plano 18): onde vivem o valor, o
@@ -84,5 +85,15 @@ class ReceivableInstallment extends Model
     public function financialEntry(): BelongsTo
     {
         return $this->belongsTo(FinancialEntry::class);
+    }
+
+    /**
+     * Cobranças (boleto ou PIX, Plano 19) emitidas para esta parcela ao longo
+     * do tempo. Pode haver mais de uma (boleto vencido e reemitido); qual
+     * delas está ativa é regra da Task 19.3, não deste relacionamento.
+     */
+    public function charges(): HasMany
+    {
+        return $this->hasMany(Charge::class);
     }
 }

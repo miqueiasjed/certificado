@@ -4,6 +4,7 @@ use App\Http\Controllers\Portal\ClientRequestController;
 use App\Http\Controllers\Portal\PortalAuthController;
 use App\Http\Controllers\Portal\PortalController;
 use App\Http\Controllers\Portal\PortalDocumentController;
+use App\Http\Controllers\Portal\PortalPagamentoController;
 use App\Http\Middleware\AutenticarCliente;
 use App\Http\Middleware\EnsurePortalModuleIsActive;
 use Illuminate\Support\Facades\Route;
@@ -93,7 +94,28 @@ Route::middleware(AutenticarCliente::class)->group(function () {
         Route::get('/certificados', [PortalController::class, 'certificados'])->name('certificados');
         Route::get('/contratos', [PortalController::class, 'contratos'])->name('contratos');
         Route::get('/adequacoes', [PortalController::class, 'adequacoes'])->name('adequacoes');
-        Route::get('/faturas', [PortalController::class, 'faturas'])->name('faturas');
+
+        // Faturas (Plano 15, Task 15.4) e, desde o Plano 19 (Task 19.6), a
+        // cobrança ativa de cada uma (link, linha digitável, QR code) e a
+        // geração de cobrança pelo próprio cliente, nas duas em
+        // `PortalPagamentoController`.
+        //
+        // Nenhuma das duas leva `module:<chave>` na rota: esse middleware
+        // (`EnsureModuleIsActive`) redireciona para `modulo-indisponivel` de
+        // `routes/web.php`, que mora atrás do guard `web` do funcionário - um
+        // `ClientUser` do guard `cliente` cairia, sem sentido nenhum para
+        // ele, na tela de login do funcionário (o mesmo motivo, documentado
+        // no cabeçalho de `EnsurePortalModuleIsActive`, pelo qual esta classe
+        // existe em vez de reaproveitar `EnsureModuleIsActive` aqui). A
+        // listagem nunca dependeu do módulo `cobranca_recorrente` (é do Plano
+        // 15, anterior a ele); a geração de cobrança confere o módulo à mão,
+        // dentro do controller (`ModuleService::ativo('cobranca_recorrente')`),
+        // e devolve JSON 403 endereçado ao cliente final, não um redirect
+        // para uma página que ele não alcança.
+        Route::get('/faturas', [PortalPagamentoController::class, 'faturas'])->name('faturas');
+        Route::post('/faturas/{parcela}/cobranca', [PortalPagamentoController::class, 'gerarCobranca'])
+            ->whereNumber('parcela')
+            ->name('faturas.cobranca');
 
         // Solicitações de atendimento (Plano 15, Task 15.5): abrir, listar e
         // ver a própria. O formulário de abertura nunca aceita prioridade -

@@ -52,8 +52,15 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     private function permissoesFinanceiro($todasAsPermissoes): array
     {
+        // 'cobranca-' entra no mesmo filtro de prefixo do financeiro e do
+        // pagamento (Plano 19, Task 19.6), mas `cobranca-configurar` é
+        // retirada logo abaixo: salvar a credencial do gateway de pagamento
+        // do tenant é ação reservada ao administrador, mesmo critério de
+        // `assinatura-gerenciar` (que também não entra em nenhum papel além
+        // dele).
         $porPrefixo = $todasAsPermissoes
-            ->filter(fn (string $nome) => Str::startsWith($nome, ['financeiro-', 'pagamento-']))
+            ->filter(fn (string $nome) => Str::startsWith($nome, ['financeiro-', 'pagamento-', 'cobranca-']))
+            ->reject(fn (string $nome) => $nome === 'cobranca-configurar')
             ->all();
 
         $especificas = [
@@ -133,9 +140,11 @@ class RolesAndPermissionsSeeder extends Seeder
 
     /**
      * Permissões do papel leitura: todas as permissões terminadas em "-ver"
-     * do catálogo, exceto financeiro-ver, pagamento-ver e usuario-ver. As duas
-     * primeiras porque leitura não alcança dinheiro; a terceira porque a tela
-     * de usuários é administração da empresa, não consulta de dado.
+     * do catálogo, exceto financeiro-ver, pagamento-ver, cobranca-ver e
+     * usuario-ver. As três primeiras porque leitura não alcança dinheiro
+     * (cobrança recorrente, Plano 19, Task 19.6, entra no mesmo critério de
+     * financeiro-ver/pagamento-ver); a quarta porque a tela de usuários é
+     * administração da empresa, não consulta de dado.
      *
      * auditoria-ver e acesso-log-ver também ficam de fora: o histórico mostra
      * o valor antes e depois de campo de qualquer módulo, inclusive financeiro,
@@ -151,6 +160,7 @@ class RolesAndPermissionsSeeder extends Seeder
             ->reject(fn (string $nome) => in_array($nome, [
                 'financeiro-ver',
                 'pagamento-ver',
+                'cobranca-ver',
                 'usuario-ver',
                 'auditoria-ver',
                 'acesso-log-ver',

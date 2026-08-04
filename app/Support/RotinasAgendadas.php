@@ -43,12 +43,16 @@ final class RotinasAgendadas
         // pesada da janela.
         'plataforma:apurar-uso' => '03:00',
         // 04:00, depois da apuração de uso (03:00) e antes dos avisos diários
-        // (07:00). É a única rotina da janela que fala com um provedor externo
-        // e que grava cobrança: fica sozinha na hora dela para que uma
-        // lentidão do gateway não empurre nenhuma outra, e com três horas de
-        // folga até os avisos, que precisam sair com a fatura do dia já
-        // emitida. Diária, e não mensal, porque cada tenant assina no dia em
-        // que assina e por isso tem o próprio dia de vencimento.
+        // (07:00). É a única rotina da janela que fala com o gateway da
+        // PLATAFORMA (a cobrança da assinatura do tenant, Plano 7) e grava
+        // Invoice: fica sozinha na hora dela para que uma lentidão desse
+        // gateway não empurre nenhuma outra, e com três horas de folga até
+        // os avisos, que precisam sair com a fatura do dia já emitida.
+        // Diária, e não mensal, porque cada tenant assina no dia em que
+        // assina e por isso tem o próprio dia de vencimento. As rotinas de
+        // cobrança do Plano 19 (o tenant cobrando o cliente final dele, com
+        // o gateway do próprio tenant) ficam em janela própria, às 06:15 e
+        // 06:30, pelo mesmo motivo de isolamento, sem disputar esta hora.
         'plataforma:gerar-faturas' => '04:00',
         // 05:00, obrigatoriamente depois da geração de faturas (04:00). A régua
         // decide atraso e bloqueio a partir de `invoices.vencimento`, então
@@ -77,6 +81,22 @@ final class RotinasAgendadas
         // despachante passar, sem competir com a janela mais cheia (00:10 a
         // 05:30).
         'estoque:verificar' => '06:00',
+        // 06:15, depois do estoque (06:00) e antes da régua de cobrança
+        // (06:30), da qual ela é pré-requisito: emite a cobrança (boleto ou
+        // Pix) das parcelas de contrato que vencem dentro da antecedência
+        // configurada, falando com o gateway do próprio tenant (Plano 19,
+        // Task 19.5). Isolada em horário próprio, longe de
+        // plataforma:gerar-faturas (04:00), pelo mesmo motivo documentado
+        // lá: rotina que fala com gateway de pagamento não pode ter a
+        // lentidão de um provedor empurrando outra rotina da janela.
+        'cobrancas:emitir-recorrentes' => '06:15',
+        // 06:30, depois da emissão recorrente (06:15): o marco "3 dias antes
+        // do vencimento" da régua só tem link de pagamento para mandar
+        // quando a cobrança de hoje já foi emitida na passada anterior.
+        // Antes dos avisos diários (07:00), pela mesma folga de uma hora
+        // documentada para as demais rotinas que alimentam a fila de
+        // notificações do dia.
+        'cobrancas:regua' => '06:30',
         // 07:00: depois de tudo que muda o dado que ela lê (status de
         // certificado, status de pagamento e geração de visitas, entre 00:10 e
         // 01:00), e antes das 08:00, que é a hora padrão de envio da central de
