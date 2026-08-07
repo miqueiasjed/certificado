@@ -8,10 +8,12 @@ use App\Models\ClientUser;
 use App\Models\Contract;
 use App\Models\PaymentDetail;
 use App\Models\ReceivableInstallment;
+use App\Models\ServiceInvoice;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderAdequation;
 use App\Support\BusinessDate;
 use App\Support\CamposVisiveisAoCliente;
+use App\Support\Fiscal\NotaFiscalPublica;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -207,6 +209,23 @@ class PortalService
             ->all();
     }
 
+    /** @return array<int, array<string, mixed>> */
+    public function notasFiscais(): array
+    {
+        return $this->consultaDeNotasFiscais()
+            ->with(['substituidaPor', 'notaSubstituida'])
+            ->orderByDesc('competencia')
+            ->orderByDesc('id')
+            ->get()
+            ->map(fn (ServiceInvoice $nota): array => NotaFiscalPublica::paraPortal($nota))
+            ->all();
+    }
+
+    public function notaFiscal(int $id): ServiceInvoice
+    {
+        return $this->consultaDeNotasFiscais()->findOrFail($id);
+    }
+
     /**
      * Faturas do cliente que ainda pedem atenção: sem `payment_date`
      * gravada, cobrindo tanto a pendente quanto a já vencida (as duas únicas
@@ -391,6 +410,14 @@ class PortalService
                 $consulta->where('company_id', $this->clientUser->company_id)
                     ->where('client_id', $this->clientUser->client_id);
             });
+    }
+
+    private function consultaDeNotasFiscais(): Builder
+    {
+        return ServiceInvoice::query()
+            ->where('company_id', $this->clientUser->company_id)
+            ->where('client_id', $this->clientUser->client_id)
+            ->whereIn('situacao', ['emitida', 'cancelamento_pendente', 'cancelada', 'substituida']);
     }
 
     /**

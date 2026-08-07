@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto">
+  <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto" @keydown="tratarTecla">
     <!-- Overlay -->
     <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
       <div class="fixed inset-0 transition-opacity" aria-hidden="true">
@@ -7,7 +7,14 @@
       </div>
 
       <!-- Modal -->
-      <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full sm:my-8 sm:align-middle sm:max-w-lg">
+      <div
+        ref="dialogo"
+        class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full sm:my-8 sm:align-middle sm:max-w-lg"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="tituloId"
+        tabindex="-1"
+      >
         <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <div class="sm:flex sm:items-start">
             <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-green-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -18,7 +25,7 @@
               </slot>
             </div>
             <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+              <h3 :id="tituloId" class="text-lg leading-6 font-medium text-gray-900 mb-4">
                 <slot name="title">Título do Modal</slot>
               </h3>
               <div class="mt-2">
@@ -40,7 +47,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { getCurrentInstance, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+
+const props = defineProps({
   show: {
     type: Boolean,
     default: false
@@ -48,8 +57,71 @@ defineProps({
 });
 
 const emit = defineEmits(['close']);
+const dialogo = ref(null);
+const tituloId = `modal-titulo-${getCurrentInstance()?.uid}`;
+let focoAnterior = null;
+const seletorFocavel = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
 
 const close = () => {
   emit('close');
 };
+
+const elementosFocaveis = () => Array.from(dialogo.value?.querySelectorAll(seletorFocavel) ?? [])
+  .filter((elemento) => !elemento.closest('[hidden], [aria-hidden="true"]'));
+
+const tratarTecla = (evento) => {
+  if (evento.key === 'Escape') {
+    evento.preventDefault();
+    close();
+    return;
+  }
+
+  if (evento.key !== 'Tab') {
+    return;
+  }
+
+  const focaveis = elementosFocaveis();
+
+  if (focaveis.length === 0) {
+    evento.preventDefault();
+    dialogo.value?.focus();
+    return;
+  }
+
+  const primeiro = focaveis[0];
+  const ultimo = focaveis[focaveis.length - 1];
+  const focoEstaNosControles = focaveis.includes(document.activeElement);
+
+  if (evento.shiftKey && (!focoEstaNosControles || document.activeElement === primeiro)) {
+    evento.preventDefault();
+    ultimo.focus();
+    return;
+  }
+
+  if (!evento.shiftKey && (!focoEstaNosControles || document.activeElement === ultimo)) {
+    evento.preventDefault();
+    primeiro.focus();
+  }
+};
+
+watch(() => props.show, async (aberto) => {
+  if (aberto) {
+    focoAnterior = document.activeElement;
+    await nextTick();
+    dialogo.value?.focus();
+    return;
+  }
+
+  focoAnterior?.focus?.();
+  focoAnterior = null;
+});
+
+onBeforeUnmount(() => focoAnterior?.focus?.());
 </script>

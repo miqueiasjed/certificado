@@ -91,6 +91,8 @@ class PortalPagamentoController extends Controller
 
         return Inertia::render('Portal/Faturas/Index', [
             'faturas' => $this->paginar($faturas, $request),
+            'notas_fiscais' => $this->moduleService->ativo('nfse') ? $this->portal->notasFiscais() : [],
+            'nfse_ativo' => $this->moduleService->ativo('nfse'),
         ]);
     }
 
@@ -121,10 +123,10 @@ class PortalPagamentoController extends Controller
             throw $erro;
         } catch (CobrancaAtivaExistenteException|CobrancaJaPagaException|DadosDeCobrancaInvalidosException
             |GatewayNaoConfiguradoException|GatewayRecusouException|GatewayIndisponivelException $erro) {
-            return $this->recusar($erro->getMessage(), 422);
-        } catch (Throwable $erro) {
-            throw $erro;
-        }
+                return $this->recusar($erro->getMessage(), 422);
+            } catch (Throwable $erro) {
+                throw $erro;
+            }
 
         $situacao = $this->portal->situacaoDeCobrancaDaFatura($parcela);
 

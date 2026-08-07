@@ -10,7 +10,9 @@ use App\Support\BusinessDate;
 use App\Support\Dinheiro;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Baixa e estorno de parcela a receber (Plano 18, Task 18.4).
@@ -91,7 +93,10 @@ class SettlementService
 
     private const SITUACAO_TITULO_CANCELADO = 'cancelado';
 
-    public function __construct(private readonly IntegracaoComCaixa $caixa) {}
+    public function __construct(
+        private readonly IntegracaoComCaixa $caixa,
+        private readonly ServiceInvoiceService $notasFiscais,
+    ) {}
 
     /**
      * Registra o recebimento de uma parcela, total ou parcial.
@@ -125,7 +130,7 @@ class SettlementService
         $formaPagamento = $this->textoOpcional($dados, 'forma_pagamento');
         $observacao = $this->textoOpcional($dados, 'observacao');
 
-        return DB::transaction(function () use ($parcela, $usuario, $valorEmCentavos, $dia, $formaPagamento, $observacao) {
+        $baixada = DB::transaction(function () use ($parcela, $usuario, $valorEmCentavos, $dia, $formaPagamento, $observacao) {
             $parcela = $this->travar($parcela);
 
             $saldoEmCentavos = $this->saldoDevedorEmCentavos($parcela);
@@ -156,6 +161,10 @@ class SettlementService
 
             return $parcela->refresh();
         });
+
+        $this->emitirNotaFiscalDoTituloQuitado($baixada);
+
+        return $baixada;
     }
 
     /**
@@ -359,6 +368,24 @@ class SettlementService
 
         if ($titulo->situacao !== $situacao) {
             $titulo->update(['situacao' => $situacao]);
+        }
+    }
+
+    private function emitirNotaFiscalDoTituloQuitado(ReceivableInstallment $parcela): void
+    {
+        $titulo = $parcela->receivable()->first();
+
+        if (! $titulo instanceof Receivable || $titulo->situacao !== self::SITUACAO_TITULO_QUITADO) {
+            return;
+        }
+
+        try {
+            $this->notasFiscais->emitirAutomaticamenteDoTitulo($titulo);
+        } catch (Throwable $falha) {
+            Log::error('[fiscal] Emissão automática do título falhou após a quitação.', [
+                'receivable_id' => $titulo->id,
+                'erro' => $falha->getMessage(),
+            ]);
         }
     }
 

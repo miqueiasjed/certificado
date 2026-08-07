@@ -290,6 +290,12 @@ class SyncPermissions extends Command
                 'cobranca-emitir',
                 'cobranca-configurar',
             ],
+            'fiscal' => [
+                'fiscal-ver',
+                'fiscal-emitir',
+                'fiscal-cancelar',
+                'fiscal-configurar',
+            ],
         ];
     }
 

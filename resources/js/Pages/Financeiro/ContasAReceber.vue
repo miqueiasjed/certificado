@@ -88,6 +88,16 @@
         </div>
       </div>
 
+      <div v-if="selecionadosFiscal.size > 0" class="rounded-md border border-blue-200 bg-blue-50 p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-sm text-blue-900">
+          {{ titulosFiscaisSelecionados.length }} título(s) selecionado(s) para NFS-e, inclusive títulos pagos e clientes distintos.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <button type="button" class="btn-secondary-sm" @click="limparSelecaoFiscal">Limpar seleção fiscal</button>
+          <button type="button" class="btn-primary" @click="abrirEmissaoFiscalSelecionadas">Emitir NFS-e</button>
+        </div>
+      </div>
+
       <!-- Lista de parcelas -->
       <Card padding="none">
         <div v-if="parcelasFiltradas.length === 0" class="p-12 text-center">
@@ -98,7 +108,8 @@
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-4 py-3 w-10"></th>
+                <th class="px-4 py-3 w-10"><span class="sr-only">Selecionar para baixa</span></th>
+                <th v-if="podeEmitirNota" class="px-4 py-3 w-10"><span class="sr-only">Selecionar para NFS-e</span></th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vencimento</th>
@@ -122,7 +133,19 @@
                     :disabled="!podeSelecionar(parcela)"
                     class="h-4 w-4 text-green-600 border-gray-300 rounded disabled:opacity-30"
                     :title="!temSaldo(parcela) ? 'Parcela sem saldo devedor' : (clienteBloqueado(parcela) ? 'Selecione parcelas do mesmo cliente' : '')"
+                    :aria-label="`Selecionar ${parcela.descricao} para baixa`"
                     @change="alternarSelecao(parcela)"
+                  />
+                </td>
+                <td v-if="podeEmitirNota" class="px-4 py-4">
+                  <input
+                    type="checkbox"
+                    :checked="selecionadosFiscal.has(parcela.id)"
+                    :disabled="!podeSelecionarFiscal(parcela)"
+                    class="h-4 w-4 rounded border-gray-300 text-blue-600 disabled:opacity-30"
+                    :title="podeSelecionarFiscal(parcela) ? 'Selecionar título para NFS-e' : 'Título sem origem fiscal elegível'"
+                    :aria-label="`Selecionar ${parcela.descricao} para NFS-e`"
+                    @change="alternarSelecaoFiscal(parcela)"
                   />
                 </td>
                 <td class="px-4 py-4 text-sm text-gray-900">
@@ -151,6 +174,14 @@
                   </span>
                 </td>
                 <td class="px-4 py-4 text-right whitespace-nowrap">
+                  <button
+                    v-if="podeEmitirNota && podeSelecionarFiscal(parcela)"
+                    type="button"
+                    class="text-green-700 hover:text-green-900 text-sm font-medium mr-3"
+                    @click="abrirEmissaoFiscal([parcela])"
+                  >
+                    NFS-e
+                  </button>
                   <button
                     v-if="temSaldo(parcela) && pode('financeiro-baixar')"
                     type="button"
@@ -275,11 +306,45 @@
         <button v-else type="button" class="btn-primary" @click="fecharEmissao">Fechar</button>
       </template>
     </Modal>
+
+    <Modal :show="mostrarModalNota" @close="fecharEmissaoFiscal">
+      <template #icon>
+        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M9 8h6m2 13H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+        </svg>
+      </template>
+      <template #title>Emitir notas fiscais</template>
+      <template #content>
+        <div v-if="resultadoNota.length === 0">
+          <p class="text-sm text-gray-700">
+            Será solicitada uma NFS-e para cada um dos {{ titulosParaNota.length }} título(s) selecionado(s). O processamento municipal poderá continuar em segundo plano.
+          </p>
+        </div>
+        <div v-else>
+          <p class="mb-3 text-sm text-gray-700">Resultado por título</p>
+          <ul class="max-h-72 space-y-2 overflow-y-auto">
+            <li v-for="item in resultadoNota" :key="item.receivableId" :class="['rounded-md border p-3 text-sm', classeResultadoFiscal(item.estado)]">
+              <p :class="['font-medium', classeTextoResultadoFiscal(item.estado)]">{{ item.descricao }}</p>
+              <p :class="classeDetalheResultadoFiscal(item.estado)">{{ item.mensagem }}</p>
+            </li>
+          </ul>
+        </div>
+      </template>
+      <template #actions>
+        <template v-if="resultadoNota.length === 0">
+          <button type="button" class="btn-secondary" :disabled="emitindoNota" @click="fecharEmissaoFiscal">Voltar</button>
+          <button type="button" class="btn-primary ml-3" :disabled="emitindoNota" @click="confirmarEmissaoFiscal">
+            {{ emitindoNota ? 'Emitindo...' : 'Emitir NFS-e' }}
+          </button>
+        </template>
+        <button v-else type="button" class="btn-primary" @click="fecharEmissaoFiscal">Fechar</button>
+      </template>
+    </Modal>
   </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
@@ -307,6 +372,7 @@ const { temModulo } = useModulos();
 // da baixa em lote, ver `selecionados` mais abaixo. Some da tela para quem
 // não tem o módulo/permissão, mesmo critério do resto do arquivo.
 const podeEmitirCobranca = computed(() => temModulo('cobranca_recorrente') && pode('cobranca-emitir'));
+const podeEmitirNota = computed(() => temModulo('nfse') && pode('fiscal-emitir'));
 
 const SITUACAO_LABEL = {
   aberta: 'Aberta',
@@ -431,6 +497,38 @@ const totalSelecionado = computed(() => (
     .filter((p) => selecionados.value.has(p.id))
     .reduce((soma, p) => soma + parseFloat(p.saldo || 0), 0)
 ));
+
+// A seleção fiscal tem regras próprias: aceita títulos pagos, reúne clientes
+// distintos e não interfere na seleção financeira usada para a baixa.
+const selecionadosFiscal = ref(new Set());
+
+function podeSelecionarFiscal(parcela) {
+  return Boolean(parcela.receivable_id) && parcela.situacao !== 'cancelada';
+}
+
+function alternarSelecaoFiscal(parcela) {
+  if (!podeSelecionarFiscal(parcela)) return;
+
+  const nova = new Set(selecionadosFiscal.value);
+  if (nova.has(parcela.id)) nova.delete(parcela.id);
+  else nova.add(parcela.id);
+  selecionadosFiscal.value = nova;
+}
+
+function limparSelecaoFiscal() {
+  selecionadosFiscal.value = new Set();
+}
+
+const titulosFiscaisSelecionados = computed(() => {
+  const unicos = new Map();
+  props.parcelas
+    .filter((parcela) => selecionadosFiscal.value.has(parcela.id))
+    .forEach((parcela) => {
+      if (!unicos.has(parcela.receivable_id)) unicos.set(parcela.receivable_id, parcela);
+    });
+
+  return [...unicos.values()];
+});
 
 // -----------------------------------------------------------------
 // Baixa: modal único reaproveitado para uma parcela ou para o lote
@@ -630,4 +728,102 @@ function descricaoDaParcela(parcelaId) {
   const parcela = props.parcelas.find((p) => p.id === parcelaId);
   return parcela ? `${parcela.cliente} - ${parcela.descricao}` : `Parcela #${parcelaId}`;
 }
+
+// Emissão fiscal usa o título, não a parcela. A seleção desta tela pode conter
+// várias parcelas do mesmo título, então o lote elimina duplicidades antes de
+// chamar o endpoint para evitar respostas repetidas no resumo.
+const mostrarModalNota = ref(false);
+const parcelasDaNota = ref([]);
+const resultadoNota = ref([]);
+const emitindoNota = ref(false);
+
+const titulosParaNota = computed(() => {
+  const unicos = new Map();
+  parcelasDaNota.value.forEach((parcela) => {
+    if (!unicos.has(parcela.receivable_id)) unicos.set(parcela.receivable_id, parcela);
+  });
+  return [...unicos.values()];
+});
+
+function abrirEmissaoFiscalSelecionadas() {
+  abrirEmissaoFiscal(titulosFiscaisSelecionados.value);
+}
+
+function abrirEmissaoFiscal(parcelasSelecionadas) {
+  parcelasDaNota.value = parcelasSelecionadas;
+  resultadoNota.value = [];
+  mostrarModalNota.value = true;
+}
+
+function fecharEmissaoFiscal() {
+  if (emitindoNota.value) return;
+  const concluiu = resultadoNota.value.length > 0;
+  mostrarModalNota.value = false;
+  resultadoNota.value = [];
+  if (concluiu) limparSelecaoFiscal();
+}
+
+function estadoDoRetornoFiscal(dados) {
+  if (dados.resultado_fiscal === 'erro' || dados.nota?.situacao === 'erro') return 'erro';
+  if (dados.resultado_fiscal === 'pendente' || ['pendente', 'processando'].includes(dados.nota?.situacao)) return 'pendente';
+  return 'concluido';
+}
+
+function classeResultadoFiscal(estado) {
+  return {
+    concluido: 'border-green-200 bg-green-50',
+    pendente: 'border-yellow-200 bg-yellow-50',
+    erro: 'border-red-200 bg-red-50',
+  }[estado];
+}
+
+function classeTextoResultadoFiscal(estado) {
+  return { concluido: 'text-green-900', pendente: 'text-yellow-900', erro: 'text-red-900' }[estado];
+}
+
+function classeDetalheResultadoFiscal(estado) {
+  return { concluido: 'text-green-700', pendente: 'text-yellow-800', erro: 'text-red-700' }[estado];
+}
+
+async function confirmarEmissaoFiscal() {
+  if (emitindoNota.value || titulosParaNota.value.length === 0) return;
+  emitindoNota.value = true;
+  const resultados = [];
+
+  for (const parcela of titulosParaNota.value) {
+    try {
+      const resposta = await fetch('/notas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ receivable_id: parcela.receivable_id }),
+      });
+      const dados = await resposta.json().catch(() => ({}));
+      const texto = Object.values(dados.errors || {}).flat()[0] || dados.message || 'A nota não pôde ser emitida.';
+      const estado = resposta.ok ? estadoDoRetornoFiscal(dados) : 'erro';
+      resultados.push({ receivableId: parcela.receivable_id, descricao: `${parcela.cliente} - ${parcela.descricao}`, estado, mensagem: texto });
+    } catch (erro) {
+      resultados.push({ receivableId: parcela.receivable_id, descricao: `${parcela.cliente} - ${parcela.descricao}`, estado: 'erro', mensagem: 'Falha de comunicação ao solicitar a nota.' });
+    }
+  }
+
+  resultadoNota.value = resultados;
+  emitindoNota.value = false;
+}
+
+watch(parcelasFiltradas, (atuais) => {
+  const idsAtuais = new Set(atuais.map((parcela) => parcela.id));
+  selecionados.value = new Set([...selecionados.value].filter((id) => idsAtuais.has(id)));
+  selecionadosFiscal.value = new Set([...selecionadosFiscal.value].filter((id) => idsAtuais.has(id)));
+  parcelasParaBaixa.value = parcelasParaBaixa.value.filter((parcela) => idsAtuais.has(parcela.id));
+  parcelasParaEmissao.value = parcelasParaEmissao.value.filter((parcela) => idsAtuais.has(parcela.id));
+  parcelasDaNota.value = parcelasDaNota.value.filter((parcela) => idsAtuais.has(parcela.id));
+
+  if (mostrarModalNota.value && resultadoNota.value.length === 0 && parcelasDaNota.value.length === 0) {
+    mostrarModalNota.value = false;
+  }
+}, { immediate: true });
 </script>

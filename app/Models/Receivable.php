@@ -94,4 +94,9 @@ class Receivable extends Model
     {
         return $this->hasMany(ReceivableInstallment::class);
     }
+
+    public function serviceInvoices(): HasMany
+    {
+        return $this->hasMany(ServiceInvoice::class);
+    }
 }

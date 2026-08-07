@@ -171,6 +171,14 @@
       </div>
     </Card>
 
+    <div v-if="selecionadas.size > 0" class="mb-6 flex flex-col gap-3 rounded-lg border border-green-200 bg-green-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <p class="text-sm text-green-900">{{ selecionadas.size }} ordem(ns) selecionada(s) para emissão fiscal.</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn-secondary-sm" @click="limparSelecaoFiscal">Limpar seleção</button>
+        <button type="button" class="btn-primary" @click="abrirEmissaoFiscal(ordensSelecionadas)">Emitir NFS-e</button>
+      </div>
+    </div>
+
     <!-- Lista de Ordens de Serviço -->
     <Card>
       <div class="p-6">
@@ -191,6 +199,14 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div class="flex-1 w-full">
                 <div class="flex items-start space-x-3">
+                  <input
+                    v-if="podeEmitirNota"
+                    type="checkbox"
+                    :checked="selecionadas.has(workOrder.id)"
+                    class="mt-2 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    :aria-label="`Selecionar a ordem ${workOrder.order_number}`"
+                    @change="alternarSelecaoFiscal(workOrder)"
+                  />
                   <!-- Ícone da ordem -->
                   <div class="flex-shrink-0">
                     <div class="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
@@ -250,7 +266,15 @@
               </div>
 
               <!-- Ações -->
-              <div class="flex items-center space-x-2 w-full sm:w-auto justify-end mt-2 sm:mt-0">
+              <div class="flex w-full flex-wrap items-center justify-end gap-2 mt-2 sm:w-auto sm:mt-0">
+                <button
+                  v-if="podeEmitirNota"
+                  type="button"
+                  class="text-green-700 hover:text-green-900 text-sm font-medium"
+                  @click="abrirEmissaoFiscal([workOrder])"
+                >
+                  Emitir NFS-e
+                </button>
                 <Link
                   :href="route('work-orders.show', workOrder.id)"
                   class="text-green-600 hover:text-green-900 text-sm font-medium"
@@ -297,19 +321,50 @@
       @confirm="confirmarExclusaoWorkOrder"
       @cancel="cancelarExclusaoWorkOrder"
     />
+
+    <Modal :show="mostrarModalNota" @close="fecharEmissaoFiscal">
+      <template #icon>
+        <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M9 8h6m2 13H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+        </svg>
+      </template>
+      <template #title>Emitir notas das ordens</template>
+      <template #content>
+        <p v-if="resultadosNota.length === 0" class="text-sm text-gray-700">
+          Será solicitada uma NFS-e para cada uma das {{ ordensParaNota.length }} ordem(ns). O resultado aparecerá por item.
+        </p>
+        <ul v-else class="max-h-72 space-y-2 overflow-y-auto">
+          <li v-for="item in resultadosNota" :key="item.id" :class="['rounded-md border p-3 text-sm', classeResultadoFiscal(item.estado)]">
+            <p :class="['font-medium', classeTextoResultadoFiscal(item.estado)]">{{ item.rotulo }}</p>
+            <p :class="classeDetalheResultadoFiscal(item.estado)">{{ item.mensagem }}</p>
+          </li>
+        </ul>
+      </template>
+      <template #actions>
+        <template v-if="resultadosNota.length === 0">
+          <button type="button" class="btn-secondary" :disabled="emitindoNota" @click="fecharEmissaoFiscal">Voltar</button>
+          <button type="button" class="btn-primary ml-3" :disabled="emitindoNota" @click="confirmarEmissaoFiscal">
+            {{ emitindoNota ? 'Emitindo...' : 'Emitir NFS-e' }}
+          </button>
+        </template>
+        <button v-else type="button" class="btn-primary" @click="fecharEmissaoFiscal">Fechar</button>
+      </template>
+    </Modal>
   </AuthenticatedLayout>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
+import Modal from '@/Components/Modal.vue';
 import { formatarData } from '@/utils/formatDate';
 import { usePermissoes } from '@/Composables/usePermissoes';
+import { useModulos } from '@/Composables/useModulos';
 
 const props = defineProps({
   workOrders: Object,
@@ -321,6 +376,8 @@ const props = defineProps({
 });
 
 const { pode } = usePermissoes();
+const { temModulo } = useModulos();
+const podeEmitirNota = computed(() => pode('fiscal-emitir') && temModulo('nfse'));
 
 const filters = ref({
   client_id: props.filters?.client_id || '',
@@ -394,4 +451,97 @@ const confirmarExclusaoWorkOrder = () => {
 const cancelarExclusaoWorkOrder = () => {
   workOrderParaExcluir.value = null;
 };
+
+const selecionadas = ref(new Set());
+const ordensSelecionadas = computed(() => props.workOrders.data.filter((ordem) => selecionadas.value.has(ordem.id)));
+
+function alternarSelecaoFiscal(ordem) {
+  const nova = new Set(selecionadas.value);
+  if (nova.has(ordem.id)) nova.delete(ordem.id);
+  else nova.add(ordem.id);
+  selecionadas.value = nova;
+}
+
+function limparSelecaoFiscal() {
+  selecionadas.value = new Set();
+}
+
+const mostrarModalNota = ref(false);
+const ordensParaNota = ref([]);
+const resultadosNota = ref([]);
+const emitindoNota = ref(false);
+
+function abrirEmissaoFiscal(ordens) {
+  ordensParaNota.value = ordens;
+  resultadosNota.value = [];
+  mostrarModalNota.value = true;
+}
+
+function fecharEmissaoFiscal() {
+  if (emitindoNota.value) return;
+  const concluiu = resultadosNota.value.length > 0;
+  mostrarModalNota.value = false;
+  resultadosNota.value = [];
+  if (concluiu) limparSelecaoFiscal();
+}
+
+function estadoDoRetornoFiscal(dados) {
+  if (dados.resultado_fiscal === 'erro' || dados.nota?.situacao === 'erro') return 'erro';
+  if (dados.resultado_fiscal === 'pendente' || ['pendente', 'processando'].includes(dados.nota?.situacao)) return 'pendente';
+  return 'concluido';
+}
+
+function classeResultadoFiscal(estado) {
+  return { concluido: 'border-green-200 bg-green-50', pendente: 'border-yellow-200 bg-yellow-50', erro: 'border-red-200 bg-red-50' }[estado];
+}
+
+function classeTextoResultadoFiscal(estado) {
+  return { concluido: 'text-green-900', pendente: 'text-yellow-900', erro: 'text-red-900' }[estado];
+}
+
+function classeDetalheResultadoFiscal(estado) {
+  return { concluido: 'text-green-700', pendente: 'text-yellow-800', erro: 'text-red-700' }[estado];
+}
+
+async function confirmarEmissaoFiscal() {
+  if (emitindoNota.value || ordensParaNota.value.length === 0) return;
+  emitindoNota.value = true;
+  const resultados = [];
+
+  for (const ordem of ordensParaNota.value) {
+    try {
+      const resposta = await fetch('/notas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'),
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ work_order_id: ordem.id }),
+      });
+      const dados = await resposta.json().catch(() => ({}));
+      resultados.push({
+        id: ordem.id,
+        rotulo: `${ordem.order_number} - ${ordem.client?.name || 'Cliente'}`,
+        estado: resposta.ok ? estadoDoRetornoFiscal(dados) : 'erro',
+        mensagem: Object.values(dados.errors || {}).flat()[0] || dados.message || 'A nota não pôde ser emitida.',
+      });
+    } catch (erro) {
+      resultados.push({ id: ordem.id, rotulo: ordem.order_number, estado: 'erro', mensagem: 'Falha de comunicação ao solicitar a nota.' });
+    }
+  }
+
+  resultadosNota.value = resultados;
+  emitindoNota.value = false;
+}
+
+watch(() => props.workOrders.data, (atuais) => {
+  const idsAtuais = new Set(atuais.map((ordem) => ordem.id));
+  selecionadas.value = new Set([...selecionadas.value].filter((id) => idsAtuais.has(id)));
+  ordensParaNota.value = ordensParaNota.value.filter((ordem) => idsAtuais.has(ordem.id));
+
+  if (mostrarModalNota.value && resultadosNota.value.length === 0 && ordensParaNota.value.length === 0) {
+    mostrarModalNota.value = false;
+  }
+}, { immediate: true });
 </script>

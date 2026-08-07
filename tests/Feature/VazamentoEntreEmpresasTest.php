@@ -28,6 +28,7 @@ use App\Models\DeviceEvent;
 use App\Models\DeviceReplacement;
 use App\Models\EventType;
 use App\Models\FinancialEntry;
+use App\Models\FiscalConfig;
 use App\Models\Inventory;
 use App\Models\InventoryItem;
 use App\Models\Invitation;
@@ -49,6 +50,7 @@ use App\Models\ReceivableInstallment;
 use App\Models\Room;
 use App\Models\SatisfactionSurvey;
 use App\Models\Service;
+use App\Models\ServiceInvoice;
 use App\Models\ServiceOrder;
 use App\Models\ServiceType;
 use App\Models\StockBalance;
@@ -1845,6 +1847,32 @@ class VazamentoEntreEmpresasTest extends TestCase
             $dados['companyBillingSetting'] = CompanyBillingSetting::create([
                 'regua_ativa' => true,
                 'antecedencia_emissao_dias' => 10,
+            ]);
+
+            // Configuração fiscal e nota de serviço (Plano 20, Task 20.1).
+            // Ainda não há endpoint nesta task, então entram apenas para que
+            // a varredura permanente cubra os dois models de domínio novos.
+            $dados['fiscalConfig'] = FiscalConfig::create([
+                'provedor' => 'provedor-'.$baixo,
+                'ambiente' => 'homologacao',
+                'credenciais' => ['token' => 'fiscal-'.$baixo],
+                'regime_tributario' => 'simples_nacional',
+                'codigo_servico' => '07.13',
+                'aliquota_iss' => '5.00',
+                'natureza_operacao' => 'tributacao_no_municipio',
+            ]);
+
+            $dados['serviceInvoice'] = ServiceInvoice::create([
+                'fiscal_config_id' => $dados['fiscalConfig']->id,
+                'client_id' => $dados['client']->id,
+                'work_order_id' => $dados['workOrder']->id,
+                'receivable_id' => $dados['receivable']->id,
+                'situacao' => 'pendente',
+                'valor_servico' => '500.00',
+                'valor_iss' => '25.00',
+                'valor_liquido' => '475.00',
+                'descricao_servico' => 'Nota fiscal '.$marca,
+                'competencia' => '2026-07-05',
             ]);
 
             return $dados;

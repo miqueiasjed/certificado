@@ -142,6 +142,10 @@ final class RotinasAgendadas
      * @var array<string, int>
      */
     public const POR_INTERVALO = [
+        // A emissão municipal é assíncrona. Dez minutos preservam uma espera
+        // curta para o usuário sem consultar a prefeitura continuamente.
+        'fiscal:processar-notas' => 10,
+
         // Envio da fila de notificações (Plano 14). A cada 5 minutos, e não a
         // cada minuto: aviso de visita não é tempo real, e a folga reduz o
         // custo de um processo que sobe e desce o dia inteiro.

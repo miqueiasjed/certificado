@@ -211,6 +211,8 @@ return Application::configure(basePath: dirname(__DIR__))
         }
     })
     ->withExceptions(function (Exceptions $exceptions) {
+        $exceptions->dontFlash('client_secret');
+
         // Link assinado inválido ou vencido.
         //
         // O middleware `signed` lança esta exceção, e o tratamento padrão do

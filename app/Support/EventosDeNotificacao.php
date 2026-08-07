@@ -248,6 +248,12 @@ final class EventosDeNotificacao
      */
     public const COBRANCA_EM_ATRASO = 'cobranca_em_atraso';
 
+    public const NFSE_EMITIDA = 'nfse_emitida';
+
+    public const NFSE_CANCELADA = 'nfse_cancelada';
+
+    public const NFSE_SUBSTITUIDA = 'nfse_substituida';
+
     /**
      * Os eventos do plano.
      *
@@ -270,6 +276,45 @@ final class EventosDeNotificacao
      * }>
      */
     public const EVENTOS = [
+        self::NFSE_EMITIDA => [
+            'rotulo' => 'Nota fiscal emitida',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => ['cliente_nome', 'empresa_nome', 'nota_numero'],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Nota fiscal {{nota_numero}} emitida',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\nA nota fiscal {{nota_numero}} segue em anexo.\n\n{{empresa_nome}}",
+                ],
+            ],
+        ],
+
+        self::NFSE_CANCELADA => [
+            'rotulo' => 'Nota fiscal cancelada',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => ['cliente_nome', 'empresa_nome', 'nota_numero', 'motivo_fiscal'],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Cancelamento da nota fiscal {{nota_numero}}',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\nA nota fiscal {{nota_numero}} foi cancelada pelo seguinte motivo: {{motivo_fiscal}}. O documento fiscal permanece em anexo para o histórico.\n\n{{empresa_nome}}",
+                ],
+            ],
+        ],
+
+        self::NFSE_SUBSTITUIDA => [
+            'rotulo' => 'Nota fiscal substituída',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => ['cliente_nome', 'empresa_nome', 'nota_numero', 'nota_anterior_numero'],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Nova nota fiscal {{nota_numero}}',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\nA nota fiscal {{nota_anterior_numero}} foi substituída. A nova nota {{nota_numero}} segue em anexo.\n\n{{empresa_nome}}",
+                ],
+            ],
+        ],
+
         self::VISITA_AGENDADA => [
             'rotulo' => 'Visita agendada',
             'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,

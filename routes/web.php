@@ -34,6 +34,8 @@ use App\Http\Controllers\FinancialDashboardController;
 use App\Http\Controllers\FinancialEntryController;
 use App\Http\Controllers\FinancialReportController;
 use App\Http\Controllers\FinancialWithdrawalController;
+use App\Http\Controllers\FiscalClientController;
+use App\Http\Controllers\FiscalConfigController;
 use App\Http\Controllers\GatewayWebhookController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvitationController;
@@ -57,6 +59,7 @@ use App\Http\Controllers\ReceivableController;
 use App\Http\Controllers\RoomController;
 use App\Http\Controllers\SatisfactionSurveyController;
 use App\Http\Controllers\ServiceController;
+use App\Http\Controllers\ServiceInvoiceController;
 use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TechnicianController;
@@ -906,8 +909,52 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
             ->name('cobrancas.configuracao.validar');
     });
 
+    Route::middleware('module:nfse')->group(function () {
+        Route::get('/fiscal/clientes/{cliente}', [FiscalClientController::class, 'show'])
+            ->middleware('permission:fiscal-emitir')
+            ->name('fiscal.clientes.show');
+        Route::put('/fiscal/clientes/{cliente}', [FiscalClientController::class, 'update'])
+            ->middleware('permission:fiscal-emitir')
+            ->name('fiscal.clientes.update');
+
+        Route::get('/notas', [ServiceInvoiceController::class, 'index'])
+            ->middleware('permission:fiscal-ver')
+            ->name('notas.index');
+        Route::post('/notas', [ServiceInvoiceController::class, 'store'])
+            ->middleware('permission:fiscal-emitir')
+            ->name('notas.store');
+        Route::get('/notas/pendencias', [ServiceInvoiceController::class, 'pendencias'])
+            ->middleware('permission:fiscal-ver')
+            ->name('notas.pendencias');
+        Route::post('/notas/pendencias/reprocessar', [ServiceInvoiceController::class, 'reprocessarPendencias'])
+            ->middleware('permission:fiscal-emitir')
+            ->name('notas.pendencias.reprocessar');
+        Route::post('/notas/{nota}/cancelar', [ServiceInvoiceController::class, 'cancelar'])
+            ->middleware('permission:fiscal-cancelar')
+            ->name('notas.cancelar');
+        Route::post('/notas/{nota}/substituir', [ServiceInvoiceController::class, 'substituir'])
+            ->middleware('permission:fiscal-cancelar')
+            ->name('notas.substituir');
+        Route::post('/notas/{nota}/reprocessar', [ServiceInvoiceController::class, 'reprocessar'])
+            ->middleware('permission:fiscal-emitir')
+            ->name('notas.reprocessar');
+        Route::get('/notas/{nota}/pdf', [ServiceInvoiceController::class, 'pdf'])
+            ->middleware('permission:fiscal-ver')
+            ->name('notas.pdf');
+        Route::get('/notas/{nota}/xml', [ServiceInvoiceController::class, 'xml'])
+            ->middleware('permission:fiscal-ver')
+            ->name('notas.xml');
+
+        Route::get('/fiscal/configuracao', [FiscalConfigController::class, 'show'])
+            ->middleware('permission:fiscal-configurar')
+            ->name('fiscal.configuracao.show');
+        Route::put('/fiscal/configuracao', [FiscalConfigController::class, 'update'])
+            ->middleware('permission:fiscal-configurar')
+            ->name('fiscal.configuracao.update');
+    });
+
     // Módulos ainda sem nenhuma rota no sistema (`portal_cliente`,
-    // `app_tecnico`, `roteirizacao`, `nfse`, `laudo_ia`): seguem só
+    // `app_tecnico`, `roteirizacao`, `laudo_ia`): seguem só
     // declarados em `CatalogoDeModulos` e ganham `module:<chave>` na task que
     // implementar o respectivo plano.
     //

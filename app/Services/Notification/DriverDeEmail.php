@@ -6,11 +6,13 @@ use App\Mail\NotificacaoDaFila;
 use App\Models\Company;
 use App\Models\NotificationQueue;
 use App\Models\ReceivableInstallment;
+use App\Models\ServiceInvoice;
 use App\Models\WorkOrder;
 use App\Services\WorkOrderService;
 use App\Support\EventosDeNotificacao;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Contracts\Mail\Mailer;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -60,8 +62,7 @@ class DriverDeEmail implements DriverDeEnvio
     public function __construct(
         private readonly Mailer $mailer,
         private readonly WorkOrderService $ordensDeServico,
-    ) {
-    }
+    ) {}
 
     public function canal(): string
     {
@@ -70,6 +71,13 @@ class DriverDeEmail implements DriverDeEnvio
 
     public function enviar(NotificationQueue $item): ResultadoDeEnvio
     {
+        $estadoAtual = $this->relerAntesDoTransporte($item);
+
+        if ($estadoAtual instanceof ResultadoDeEnvio) {
+            return $estadoAtual;
+        }
+
+        $item = $estadoAtual;
         $parcelaEncerrada = $this->parcelaEncerradaAntesDoEnvio($item);
 
         if ($parcelaEncerrada instanceof ResultadoDeEnvio) {
@@ -123,6 +131,16 @@ class DriverDeEmail implements DriverDeEnvio
             }
         }
 
+        $documentoFiscal = $this->documentoFiscalDoContexto($item);
+
+        if ($documentoFiscal instanceof ResultadoDeEnvio) {
+            return $documentoFiscal;
+        }
+
+        if ($documentoFiscal !== null) {
+            $anexos[] = $documentoFiscal;
+        }
+
         $mensagem = new NotificacaoDaFila(
             assuntoDaMensagem: $this->assunto($item, $empresa),
             corpoDaMensagem: (string) $item->corpo,
@@ -131,6 +149,14 @@ class DriverDeEmail implements DriverDeEnvio
             responderPara: $remetente['responder_para'],
             documentos: $anexos,
         );
+
+        $estadoAtual = $this->relerAntesDoTransporte($item);
+
+        if ($estadoAtual instanceof ResultadoDeEnvio) {
+            return $estadoAtual;
+        }
+
+        $item = $estadoAtual;
 
         try {
             $this->mailer->send($mensagem->to($item->destino));
@@ -146,6 +172,20 @@ class DriverDeEmail implements DriverDeEnvio
                 'anexos' => count($anexos),
             ]
         );
+    }
+
+    private function relerAntesDoTransporte(NotificationQueue $item): NotificationQueue|ResultadoDeEnvio
+    {
+        $atual = NotificationQueue::query()->find($item->id);
+
+        if (! $atual instanceof NotificationQueue
+            || $atual->situacao === NotificationQueue::SITUACAO_CANCELADA) {
+            return ResultadoDeEnvio::falhaPermanente(
+                'O aviso foi cancelado antes de chegar ao transporte e não será enviado.'
+            );
+        }
+
+        return $atual;
     }
 
     /**
@@ -300,6 +340,51 @@ class DriverDeEmail implements DriverDeEnvio
         return [
             'nome' => 'OS-'.$ordem->order_number.'.pdf',
             'conteudo' => $pdf->output(),
+            'mime' => 'application/pdf',
+        ];
+    }
+
+    /**
+     * Lê o PDF fiscal já autorizado no disco privado. A consulta Eloquent e o
+     * prefixo do caminho conferem o tenant antes de tocar no arquivo.
+     *
+     * @return array{nome: string, conteudo: string, mime: string}|ResultadoDeEnvio|null
+     */
+    private function documentoFiscalDoContexto(NotificationQueue $item): array|ResultadoDeEnvio|null
+    {
+        $contexto = is_array($item->contexto) ? $item->contexto : [];
+        $identificador = $contexto['service_invoice_id'] ?? null;
+
+        if (blank($identificador)) {
+            return null;
+        }
+
+        $nota = ServiceInvoice::query()->find((int) $identificador);
+
+        if (! $nota instanceof ServiceInvoice || (int) $nota->company_id !== (int) $item->company_id) {
+            return ResultadoDeEnvio::falhaPermanente(
+                "A nota fiscal #{$identificador}, indicada como anexo, não foi encontrada nesta empresa."
+            );
+        }
+
+        $caminho = trim((string) $nota->pdf_path);
+        $esperado = "fiscal/empresa-{$item->company_id}/nota-{$nota->id}/nfse.pdf";
+
+        if (! hash_equals($esperado, $caminho)) {
+            return ResultadoDeEnvio::falhaPermanente(
+                "O caminho privado do PDF da nota fiscal #{$nota->id} é inválido."
+            );
+        }
+
+        if (! Storage::disk('local')->exists($caminho)) {
+            return ResultadoDeEnvio::falhaTemporaria(
+                "O PDF da nota fiscal #{$nota->id} ainda não está disponível no armazenamento privado."
+            );
+        }
+
+        return [
+            'nome' => 'NFS-e-'.($nota->numero ?: $nota->id).'.pdf',
+            'conteudo' => Storage::disk('local')->get($caminho),
             'mime' => 'application/pdf',
         ];
     }

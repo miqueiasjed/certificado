@@ -275,6 +275,16 @@ class NotificationDispatcher
      */
     private function entregar(NotificationQueue $item): ResultadoDeEnvio
     {
+        $atual = NotificationQueue::query()->find($item->id);
+
+        if (! $atual instanceof NotificationQueue
+            || $atual->situacao !== NotificationQueue::SITUACAO_ENVIANDO) {
+            return ResultadoDeEnvio::falhaPermanente(
+                'O aviso deixou de estar disponível para envio antes de chegar ao transporte.'
+            );
+        }
+
+        $item = $atual;
         $driver = $this->drivers[$item->canal] ?? null;
 
         if ($driver === null) {
@@ -303,13 +313,23 @@ class NotificationDispatcher
 
         $situacao = $this->situacaoDepoisDe($item, $resultado);
 
-        $item->update([
-            'situacao' => $situacao,
-            'proxima_tentativa_em' => $situacao === NotificationQueue::SITUACAO_PENDENTE
-                ? $this->proximaTentativa($item)
-                : null,
-            'tentativas' => (int) $item->tentativas,
-        ]);
+        $alterados = NotificationQueue::query()
+            ->whereKey($item->id)
+            ->where('situacao', NotificationQueue::SITUACAO_ENVIANDO)
+            ->update([
+                'situacao' => $situacao,
+                'proxima_tentativa_em' => $situacao === NotificationQueue::SITUACAO_PENDENTE
+                    ? $this->proximaTentativa($item)
+                    : null,
+                'tentativas' => (int) $item->tentativas,
+            ]);
+
+        if ($alterados === 0) {
+            return (string) (NotificationQueue::query()->find($item->id)?->situacao
+                ?? NotificationQueue::SITUACAO_CANCELADA);
+        }
+
+        $item->forceFill(['situacao' => $situacao])->syncOriginal();
 
         if ($situacao === NotificationQueue::SITUACAO_FALHA) {
             Log::warning('Aviso encerrado sem entrega.', [

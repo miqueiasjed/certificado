@@ -1609,3 +1609,51 @@ hifenizado de `SyncPermissions::catalogo()`, apesar de `.claude/tasks/18/*.md`
 escrever "financeiro.estornar" com ponto em mais de um arquivo. Mesma
 correção das Tasks 14.6, 16.4 e 17.7 - já são quatro planos seguidos com o
 mesmo desvio entre a especificação e o catálogo real.
+
+## Plano 20 - Nota fiscal de serviço (07/08/2026)
+
+Concluído, 7 tasks. A suíte fechou em 1.192 testes e 10.040 asserções.
+
+### Concorrência fiscal em teste MySQL
+
+O teste que disputa a mesma emissão usa uma conexão administrativa separada
+para criar uma base temporária. Criar ou remover a base pela conexão gerenciada
+por `RefreshDatabase` provoca commit implícito no MySQL e pode persistir dados
+do `setUp`. A conexão temporária também precisa ser registrada antes da abertura
+da segunda transação, com restauração completa de `database.connections` e
+`database.default` ao final. O runner precisa de permissão para `CREATE DATABASE`
+e `DROP DATABASE`; uma interrupção abrupta pode exigir a remoção manual de uma
+base com prefixo `testing_nfse_`.
+
+### Convenção de permissão com hífen, quinta vez
+
+O catálogo novo nasceu com `fiscal.ver`, `fiscal.emitir`, `fiscal.cancelar` e
+`fiscal.configurar` (ponto, replicado de forma consistente em rotas, Vue e
+teste). Corrigido para hífen antes do commit, mesmo padrão das Tasks 14.6,
+16.4, 17.7 e 18.10. Já são cinco planos seguidos com o mesmo desvio - vale
+revisar o prompt/skill que gera o catálogo, porque "escrever com ponto e
+corrigir depois" parou de ser coincidência.
+
+### `IsolamentoDoPortalTest` comparava id bruto entre tipos diferentes
+
+A varredura de vazamento comparava `->id` de fixtures contra um array de ids
+extraído por flatten de toda a resposta (`idsNoArray`), sem separar por tipo.
+Isso sempre foi frágil, mas só quebrou quando `FiscalModelsTest` passou a
+criar `Company`/`WorkOrder`/`Client` antes de `IsolamentoDoPortalTest` rodar
+na mesma suíte: o autoincrement do MySQL não é revertido pelo rollback do
+`RefreshDatabase` (é um contador não-transacional), então as tabelas
+avançaram em proporções diferentes e um id de visita do cliente A passou a
+coincidir, por acaso, com o id de adequação do cliente B. Nenhum vazamento
+real: a query de `PortalService` já filtra corretamente por
+`company_id`+`client_id`, confirmado inspecionando a resposta bruta antes de
+mexer em qualquer coisa.
+
+Corrigido escopando a extração de id à prop exata onde cada tipo aparece
+(`portal.painel` e `portal.faturas` combinam mais de um tipo na mesma
+resposta) e ignorando a prop `proximas_visitas` que `portal.contratos`
+embute dentro de cada contrato (Task 15.7, outro tipo aninhado). **Regra que
+fica:** teste de isolamento que compara id bruto entre fixtures de tabelas
+diferentes não pode presumir que autoincrement nunca colide; ou escopa a
+busca ao tipo exato, ou compara por um marcador de conteúdo (nome, descrição)
+em vez do id. Vale para qualquer plano futuro que crie fixture em tabela já
+usada por `IsolamentoDoPortalTest`/`VazamentoEntreEmpresasTest`.

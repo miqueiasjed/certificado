@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Models\Concerns\Auditavel;
 use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Client extends Model
@@ -18,6 +17,11 @@ class Client extends Model
         'phone',
         'cnpj',
         'notes',
+        'inscricao_municipal',
+        'inscricao_estadual',
+        'codigo_municipio_ibge',
+        'regime_tributario',
+        'email_nfe',
         // Preferência de contato da central de notificações (Plano 14).
         'aceita_email',
         'aceita_whatsapp',
@@ -57,5 +61,10 @@ class Client extends Model
     public function receivables(): HasMany
     {
         return $this->hasMany(Receivable::class);
+    }
+
+    public function serviceInvoices(): HasMany
+    {
+        return $this->hasMany(ServiceInvoice::class);
     }
 }

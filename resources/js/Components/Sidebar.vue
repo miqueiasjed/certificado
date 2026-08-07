@@ -262,8 +262,8 @@
         </li>
 
         <!-- Gestão Financeira -->
-        <li v-if="!collapsed && podeVerFinanceiro" class="mt-4">
-          <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Gestão Financeira</div>
+        <li v-if="!collapsed && mostrarBlocoFinanceiro" class="mt-4">
+          <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Financeiro e Fiscal</div>
         </li>
         <li v-if="podeVerFinanceiro">
           <Link
@@ -335,6 +335,42 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
             </svg>
             <span v-if="!collapsed">Fluxo de Caixa</span>
+          </Link>
+        </li>
+        <li v-if="podeVerFiscal">
+          <Link
+            href="/notas"
+            :class="[
+              isCurrentRoute('/notas')
+                ? 'bg-green-700 text-white'
+                : 'text-green-100 hover:bg-green-700 hover:text-white',
+              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+            ]">
+            <svg :class="[
+              isCurrentRoute('/notas') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              'h-5 w-5 shrink-0 transition-colors'
+            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M9 8h6m2 13H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
+            </svg>
+            <span v-if="!collapsed">Notas fiscais</span>
+          </Link>
+        </li>
+        <li v-if="podeConfigurarFiscal">
+          <Link
+            href="/fiscal/configuracao"
+            :class="[
+              isCurrentRoute('/fiscal/configuracao')
+                ? 'bg-green-700 text-white'
+                : 'text-green-100 hover:bg-green-700 hover:text-white',
+              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+            ]">
+            <svg :class="[
+              isCurrentRoute('/fiscal/configuracao') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              'h-5 w-5 shrink-0 transition-colors'
+            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4v2m0-6V4m12 14a2 2 0 100-4m0 4v2m0-6V4" />
+            </svg>
+            <span v-if="!collapsed">Configuração fiscal</span>
           </Link>
         </li>
 
@@ -491,6 +527,9 @@ const mostrarBlocoOperacional = computed(() =>
 
 // Gestão Financeira
 const podeVerFinanceiro = computed(() => pode('financeiro-ver') && temModulo('financeiro'));
+const podeVerFiscal = computed(() => pode('fiscal-ver') && temModulo('nfse'));
+const podeConfigurarFiscal = computed(() => pode('fiscal-configurar') && temModulo('nfse'));
+const mostrarBlocoFinanceiro = computed(() => podeVerFinanceiro.value || podeVerFiscal.value || podeConfigurarFiscal.value);
 
 // Configurações da empresa
 const podeConfigurarEmpresa = computed(() => pode('empresa-configurar'));

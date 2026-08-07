@@ -8,8 +8,9 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Barra o acesso ao portal do cliente quando a empresa não tem o módulo
- * `portal_cliente` ativo (Plano 6, Task 15.4), mesmo mecanismo de
+ * Barra o acesso a uma área do portal quando a empresa não tem o módulo
+ * informado. Sem parâmetro, protege `portal_cliente`; rotas de nota passam
+ * `nfse` (Plano 20). Usa o mesmo mecanismo de
  * `EnsureModuleIsActive` (Task 6.4): delega a decisão a
  * `ModuleService::ativo()`, independente de qualquer verificação de
  * permissão, e barra até o cliente já convidado.
@@ -37,9 +38,9 @@ class EnsurePortalModuleIsActive
         private readonly ModuleService $moduleService,
     ) {}
 
-    public function handle(Request $request, Closure $next): Response
+    public function handle(Request $request, Closure $next, string $modulo = self::MODULO): Response
     {
-        if ($this->moduleService->ativo(self::MODULO)) {
+        if ($this->moduleService->ativo($modulo)) {
             return $next($request);
         }
 
@@ -47,9 +48,10 @@ class EnsurePortalModuleIsActive
         // JSON, mesmo critério de EnsureModuleIsActive.
         if ($request->expectsJson()) {
             return response()->json([
-                'message' => 'O portal do cliente não está disponível no momento. '
-                    .'Fale com a empresa para mais informações.',
-                'modulo' => self::MODULO,
+                'message' => $modulo === self::MODULO
+                    ? 'O portal do cliente não está disponível no momento. Fale com a empresa para mais informações.'
+                    : 'Este recurso não está disponível no portal. Fale com a empresa para mais informações.',
+                'modulo' => $modulo,
             ], 403);
         }
 

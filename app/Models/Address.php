@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Address extends Model
 {
-    use HasFactory, BelongsToCompany;
+    use BelongsToCompany, HasFactory;
 
     protected $fillable = [
         'client_id',
@@ -22,12 +22,14 @@ class Address extends Model
         'city',
         'state',
         'zip',
+        'codigo_municipio_ibge',
         'reference',
         'active',
     ];
 
     protected $casts = [
         'active' => 'boolean',
+        'codigo_municipio_ibge' => 'string',
     ];
 
     // Relacionamentos

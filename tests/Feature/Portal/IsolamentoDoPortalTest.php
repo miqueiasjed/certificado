@@ -8,7 +8,9 @@ use App\Models\ClientRequest;
 use App\Models\ClientUser;
 use App\Models\Company;
 use App\Models\Contract;
+use App\Models\FiscalConfig;
 use App\Models\PaymentDetail;
+use App\Models\ServiceInvoice;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderAdequation;
@@ -20,6 +22,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -102,20 +105,26 @@ class IsolamentoDoPortalTest extends TestCase
     ];
 
     /**
-     * Rotas de listagem: nome da rota => tipo(s) de entidade (chave do
-     * conjunto de fixture) que ela devolve. `portal.painel` combina três
-     * tipos (próximas visitas, adequações em aberto e faturas vencendo).
+     * Rotas de listagem: nome da rota => tipo de entidade (chave do conjunto
+     * de fixture) => prop da resposta onde aquele tipo aparece. `portal.painel`
+     * e `portal.faturas` combinam mais de um tipo na mesma resposta; escopar
+     * a busca de id à prop certa evita falso positivo de vazamento quando
+     * duas tabelas diferentes (ex.: work_orders e work_order_adequations)
+     * reaproveitam o mesmo id por coincidência de autoincremento entre
+     * testes - o id em si deixa de ser um identificador confiável de tipo
+     * assim que mais de uma entidade divide a mesma resposta.
      *
-     * @var array<string, array<int, string>>
+     * @var array<string, array<string, string>>
      */
     private const ROTAS_DE_LISTAGEM = [
-        'portal.painel' => ['visita', 'adequacao', 'fatura'],
-        'portal.visitas' => ['visita'],
-        'portal.certificados' => ['certificado'],
-        'portal.contratos' => ['contrato'],
-        'portal.adequacoes' => ['adequacao'],
-        'portal.faturas' => ['fatura'],
-        'portal.solicitacoes.index' => ['solicitacao'],
+        'portal.painel' => ['visita' => 'proximasVisitas', 'adequacao' => 'adequacoesEmAberto', 'fatura' => 'faturasVencendo'],
+        'portal.visitas' => ['visita' => 'visitas'],
+        'portal.certificados' => ['certificado' => 'certificados'],
+        'portal.contratos' => ['contrato' => 'contratos'],
+        'portal.adequacoes' => ['adequacao' => 'adequacoes'],
+        'portal.faturas' => ['fatura' => 'faturas', 'nota' => 'notas_fiscais'],
+        'portal.notas.index' => ['nota' => 'notas_fiscais'],
+        'portal.solicitacoes.index' => ['solicitacao' => 'solicitacoes'],
     ];
 
     /**
@@ -128,6 +137,8 @@ class IsolamentoDoPortalTest extends TestCase
         'portal.visitas.show',
         'portal.solicitacoes.show',
         'portal.documentos.download',
+        'portal.notas.pdf',
+        'portal.notas.xml',
     ];
 
     /**
@@ -163,6 +174,7 @@ class IsolamentoDoPortalTest extends TestCase
 
         TenantAtual::limpar();
         Carbon::setTestNow('2026-07-28 10:00:00');
+        Storage::fake('local');
 
         $this->seed(RolesAndPermissionsSeeder::class);
 
@@ -261,12 +273,11 @@ class IsolamentoDoPortalTest extends TestCase
         $this->autenticarComo($this->um['a']);
 
         foreach (self::ROTAS_DE_LISTAGEM as $nomeRota => $tipos) {
-            $resposta = $this->get(route($nomeRota));
-            $resposta->assertOk();
+            [, $dados] = $this->respostaDaListagem($nomeRota);
 
-            $ids = $this->idsNoArray($resposta->inertiaProps());
+            foreach ($tipos as $tipo => $propKey) {
+                $ids = $this->idsDoTipo($dados, $propKey, $nomeRota);
 
-            foreach ($tipos as $tipo) {
                 $this->assertContains(
                     $this->um['a'][$tipo]->id,
                     $ids,
@@ -286,12 +297,11 @@ class IsolamentoDoPortalTest extends TestCase
         $this->autenticarComo($this->um['a']);
 
         foreach (self::ROTAS_DE_LISTAGEM as $nomeRota => $tipos) {
-            $resposta = $this->get(route($nomeRota));
-            $resposta->assertOk();
+            [, $dados] = $this->respostaDaListagem($nomeRota);
 
-            $ids = $this->idsNoArray($resposta->inertiaProps());
+            foreach ($tipos as $tipo => $propKey) {
+                $ids = $this->idsDoTipo($dados, $propKey, $nomeRota);
 
-            foreach ($tipos as $tipo) {
                 $this->assertNotContains($this->dois['a'][$tipo]->id, $ids, "'{$nomeRota}' vazou o {$tipo} de outra empresa (cliente A)");
                 $this->assertNotContains($this->dois['b'][$tipo]->id, $ids, "'{$nomeRota}' vazou o {$tipo} de outra empresa (cliente B)");
             }
@@ -366,6 +376,8 @@ class IsolamentoDoPortalTest extends TestCase
         );
         $this->get(route('portal.documentos.download', ['tipo' => 'certificado', 'id' => $this->um['a']['certificado']->id]))
             ->assertOk();
+        $this->get(route('portal.notas.pdf', ['nota' => $this->um['a']['nota']->id]))->assertOk();
+        $this->get(route('portal.notas.xml', ['nota' => $this->um['a']['nota']->id]))->assertOk();
     }
 
     // -----------------------------------------------------------------
@@ -384,18 +396,20 @@ class IsolamentoDoPortalTest extends TestCase
     {
         $this->autenticarComo($this->um['a']);
 
-        $urls = array_merge(
-            array_map(fn (string $nome): string => route($nome), array_keys(self::ROTAS_DE_LISTAGEM)),
-            [
-                route('portal.visitas.show', ['id' => $this->um['a']['visita']->id]),
-                route('portal.solicitacoes.show', ['id' => $this->um['a']['solicitacao']->id]),
-            ]
-        );
+        foreach (array_keys(self::ROTAS_DE_LISTAGEM) as $nomeRota) {
+            [, $dados] = $this->respostaDaListagem($nomeRota);
+            $chaves = $this->todasAsChavesDoJson($dados);
 
-        foreach ($urls as $url) {
-            $resposta = $this->get($url);
-            $resposta->assertOk();
+            foreach (self::CAMPOS_PROIBIDOS as $campo) {
+                $this->assertNotContains($campo, $chaves, "a chave financeira \"{$campo}\" apareceu em '{$nomeRota}'");
+            }
+        }
 
+        foreach ([
+            route('portal.visitas.show', ['id' => $this->um['a']['visita']->id]),
+            route('portal.solicitacoes.show', ['id' => $this->um['a']['solicitacao']->id]),
+        ] as $url) {
+            $resposta = $this->get($url)->assertOk();
             $chaves = $this->todasAsChavesDoJson($resposta->inertiaProps());
 
             foreach (self::CAMPOS_PROIBIDOS as $campo) {
@@ -528,6 +542,36 @@ class IsolamentoDoPortalTest extends TestCase
                 'payment_due_date' => '2026-08-10',
             ]);
 
+            $configuracaoFiscal = FiscalConfig::query()->first() ?? FiscalConfig::create([
+                'provedor' => 'nuvem_fiscal',
+                'ambiente' => 'homologacao',
+                'credenciais' => ['client_id' => 'teste', 'client_secret' => 'teste'],
+                'regime_tributario' => 'simples_nacional',
+                'codigo_servico' => '07.13',
+                'aliquota_iss' => '5.00',
+                'natureza_operacao' => 'tributacao_no_municipio',
+                'ativo' => true,
+            ]);
+            $nota = ServiceInvoice::create([
+                'fiscal_config_id' => $configuracaoFiscal->id,
+                'client_id' => $cliente->id,
+                'address_id' => $endereco->id,
+                'work_order_id' => $visita->id,
+                'numero' => 'NFSE-'.$marca,
+                'situacao' => 'emitida',
+                'valor_servico' => '100.00',
+                'valor_iss' => '5.00',
+                'valor_liquido' => '100.00',
+                'descricao_servico' => 'Serviço fiscal '.$marca,
+                'competencia' => '2026-07-28',
+            ]);
+            $nota->update([
+                'pdf_path' => "fiscal/empresa-{$nota->company_id}/nota-{$nota->id}/nfse.pdf",
+                'xml_path' => "fiscal/empresa-{$nota->company_id}/nota-{$nota->id}/nfse.xml",
+            ]);
+            Storage::disk('local')->put($nota->pdf_path, '%PDF');
+            Storage::disk('local')->put($nota->xml_path, '<nota/>');
+
             $clientUser = ClientUser::create([
                 'client_id' => $cliente->id,
                 'nome' => 'Usuário '.$marca,
@@ -548,7 +592,7 @@ class IsolamentoDoPortalTest extends TestCase
 
             return compact(
                 'cliente', 'endereco', 'visita', 'certificado', 'contrato',
-                'adequacao', 'fatura', 'clientUser', 'solicitacao'
+                'adequacao', 'fatura', 'nota', 'clientUser', 'solicitacao'
             );
         });
     }
@@ -591,6 +635,20 @@ class IsolamentoDoPortalTest extends TestCase
         return array_values(array_unique($nomes));
     }
 
+    /** @return array{\Illuminate\Testing\TestResponse, array<string, mixed>} */
+    private function respostaDaListagem(string $nomeRota): array
+    {
+        if ($nomeRota === 'portal.notas.index') {
+            $resposta = $this->getJson(route($nomeRota))->assertOk();
+
+            return [$resposta, $resposta->json()];
+        }
+
+        $resposta = $this->get(route($nomeRota))->assertOk();
+
+        return [$resposta, $resposta->inertiaProps()];
+    }
+
     /**
      * URL(s) de uma rota de detalhe do portal, com o id (e, quando aplicável,
      * o tipo) apontando para uma entidade do conjunto de fixture informado
@@ -611,6 +669,9 @@ class IsolamentoDoPortalTest extends TestCase
                 route($nomeRota, ['tipo' => 'certificado', 'id' => $conjunto['certificado']->id]),
                 route($nomeRota, ['tipo' => 'contrato', 'id' => $conjunto['contrato']->id]),
                 route($nomeRota, ['tipo' => 'fatura', 'id' => $conjunto['fatura']->id]),
+            ],
+            'portal.notas.pdf', 'portal.notas.xml' => [
+                route($nomeRota, ['nota' => $conjunto['nota']->id]),
             ],
             default => throw new RuntimeException(
                 "Rota de detalhe '{$nomeRota}' não tem URL de teste mapeada em ".self::class.'::urlsDeDetalheParaOutro(). '
@@ -633,6 +694,55 @@ class IsolamentoDoPortalTest extends TestCase
      *
      * @return array<int, int|string>
      */
+    /**
+     * Props que embutem outro tipo de entidade dentro de si (ex.:
+     * `portal.contratos` acrescenta `proximas_visitas`, de
+     * `PortalController::comProximasVisitas()`, dentro de cada contrato). Um
+     * id de visita nessa prop aninhada não identifica o contrato, e contar
+     * com ele quebraria a comparação por id assim que o autoincremento de
+     * `work_orders` e de `contracts` divergir entre os testes.
+     *
+     * @var array<string, array<int, string>>
+     */
+    private const CHAVES_ANINHADAS_A_IGNORAR = [
+        'portal.contratos' => ['proximas_visitas'],
+    ];
+
+    /**
+     * Ids de um tipo específico dentro da resposta de uma rota de listagem,
+     * restrito à prop que carrega aquele tipo (ver `ROTAS_DE_LISTAGEM`) e sem
+     * as props aninhadas de outro tipo (ver `CHAVES_ANINHADAS_A_IGNORAR`).
+     *
+     * @param  array<string, mixed>  $dados
+     * @return array<int, int|string>
+     */
+    private function idsDoTipo(array $dados, string $propKey, string $nomeRota): array
+    {
+        $itens = $dados[$propKey] ?? [];
+        $chavesAIgnorar = self::CHAVES_ANINHADAS_A_IGNORAR[$nomeRota] ?? [];
+
+        return $this->idsNoArray($this->semChaves($itens, $chavesAIgnorar));
+    }
+
+    private function semChaves(mixed $dado, array $chaves): mixed
+    {
+        if (! is_array($dado) || $chaves === []) {
+            return $dado;
+        }
+
+        $resultado = [];
+
+        foreach ($dado as $chave => $valor) {
+            if (is_string($chave) && in_array($chave, $chaves, true)) {
+                continue;
+            }
+
+            $resultado[$chave] = $this->semChaves($valor, $chaves);
+        }
+
+        return $resultado;
+    }
+
     private function idsNoArray(mixed $dado): array
     {
         $ids = [];

@@ -22,6 +22,7 @@ class WorkOrderService
      */
     public function __construct(
         private readonly WorkOrderStockService $estoqueDaOs,
+        private readonly ServiceInvoiceService $notasFiscais,
     ) {}
 
     /**
@@ -271,6 +272,7 @@ class WorkOrderService
     public function updateWorkOrder(WorkOrder $workOrder, array $data): bool
     {
         $this->garantirQueNaoEstaTravada($workOrder);
+        $estavaConcluida = $workOrder->status === 'completed';
 
         $technicians = $data['technicians'] ?? [];
         $products = $data['products'] ?? [];
@@ -394,6 +396,10 @@ class WorkOrderService
         // quantidade aplicada, não gera movimento nenhum.
         if ($workOrder->status === 'completed') {
             $this->baixarEstoqueDaOs($workOrder);
+
+            if (! $estavaConcluida) {
+                $this->emitirNotaFiscalDaOs($workOrder);
+            }
         }
 
         return $result;
@@ -614,6 +620,7 @@ class WorkOrderService
     public function markAsCompleted(WorkOrder $workOrder, array $data = []): bool
     {
         $this->garantirQueNaoEstaTravada($workOrder);
+        $estavaConcluida = $workOrder->status === 'completed';
 
         $data['status'] = 'completed';
         $data['end_time'] = $data['end_time'] ?? now();
@@ -622,6 +629,10 @@ class WorkOrderService
 
         if ($concluida) {
             $this->baixarEstoqueDaOs($workOrder);
+
+            if (! $estavaConcluida) {
+                $this->emitirNotaFiscalDaOs($workOrder);
+            }
         }
 
         return $concluida;
@@ -646,6 +657,19 @@ class WorkOrderService
             $this->estoqueDaOs->baixarProdutosDaOs($workOrder);
         } catch (Throwable $falha) {
             Log::error('[estoque] Baixa automática da OS falhou no fechamento.', [
+                'work_order_id' => $workOrder->id,
+                'order_number' => $workOrder->order_number,
+                'erro' => $falha->getMessage(),
+            ]);
+        }
+    }
+
+    private function emitirNotaFiscalDaOs(WorkOrder $workOrder): void
+    {
+        try {
+            $this->notasFiscais->emitirAutomaticamenteDaOs($workOrder->refresh());
+        } catch (Throwable $falha) {
+            Log::error('[fiscal] Emissão automática da OS falhou no fechamento.', [
                 'work_order_id' => $workOrder->id,
                 'order_number' => $workOrder->order_number,
                 'erro' => $falha->getMessage(),

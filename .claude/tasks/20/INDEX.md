@@ -5,16 +5,17 @@
 ## Legenda
 
 - ✅ Concluída | 🔄 Em andamento | ⏳ Pendente
+- BLOQUEADA: limite de tentativas atingido com evidência pendente
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 20.1 | Migrations e models de configuração fiscal e nota | backend-estrutura | ⏳ | média |
-| 20.2 | Interface do provedor de NFS-e | backend-logica | ⏳ | alta |
-| 20.3 | Validação fiscal e emissão da OS ou do título | backend-logica | ⏳ | alta |
-| 20.4 | Cancelamento e substituição de nota | backend-logica | ⏳ | média |
-| 20.5 | Endpoints de nota e disponibilização no portal | backend-endpoint | ⏳ | alta |
-| 20.6 | Telas de nota, pendências e configuração | frontend-pagina | ⏳ | alta |
-| 20.7 | Testes de emissão, falha e cancelamento | teste | ⏳ | alta |
+| 20.1 | Migrations e models de configuração fiscal e nota | backend-estrutura | ✅ | média |
+| 20.2 | Interface do provedor de NFS-e | backend-logica | ✅ | alta |
+| 20.3 | Validação fiscal e emissão da OS ou do título | backend-logica | ✅ | alta |
+| 20.4 | Cancelamento e substituição de nota | backend-logica | ✅ | média |
+| 20.5 | Endpoints de nota e disponibilização no portal | backend-endpoint | ✅ | alta |
+| 20.6 | Telas de nota, pendências e configuração | frontend-pagina | ✅ | alta |
+| 20.7 | Testes de emissão, falha e cancelamento | teste | ✅ | alta |
 
 ## Ordem de execução
 

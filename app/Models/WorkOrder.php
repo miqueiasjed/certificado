@@ -231,6 +231,11 @@ class WorkOrder extends Model
         return $this->hasMany(WorkOrderPhoto::class);
     }
 
+    public function serviceInvoices(): HasMany
+    {
+        return $this->hasMany(ServiceInvoice::class);
+    }
+
     /**
      * Assinatura do cliente coletada em campo para esta OS (Plano 13).
      */

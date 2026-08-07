@@ -4,6 +4,7 @@ use App\Http\Controllers\Portal\ClientRequestController;
 use App\Http\Controllers\Portal\PortalAuthController;
 use App\Http\Controllers\Portal\PortalController;
 use App\Http\Controllers\Portal\PortalDocumentController;
+use App\Http\Controllers\Portal\PortalNotaController;
 use App\Http\Controllers\Portal\PortalPagamentoController;
 use App\Http\Middleware\AutenticarCliente;
 use App\Http\Middleware\EnsurePortalModuleIsActive;
@@ -116,6 +117,16 @@ Route::middleware(AutenticarCliente::class)->group(function () {
         Route::post('/faturas/{parcela}/cobranca', [PortalPagamentoController::class, 'gerarCobranca'])
             ->whereNumber('parcela')
             ->name('faturas.cobranca');
+
+        Route::middleware(EnsurePortalModuleIsActive::class.':nfse')->group(function () {
+            Route::get('/notas', [PortalNotaController::class, 'index'])->name('notas.index');
+            Route::get('/notas/{nota}/pdf', [PortalNotaController::class, 'pdf'])
+                ->whereNumber('nota')
+                ->name('notas.pdf');
+            Route::get('/notas/{nota}/xml', [PortalNotaController::class, 'xml'])
+                ->whereNumber('nota')
+                ->name('notas.xml');
+        });
 
         // Solicitações de atendimento (Plano 15, Task 15.5): abrir, listar e
         // ver a própria. O formulário de abertura nunca aceita prioridade -
