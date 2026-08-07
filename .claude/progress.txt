@@ -1657,3 +1657,86 @@ diferentes não pode presumir que autoincrement nunca colide; ou escopa a
 busca ao tipo exato, ou compara por um marcador de conteúdo (nome, descrição)
 em vez do id. Vale para qualquer plano futuro que crie fixture em tabela já
 usada por `IsolamentoDoPortalTest`/`VazamentoEntreEmpresasTest`.
+
+## Plano 21 - Monitoramento CIP: tendência e mapa de pontos (07/08/2026)
+
+Concluído, 9 tasks. Suíte completa do projeto fechou em 1.235 testes e 10.505
+asserções. O plano entrega relatório de tendência de infestação, mapa de
+calor, ranking de pontos críticos, planta versionada com posicionamento por
+arrastar e PDF com identidade do tenant, publicável no portal do cliente.
+
+### Vazamento cross-tenant por caminho de arquivo previsível no disco público
+
+`FloorPlanService::armazenar()` (Task 21.4) gravava a planta em
+`floor-plans/{address_id}/{slug-do-nome}-v{versao}.{ext}`, no disco `public`,
+servido direto pelo `storage:link` sem middleware, permissão ou escopo de
+empresa algum. Como `address_id` é sequência global (não por empresa),
+qualquer pessoa sem autenticação podia enumerar `address_id` e baixar a
+planta de outro tenant. Achado por um agente revisor independente na revisão
+de alto risco da Task 21.5, com o comentário do código citando `WorkOrderPhoto`
+como precedente - comparação que não se sustentava, porque lá o nome do
+arquivo já é um hash aleatório do `UploadedFile::store()` sem path fixo.
+Corrigido acrescentando `Str::random(40)` ao nome do arquivo, mesmo critério
+de `WorkOrderPhoto` e o mesmo raciocínio já usado para os tokens de convite e
+de pesquisa de satisfação em `DominioMultiempresa::UNIQUES_GLOBAIS_MANTIDOS`.
+**Regra que fica:** todo arquivo gravado em disco `public` sem middleware de
+autenticação por trás precisa de nome imprevisível, nunca só um caminho
+hierárquico por id; "documento novo grava em disco público" é sinal para
+conferir isso antes de aceitar a task.
+
+### Divergência entre o nome de componente Inertia real e o que o arquivo da task supõe
+
+A Task 21.5 nasceu antes da 21.8, e o controller da 21.5 já decidiu os nomes
+reais de componente Inertia (`Monitoring/Index`, `Monitoring/Relatorios/Index`,
+`Monitoring/Relatorios/Show`, `Portal/Relatorios/Index`, `Portal/Relatorios/Show`).
+O arquivo `.claude/tasks/21/21.8.md`, escrito antes da 21.5 rodar, supôs
+caminhos diferentes (`Monitoramento/Index.vue`, `Monitoramento/Relatorios.vue`,
+`Portal/Pages/Relatorios.vue` - português em vez de inglês, um arquivo só onde
+o controller já divide lista e detalhe, pasta de portal errada). Sem a
+correção explícita no prompt do agente da 21.8 (que eu apliquei conferindo o
+código-fonte dos dois controllers antes de despachar), o agente teria criado
+cinco Vue em caminhos que a rota nunca resolveria - o mesmo tipo de "o texto
+da task diverge do código real" já visto cinco vezes seguidas para nome de
+permissão (ponto vs. hífen, Tasks 14.6 a 18.10 no registro acima), agora na
+variante "caminho de arquivo Vue previsto antes de o controller existir".
+**Regra que fica:** quando uma task de frontend depende de um controller já
+escrito por uma task anterior do mesmo plano, ler o `Inertia::render()` real
+antes de confiar no nome de arquivo que o `.md` da task lista.
+
+### Buraco de integração entre tasks paralelas do mesmo plano
+
+Duas tasks despachadas como "independentes" deixaram pontas soltas que só
+apareceram na integração: a 21.2 criou `ConsolidadorDePeriodo` com três
+chaves vazias (`ranking_pontos_criticos`, `mapa_de_calor`,
+`ocorrencia_por_especie`) para a 21.3 preencher, mas nenhuma task futura tinha
+"integrar os dois" no próprio escopo - coube à 21.5 perceber e fechar. A 21.7
+(frontend do editor de planta) foi escrita contra um contrato de rota que a
+21.5 nunca criou (`Plantas/Editor.vue` não tinha controller nenhum
+renderizando), contra um endpoint que respondia redirect em vez de JSON
+(quebrando o autosave) e sem endpoint de remoção de posição nenhum - a própria
+21.7 documentou os três atritos em vez de travar, e a integração ficou para o
+orquestrador depois. **Regra que fica:** ao decompor um plano em tasks
+"independentes" que na verdade formam uma cadeia de produtor/consumidor
+(service que devolve chave vazia para outro preencher; frontend que consome
+rota que outra task deveria ter criado), vale registrar explicitamente qual
+task futura faz a integração final - sem isso, cada agente resolve o próprio
+pedaço corretamente e ninguém liga os fios, e o orquestrador precisa
+descobrir e fechar na revisão em vez de a decomposição já prever.
+
+### `ConsolidadorDePeriodo::visitasDoPeriodo` contava OS de endereço inativo
+
+Achado pela Task 21.9 ao escrever teste novo para "consolidado traz o número
+e as datas das visitas" (esse ângulo específico só tinha verificação manual
+por tinker na Task 21.2, nunca teste persistido): com `$endereco` nulo
+(relatório do cliente inteiro), `visitasDoPeriodo()` contava toda `WorkOrder`
+do cliente por `client_id`, sem filtrar pelos mesmos endereços ativos que
+`enderecosDoRetrato()` já usa para tendência/ranking/mapa de
+calor/ocorrência por espécie - um endereço inativo entrava na contagem de
+visitas mas em nenhuma das outras quatro partes do retrato, uma divergência
+interna no mesmo documento. Corrigido filtrando por
+`whereIn('address_id', $enderecos->pluck('id'))` com a mesma coleção já
+calculada. **Regra que fica:** quando várias partes de um mesmo retrato/relatório
+precisam do mesmo subconjunto de dado (aqui, "endereços ativos do cliente"),
+cada parte deve receber a coleção já resolvida, não recalcular o próprio
+filtro - divergência entre partes do mesmo documento é sutil e só aparece
+testando o campo específico, não por inspeção visual do todo.

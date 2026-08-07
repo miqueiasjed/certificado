@@ -8,15 +8,15 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 21.1 | Migrations e models de planta, posição e relatório | backend-estrutura | ⏳ | média |
-| 21.2 | Agregação de tendência e comparação entre períodos | backend-logica | ⏳ | alta |
-| 21.3 | Ranking, mapa de calor e ocorrência por espécie | backend-logica | ⏳ | alta |
-| 21.4 | Planta versionada e posicionamento | backend-logica | ⏳ | alta |
-| 21.5 | Endpoints do relatório, da planta e do portal | backend-endpoint | ⏳ | alta |
-| 21.6 | PDF do relatório e croqui imprimível | backend-endpoint | ⏳ | alta |
-| 21.7 | Editor de planta com posicionamento por arrastar | frontend-componente | ⏳ | alta |
-| 21.8 | Telas do relatório de monitoramento | frontend-pagina | ⏳ | alta |
-| 21.9 | Testes de agregação, planta e publicação | teste | ⏳ | alta |
+| 21.1 | Migrations e models de planta, posição e relatório | backend-estrutura | ✅ | média |
+| 21.2 | Agregação de tendência e comparação entre períodos | backend-logica | ✅ | alta |
+| 21.3 | Ranking, mapa de calor e ocorrência por espécie | backend-logica | ✅ | alta |
+| 21.4 | Planta versionada e posicionamento | backend-logica | ✅ | alta |
+| 21.5 | Endpoints do relatório, da planta e do portal | backend-endpoint | ✅ | alta |
+| 21.6 | PDF do relatório e croqui imprimível | backend-endpoint | ✅ | alta |
+| 21.7 | Editor de planta com posicionamento por arrastar | frontend-componente | ✅ | alta |
+| 21.8 | Telas do relatório de monitoramento | frontend-pagina | ✅ | alta |
+| 21.9 | Testes de agregação, planta e publicação | teste | ✅ | alta |
 
 ## Ordem de execução
 

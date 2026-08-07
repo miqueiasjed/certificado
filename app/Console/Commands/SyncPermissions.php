@@ -296,6 +296,62 @@ class SyncPermissions extends Command
                 'fiscal-cancelar',
                 'fiscal-configurar',
             ],
+            // Planta versionada do endereço e posicionamento dos dispositivos
+            // sobre ela (Plano 21, Task 21.4). O arquivo da task pedia
+            // "plantas.gerenciar", com ponto; vale o nome abaixo, no padrão
+            // "recurso-acao" no singular do resto do catálogo (mesmo critério
+            // de "comodo-gerenciar", que também cobre enviar e editar um
+            // recurso inteiro com uma permissão só), mesma correção já
+            // aplicada às Tasks 14.6, 16.4, 17.7, 18.4 e 19.6.
+            //
+            // Uma permissão só, e não separada em enviar/posicionar: as duas
+            // ações (enviar a planta e posicionar dispositivo sobre ela)
+            // andam juntas na mesma tela, e separar criaria a chance de um
+            // papel enviar planta sem poder posicionar nada nela, o que a
+            // deixaria sempre incompleta. Fica de fora do filtro por sufixo
+            // "-ver" do papel leitura e de qualquer prefixo do
+            // RolesAndPermissionsSeeder, então só administrador recebe (mesmo
+            // critério de "assinatura-gerenciar" e "cobranca-configurar");
+            // estender a técnico ou comercial é decisão de produto para uma
+            // task futura de tela, não desta.
+            'plantas' => [
+                'planta-gerenciar',
+            ],
+            // Relatório de monitoramento consolidado por período (Plano 21,
+            // Task 21.5). O arquivo da task pedia "monitoramento.ver"/
+            // "monitoramento.gerar"/"monitoramento.publicar", com ponto;
+            // valem os nomes abaixo, no padrão "recurso-acao" no singular do
+            // resto do catálogo, mesma correção já aplicada às Tasks 14.6,
+            // 16.4, 17.7, 18.4, 19.6 e 21.4 (`planta-gerenciar`).
+            //
+            // Três permissões, com alcance crescente de risco:
+            //
+            // - `monitoramento-ver`: a visão ao vivo e a lista/detalhe de
+            //   relatório já gerado. Leitura pura, sem custo nem dado
+            //   pessoal de terceiro na resposta (ver `PortalRelatorioController`).
+            //   Termina em "-ver", então entra automaticamente no papel
+            //   `leitura` pelo filtro genérico de `RolesAndPermissionsSeeder`
+            //   (mesmo critério de `fiscal-ver`), sem precisar de entrada
+            //   própria lá.
+            // - `monitoramento-gerar`: congela o consolidado num
+            //   `MonitoringReport` novo. Mexe em dado novo (nunca no que já
+            //   foi entregue), e por isso entra explicitamente no papel
+            //   `tecnico` em `RolesAndPermissionsSeeder`: é o técnico que
+            //   acompanha o monitoramento em campo quem tem o contexto para
+            //   decidir que o período está pronto para consolidar.
+            // - `monitoramento-publicar`: alterna a visibilidade do
+            //   relatório no portal do cliente. Deliberadamente mais
+            //   restrita que `monitoramento-gerar` (ver `MonitoringReportController::publicar()`):
+            //   publicar é o que entrega o documento para a auditoria do
+            //   cliente, e essa decisão fica só com `administrador` (que
+            //   recebe o catálogo inteiro), mesmo critério de
+            //   `fiscal-cancelar`/`cobranca-configurar` - nenhum prefixo ou
+            //   sufixo de `RolesAndPermissionsSeeder` a alcança de propósito.
+            'monitoramento' => [
+                'monitoramento-ver',
+                'monitoramento-gerar',
+                'monitoramento-publicar',
+            ],
         ];
     }
 

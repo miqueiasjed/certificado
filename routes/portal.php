@@ -6,6 +6,7 @@ use App\Http\Controllers\Portal\PortalController;
 use App\Http\Controllers\Portal\PortalDocumentController;
 use App\Http\Controllers\Portal\PortalNotaController;
 use App\Http\Controllers\Portal\PortalPagamentoController;
+use App\Http\Controllers\Portal\PortalRelatorioController;
 use App\Http\Middleware\AutenticarCliente;
 use App\Http\Middleware\EnsurePortalModuleIsActive;
 use Illuminate\Support\Facades\Route;
@@ -126,6 +127,24 @@ Route::middleware(AutenticarCliente::class)->group(function () {
             Route::get('/notas/{nota}/xml', [PortalNotaController::class, 'xml'])
                 ->whereNumber('nota')
                 ->name('notas.xml');
+        });
+
+        // Relatórios de monitoramento (Plano 21, Task 21.5): só os já
+        // publicados pelo responsável técnico (`publicado_no_portal = true`)
+        // aparecem aqui - relatório existente mas não publicado devolve 404,
+        // nunca 403 (mesmo critério de `PortalService`, ver
+        // `PortalRelatorioController`). `{monitoringReport}` é `int` simples,
+        // não Model Binding: o escopo duplo (empresa + cliente) é resolvido
+        // inteiro dentro do controller, mesmo padrão de
+        // `ClientRequestController`/`PortalController::visita()`.
+        Route::middleware(EnsurePortalModuleIsActive::class.':monitoramento')->group(function () {
+            Route::get('/relatorios', [PortalRelatorioController::class, 'index'])->name('relatorios.index');
+            Route::get('/relatorios/{monitoringReport}', [PortalRelatorioController::class, 'show'])
+                ->whereNumber('monitoringReport')
+                ->name('relatorios.show');
+            Route::get('/relatorios/{monitoringReport}/pdf', [PortalRelatorioController::class, 'pdf'])
+                ->whereNumber('monitoringReport')
+                ->name('relatorios.pdf');
         });
 
         // Solicitações de atendimento (Plano 15, Task 15.5): abrir, listar e

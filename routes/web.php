@@ -36,9 +36,11 @@ use App\Http\Controllers\FinancialReportController;
 use App\Http\Controllers\FinancialWithdrawalController;
 use App\Http\Controllers\FiscalClientController;
 use App\Http\Controllers\FiscalConfigController;
+use App\Http\Controllers\FloorPlanController;
 use App\Http\Controllers\GatewayWebhookController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\MonitoringReportController;
 use App\Http\Controllers\NotificationQueueController;
 use App\Http\Controllers\NotificationTemplateController;
 use App\Http\Controllers\OnboardingController;
@@ -953,19 +955,105 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
             ->name('fiscal.configuracao.update');
     });
 
+    // Monitoramento (Plano 21, Task 21.5): relatório consolidado por período,
+    // geração/congelamento, publicação no portal, e a planta versionada do
+    // endereço com o posicionamento dos dispositivos sobre ela.
+    //
+    // `module:monitoramento` no grupo inteiro, mesmo critério dos blocos de
+    // estoque e cobrança recorrente acima: o bloco nasce inteiro nesta task,
+    // então a garantia estrutural ("rota nova já nasce bloqueada para tenant
+    // sem o módulo") vale mais que replicar o middleware rota a rota.
+    //
+    // Quatro permissões, cada uma com um alcance diferente:
+    //
+    // - `monitoramento-ver`: a visão ao vivo (`GET /monitoramento`), a lista
+    //   e o detalhe de relatório já gerado. Leitura pura.
+    // - `monitoramento-gerar`: congela o consolidado em `monitoring_reports`.
+    //   Mexe em dado novo, nunca no que já foi entregue.
+    // - `monitoramento-publicar`: alterna a visibilidade no portal do
+    //   cliente. Mais restrita que `monitoramento-gerar` de propósito: quem
+    //   gera o relatório não é necessariamente quem decide que ele já pode
+    //   ir para a auditoria do cliente (ver `RolesAndPermissionsSeeder`).
+    // - `planta-gerenciar` (já existe desde a Task 21.4): cobre toda ação de
+    //   planta, inclusive a listagem - o catálogo não tem uma permissão
+    //   "planta-ver" separada, decisão já tomada na Task 21.4.
+    Route::middleware('module:monitoramento')->group(function () {
+        Route::get('/monitoramento', [MonitoringReportController::class, 'index'])
+            ->middleware('permission:monitoramento-ver')
+            ->name('monitoramento.index');
+
+        // `/monitoramento/relatorios` (lista e geração) precisa vir antes de
+        // `/monitoramento/relatorios/{monitoringReport}` só por clareza de
+        // leitura - path fixo e path com parâmetro nunca colidem no Laravel,
+        // diferente do caso "stats antes do resource" comentado no bloco
+        // financeiro acima.
+        Route::get('/monitoramento/relatorios', [MonitoringReportController::class, 'relatorios'])
+            ->middleware('permission:monitoramento-ver')
+            ->name('monitoramento.relatorios.index');
+        Route::post('/monitoramento/relatorios', [MonitoringReportController::class, 'store'])
+            ->middleware('permission:monitoramento-gerar')
+            ->name('monitoramento.relatorios.store');
+        Route::get('/monitoramento/relatorios/{monitoringReport}', [MonitoringReportController::class, 'show'])
+            ->middleware('permission:monitoramento-ver')
+            ->name('monitoramento.relatorios.show');
+        Route::get('/monitoramento/relatorios/{monitoringReport}/pdf', [MonitoringReportController::class, 'pdf'])
+            ->middleware('permission:monitoramento-ver')
+            ->name('monitoramento.relatorios.pdf');
+        Route::post('/monitoramento/relatorios/{monitoringReport}/publicar', [MonitoringReportController::class, 'publicar'])
+            ->middleware('permission:monitoramento-publicar')
+            ->name('monitoramento.relatorios.publicar');
+        Route::post('/monitoramento/relatorios/{monitoringReport}/despublicar', [MonitoringReportController::class, 'despublicar'])
+            ->middleware('permission:monitoramento-publicar')
+            ->name('monitoramento.relatorios.despublicar');
+
+        // Planta do endereço e posicionamento dos dispositivos (service e
+        // FormRequests prontos desde a Task 21.4; `StoreFloorPlanRequest` e
+        // `UpdateDevicePositionsRequest` já checam `planta-gerenciar` no
+        // próprio `authorize()`, e a permissão aqui na rota é defesa em
+        // profundidade, mesmo padrão do resto do sistema).
+        Route::get('/enderecos/{address}/plantas', [FloorPlanController::class, 'index'])
+            ->middleware('permission:planta-gerenciar')
+            ->name('enderecos.plantas.index');
+        // Editor de arrastar-soltar (Task 21.7): entrada pelo endereço, sem
+        // planta escolhida ainda, ou por uma planta específica (o seletor do
+        // próprio editor navega para a segunda ao trocar de planta).
+        Route::get('/enderecos/{address}/plantas/editor', [FloorPlanController::class, 'editorPorEndereco'])
+            ->middleware('permission:planta-gerenciar')
+            ->name('enderecos.plantas.editor');
+        Route::get('/plantas/{floorPlan}/editor', [FloorPlanController::class, 'editor'])
+            ->middleware('permission:planta-gerenciar')
+            ->name('plantas.editor');
+        Route::post('/enderecos/{address}/plantas', [FloorPlanController::class, 'store'])
+            ->middleware('permission:planta-gerenciar')
+            ->name('enderecos.plantas.store');
+        Route::post('/plantas/{floorPlan}/substituir', [FloorPlanController::class, 'substituir'])
+            ->middleware('permission:planta-gerenciar')
+            ->name('plantas.substituir');
+        Route::put('/plantas/{floorPlan}/posicoes', [FloorPlanController::class, 'posicoes'])
+            ->middleware('permission:planta-gerenciar')
+            ->name('plantas.posicoes');
+        Route::delete('/plantas/{floorPlan}/posicoes/{device}', [FloorPlanController::class, 'removerPosicao'])
+            ->middleware('permission:planta-gerenciar')
+            ->name('plantas.posicoes.remover');
+        // `?versao=tecnico|cliente` (Task 21.6); sem o parâmetro, sai a
+        // versão técnica, padrão desta rota de uso interno.
+        Route::get('/plantas/{floorPlan}/croqui', [FloorPlanController::class, 'croqui'])
+            ->middleware('permission:planta-gerenciar')
+            ->name('plantas.croqui');
+    });
+
     // Módulos ainda sem nenhuma rota no sistema (`portal_cliente`,
     // `app_tecnico`, `roteirizacao`, `laudo_ia`): seguem só
     // declarados em `CatalogoDeModulos` e ganham `module:<chave>` na task que
     // implementar o respectivo plano.
     //
-    // `notificacoes` (Plano 14) e `monitoramento` (Plano 21) são exceções
-    // diferentes uma da outra: notificações já tem rota registrada (grupo
-    // "Rotas de Notificações", abaixo) mas ainda sem `module:notificacoes` -
-    // fica para quando o módulo entrar no escopo de uma task dedicada, para
-    // não gatilhar bloqueio sem o resto do fluxo (telas, aviso de plano)
-    // pronto. Monitoramento não tem rota nenhuma ainda; a rota de relatório
-    // de monitoramento nasce só no Plano 21, com `module:monitoramento` desde
-    // o primeiro deploy dela.
+    // `notificacoes` (Plano 14) é exceção diferente das demais: já tem rota
+    // registrada (grupo "Rotas de Notificações", abaixo) mas ainda sem
+    // `module:notificacoes` - fica para quando o módulo entrar no escopo de
+    // uma task dedicada, para não gatilhar bloqueio sem o resto do fluxo
+    // (telas, aviso de plano) pronto. `monitoramento` deixou de ser exceção
+    // nesta task: a rota de relatório de monitoramento nasceu já com
+    // `module:monitoramento` desde o primeiro deploy dela, ver o bloco acima.
 
     // Rotas para criação rápida
     // Registradas depois dos resources, estas quatro substituem o store de cada

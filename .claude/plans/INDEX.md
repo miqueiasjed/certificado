@@ -1,6 +1,6 @@
 # INDEX - Planos do Sistema de Certificados
 
-> Última atualização: 29/07/2026
+> Última atualização: 07/08/2026
 > Fonte de requisitos: `.claude/prd/` (índice em `.claude/prd/README.md`)
 
 ## Legenda
@@ -69,7 +69,7 @@ bloqueio.
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 21 | Monitoramento CIP: tendência e mapa de pontos | ⏳ | 6, 13, 15 | 9 |
+| 21 | Monitoramento CIP: tendência e mapa de pontos | ✅ | 6, 13, 15 | 9 |
 | 22 | Roteirização e rastreamento em campo | ⏳ | 10, 13 | 8 |
 | 23 | Comissões, metas e renovação de contratos | ⏳ | 14, 18 | 9 |
 | 24 | Conformidade RDC 622/2022 | ⏳ | 14, 17 | 7 |

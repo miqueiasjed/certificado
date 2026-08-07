@@ -9,6 +9,7 @@ use App\Models\ClientUser;
 use App\Models\Company;
 use App\Models\Contract;
 use App\Models\FiscalConfig;
+use App\Models\MonitoringReport;
 use App\Models\PaymentDetail;
 use App\Models\ServiceInvoice;
 use App\Models\User;
@@ -125,6 +126,12 @@ class IsolamentoDoPortalTest extends TestCase
         'portal.faturas' => ['fatura' => 'faturas', 'nota' => 'notas_fiscais'],
         'portal.notas.index' => ['nota' => 'notas_fiscais'],
         'portal.solicitacoes.index' => ['solicitacao' => 'solicitacoes'],
+        // Plano 21, Task 21.5: relatório de monitoramento publicado. A
+        // varredura genérica (`idsNoArray()`) percorre a estrutura de
+        // paginação sem precisar de tratamento especial - encontra o "id" de
+        // cada relatório dentro de `relatorios.data`, no mesmo jeito que já
+        // faz com o restante das listagens.
+        'portal.relatorios.index' => ['relatorio' => 'relatorios'],
     ];
 
     /**
@@ -139,6 +146,14 @@ class IsolamentoDoPortalTest extends TestCase
         'portal.documentos.download',
         'portal.notas.pdf',
         'portal.notas.xml',
+        // Plano 21, Task 21.5: só relatório publicado é acessível (o não
+        // publicado já é 404 por construção, coberto em
+        // `MonitoringReportEndpointTest`); aqui o conjunto de fixture só tem
+        // relatório publicado, então o que esta classe testa é o mesmo
+        // critério das demais rotas de detalhe - id de outro cliente/outra
+        // empresa devolve 404.
+        'portal.relatorios.show',
+        'portal.relatorios.pdf',
     ];
 
     /**
@@ -378,6 +393,11 @@ class IsolamentoDoPortalTest extends TestCase
             ->assertOk();
         $this->get(route('portal.notas.pdf', ['nota' => $this->um['a']['nota']->id]))->assertOk();
         $this->get(route('portal.notas.xml', ['nota' => $this->um['a']['nota']->id]))->assertOk();
+        $this->assertNotSame(
+            404,
+            $this->get(route('portal.relatorios.show', ['monitoringReport' => $this->um['a']['relatorio']->id]))->status()
+        );
+        $this->get(route('portal.relatorios.pdf', ['monitoringReport' => $this->um['a']['relatorio']->id]))->assertOk();
     }
 
     // -----------------------------------------------------------------
@@ -408,6 +428,7 @@ class IsolamentoDoPortalTest extends TestCase
         foreach ([
             route('portal.visitas.show', ['id' => $this->um['a']['visita']->id]),
             route('portal.solicitacoes.show', ['id' => $this->um['a']['solicitacao']->id]),
+            route('portal.relatorios.show', ['monitoringReport' => $this->um['a']['relatorio']->id]),
         ] as $url) {
             $resposta = $this->get($url)->assertOk();
             $chaves = $this->todasAsChavesDoJson($resposta->inertiaProps());
@@ -590,9 +611,35 @@ class IsolamentoDoPortalTest extends TestCase
                 'prioridade' => ClientRequest::PRIORIDADE_NORMAL,
             ]);
 
+            // Plano 21, Task 21.5: relatório de monitoramento já publicado -
+            // só relatório publicado aparece no portal, e é esse o cenário
+            // que a varredura de isolamento precisa exercitar.
+            $autorDoRelatorio = User::factory()->create(['is_active' => true]);
+            $relatorio = MonitoringReport::query()->create([
+                'client_id' => $cliente->id,
+                'address_id' => $endereco->id,
+                'periodo_inicio' => '2026-07-01',
+                'periodo_fim' => '2026-07-31',
+                'gerado_em' => now(),
+                'gerado_por' => $autorDoRelatorio->id,
+                'dados' => [
+                    'client_id' => $cliente->id,
+                    'address_id' => $endereco->id,
+                    'periodo' => ['de' => '2026-07-01', 'ate' => '2026-07-31'],
+                    'gerado_em' => now()->toIso8601String(),
+                    'visitas' => ['quantidade' => 1, 'datas' => []],
+                    'tendencia' => [],
+                    'ranking_pontos_criticos' => [],
+                    'mapa_de_calor' => [],
+                    'ocorrencia_por_especie' => [],
+                    'adequacoes' => [],
+                ],
+                'publicado_no_portal' => true,
+            ]);
+
             return compact(
                 'cliente', 'endereco', 'visita', 'certificado', 'contrato',
-                'adequacao', 'fatura', 'nota', 'clientUser', 'solicitacao'
+                'adequacao', 'fatura', 'nota', 'clientUser', 'solicitacao', 'relatorio'
             );
         });
     }
@@ -672,6 +719,9 @@ class IsolamentoDoPortalTest extends TestCase
             ],
             'portal.notas.pdf', 'portal.notas.xml' => [
                 route($nomeRota, ['nota' => $conjunto['nota']->id]),
+            ],
+            'portal.relatorios.show', 'portal.relatorios.pdf' => [
+                route($nomeRota, ['monitoringReport' => $conjunto['relatorio']->id]),
             ],
             default => throw new RuntimeException(
                 "Rota de detalhe '{$nomeRota}' não tem URL de teste mapeada em ".self::class.'::urlsDeDetalheParaOutro(). '

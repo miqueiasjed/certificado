@@ -44,6 +44,15 @@ use Illuminate\Support\Facades\DB;
 class DeviceReplacementService
 {
     /**
+     * Herda a posição do dispositivo anterior para o novo em toda planta
+     * ativa do endereço (Plano 21, Task 21.4), assim que a troca cria o
+     * dispositivo novo: ver `substituir()`.
+     */
+    public function __construct(
+        private readonly FloorPlanService $plantas,
+    ) {}
+
+    /**
      * Situação do dispositivo que saiu do ponto. Espelha o enum da coluna
      * `devices.situacao`.
      */
@@ -133,6 +142,15 @@ class DeviceReplacementService
             }
 
             $novo = Device::query()->create($this->atributosDoDispositivoNovo($emBanco, $dados));
+
+            // O ponto físico de instalação é o mesmo antes e depois da troca:
+            // o dispositivo novo herda a posição do anterior em toda planta
+            // ativa do endereço (Plano 21, Task 21.4), para ninguém precisar
+            // arrastar o marcador de novo no mapa por causa de uma isca
+            // trocada. Dentro da mesma transação da substituição: falhar ao
+            // herdar a posição desfaz a troca inteira, e não deixa o
+            // dispositivo novo criado sem o marcador que a planta esperava.
+            $this->plantas->herdarPosicao($anterior, $novo);
 
             // O anterior sai de circulação, mas continua no banco com os
             // eventos que gerou: ele é o histórico daquele ponto.

@@ -135,6 +135,15 @@ class RolesAndPermissionsSeeder extends Seeder
             // aqui: técnico corrigir a própria OS assinada anularia o
             // efeito do travamento.
             'os.assinar',
+            // Plano 21, Task 21.5: é o técnico que acompanha o monitoramento
+            // em campo quem tem o contexto para decidir que o período está
+            // pronto para consolidar, e para isso precisa ver a visão ao
+            // vivo antes de gerar. `monitoramento-publicar` fica de fora de
+            // propósito - publicar entrega o relatório para a auditoria do
+            // cliente, e essa decisão fica só com administrador (ver
+            // `SyncPermissions::catalogo()`).
+            'monitoramento-ver',
+            'monitoramento-gerar',
         ];
     }
 

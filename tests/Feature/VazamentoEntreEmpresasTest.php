@@ -25,13 +25,16 @@ use App\Models\ContractVisitJustification;
 use App\Models\DailyCashBalance;
 use App\Models\Device;
 use App\Models\DeviceEvent;
+use App\Models\DevicePosition;
 use App\Models\DeviceReplacement;
 use App\Models\EventType;
 use App\Models\FinancialEntry;
 use App\Models\FiscalConfig;
+use App\Models\FloorPlan;
 use App\Models\Inventory;
 use App\Models\InventoryItem;
 use App\Models\Invitation;
+use App\Models\MonitoringReport;
 use App\Models\NotificationLog;
 use App\Models\NotificationQueue;
 use App\Models\NotificationTemplate;
@@ -1873,6 +1876,37 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'valor_liquido' => '475.00',
                 'descricao_servico' => 'Nota fiscal '.$marca,
                 'competencia' => '2026-07-05',
+            ]);
+
+            // Planta, posição do dispositivo sobre ela e relatório de
+            // monitoramento (Plano 21). Nenhum dos três tem rota de CRUD
+            // ainda (só migrations e models na Task 21.1), mesmo critério já
+            // usado para invitation/onboardingStep acima: o objetivo aqui é
+            // só o model de domínio ter dado no cenário.
+            $dados['floorPlan'] = FloorPlan::create([
+                'address_id' => $dados['address']->id,
+                'versao' => 1,
+                'nome' => 'Planta '.$marca,
+                'arquivo_path' => 'floor-plans/teste-'.$baixo.'.png',
+                'largura_px' => 1000,
+                'altura_px' => 800,
+            ]);
+
+            $dados['devicePosition'] = DevicePosition::create([
+                'floor_plan_id' => $dados['floorPlan']->id,
+                'device_id' => $dados['device']->id,
+                'x' => '0.5000',
+                'y' => '0.5000',
+            ]);
+
+            $dados['monitoringReport'] = MonitoringReport::create([
+                'client_id' => $dados['client']->id,
+                'address_id' => $dados['address']->id,
+                'periodo_inicio' => '2026-06-01',
+                'periodo_fim' => '2026-06-30',
+                'gerado_em' => now(),
+                'gerado_por' => $autor->id,
+                'dados' => ['marca' => $marca],
             ]);
 
             return $dados;
