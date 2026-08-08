@@ -233,7 +233,15 @@ return new class extends Migration
             // Dois tenants no mesmo provedor podem coincidir no identificador
             // do documento; sem company_id na composição, o segundo tenant
             // colidiria com o primeiro.
-            $table->unique([DominioMultiempresa::COLUNA_TENANT, 'provedor', 'provedor_documento_id']);
+            //
+            // O nome é explícito porque o gerado pelo Laravel
+            // (`signature_requests_company_id_provedor_provedor_documento_id_unique`,
+            // 66 caracteres) estoura o limite de 64 do MySQL e a migration
+            // falha com "Identifier name is too long".
+            $table->unique(
+                [DominioMultiempresa::COLUNA_TENANT, 'provedor', 'provedor_documento_id'],
+                'signature_requests_tenant_provedor_documento_unique'
+            );
 
             $table->foreign(DominioMultiempresa::COLUNA_TENANT)
                 ->references('id')

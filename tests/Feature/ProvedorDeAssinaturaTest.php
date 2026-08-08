@@ -440,7 +440,17 @@ class ProvedorDeAssinaturaTest extends TestCase
 
     public function test_falha_de_rede_vira_indisponibilidade_e_e_repetida(): void
     {
-        Http::fake(fn (): never => throw new ConnectionException('Connection timed out'));
+        // O contador vive no próprio dublê: quando o `Http::fake()` lança em
+        // vez de responder, nada entra no histórico de `Http::assertSentCount()`
+        // — a requisição nunca chega a existir. Contar aqui é o que prova a
+        // repetição.
+        $tentativas = 0;
+
+        Http::fake(function () use (&$tentativas): never {
+            $tentativas++;
+
+            throw new ConnectionException('Connection timed out');
+        });
 
         try {
             $this->provedor()->consultar($this->configuracao($this->empresa(), 'tok-a'), 'DOC-TOKEN-1');
@@ -452,7 +462,7 @@ class ProvedorDeAssinaturaTest extends TestCase
 
         // Duas tentativas no total: só aqui não se sabe se a operação
         // aconteceu do lado do provedor.
-        Http::assertSentCount(2);
+        $this->assertSame(2, $tentativas);
     }
 
     public function test_erro_do_servidor_vira_indisponibilidade(): void
