@@ -40,6 +40,20 @@ final class CatalogoDeModulos
             // Pix a partir do título a receber, régua de cobrança e
             // conciliação com o gateway de pagamento do tenant.
             ['chave' => 'cobranca_recorrente', 'nome' => 'Cobrança recorrente', 'descricao' => 'Emissão de boleto e Pix, régua de cobrança automática e conciliação com o gateway de pagamento.', 'sempre_ativo' => false],
+            // Conformidade com a RDC 622/2022 (Plano 24, Tasks 24.3 e 24.5):
+            // validade das licenças e do registro do responsável técnico,
+            // validade do registro do produto na Anvisa, checklist do que
+            // falta para a empresa estar regular e referência normativa
+            // configurável.
+            //
+            // `sempre_ativo => false` é o que faz o módulo **nascer
+            // desligado**, e é também o interruptor da rotina diária
+            // `conformidade:verificar-validades`, que pula o tenant sem o
+            // módulo ativo. É essa combinação que permite subir o código
+            // (Deploy 3) sem que nenhum aviso saia, preencher as validades
+            // reais com calma e só então ligar (Deploy 4), conforme a ordem
+            // de aplicação registrada no INDEX do plano.
+            ['chave' => 'conformidade', 'nome' => 'Conformidade RDC 622/2022', 'descricao' => 'Controle de validade das licenças, do responsável técnico e do registro dos produtos na Anvisa, com checklist do que falta para estar regular.', 'sempre_ativo' => false],
         ];
     }
 }

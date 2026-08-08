@@ -6,7 +6,9 @@ use App\Contracts\GatewayAssinatura;
 use App\Listeners\RegistraAcesso;
 use App\Listeners\RegistraExecucaoAgendada;
 use App\Models\Company;
+use App\Models\OrganRegistration;
 use App\Models\WorkOrder;
+use App\Observers\ValidadeRegulatoriaObserver;
 use App\Observers\WorkOrderNotificationObserver;
 use App\Services\Compliance\ReferenciaNormativaService;
 use App\Services\Geo\ProvedorDeGeocodificacao;
@@ -107,6 +109,15 @@ class AppServiceProvider extends ServiceProvider
     private function registrarObservadoresDeNotificacao(): void
     {
         WorkOrder::observe(WorkOrderNotificationObserver::class);
+
+        // Plano 24, Task 24.3: atualizar a validade de um documento
+        // regulatório encerra os avisos de vencimento dele na hora, sem
+        // esperar a próxima execução de `conformidade:verificar-validades`.
+        // Observer, e não chamada no controller, porque a validade é gravada
+        // de mais de um lugar (configurações da empresa, registros em órgão,
+        // e amanhã qualquer importação): ver o cabeçalho da classe.
+        Company::observe(ValidadeRegulatoriaObserver::class);
+        OrganRegistration::observe(ValidadeRegulatoriaObserver::class);
     }
 
     /**

@@ -248,6 +248,59 @@ final class EventosDeNotificacao
      */
     public const COBRANCA_EM_ATRASO = 'cobranca_em_atraso';
 
+    /**
+     * Documento regulatório da empresa (licença sanitária, licença ambiental,
+     * alvará de funcionamento, registro do responsável técnico no conselho) ou
+     * registro de produto na Anvisa perto de vencer (Plano 24, Task 24.3),
+     * enfileirado pela rotina `conformidade:verificar-validades` nos marcos de
+     * 60, 30 e 7 dias.
+     *
+     * Aviso interno, mesmo critério de `CONTRATO_A_VENCER` e
+     * `LOTE_PROXIMO_DO_VENCIMENTO`: quem renova licença é a empresa, nunca o
+     * cliente final, e por isso só aceita e-mail.
+     *
+     * Os quatro documentos da empresa compartilham a mesma referência
+     * (`Company`) na chave de idempotência, então o marco carrega também o item
+     * (`licenca_sanitaria-30`, `registro_conselho-7`), montado por
+     * `ValidadeService::marcoDoDocumento()`. Sem isso, o aviso da licença
+     * sanitária calaria o da ambiental no mesmo marco.
+     */
+    public const DOCUMENTO_REGULATORIO_A_VENCER = 'documento_regulatorio_a_vencer';
+
+    /**
+     * Documento regulatório ou registro de produto **já vencido** (Plano 24,
+     * Task 24.3), reenviado **semanalmente** enquanto continuar vencido.
+     *
+     * Evento separado de `DOCUMENTO_REGULATORIO_A_VENCER`, e não mais um marco
+     * dele, porque o texto é de natureza diferente: um pede providência com
+     * antecedência, o outro informa que a empresa **está operando com documento
+     * vencido**, o que tem consequência perante fiscalização. Misturar os dois
+     * num template só impediria o tenant de dar a cada um o tom que ele merece.
+     *
+     * O reenvio semanal é a exceção de "um aviso por marco", pelo mesmo motivo
+     * do lote vencido do Plano 17 (`LOTE_PROXIMO_DO_VENCIMENTO`): o silêncio
+     * depois do primeiro aviso não resolve um problema que continua de pé todo
+     * dia. `ValidadeService::marcoSemanal()` muda o marco a cada sete dias
+     * corridos, o que libera a chave de idempotência para um aviso novo.
+     */
+    public const DOCUMENTO_REGULATORIO_VENCIDO = 'documento_regulatorio_vencido';
+
+    /**
+     * Documentos regulatórios sem validade cadastrada (Plano 24, Task 24.3),
+     * enfileirado **uma vez por mês** com a lista do que falta.
+     *
+     * Existe justamente para que "não informado" não vire "vencido". Acusar de
+     * irregular quem apenas não preencheu um campo seria informação falsa —
+     * hoje o cadastro de todo tenant está em branco, porque as colunas nasceram
+     * nulas na Task 24.1 — e destruiria a confiança no checklist inteiro.
+     *
+     * Mensal, e não diário: cadastro em branco é pendência administrativa que
+     * a empresa resolve quando puder abrir o sistema com os documentos em mãos,
+     * e um lembrete diário viraria ruído. Ruído aqui é caro: a empresa
+     * aprenderia a filtrar também os avisos de vencimento, que importam.
+     */
+    public const CADASTRO_REGULATORIO_INCOMPLETO = 'cadastro_regulatorio_incompleto';
+
     public const NFSE_EMITIDA = 'nfse_emitida';
 
     public const NFSE_CANCELADA = 'nfse_cancelada';
@@ -499,7 +552,7 @@ final class EventosDeNotificacao
                     // texto explica a leitura em vez de assumir só o
                     // vencimento futuro.
                     'corpo' => 'O contrato {{contrato_numero}}, do cliente {{cliente_nome}}, no valor de {{valor}}, '
-                        ."vence em {{data_vencimento}} ({{dias_para_vencer}} dia(s); número negativo indica "
+                        .'vence em {{data_vencimento}} ({{dias_para_vencer}} dia(s); número negativo indica '
                         ."contrato já vencido, sem decisão de renovação registrada).\n"
                         ."Endereço: {{endereco}}.\n"
                         ."Histórico de renovações: {{historico_renovacoes}}\n\n"
@@ -1089,6 +1142,80 @@ final class EventosDeNotificacao
                         .'{{data_vencimento}}, continua em aberto há {{dias_em_atraso}} dias. Regularize o '
                         .'quanto antes. Link: {{link_pagamento}} Linha digitável: {{linha_digitavel}} '
                         .'Pix copia e cola: {{qr_code_pix}} {{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::DOCUMENTO_REGULATORIO_A_VENCER => [
+            'rotulo' => 'Documento regulatório próximo do vencimento',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            // Todas preenchidas pelo disparo (`VerificarValidadesRegulatorias`):
+            // `variaveisDaReferencia()` não conhece `Company` nem
+            // `OrganRegistration`, e `documento_numero` pode vir de qualquer uma
+            // de cinco colunas diferentes, conforme o documento.
+            'variaveis' => [
+                'empresa_nome',
+                'documento_nome',
+                'documento_numero',
+                'data_vencimento',
+                'dias_para_vencer',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => '{{documento_nome}} vence em {{data_vencimento}}',
+                    'corpo' => 'O documento "{{documento_nome}}" (número {{documento_numero}}) vence em '
+                        ."{{data_vencimento}}, daqui a {{dias_para_vencer}} dia(s).\n\n"
+                        .'A RDC nº 622/2022 exige que a empresa especializada mantenha licença sanitária, '
+                        .'licença ambiental, alvará de funcionamento e responsável técnico habilitado, todos '
+                        ."válidos, e que só aplique produto com registro ativo na Anvisa.\n\n"
+                        .'Providencie a renovação e atualize a validade em Configurações; assim que a data '
+                        .'nova for salva, este aviso para de ser enviado.',
+                ],
+            ],
+        ],
+
+        self::DOCUMENTO_REGULATORIO_VENCIDO => [
+            'rotulo' => 'Documento regulatório vencido',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'documento_nome',
+                'documento_numero',
+                'data_vencimento',
+                'dias_vencido',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Documento vencido: {{documento_nome}}',
+                    'corpo' => 'O documento "{{documento_nome}}" (número {{documento_numero}}) venceu em '
+                        ."{{data_vencimento}}, há {{dias_vencido}} dia(s), e continua vencido.\n\n"
+                        .'Operar com documento regulatório vencido tem consequência perante a fiscalização '
+                        ."sanitária.\n\n"
+                        .'Regularize e atualize a validade em Configurações. Enquanto isso não for feito, '
+                        .'este aviso é repetido semanalmente.',
+                ],
+            ],
+        ],
+
+        self::CADASTRO_REGULATORIO_INCOMPLETO => [
+            'rotulo' => 'Documentos regulatórios sem validade cadastrada',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'documentos_pendentes',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Documentos regulatórios sem validade cadastrada',
+                    'corpo' => "Estes documentos ainda não têm data de validade cadastrada:\n\n"
+                        ."{{documentos_pendentes}}\n\n"
+                        .'Isto não quer dizer que a empresa esteja irregular: quer dizer apenas que o sistema '
+                        ."ainda não tem como avisar você antes de cada um vencer.\n\n"
+                        .'Preencha as validades em Configurações. Enquanto houver documento sem data, este '
+                        .'lembrete é enviado uma vez por mês.',
                 ],
             ],
         ],
