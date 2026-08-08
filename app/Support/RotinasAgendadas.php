@@ -188,6 +188,26 @@ final class RotinasAgendadas
     ];
 
     /**
+     * Assinatura do comando => intervalo entre execuções, em **horas**.
+     *
+     * Existe separado de `POR_INTERVALO` por um motivo mecânico, não estético:
+     * lá o valor vira `cron("*\/{$minutos} * * * *")`, e o campo de minutos do
+     * cron só vai até 59 — declarar 360 ali produziria uma expressão que nunca
+     * dispara, em silêncio. Aqui o valor vai para o campo de horas.
+     *
+     * @var array<string, int>
+     */
+    public const A_CADA_HORAS = [
+        // Sincronização dos pedidos de assinatura eletrônica em aberto
+        // (Plano 26, Task 26.3). De 6 em 6 horas: webhook se perde, e sem
+        // esta rede o contrato fica preso em "em assinatura" para sempre. Não
+        // é mais frequente porque assinatura de contrato leva dias, não
+        // minutos, e cada passada é uma consulta por pedido em aberto, contra
+        // a API do provedor.
+        'assinaturas:sincronizar' => 6,
+    ];
+
+    /**
      * Rotinas que não pertencem a empresa nenhuma.
      *
      * Vazia hoje, e o que importa é o motivo. Todas as rotinas atuais processam
@@ -274,6 +294,10 @@ final class RotinasAgendadas
             $rotinas[$assinatura] = "a cada {$minutos} min";
         }
 
+        foreach (self::A_CADA_HORAS as $assinatura => $horas) {
+            $rotinas[$assinatura] = "a cada {$horas} h";
+        }
+
         return $rotinas;
     }
 
@@ -299,6 +323,10 @@ final class RotinasAgendadas
 
         if (array_key_exists($assinatura, self::MENSAIS)) {
             return self::MINUTOS_DE_UM_MES;
+        }
+
+        if (array_key_exists($assinatura, self::A_CADA_HORAS)) {
+            return self::A_CADA_HORAS[$assinatura] * 60;
         }
 
         return self::POR_INTERVALO[$assinatura] ?? null;

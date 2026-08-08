@@ -73,6 +73,7 @@ use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\Webhooks\AssinaturaWebhookController;
 use App\Http\Controllers\Webhooks\CobrancaWebhookController;
 use App\Http\Controllers\WorkOrderAdequationController;
 use App\Http\Controllers\WorkOrderController;
@@ -129,6 +130,27 @@ Route::post('/webhooks/gateway/{gateway}', [GatewayWebhookController::class, 'ha
 Route::post('/webhooks/cobranca/{webhookToken}', [CobrancaWebhookController::class, 'handle'])
     ->where('webhookToken', '[A-Za-z0-9]+')
     ->name('webhooks.cobranca');
+
+// Webhook do provedor de assinatura eletrônica de contratos (Plano 26, Task
+// 26.3).
+//
+// Mesmo desenho do webhook de cobrança logo acima — fora do grupo autenticado,
+// fora da resolução de tenant, fora do CSRF, tenant resolvido pelo
+// `{webhookToken}` da URL via `SignatureProviderConfig::paraToken()` — com uma
+// diferença que precisa estar clara para quem for mexer aqui: o provedor de
+// assinatura **não assina** a requisição, então não há cabeçalho de HMAC a
+// conferir.
+//
+// O que sustenta a segurança desta rota é o corpo não decidir nada. Dele sai
+// só o identificador do documento; quem diz o que aconteceu é uma consulta
+// autenticada ao provedor, com a credencial do próprio tenant
+// (`SignatureRequestService::sincronizar()`). Um POST forjado que acerte o
+// token, no pior caso, provoca uma consulta sobre um documento daquele mesmo
+// tenant e converge para o estado real — ele não marca contrato como assinado.
+// Ver o cabeçalho de `App\Services\Signature\ProvedorPadrao::validarWebhook()`.
+Route::post('/webhooks/assinatura/{webhookToken}', [AssinaturaWebhookController::class, 'handle'])
+    ->where('webhookToken', '[A-Za-z0-9]+')
+    ->name('webhooks.assinatura');
 
 // Recibo de pagamento.
 //

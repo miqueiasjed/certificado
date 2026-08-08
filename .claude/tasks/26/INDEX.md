@@ -9,7 +9,7 @@
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
 | 26.1 | Migrations e models de pedido de assinatura | backend-estrutura | ✅ | média |
-| 26.2 | Interface do provedor de assinatura | backend-logica | ⏳ | média |
+| 26.2 | Interface do provedor de assinatura | backend-logica | ✅ | média |
 | 26.3 | Envio, acompanhamento e webhook de situação | backend-endpoint | ⏳ | alta |
 | 26.4 | Endpoints e contrato assinado no portal | backend-endpoint | ⏳ | média |
 | 26.5 | Telas de envio e acompanhamento | frontend-pagina | ⏳ | alta |

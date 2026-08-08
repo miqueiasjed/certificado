@@ -248,6 +248,53 @@ final class EventosDeNotificacao
      */
     public const COBRANCA_EM_ATRASO = 'cobranca_em_atraso';
 
+    /**
+     * Contrato enviado para assinatura eletrônica (Plano 26, Task 26.3),
+     * enfileirado por `App\Services\SignatureRequestService::enviar()`.
+     *
+     * `destinatario` é `cliente`: quem precisa saber que o contrato chegou é
+     * quem vai assinar. O link de assinatura em si **não** viaja neste aviso —
+     * quem manda o convite com o link é o provedor, que é quem consegue
+     * autenticar o signatário. Este evento é o aviso de que aquele convite
+     * está a caminho, para o e-mail do provedor não chegar sem contexto.
+     */
+    public const CONTRATO_ENVIADO_PARA_ASSINATURA = 'contrato_enviado_para_assinatura';
+
+    /**
+     * Contrato assinado por todas as partes (Plano 26, Task 26.3),
+     * enfileirado quando o último signatário assina.
+     *
+     * Enfileirado **duas vezes**, uma para o cliente e outra para a empresa,
+     * mesmo critério já usado em `CERTIFICADO_A_VENCER`: o cliente precisa
+     * receber a via assinada, e a empresa precisa saber que pode começar a
+     * executar o contrato. O padrão declarado aqui é o do cliente.
+     */
+    public const CONTRATO_ASSINADO = 'contrato_assinado';
+
+    /**
+     * Um signatário recusou a assinatura do contrato (Plano 26, Task 26.3).
+     *
+     * Aviso interno, só para a empresa, mesmo critério de
+     * `NOTA_BAIXA_RECEBIDA`: quem resolve uma recusa é pessoa, ligando para o
+     * cliente, e nenhuma resposta automática vai para quem recusou. O motivo
+     * informado ao provedor viaja em `motivo_recusa`, porque é ele que diz se
+     * o caso é renegociação de valor ou erro de cadastro.
+     */
+    public const CONTRATO_RECUSADO = 'contrato_recusado';
+
+    /**
+     * Contrato enviado há mais de cinco dias e ainda sem conclusão (Plano 26,
+     * Task 26.3), reenfileirado semanalmente pela rotina
+     * `assinaturas:sincronizar` enquanto o pedido continuar em aberto.
+     *
+     * Aviso interno, mesmo critério de `CONTRATO_A_VENCER`: quem cobra o
+     * cliente é a empresa. O reenvio semanal segue o critério de
+     * `LOTE_PROXIMO_DO_VENCIMENTO`: enquanto a pendência existir e tiver
+     * consequência (contrato sem assinatura é serviço executado sem amparo),
+     * o aviso volta.
+     */
+    public const CONTRATO_PENDENTE_DE_ASSINATURA = 'contrato_pendente_de_assinatura';
+
     public const NFSE_EMITIDA = 'nfse_emitida';
 
     public const NFSE_CANCELADA = 'nfse_cancelada';
@@ -1089,6 +1136,118 @@ final class EventosDeNotificacao
                         .'{{data_vencimento}}, continua em aberto há {{dias_em_atraso}} dias. Regularize o '
                         .'quanto antes. Link: {{link_pagamento}} Linha digitável: {{linha_digitavel}} '
                         .'Pix copia e cola: {{qr_code_pix}} {{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        // -------------------------------------------------------------
+        // Assinatura eletrônica de contratos (Plano 26, Task 26.3)
+        // -------------------------------------------------------------
+        //
+        // Nenhum dos quatro carrega link de assinatura: quem manda o convite
+        // com o link é o provedor, que é quem sabe autenticar o signatário.
+        // Um link de assinatura reemitido por nós circularia por um canal que
+        // não confere identidade nenhuma, e é justamente a comprovação de
+        // autoria que dá valor ao contrato assinado a distância.
+        //
+        // `contrato_numero`, `cliente_nome`, `empresa_nome` e `endereco` são
+        // derivados de `Contract` por
+        // `NotificationService::variaveisDaReferencia()`; as demais chegam
+        // pelas `variaveis` do disparo.
+
+        self::CONTRATO_ENVIADO_PARA_ASSINATURA => [
+            'rotulo' => 'Contrato enviado para assinatura eletrônica',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'contrato_numero',
+                'endereco',
+                'data_limite_assinatura',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Contrato {{contrato_numero}} enviado para assinatura',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\n"
+                        .'O contrato {{contrato_numero}}, referente ao endereço {{endereco}}, foi enviado '
+                        ."para assinatura eletrônica.\n\n"
+                        .'Você vai receber, em outro e-mail, o convite do nosso provedor de assinatura, com o '
+                        ."link para ler e assinar o documento. O prazo para assinar vai até {{data_limite_assinatura}}.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::CONTRATO_ASSINADO => [
+            'rotulo' => 'Contrato assinado por todas as partes',
+            'destinatario' => NotificationQueue::DESTINATARIO_CLIENTE,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'contrato_numero',
+                'endereco',
+                'data_assinatura',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Contrato {{contrato_numero}} assinado',
+                    'corpo' => "Olá, {{cliente_nome}}.\n\n"
+                        .'O contrato {{contrato_numero}}, referente ao endereço {{endereco}}, foi assinado por '
+                        ."todas as partes em {{data_assinatura}}.\n\n"
+                        ."A via assinada segue em anexo e fica disponível também no portal do cliente.\n\n"
+                        .'{{empresa_nome}}',
+                ],
+            ],
+        ],
+
+        self::CONTRATO_RECUSADO => [
+            'rotulo' => 'Assinatura de contrato recusada',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'contrato_numero',
+                'endereco',
+                'motivo_recusa',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Contrato {{contrato_numero}}: assinatura recusada',
+                    'corpo' => 'A assinatura do contrato {{contrato_numero}}, do cliente {{cliente_nome}} '
+                        ."(endereço {{endereco}}), foi recusada.\n\n"
+                        ."Motivo informado: {{motivo_recusa}}\n\n"
+                        .'Nenhum aviso automático foi enviado a quem recusou. Fale com o cliente antes de '
+                        .'enviar o contrato de novo: um pedido novo substitui o recusado.',
+                ],
+            ],
+        ],
+
+        self::CONTRATO_PENDENTE_DE_ASSINATURA => [
+            'rotulo' => 'Contrato pendente de assinatura há dias',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'cliente_nome',
+                'empresa_nome',
+                'contrato_numero',
+                'endereco',
+                'dias_pendente',
+                'data_limite_assinatura',
+                'signatarios_pendentes',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Contrato {{contrato_numero}} sem assinatura há {{dias_pendente}} dias',
+                    'corpo' => 'O contrato {{contrato_numero}}, do cliente {{cliente_nome}} (endereço '
+                        ."{{endereco}}), foi enviado para assinatura há {{dias_pendente}} dias e ainda não "
+                        ."foi concluído.\n\n"
+                        ."Ainda faltam assinar: {{signatarios_pendentes}}\n"
+                        ."O prazo do documento vai até {{data_limite_assinatura}}.\n\n"
+                        .'Contrato sem assinatura é serviço executado sem amparo: cobre a assinatura ou '
+                        .'cancele o pedido. Este aviso volta toda semana enquanto a pendência existir.',
                 ],
             ],
         ],
