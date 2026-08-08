@@ -11,6 +11,28 @@
       <!-- Trilha de primeiros passos -->
       <TrilhaDePrimeirosPassos />
 
+      <!-- Conformidade RDC 622/2022 (Plano 24) -->
+      <div
+        v-if="conformidade"
+        class="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div>
+          <h3 class="text-sm font-semibold text-gray-900">Conformidade RDC 622/2022</h3>
+          <p class="mt-1 text-sm text-gray-600">
+            <span class="font-medium text-red-700">{{ conformidade.irregular }} irregular(es)</span>,
+            {{ conformidade.atencao }} em atenção e
+            {{ conformidade.regular }} regular(es), de {{ conformidade.total }} item(ns) verificado(s).
+          </p>
+          <p class="mt-1 text-xs text-gray-500">
+            Verificado em {{ formatarDataHora(conformidade.verificado_em) }}. O checklist informa o que o
+            sistema consegue verificar; ele não atesta conformidade.
+          </p>
+        </div>
+        <Link :href="route('conformidade.index')" class="btn-secondary-sm whitespace-nowrap">
+          Ver checklist
+        </Link>
+      </div>
+
       <!-- Estatísticas Gerais -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
@@ -198,6 +220,7 @@ import Card from '@/Components/Card.vue';
 import StatCard from '@/Components/StatCard.vue';
 import QuickAction from '@/Components/QuickAction.vue';
 import TrilhaDePrimeirosPassos from '@/Components/TrilhaDePrimeirosPassos.vue';
+import { formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   stats: {
@@ -224,6 +247,15 @@ const props = defineProps({
   recentCertificates: {
     type: Array,
     default: () => []
+  },
+  // Resumo do checklist de conformidade (Plano 24, Task 24.5). Vem null
+  // quando o módulo está desligado, quando o usuário não tem
+  // `conformidade-ver` ou quando a verificação nunca rodou — neste último
+  // caso mostrar "0 irregulares" seria afirmar algo falso: não é que esteja
+  // tudo certo, é que ninguém verificou ainda.
+  conformidade: {
+    type: [Object, null],
+    default: null,
   },
 });
 

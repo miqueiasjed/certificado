@@ -48,6 +48,13 @@ class Company extends Model
         'licenca_ambiental_validade',
         'licenca_funcionamento_validade',
 
+        // Anexo digitalizado de cada documento (Task 24.6): caminho no disco
+        // `public`, mesmo formato de `logo_path` e das assinaturas.
+        'registro_conselho_arquivo',
+        'licenca_sanitaria_arquivo',
+        'licenca_ambiental_arquivo',
+        'licenca_funcionamento_arquivo',
+
         // Identidade visual do portal do cliente (Plano 15, Task 15.6).
         // Nenhum formulário grava aqui ainda: ver o docblock da migration
         // `add_cores_de_marca_to_companies_table`.
