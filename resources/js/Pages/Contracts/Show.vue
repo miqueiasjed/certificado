@@ -261,6 +261,17 @@
               >
                 Baixar contrato assinado
               </a>
+
+              <!-- A tela de configuração não tem entrada no menu: quem a
+                   alcança é o administrador, a partir daqui, como a de
+                   cobrança faz a partir da listagem de cobranças. -->
+              <Link
+                v-if="pode('assinatura-eletronica-configurar')"
+                href="/assinaturas/configuracao"
+                class="btn-secondary"
+              >
+                Configurar provedor
+              </Link>
             </div>
           </template>
         </div>

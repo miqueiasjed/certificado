@@ -262,16 +262,24 @@ class SignatureRequestServiceTest extends TestCase
     {
         [, $pedido] = $this->contratoEnviado();
 
-        $this->fakeDoProvedor([
-            'detalhe' => $this->documentoAssinado(),
-            'arquivo' => '%PDF-assinado',
+        $downloads = 0;
+
+        Http::fake([
+            self::HOST.'/api/v1/docs/DOC-1/' => Http::response($this->documentoAssinado(), 200),
+            'https://arquivos.zapsign.test/assinado.pdf' => function () use (&$downloads) {
+                $downloads++;
+
+                return Http::response('%PDF-assinado', 200);
+            },
         ]);
 
         $this->naEmpresa(fn (): SignatureRequest => $this->service()->sincronizar($pedido));
         $this->naEmpresa(fn (): SignatureRequest => $this->service()->sincronizar($pedido->fresh()));
 
-        // A segunda passada nem chega a consultar: o pedido já está encerrado.
-        Http::assertSentCount(2);
+        // A segunda passada nem chega a consultar o provedor: `sincronizar()`
+        // sai na primeira linha porque o pedido já está encerrado. O arquivo
+        // que vale é baixado uma vez só.
+        $this->assertSame(1, $downloads);
     }
 
     // -----------------------------------------------------------------

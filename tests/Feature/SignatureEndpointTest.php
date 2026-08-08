@@ -5,12 +5,12 @@ namespace Tests\Feature;
 use App\Models\Client;
 use App\Models\ClientUser;
 use App\Models\Company;
-use App\Models\CompanyModule;
 use App\Models\Contract;
 use App\Models\Module;
 use App\Models\SignatureProviderConfig;
 use App\Models\SignatureRequest;
 use App\Models\User;
+use App\Services\ModuleService;
 use App\Services\Signature\ProvedorPadrao;
 use App\Services\SignatureRequestService;
 use App\Support\TenantAtual;
@@ -97,16 +97,24 @@ class SignatureEndpointTest extends TestCase
         $contrato = $this->criarContrato();
         $this->naEmpresa(fn () => $contrato->forceFill(['situacao_assinatura' => 'em_assinatura'])->save());
 
-        $resposta = $this->actingAs($this->administrador)
-            ->putJson("/contracts/{$contrato->id}", [
+        $this->from("/contracts/{$contrato->id}/edit")
+            ->actingAs($this->administrador)
+            ->put("/contracts/{$contrato->id}", [
                 'address_id' => $contrato->address_id,
                 'service_type' => 'pontual',
                 'service_value' => '2000.00',
                 'start_date' => $contrato->start_date->toDateString(),
                 'end_date' => $contrato->end_date->toDateString(),
-            ]);
+                'visit_frequency' => 'monthly',
+                'visit_count' => 12,
+            ])
+            ->assertRedirect("/contracts/{$contrato->id}/edit")
+            ->assertSessionHasNoErrors()
+            ->assertSessionHas('error');
 
-        $resposta->assertStatus(500);
+        $this->assertStringContainsString('está em assinatura', (string) session('error'));
+
+        // O que mais importa: o texto do contrato não mudou.
         $this->assertSame('1000.00', $contrato->fresh()->service_value);
     }
 
@@ -248,7 +256,7 @@ class SignatureEndpointTest extends TestCase
         Http::fake();
 
         $contrato = $this->criarContrato();
-        CompanyModule::query()->where('company_id', $this->empresa->id)->delete();
+        $this->bloquearModulo($this->empresa, 'assinatura_eletronica');
 
         $resposta = $this->actingAs($this->administrador)
             ->getJson("/contratos/{$contrato->id}/assinatura");
@@ -260,7 +268,56 @@ class SignatureEndpointTest extends TestCase
     // Portal do cliente
     // -----------------------------------------------------------------
 
-    public function test_cliente_baixa_a_via_assinada_do_proprio_contrato_e_nao_a_de_outro(): void
+    public function test_cliente_baixa_a_via_assinada_do_proprio_contrato(): void
+    {
+        $contrato = $this->contratoComViaAssinada();
+
+        $this->autenticarNoPortal($contrato->address->client, 'dono@exemplo.test');
+
+        $this->get("/portal/contratos/{$contrato->id}/assinado")
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    /**
+     * Teste separado, e não a segunda metade do anterior, de propósito: cada
+     * teste começa com sessão limpa, e trocar de cliente autenticado dentro da
+     * mesma sessão do portal é justamente o que não acontece em produção.
+     */
+    public function test_cliente_nao_baixa_a_via_assinada_de_contrato_de_outro_cliente(): void
+    {
+        $contrato = $this->contratoComViaAssinada();
+
+        $outroCliente = $this->naEmpresa(fn (): Client => ClientFactory::new()->create([
+            'name' => 'Outro Cliente',
+            'email' => 'outro@exemplo.com.br',
+        ]));
+
+        $this->autenticarNoPortal($outroCliente, 'outro@exemplo.test');
+
+        // O contrato não é do outro cliente: 404, e não 403 — revelar que o
+        // documento existe já seria informação demais.
+        $this->get("/portal/contratos/{$contrato->id}/assinado")->assertNotFound();
+    }
+
+    public function test_contrato_sem_via_assinada_nao_tem_download_no_portal(): void
+    {
+        [$contrato] = $this->contratoEnviado();
+
+        $this->autenticarNoPortal($contrato->address->client, 'dono@exemplo.test');
+
+        $this->get("/portal/contratos/{$contrato->id}/assinado")->assertNotFound();
+    }
+
+    // -----------------------------------------------------------------
+    // Apoio
+    // -----------------------------------------------------------------
+
+    /**
+     * Contrato com pedido concluído e a via assinada já arquivada em disco,
+     * exatamente como `SignatureRequestService` deixa depois da conclusão.
+     */
+    private function contratoComViaAssinada(): Contract
     {
         [$contrato, $pedido] = $this->contratoEnviado();
 
@@ -278,38 +335,8 @@ class SignatureEndpointTest extends TestCase
             $contrato->forceFill(['situacao_assinatura' => 'assinado', 'assinado_em' => now()])->save();
         });
 
-        $dono = $this->clienteDoPortal($contrato->address->client);
-        $outro = $this->clienteDoPortal($this->naEmpresa(fn (): Client => ClientFactory::new()->create([
-            'name' => 'Outro Cliente',
-            'email' => 'outro@exemplo.com.br',
-        ])));
-
-        $this->actingAs($dono, 'cliente')
-            ->get("/portal/contratos/{$contrato->id}/assinado")
-            ->assertOk()
-            ->assertHeader('Content-Type', 'application/pdf');
-
-        // O contrato não é do outro cliente: 404, e não 403 — revelar que o
-        // documento existe já seria informação demais.
-        $this->actingAs($outro, 'cliente')
-            ->get("/portal/contratos/{$contrato->id}/assinado")
-            ->assertNotFound();
+        return $contrato;
     }
-
-    public function test_contrato_sem_via_assinada_nao_tem_download_no_portal(): void
-    {
-        [$contrato] = $this->contratoEnviado();
-
-        $dono = $this->clienteDoPortal($contrato->address->client);
-
-        $this->actingAs($dono, 'cliente')
-            ->get("/portal/contratos/{$contrato->id}/assinado")
-            ->assertNotFound();
-    }
-
-    // -----------------------------------------------------------------
-    // Apoio
-    // -----------------------------------------------------------------
 
     /**
      * @return array{0: Contract, 1: SignatureRequest}
@@ -372,15 +399,32 @@ class SignatureEndpointTest extends TestCase
         return $usuario->fresh();
     }
 
-    private function clienteDoPortal(Client $cliente): ClientUser
+    /**
+     * Autentica de verdade pelo formulário do portal, e não por
+     * `actingAs($clientUser, 'cliente')`.
+     *
+     * `actingAs` com guard explícito também troca o guard **padrão**, e aí
+     * `HandleInertiaRequests::share()` chama `$request->user()->getRoleNames()`
+     * sobre um `ClientUser`, que não tem papéis do Spatie, e toda requisição
+     * do portal estoura em 500. O login real deixa o guard `web` intacto,
+     * exatamente como em produção. Mesmo caminho de
+     * `PortalEndpointTest::autenticarComo()`.
+     */
+    private function autenticarNoPortal(Client $cliente, string $email): ClientUser
     {
-        return $this->naEmpresa(fn (): ClientUser => ClientUser::query()->create([
+        $this->naEmpresa(fn (): ClientUser => ClientUser::query()->create([
             'client_id' => $cliente->id,
             'nome' => 'Portal '.$cliente->name,
-            'email' => 'portal-'.uniqid().'@exemplo.com.br',
-            'senha' => bcrypt('segredo123'),
+            'email' => $email,
+            'password' => bcrypt('segredo123'),
             'ativo' => true,
+            'email_verificado_em' => now(),
         ]));
+
+        $this->post('/portal/login', ['email' => $email, 'password' => 'segredo123'])
+            ->assertRedirect();
+
+        return ClientUser::query()->deTodasAsEmpresas()->where('email', $email)->firstOrFail();
     }
 
     private function criarContrato(): Contract
@@ -401,23 +445,40 @@ class SignatureEndpointTest extends TestCase
     }
 
     /**
-     * Libera os módulos de que estas rotas dependem: `assinatura_eletronica`
-     * (as telas de assinatura) e `portal_cliente` (o download do cliente).
+     * Libera explicitamente os módulos de que estas rotas dependem.
+     *
+     * `ModulesSeeder` já põe o tenant fundador no plano interno, que carrega o
+     * catálogo inteiro, então isto é redundante hoje. Fica assim mesmo para
+     * que o teste não dependa de uma decisão do seeder que pode mudar: a
+     * liberação pontual (`company_modules.liberado = true`) vence o plano na
+     * regra 3 de `ModuleService`.
      */
     private function liberarModulo(Company $empresa): void
     {
+        $modulos = app(ModuleService::class);
+
         foreach (['assinatura_eletronica', 'portal_cliente', 'contratos'] as $chave) {
             $modulo = Module::query()->where('chave', $chave)->first();
 
-            if ($modulo === null) {
-                continue;
+            if ($modulo !== null) {
+                $modulos->liberarPara($empresa, $modulo, 'teste', null);
             }
-
-            CompanyModule::query()->updateOrCreate(
-                ['company_id' => $empresa->id, 'module_id' => $modulo->id],
-                ['ativo' => true]
-            );
         }
+    }
+
+    /**
+     * Bloqueio pontual do módulo: `liberado = false` vence o plano (regra 2 de
+     * `ModuleService`), que é a única forma de desligar um módulo para um
+     * tenant que o tem pelo plano — e o tenant fundador tem, porque
+     * `ModulesSeeder` o põe no plano interno com o catálogo inteiro.
+     */
+    private function bloquearModulo(Company $empresa, string $chave): void
+    {
+        app(ModuleService::class)->bloquearPara(
+            $empresa,
+            Module::query()->where('chave', $chave)->firstOrFail(),
+            'teste'
+        );
     }
 
     private function naEmpresa(Closure $callback): mixed
