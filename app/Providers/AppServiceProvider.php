@@ -5,8 +5,10 @@ namespace App\Providers;
 use App\Contracts\GatewayAssinatura;
 use App\Listeners\RegistraAcesso;
 use App\Listeners\RegistraExecucaoAgendada;
+use App\Models\Company;
 use App\Models\WorkOrder;
 use App\Observers\WorkOrderNotificationObserver;
+use App\Services\Compliance\ReferenciaNormativaService;
 use App\Services\Geo\ProvedorDeGeocodificacao;
 use App\Support\TenantAtual;
 use Illuminate\Auth\Events\Failed;
@@ -16,10 +18,12 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -46,6 +50,49 @@ class AppServiceProvider extends ServiceProvider
         $this->registrarLimiteDeLoginDoPortal();
         $this->registrarLimitesDoAgendamentoPublico();
         $this->registrarLimitesDaPesquisaPublica();
+        $this->registrarReferenciaNormativaNosDocumentos();
+    }
+
+    /**
+     * Compartilha `$referenciaNormativa` com toda view de `resources/views/pdf`
+     * (Plano 24, Task 24.2).
+     *
+     * Por que um view composer, e não um parâmetro em cada chamada
+     * -----------------------------------------------------------
+     * As cinco views de documento são carregadas de oito lugares diferentes
+     * (`CertificateController`, `ContractController`, `WorkOrderController`
+     * duas vezes, `ServiceOrderController`, `PortalDocumentController` quatro
+     * vezes, `Notification\DriverDeEmail`). Passar a referência em cada
+     * chamada significaria oito pontos onde alguém pode esquecer, e o esquecido
+     * sai como documento sem a norma na mão do fiscal — sem erro nenhum na
+     * tela. Além disso `pdf.service-order` sequer recebe `$company` hoje, então
+     * nem haveria de onde tirar a empresa dentro da view.
+     *
+     * De qual empresa é a referência
+     * ------------------------------
+     * Do `$company` já passado à view, quando existe: é ele que manda, porque
+     * é dele o cabeçalho impresso no documento (o portal do cliente e o envio
+     * por e-mail em fila resolvem a empresa por conta própria, e o tenant
+     * corrente pode não ser o mesmo). Sem `$company`, cai no tenant corrente, e
+     * sem tenant corrente, na referência padrão da plataforma.
+     *
+     * O composer nunca lança: `ReferenciaNormativaService::obter()` devolve
+     * string vazia em qualquer falha, e é a view que decide não imprimir a
+     * linha. Documento que falha de gerar é pior que documento sem a linha.
+     */
+    private function registrarReferenciaNormativaNosDocumentos(): void
+    {
+        View::composer('pdf.*', function (ViewContract $view): void {
+            $dados = $view->getData();
+            $empresa = $dados['company'] ?? null;
+
+            $empresaId = $empresa instanceof Company ? $empresa->id : TenantAtual::id();
+
+            $view->with(
+                'referenciaNormativa',
+                app(ReferenciaNormativaService::class)->obterParaEmpresaId($empresaId)
+            );
+        });
     }
 
     /**

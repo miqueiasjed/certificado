@@ -1124,6 +1124,13 @@
 
     <!-- Rodapé -->
     <div class="footer-info">
+        {{-- Referência normativa (Plano 24, Task 24.2): vem do cadastro
+             (`normative_references`), nunca do código. Omitida por completo
+             quando não há referência cadastrada, porque documento que falha de
+             gerar é pior que documento sem a linha. --}}
+        @if(!empty($referenciaNormativa ?? ''))
+        <p>Serviço prestado em conformidade com a {{ $referenciaNormativa }}.</p>
+        @endif
         <p>Documento gerado automaticamente em {{ $currentDate }} às {{ $currentTime }}</p>
         <p>Sistema de Gestão de Ordens de Serviço - Certificado.test</p>
     </div>

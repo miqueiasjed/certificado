@@ -129,6 +129,15 @@
         <p>As Partes acima identificadas têm justo e acordado o presente Contrato de Prestação de Serviços de
             Dedetização, que se regerá pelas cláusulas e condições seguintes, bem como pela legislação aplicável,
             em especial o Código Civil e o Código de Defesa do Consumidor (Lei nº 8.078/90), conforme o caso.</p>
+        {{-- Referência normativa (Plano 24, Task 24.2): sai do cadastro
+             (`normative_references`), e não do código, porque a resolução da
+             Anvisa muda. A remissão genérica acima permanece exatamente como
+             estava; esta frase apenas nomeia a resolução ao lado dela. Omitida
+             quando não há referência cadastrada. --}}
+        @if(!empty($referenciaNormativa ?? ''))
+            <p>Aplica-se ainda a este Contrato, no que se refere ao controle de vetores e pragas urbanas, a
+                {{ $referenciaNormativa }}.</p>
+        @endif
     </div>
 
     <div class="section-title">CLÁUSULA 1ª – DO OBJETO</div>
