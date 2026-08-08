@@ -14,7 +14,7 @@
 | 28.4 | Endpoints, permissões e módulo `epi` | backend-endpoint | ✅ | alta |
 | 28.5 | Ficha de EPI em PDF e extração por período | backend-logica | ✅ | média |
 | 28.6 | Telas de cadastro de EPI e ficha do técnico | frontend-pagina | ✅ | alta |
-| 28.7 | Testes de snapshot do CA, estorno e alertas | teste | 🔄 | alta |
+| 28.7 | Testes de snapshot do CA, estorno e alertas | teste | 🔄 parcial | alta |
 
 ## Ordem de execução
 

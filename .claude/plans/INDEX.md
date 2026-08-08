@@ -89,7 +89,7 @@ bloqueio.
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 28 | Controle de EPI: cadastro, CA e ficha de entrega | ⏳ | 6, 13, 14 | 7 |
+| 28 | Controle de EPI: cadastro, CA e ficha de entrega | 🔄 | 6, 13, 14 | 7 |
 | 29 | EPI em campo e na conformidade | 🔒 | 28, 13, 24 | 6 |
 
 Total: 275 tasks decompostas nos 29 planos.
