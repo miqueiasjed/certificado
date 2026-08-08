@@ -276,6 +276,51 @@ class AlertaDeEpiServiceTest extends TestCase
     }
 
     /**
+     * Regressão: o aviso de antecedência precisa voltar no ciclo seguinte do
+     * certificado.
+     *
+     * O CA do EPI é renovado **na própria linha** do cadastro, ao contrário do
+     * documento de veículo, que ganha linha nova a cada renovação. Enquanto o
+     * marco era só a janela (`60`), a chave de idempotência de um modelo de EPI
+     * era a mesma pela vida inteira do registro: os três avisos de antecedência
+     * saíam uma única vez na história daquele cadastro, e do segundo ciclo em
+     * diante a empresa só era avisada **depois** do vencimento — justamente o
+     * que este alerta existe para evitar.
+     *
+     * Achado por revisão independente, depois de a implementação e os testes
+     * originais darem o alerta por correto.
+     */
+    public function test_o_aviso_de_antecedencia_volta_quando_o_ca_renovado_se_aproxima_de_vencer(): void
+    {
+        $this->viajarPara('1970-01-01 12:00:00');
+
+        $epi = $this->criarEpi(['validade_ca' => $this->emDias(50)]);
+
+        $this->artisan('epi:verificar')->assertSuccessful();
+        $this->assertCount(
+            1,
+            $this->itensDoEvento(EventosDeNotificacao::EPI_COM_CA_A_VENCER),
+            'a primeira aproximação precisa avisar'
+        );
+
+        // A empresa renova o certificado no mesmo cadastro, como manda o fluxo.
+        $this->naEmpresa(fn () => app(PpeService::class)->atualizar($epi, [
+            'numero_ca' => 'CA-RENOVADO',
+            'validade_ca' => $this->emDias(800),
+        ]));
+
+        // Dois anos depois, o CA renovado volta a estar a 50 dias de vencer.
+        $this->viajarPara('1972-02-01 12:00:00');
+        $this->artisan('epi:verificar')->assertSuccessful();
+
+        $this->assertCount(
+            2,
+            $this->itensDoEvento(EventosDeNotificacao::EPI_COM_CA_A_VENCER),
+            'o ciclo seguinte do certificado precisa avisar de novo'
+        );
+    }
+
+    /**
      * Critério de parada nº 2: inativar é como a empresa aposenta o modelo
      * substituído por outro cadastro. Cobrar a renovação do certificado de um
      * modelo fora de uso é ruído garantido.
@@ -607,13 +652,21 @@ class AlertaDeEpiServiceTest extends TestCase
     }
 
     /**
+     * O marco do aviso de antecedência é `{janela}-{validade}`, e não só a
+     * janela: a validade entra na chave porque o CA é renovado na própria linha
+     * do cadastro, e sem ela o aviso sairia uma vez só na vida do registro (ver
+     * `test_o_aviso_de_antecedencia_volta_quando_o_ca_renovado_se_aproxima_de_vencer`).
+     *
+     * Por isso a conferência é pelo trecho `:{janela}-`, e não pelo fim da
+     * chave.
+     *
      * @param  Collection<int, NotificationQueue>  $avisos
      */
     private function assertMarco(Collection $avisos, string $marco): void
     {
         $this->assertTrue(
             $avisos->pluck('chave_idempotencia')
-                ->contains(fn (string $chave): bool => str_ends_with($chave, ":{$marco}")),
+                ->contains(fn (string $chave): bool => str_contains($chave, ":{$marco}-")),
             "faltou o aviso do marco {$marco}"
         );
     }

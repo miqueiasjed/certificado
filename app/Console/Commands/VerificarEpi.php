@@ -197,7 +197,25 @@ class VerificarEpi extends Command
                 // `dias_para_vencer` do item: é o que permite ao mesmo CA gerar
                 // até três avisos ao longo do tempo, um por marco, sem duplicar
                 // dentro da mesma janela.
-                $this->enfileirarCertificado($item, EventosDeNotificacao::EPI_COM_CA_A_VENCER, (string) $dias);
+                //
+                // A validade entra no marco porque **o CA do EPI é renovado na
+                // própria linha do cadastro** (`PpeService::atualizar()`). Sem
+                // ela, a chave de idempotência de um modelo de EPI seria a mesma
+                // pela vida inteira do registro, e os três avisos de antecedência
+                // sairiam **uma única vez na história daquele cadastro**: do
+                // segundo ciclo de certificado em diante a empresa só saberia do
+                // vencimento depois de vencido, que é exatamente o que este
+                // alerta existe para evitar.
+                //
+                // É onde o EPI difere do documento de veículo, de onde o padrão
+                // veio: lá a renovação cria uma linha nova de `VehicleDocument`,
+                // então a referência já muda sozinha e o marco não precisa da
+                // data. Aqui a linha é a mesma.
+                $this->enfileirarCertificado(
+                    $item,
+                    EventosDeNotificacao::EPI_COM_CA_A_VENCER,
+                    $dias.'-'.$item['validade']
+                );
             }
         }
 

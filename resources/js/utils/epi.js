@@ -1,9 +1,16 @@
 // Vocabulário compartilhado das telas de EPI (Plano 28, Task 28.6).
 //
-// Os rótulos são os mesmos do `FichaDeEpiService`, que monta a ficha em PDF e a
-// extração por período: tela e documento precisam falar igual, senão o usuário
-// confere um "Respirador / Substituição" na tela e recebe outro texto no
-// arquivo que entrega ao fiscal.
+// Os rótulos de conteúdo são os mesmos do `FichaDeEpiService`, que monta a
+// ficha em PDF e a extração por período: tela e documento precisam falar igual,
+// senão o usuário confere um "Respirador / Substituição" na tela e recebe outro
+// texto no arquivo que entrega ao fiscal.
+//
+// A exceção é `TEXTO_NAO_INFORMADO`, e é deliberada: aqui é "Não informado", e
+// no documento é o travessão de `FichaDeEpiService::NAO_INFORMADO`. Numa tabela
+// densa de PDF o travessão é o que se lê como célula vazia intencional; na
+// tela, onde há espaço, a frase diz ao usuário o que fazer a respeito. O que
+// não pode divergir é o significado — os dois são estado neutro, nunca
+// irregularidade, e nenhum dos dois sai em vermelho.
 //
 // Nenhuma data passa por `new Date(...)` de string nem por `toLocaleDateString`:
 // a comparação de dia é do `diasAte`, que compara dia contra dia no fuso do
