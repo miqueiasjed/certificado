@@ -116,53 +116,19 @@ class CustoPorKmService
      */
     public function consumo(Vehicle $veiculo, string $de, string $ate): array
     {
-        $abastecimentos = $this->abastecimentosDoPeriodo($veiculo, $de, $ate);
+        $intervalosApurados = $this->intervalos($veiculo, $de, $ate);
 
         $kmRodados = 0;
         $litros = 0.0;
         $custoCentavos = 0;
-        $intervalos = 0;
 
-        // Índices dos abastecimentos de tanque cheio dentro da série completa.
-        $pontas = [];
-        foreach ($abastecimentos as $indice => $abastecimento) {
-            if ((bool) $abastecimento->tanque_cheio) {
-                $pontas[] = $indice;
-            }
+        foreach ($intervalosApurados as $intervalo) {
+            $kmRodados += $intervalo['distancia_km'];
+            $litros += $intervalo['litros'];
+            $custoCentavos += $intervalo['custo_centavos'];
         }
 
-        for ($i = 0; $i < count($pontas) - 1; $i++) {
-            $inicio = $pontas[$i];
-            $fim = $pontas[$i + 1];
-
-            $distancia = (int) $abastecimentos[$fim]->km - (int) $abastecimentos[$inicio]->km;
-
-            // Duas leituras iguais de hodômetro não formam intervalo: dividir
-            // por zero aqui produziria INF e contaminaria a média inteira.
-            if ($distancia <= 0) {
-                continue;
-            }
-
-            // Tudo que foi posto no tanque DEPOIS da ponta inicial e ATÉ a
-            // ponta final foi consumido no trecho, inclusive abastecimento
-            // parcial no meio. Ver o cabeçalho da classe.
-            $litrosDoIntervalo = 0.0;
-            $custoDoIntervaloCentavos = 0;
-
-            for ($j = $inicio + 1; $j <= $fim; $j++) {
-                $litrosDoIntervalo += (float) $abastecimentos[$j]->litros;
-                $custoDoIntervaloCentavos += Dinheiro::centavos($abastecimentos[$j]->valor_total);
-            }
-
-            if ($litrosDoIntervalo <= 0.0) {
-                continue;
-            }
-
-            $kmRodados += $distancia;
-            $litros += $litrosDoIntervalo;
-            $custoCentavos += $custoDoIntervaloCentavos;
-            $intervalos++;
-        }
+        $intervalos = count($intervalosApurados);
 
         return [
             'km_por_litro' => $litros > 0.0 ? round($kmRodados / $litros, 2) : null,
@@ -224,6 +190,115 @@ class CustoPorKmService
             'origem' => self::ORIGEM_MEDIDO,
             'motivo' => null,
         ];
+    }
+
+    /**
+     * Série de consumo, um ponto por intervalo de tanque cheio, na ordem em que
+     * aconteceram (Task 27.5).
+     *
+     * É o que a ficha do veículo desenha: queda de rendimento aparece no
+     * gráfico semanas antes de virar problema mecânico, e a média do período
+     * sozinha esconde exatamente isso.
+     *
+     * Cada ponto é um intervalo, nunca um abastecimento: km/l de um
+     * abastecimento isolado não existe (não se sabe quanto do tanque anterior
+     * ainda estava lá).
+     *
+     * @return array<int, array{
+     *     data: ?string,
+     *     km: int,
+     *     distancia_km: int,
+     *     litros: float,
+     *     km_por_litro: float,
+     *     custo_por_km: string
+     * }>
+     */
+    public function serieDeConsumo(Vehicle $veiculo, string $de, string $ate): array
+    {
+        return array_map(static fn (array $intervalo): array => [
+            'data' => $intervalo['data'],
+            'km' => $intervalo['km_final'],
+            'distancia_km' => $intervalo['distancia_km'],
+            'litros' => round($intervalo['litros'], 3),
+            'km_por_litro' => $intervalo['km_por_litro'],
+            'custo_por_km' => $intervalo['custo_por_km'],
+        ], $this->intervalos($veiculo, $de, $ate));
+    }
+
+    /**
+     * Intervalos completos de tanque cheio no período, na ordem do hodômetro.
+     *
+     * É o coração do módulo, e existe uma vez só: `consumo()` agrega estes
+     * intervalos e `serieDeConsumo()` os devolve ponto a ponto. Duas
+     * implementações da mesma travessia acabariam divergindo, e a divergência
+     * apareceria como um gráfico que não bate com a média ao lado dele.
+     *
+     * Um intervalo vai de um abastecimento com `tanque_cheio` até o próximo com
+     * `tanque_cheio`; os litros de todo abastecimento no meio (parcial
+     * incluído) entram na conta, porque o tanque estava cheio nas duas pontas.
+     *
+     * @return array<int, array{
+     *     data: ?string,
+     *     km_inicial: int,
+     *     km_final: int,
+     *     distancia_km: int,
+     *     litros: float,
+     *     custo_centavos: int,
+     *     km_por_litro: float,
+     *     custo_por_km: string
+     * }>
+     */
+    private function intervalos(Vehicle $veiculo, string $de, string $ate): array
+    {
+        $abastecimentos = $this->abastecimentosDoPeriodo($veiculo, $de, $ate);
+
+        // Índices dos abastecimentos de tanque cheio dentro da série completa.
+        $pontas = [];
+        foreach ($abastecimentos as $indice => $abastecimento) {
+            if ((bool) $abastecimento->tanque_cheio) {
+                $pontas[] = $indice;
+            }
+        }
+
+        $intervalos = [];
+
+        for ($i = 0; $i < count($pontas) - 1; $i++) {
+            $inicio = $pontas[$i];
+            $fim = $pontas[$i + 1];
+
+            $distancia = (int) $abastecimentos[$fim]->km - (int) $abastecimentos[$inicio]->km;
+
+            // Duas leituras iguais de hodômetro não formam intervalo: dividir
+            // por zero aqui produziria INF e contaminaria a média inteira.
+            if ($distancia <= 0) {
+                continue;
+            }
+
+            $litros = 0.0;
+            $custoCentavos = 0;
+
+            for ($j = $inicio + 1; $j <= $fim; $j++) {
+                $litros += (float) $abastecimentos[$j]->litros;
+                $custoCentavos += Dinheiro::centavos($abastecimentos[$j]->valor_total);
+            }
+
+            if ($litros <= 0.0) {
+                continue;
+            }
+
+            $intervalos[] = [
+                'data' => BusinessDate::diaDe($abastecimentos[$fim]->data),
+                'km_inicial' => (int) $abastecimentos[$inicio]->km,
+                'km_final' => (int) $abastecimentos[$fim]->km,
+                'distancia_km' => $distancia,
+                'litros' => $litros,
+                'custo_centavos' => $custoCentavos,
+                'km_por_litro' => round($distancia / $litros, 2),
+                'custo_por_km' => $this->porKm($custoCentavos, $distancia),
+            ];
+        }
+
+        return $intervalos;
     }
 
     /**

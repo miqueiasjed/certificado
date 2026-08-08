@@ -40,6 +40,14 @@ final class CatalogoDeModulos
             // Pix a partir do título a receber, régua de cobrança e
             // conciliação com o gateway de pagamento do tenant.
             ['chave' => 'cobranca_recorrente', 'nome' => 'Cobrança recorrente', 'descricao' => 'Emissão de boleto e Pix, régua de cobrança automática e conciliação com o gateway de pagamento.', 'sempre_ativo' => false],
+            // Frota e veículos (Plano 27, Task 27.4). Nasce desligado para
+            // todos os tenants, como todo módulo que não é `sempre_ativo`, e
+            // continua desligado até alguém pedir: só compensa para empresa
+            // com várias equipes. Ligar o módulo antes de os veículos estarem
+            // cadastrados e com histórico de abastecimento faria a rotina de
+            // alerta (`frota:verificar`, que também nasce sem agendamento)
+            // avisar sobre dado incompleto.
+            ['chave' => 'frota', 'nome' => 'Frota e veículos', 'descricao' => 'Cadastro de veículos, abastecimento, manutenção preventiva e custo de deslocamento no serviço.', 'sempre_ativo' => false],
         ];
     }
 }

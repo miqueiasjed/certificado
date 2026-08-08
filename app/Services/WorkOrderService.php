@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\OsTravadaException;
 use App\Models\WorkOrder;
+use App\Services\Fleet\VehicleService;
 use App\Support\BusinessDate;
 use Closure;
 use Illuminate\Database\QueryException;
@@ -122,6 +123,8 @@ class WorkOrderService
 
         unset($data['technicians'], $data['products'], $data['services'], $data['rooms'], $data['devices']);
 
+        $data = $this->comVeiculoDoTecnico($data);
+
         $workOrder = $this->criarComNumeroDeOrdemUnico($data);
 
         // Sincronizar técnicos
@@ -239,6 +242,43 @@ class WorkOrderService
      * vier em `$data` (fluxo normal, gerado em `WorkOrderRequest` ou em
      * `GeracaoDeVisitasService`), ele só é descartado se colidir de fato.
      */
+    /**
+     * Preenche `vehicle_id` com o veículo do técnico designado, quando quem
+     * criou a OS não informou nenhum (Plano 27, Task 27.4).
+     *
+     * É o caso comum: o técnico sai com o mesmo carro todo dia, e obrigar a
+     * escolher o veículo em toda OS faria o campo ficar vazio na maioria delas
+     * — e sem `vehicle_id` não há rateio de deslocamento na margem.
+     *
+     * O que veio do formulário sempre vence, inclusive `null` explícito: troca
+     * de veículo acontece, e o campo é editável exatamente por isso. Técnico
+     * com dois veículos ativos não tem padrão: escolher um dos dois seria
+     * adivinhar (ver `VehicleService::veiculoPadraoDoTecnico()`).
+     *
+     * Empresa sem o módulo de frota nunca tem veículo cadastrado, então esta
+     * consulta devolve nada e o comportamento é idêntico ao de antes do Plano
+     * 27.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function comVeiculoDoTecnico(array $data): array
+    {
+        if (array_key_exists('vehicle_id', $data)) {
+            return $data;
+        }
+
+        $veiculo = app(VehicleService::class)->veiculoPadraoDoTecnico(
+            isset($data['technician_id']) ? (int) $data['technician_id'] : null
+        );
+
+        if ($veiculo !== null) {
+            $data['vehicle_id'] = $veiculo->getKey();
+        }
+
+        return $data;
+    }
+
     private function criarComNumeroDeOrdemUnico(array $data, int $maxTentativas = 5): WorkOrder
     {
         for ($tentativa = 1; $tentativa <= $maxTentativas; $tentativa++) {

@@ -70,7 +70,11 @@ use App\Http\Controllers\SatisfactionSurveyController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ServiceInvoiceController;
 use App\Http\Controllers\ServiceOrderController;
+use App\Http\Controllers\RefuelingController;
 use App\Http\Controllers\StockController;
+use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\VehicleDocumentController;
+use App\Http\Controllers\VehicleMaintenanceController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Webhooks\CobrancaWebhookController;
@@ -1143,6 +1147,92 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
         Route::post('/enderecos/{address}/geocodificar', [AddressGeoController::class, 'geocodificar'])
             ->middleware('permission:endereco-geo')
             ->name('enderecos.geocodificar');
+    });
+
+    // Frota e veículos (Plano 27, Task 27.4): cadastro do veículo,
+    // abastecimento, manutenção e documentação, com o custo de deslocamento
+    // entrando na margem da OS (Task 27.2) e os alertas de vencimento na
+    // rotina `frota:verificar` (Task 27.3).
+    //
+    // `module:frota` no grupo inteiro, mesmo critério dos blocos de estoque,
+    // cobrança recorrente, monitoramento e roteirização acima: o bloco nasce
+    // inteiro nesta task, então a garantia estrutural ("rota nova já nasce
+    // bloqueada para tenant sem o módulo") vale mais que replicar o middleware
+    // rota a rota. O módulo nasce desligado para todos os tenants, e a rotina
+    // de verificação nasce sem agendamento (ver `VerificarFrota`): ligar os
+    // dois é decisão por tenant, depois de os veículos estarem cadastrados.
+    //
+    // Duas permissões, no par "-ver"/"-gerenciar" já usado por
+    // `comodo-gerenciar`, `planta-gerenciar` e `servico-gerenciar`:
+    //
+    // - `frota-ver`: lista de veículos, ficha, histórico de abastecimento e de
+    //   manutenção, documentos. Leitura pura. Termina em "-ver", então entra
+    //   automaticamente no papel `leitura` pelo filtro genérico de
+    //   `RolesAndPermissionsSeeder`.
+    // - `frota-gerenciar`: tudo que escreve — cadastro do veículo, registro de
+    //   abastecimento e de manutenção, documentos e a geração do título a
+    //   pagar. Fica só com o administrador (nenhum prefixo ou sufixo do seeder
+    //   a alcança), pelo mesmo critério de `planta-gerenciar`: registrar
+    //   abastecimento move o hodômetro do veículo, que é o número de onde sai
+    //   o custo por quilômetro que entra na margem financeira das OS.
+    //
+    // O técnico não recebe nenhuma das duas nesta entrega. Registrar o próprio
+    // abastecimento pelo aplicativo é caso de uso real, mas exige a tela do
+    // app (Plano 12) e uma decisão sobre até onde o técnico enxerga custo da
+    // frota; abrir `frota-gerenciar` para ele agora daria, junto, acesso ao
+    // cadastro e ao lançamento financeiro.
+    Route::middleware('module:frota')->group(function () {
+        Route::get('/veiculos', [VehicleController::class, 'index'])
+            ->middleware('permission:frota-ver')
+            ->name('frota.index');
+        Route::post('/veiculos', [VehicleController::class, 'store'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.store');
+        Route::get('/veiculos/{vehicle}', [VehicleController::class, 'show'])
+            ->middleware('permission:frota-ver')
+            ->name('frota.show');
+        Route::put('/veiculos/{vehicle}', [VehicleController::class, 'update'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.update');
+        Route::delete('/veiculos/{vehicle}', [VehicleController::class, 'destroy'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.destroy');
+
+        Route::get('/veiculos/{vehicle}/abastecimentos', [RefuelingController::class, 'index'])
+            ->middleware('permission:frota-ver')
+            ->name('frota.abastecimentos.index');
+        Route::post('/veiculos/{vehicle}/abastecimentos', [RefuelingController::class, 'store'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.abastecimentos.store');
+        Route::post('/veiculos/{vehicle}/abastecimentos/{refueling}/titulo', [RefuelingController::class, 'gerarTitulo'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.abastecimentos.titulo');
+
+        Route::get('/veiculos/{vehicle}/manutencoes', [VehicleMaintenanceController::class, 'index'])
+            ->middleware('permission:frota-ver')
+            ->name('frota.manutencoes.index');
+        Route::post('/veiculos/{vehicle}/manutencoes', [VehicleMaintenanceController::class, 'store'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.manutencoes.store');
+        Route::put('/veiculos/{vehicle}/manutencoes/{maintenance}', [VehicleMaintenanceController::class, 'update'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.manutencoes.update');
+        Route::post('/veiculos/{vehicle}/manutencoes/{maintenance}/titulo', [VehicleMaintenanceController::class, 'gerarTitulo'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.manutencoes.titulo');
+
+        Route::get('/veiculos/{vehicle}/documentos', [VehicleDocumentController::class, 'index'])
+            ->middleware('permission:frota-ver')
+            ->name('frota.documentos.index');
+        Route::post('/veiculos/{vehicle}/documentos', [VehicleDocumentController::class, 'store'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.documentos.store');
+        Route::post('/veiculos/{vehicle}/documentos/{document}', [VehicleDocumentController::class, 'update'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.documentos.update');
+        Route::delete('/veiculos/{vehicle}/documentos/{document}', [VehicleDocumentController::class, 'destroy'])
+            ->middleware('permission:frota-gerenciar')
+            ->name('frota.documentos.destroy');
     });
 
     // Módulos ainda sem nenhuma rota no sistema (`portal_cliente`,
