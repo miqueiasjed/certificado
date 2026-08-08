@@ -2,9 +2,9 @@
 
 Plano: 22
 Task: -
-Estado: Concluído, aguardando commit
+Estado: Concluído e commitado (f8c988b), não publicado
 Tentativas: -
-Base Git: 9ebd7db (local, à frente de origin/main em 1 commit - Plano 21)
+Base Git: f8c988b (local, à frente de origin/main em 2 commits - Planos 21 e 22)
 Feito: Plano 22 (Roteirização e rastreamento em campo) completo, 8 tasks. Coordenada de endereço (geocodificação via Nominatim, gratuito), roteiro do dia por técnico ordenado por proximidade com âncora de horário, mapa das visitas (Leaflet), registro de local de início/fim de execução com consentimento, divergência de local e rastreamento contínuo opcional desligado por padrão. Suíte completa do projeto: 1.285 testes, 10.745 asserções, tudo verde. `npm run build` limpo. Quatro achados corrigidos durante a execução (registrados em `.claude/progress.txt`): coordenada de sede fictícia `(0,0)` inflando a distância total do roteiro; divergência de local zerada abaixo do limiar (apagava o dado que a task existe para preservar); reordenação manual não recalculava totais; rastreamento contínuo não exposto ao aplicativo.
 Falta: nenhuma ação pendente no Plano 22, exceto commit (e push, se autorizado).
 Erro reproduzível: nenhum erro ativo
