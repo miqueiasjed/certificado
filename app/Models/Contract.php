@@ -14,6 +14,18 @@ class Contract extends Model
 {
     use Auditavel, BelongsToCompany;
 
+    /**
+     * Situações de assinatura eletrônica aceitas (Plano 26, Task 26.1),
+     * iguais ao enum da coluna `situacao_assinatura`.
+     *
+     * `assinado` só vale quando **todos** os signatários assinaram: assinatura
+     * parcial não é contrato. Quem faz essa apuração é
+     * `App\Services\Signature\SignatureRequestService`.
+     *
+     * @var array<int, string>
+     */
+    public const SITUACOES_DE_ASSINATURA = ['nao_enviado', 'em_assinatura', 'assinado', 'recusado'];
+
     protected $fillable = [
         'address_id',
         'contract_number',
@@ -54,6 +66,12 @@ class Contract extends Model
         'renovado_em' => 'datetime',
         // Idem: instante em que a negociação começou, não um dia de vigência.
         'em_negociacao_em' => 'datetime',
+        // Instante em que o último signatário assinou (Plano 26, Task 26.1),
+        // não um dia de vigência. Preenchido por
+        // `App\Services\Signature\SignatureRequestService`, nunca por
+        // formulário: por isso `situacao_assinatura` e esta coluna ficam fora
+        // de `$fillable`.
+        'assinado_em' => 'datetime',
         'service_value' => 'decimal:2',
         'visit_frequency_valor' => 'integer',
         'percentual_reajuste' => 'decimal:2',
@@ -124,6 +142,32 @@ class Contract extends Model
     public function renovacao(): HasOne
     {
         return $this->hasOne(Contract::class, 'contrato_anterior_id');
+    }
+
+    /**
+     * Pedidos de assinatura eletrônica deste contrato (Plano 26, Task 26.1),
+     * do mais recente para o mais antigo.
+     *
+     * São vários ao longo do tempo — um cancelado e outro criado depois — mas
+     * só um em aberto por vez. Ver `SignatureRequest::SITUACOES_EM_ABERTO`.
+     */
+    public function signatureRequests(): HasMany
+    {
+        return $this->hasMany(SignatureRequest::class)->latest('id');
+    }
+
+    /**
+     * O contrato está travado para edição porque tem pedido de assinatura em
+     * aberto?
+     *
+     * Contrato em assinatura é imutável: alterar o texto enquanto o cliente lê
+     * o PDF já enviado significaria assinar uma versão diferente da aceita.
+     * Quem recusa a edição é `ContractService` (Task 26.3); este método é só a
+     * leitura do estado.
+     */
+    public function estaEmAssinatura(): bool
+    {
+        return $this->situacao_assinatura === 'em_assinatura';
     }
 
     public function generateContractNumber(): string

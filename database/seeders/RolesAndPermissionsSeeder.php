@@ -86,6 +86,13 @@ class RolesAndPermissionsSeeder extends Seeder
      * marcar em negociação são ações do dia a dia comercial, não
      * administrativas.
      *
+     * `contrato-enviar-assinatura` (Plano 26, Task 26.4) entra pelo mesmo
+     * prefixo `contrato-`, e é deliberado: enviar o contrato para o cliente
+     * assinar é o fecho da venda, não uma ação administrativa. A credencial
+     * do provedor (`assinatura-eletronica-configurar`) fica **fora** deste
+     * papel, sem prefixo que a alcance — só o administrador a recebe, mesmo
+     * critério de `cobranca-configurar`.
+     *
      * `comissoes-ver` e `meta-gerenciar` (Plano 23, Task 23.6) entram
      * explícitas, como as demais específicas: é o papel comercial quem
      * vende (e por isso comissiona) e quem tem meta de venda.

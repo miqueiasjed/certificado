@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Exceptions\ContratoEmAssinaturaException;
 use App\Models\Address;
 use App\Models\Contract;
 use App\Support\BusinessDate;
 use App\Support\PeriodicidadeDeContrato;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 
 class ContractService
@@ -113,6 +115,8 @@ class ContractService
      */
     public function atualizar(Contract $contrato, array $dados): array
     {
+        $this->exigirContratoForaDeAssinatura($contrato);
+
         return DB::transaction(function () use ($contrato, $dados): array {
             $dados = $this->comPeriodicidadeResolvida($dados);
 
@@ -255,6 +259,8 @@ class ContractService
      */
     public function excluir(Contract $contrato): array
     {
+        $this->exigirContratoForaDeAssinatura($contrato);
+
         $executadas = $contrato->workOrders()
             ->where('origem', 'contrato')
             ->whereIn('status', ['completed', 'in_progress'])
@@ -299,6 +305,55 @@ class ContractService
             $resumo['movidas'],
             $resumo['canceladas']
         );
+    }
+
+    /**
+     * Recusa a operação quando o contrato está em assinatura (Plano 26,
+     * Task 26.3).
+     *
+     * Contrato em assinatura é imutável: alterar o texto (ou apagar o
+     * contrato) enquanto o cliente lê o PDF já enviado faria a assinatura
+     * valer para uma versão diferente da aceita, e isso não tem conserto
+     * depois de assinado. A checagem fica aqui, no ponto único de gravação,
+     * e não no controller: `ContractRenewalService` e qualquer endpoint futuro
+     * passam por `atualizar()`/`excluir()` e herdam a mesma proteção sem
+     * precisar lembrar dela.
+     *
+     * @throws ContratoEmAssinaturaException
+     */
+    private function exigirContratoForaDeAssinatura(Contract $contrato): void
+    {
+        if ($contrato->situacao_assinatura === 'em_assinatura') {
+            throw ContratoEmAssinaturaException::naoPodeSerAlterado($contrato);
+        }
+    }
+
+    /**
+     * PDF do contrato em bytes, para ser enviado ao provedor de assinatura
+     * eletrônica (Plano 26, Task 26.3) ou arquivado.
+     *
+     * Monta exatamente a mesma view e os mesmos dados que
+     * `ContractController::generatePDF()` já usa na tela — inclusive
+     * `address` e `client`, que o controller acrescenta por fora de
+     * `preparePdfData()` — para que o documento enviado para assinatura seja,
+     * byte a byte, o mesmo que a empresa vê ao imprimir. Layout de documento
+     * emitido tem valor perante fiscalização (CLAUDE.md), e duas montagens
+     * diferentes acabariam divergindo com o tempo.
+     *
+     * Devolve os bytes em vez de gravar: quem chama decide se arquiva, se
+     * manda ao provedor ou os dois.
+     */
+    public function renderizarPdf(Contract $contrato): string
+    {
+        $contrato->loadMissing('address.client');
+
+        $dados = $this->preparePdfData($contrato);
+        $dados['address'] = $contrato->address;
+        $dados['client'] = $contrato->address?->client;
+
+        return Pdf::loadView('pdf.contract', $dados)
+            ->setPaper('A4', 'portrait')
+            ->output();
     }
 
     /**

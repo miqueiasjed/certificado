@@ -131,6 +131,27 @@ class SyncPermissions extends Command
                 // operacional. Entra no papel `comercial` pelo prefixo
                 // `contrato-` já filtrado em `RolesAndPermissionsSeeder`.
                 'contrato-renovar',
+                // Assinatura eletrônica do contrato (Plano 26, Task 26.4):
+                // enviar ao provedor, acompanhar a situação, reenviar,
+                // cancelar e baixar o documento. Uma permissão só para as
+                // cinco, mesmo critério de `contrato-renovar`: são as ações do
+                // mesmo pedido, e separar criaria a chance de alguém enviar
+                // um contrato sem poder cancelar o pedido que ele mesmo
+                // abriu — deixando o contrato travado para edição sem saída.
+                //
+                // Entra no papel `comercial` pelo prefixo `contrato-` já
+                // filtrado em `RolesAndPermissionsSeeder`, e é deliberado: o
+                // arquivo da task pede "administrador e coordenador", e quem
+                // fecha a venda é quem manda o contrato para o cliente
+                // assinar. Continua fora do papel `leitura`, que filtra por
+                // sufixo `-ver`.
+                //
+                // O nome no arquivo da task era "contratos.enviar_assinatura",
+                // com ponto e no plural; vale o nome abaixo, no padrão
+                // "recurso-acao" no singular do resto do catálogo, mesma
+                // correção já aplicada às Tasks 14.6, 16.4, 17.7, 18.4, 19.6
+                // e 21.4.
+                'contrato-enviar-assinatura',
             ],
             'orcamentos' => [
                 'orcamento-ver',
@@ -299,6 +320,26 @@ class SyncPermissions extends Command
                 'cobranca-ver',
                 'cobranca-emitir',
                 'cobranca-configurar',
+            ],
+            // Credencial do provedor de assinatura eletrônica (Plano 26,
+            // Task 26.4). O arquivo da task pedia "assinaturas.configurar",
+            // com ponto e no plural; vale o nome abaixo, no padrão
+            // "recurso-acao" no singular do resto do catálogo.
+            //
+            // O nome é `assinatura-eletronica-configurar`, e não
+            // `assinatura-configurar`, para não se confundir com
+            // `assinatura-gerenciar` (Plano 7), que é a assinatura que o
+            // tenant paga à plataforma — coisa completamente diferente, e
+            // dois nomes parecidos no mesmo catálogo seriam concedidos por
+            // engano mais cedo ou mais tarde.
+            //
+            // Fica de fora do filtro por sufixo "-ver" do papel leitura e de
+            // qualquer prefixo do RolesAndPermissionsSeeder, então só
+            // administrador recebe (mesmo critério de `cobranca-configurar` e
+            // `planta-gerenciar`): a credencial guardada aqui assina contrato
+            // em nome da empresa.
+            'assinatura_eletronica' => [
+                'assinatura-eletronica-configurar',
             ],
             'fiscal' => [
                 'fiscal-ver',

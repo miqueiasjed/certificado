@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\NotificationQueue;
 use App\Models\ReceivableInstallment;
 use App\Models\ServiceInvoice;
+use App\Models\SignatureRequest;
 use App\Models\WorkOrder;
 use App\Services\WorkOrderService;
 use App\Support\EventosDeNotificacao;
@@ -139,6 +140,16 @@ class DriverDeEmail implements DriverDeEnvio
 
         if ($documentoFiscal !== null) {
             $anexos[] = $documentoFiscal;
+        }
+
+        $contratoAssinado = $this->contratoAssinadoDoContexto($item);
+
+        if ($contratoAssinado instanceof ResultadoDeEnvio) {
+            return $contratoAssinado;
+        }
+
+        if ($contratoAssinado !== null) {
+            $anexos[] = $contratoAssinado;
         }
 
         $mensagem = new NotificacaoDaFila(
@@ -350,6 +361,60 @@ class DriverDeEmail implements DriverDeEnvio
      *
      * @return array{nome: string, conteudo: string, mime: string}|ResultadoDeEnvio|null
      */
+    /**
+     * Lê o PDF do contrato assinado no disco privado (Plano 26, Task 26.3).
+     *
+     * Mesmo desenho de `documentoFiscalDoContexto()` logo abaixo, e pelas
+     * mesmas razões: a consulta Eloquent é escopada pelo tenant corrente
+     * (pedido de outra empresa simplesmente não é encontrado), o caminho é
+     * conferido contra o formato que `SignatureRequestService` grava antes de
+     * qualquer leitura de arquivo, e arquivo ausente é falha **temporária** —
+     * o download do provedor pode ter ficado para a próxima passada da rotina
+     * de sincronização, e o corpo da mensagem promete a via assinada em anexo.
+     *
+     * @return array{nome: string, conteudo: string, mime: string}|ResultadoDeEnvio|null
+     */
+    private function contratoAssinadoDoContexto(NotificationQueue $item): array|ResultadoDeEnvio|null
+    {
+        $contexto = is_array($item->contexto) ? $item->contexto : [];
+        $identificador = $contexto['signature_request_id'] ?? null;
+
+        if (blank($identificador)) {
+            return null;
+        }
+
+        $pedido = SignatureRequest::query()->find((int) $identificador);
+
+        if (! $pedido instanceof SignatureRequest) {
+            return ResultadoDeEnvio::falhaPermanente(
+                "O pedido de assinatura #{$identificador}, indicado como anexo, não foi encontrado nesta empresa."
+            );
+        }
+
+        $caminho = trim((string) $pedido->arquivo_assinado_path);
+        $esperado = "contratos/assinatura/{$item->company_id}/{$pedido->id}-assinado.pdf";
+
+        if (! hash_equals($esperado, $caminho)) {
+            return ResultadoDeEnvio::falhaPermanente(
+                "O caminho privado do contrato assinado do pedido #{$pedido->id} é inválido."
+            );
+        }
+
+        if (! Storage::disk('local')->exists($caminho)) {
+            return ResultadoDeEnvio::falhaTemporaria(
+                "O contrato assinado do pedido #{$pedido->id} ainda não está disponível no armazenamento privado."
+            );
+        }
+
+        $numero = $pedido->contract?->contract_number ?: $pedido->contract_id;
+
+        return [
+            'nome' => 'Contrato-'.$numero.'-assinado.pdf',
+            'conteudo' => Storage::disk('local')->get($caminho),
+            'mime' => 'application/pdf',
+        ];
+    }
+
     private function documentoFiscalDoContexto(NotificationQueue $item): array|ResultadoDeEnvio|null
     {
         $contexto = is_array($item->contexto) ? $item->contexto : [];

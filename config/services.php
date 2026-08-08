@@ -121,6 +121,31 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Assinatura eletrônica de contratos (Plano 26, Task 26.2)
+    |--------------------------------------------------------------------------
+    |
+    | Só os ENDEREÇOS do provedor moram aqui. A credencial NÃO: ela é por
+    | tenant, cifrada em `signature_provider_configs.credenciais`
+    | (App\Models\SignatureProviderConfig), porque a conta com o provedor é da
+    | empresa — a plataforma não assina contrato de ninguém. Mesmo desenho da
+    | cobrança do tenant ao cliente final (Plano 19), e diferente da assinatura
+    | que o tenant paga à plataforma (Plano 7), que usa `pagbank.token`.
+    |
+    | Qual ambiente vale (sandbox ou produção) também não é decisão da
+    | plataforma: vem de `signature_provider_configs.ambiente`, tenant a
+    | tenant, para que uma empresa possa testar o ciclo inteiro enquanto outra
+    | já assina de verdade. Documento assinado em sandbox NÃO tem validade
+    | jurídica, e a tela mostra o aviso enquanto o ambiente for esse.
+    |
+    */
+
+    'zapsign' => [
+        'base_url_sandbox' => env('ZAPSIGN_BASE_URL_SANDBOX', 'https://sandbox.api.zapsign.com.br'),
+        'base_url_producao' => env('ZAPSIGN_BASE_URL_PRODUCAO', 'https://api.zapsign.com.br'),
+    ],
+
     'geocodificacao' => [
         'provedor' => env('GEOCODIFICACAO_PROVEDOR_DRIVER', \App\Services\Geo\ProvedorNominatim::class),
 

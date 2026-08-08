@@ -54,6 +54,12 @@ final class CatalogoDeModulos
             // reais com calma e só então ligar (Deploy 4), conforme a ordem
             // de aplicação registrada no INDEX do plano.
             ['chave' => 'conformidade', 'nome' => 'Conformidade RDC 622/2022', 'descricao' => 'Controle de validade das licenças, do responsável técnico e do registro dos produtos na Anvisa, com checklist do que falta para estar regular.', 'sempre_ativo' => false],
+            // Assinatura eletrônica de contratos (Plano 26, Task 26.4).
+            // Nasce desligado para todos, e é o único jeito de um tenant sem
+            // conta no provedor não ver na tela um botão que só saberia
+            // devolver erro. Ligar depende de a empresa ter contratado o
+            // provedor e cadastrado a credencial dela.
+            ['chave' => 'assinatura_eletronica', 'nome' => 'Assinatura eletrônica de contratos', 'descricao' => 'Envio do contrato para assinatura eletrônica com validade jurídica, acompanhamento da situação e arquivo assinado no portal do cliente.', 'sempre_ativo' => false],
         ];
     }
 }

@@ -114,9 +114,20 @@ return Application::configure(basePath: dirname(__DIR__))
         // como obter um token CSRF. A autorização vem da assinatura conferida
         // em `GatewayDeCobranca::validarWebhook()`
         // (`CobrancaWebhookController`), não do CSRF.
+        //
+        // `webhooks/assinatura/*` (Plano 26, Task 26.3) é a mesma exceção para
+        // o webhook do provedor de assinatura eletrônica de contratos. Aqui a
+        // troca exige uma linha a mais de explicação, porque este provedor não
+        // assina a requisição: a autorização vem do `webhook_token` da URL,
+        // de 40 caracteres aleatórios por tenant, e — sobretudo — do fato de o
+        // corpo do webhook não decidir nada. Dele sai só o identificador do
+        // documento; a situação vem de uma consulta autenticada ao provedor
+        // (`SignatureRequestService::sincronizar()`). Ver o cabeçalho de
+        // `ProvedorPadrao::validarWebhook()`.
         $middleware->validateCsrfTokens(except: [
             'webhooks/gateway/*',
             'webhooks/cobranca/*',
+            'webhooks/assinatura/*',
         ]);
 
         // Aliases dos middlewares do Spatie Permission. O pacote não os
@@ -219,6 +230,22 @@ return Application::configure(basePath: dirname(__DIR__))
             $auditar($schedule->command($comando)
                 ->cron("*/{$minutos} * * * *")
                 ->withoutOverlapping(RotinasAgendadas::MINUTOS_DE_TRAVA_CURTA)
+                ->storeOutput());
+        }
+
+        // Rotinas de intervalo longo (Plano 26, Task 26.3): a sincronização
+        // dos pedidos de assinatura, de 6 em 6 horas. Separadas de
+        // POR_INTERVALO porque o campo de minutos do cron só vai até 59, e uma
+        // expressão `*/360 * * * *` nunca dispararia — ver o comentário de
+        // `RotinasAgendadas::A_CADA_HORAS`. O minuto 20 tira a rotina do topo
+        // da hora, onde as demais se acumulam. Com `timezone()`, como as
+        // diárias: aqui existe hora, e sem o fuso do negócio as passadas
+        // cairiam três horas deslocadas.
+        foreach (RotinasAgendadas::A_CADA_HORAS as $comando => $horas) {
+            $auditar($schedule->command($comando)
+                ->cron("20 */{$horas} * * *")
+                ->timezone(config('app.business_timezone'))
+                ->withoutOverlapping(RotinasAgendadas::MINUTOS_DE_TRAVA)
                 ->storeOutput());
         }
     })
