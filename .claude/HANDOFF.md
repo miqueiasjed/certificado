@@ -88,12 +88,36 @@ Verificado por leitura direta antes de mexer: `BusinessDate::hoje()` devolve
   `ModuloBloqueadoTest`, `EventosDeNotificacaoTest`): **93 testes, 3272
   asserções, 0 falhas**.
 - `npm run build`: limpo (`✓ built in 16.17s`).
-- **A suíte completa foi lançada e o resultado não entrou neste handoff.**
-  Rodar antes do merge: `DB_DATABASE=testing php artisan test`. A falha
-  pré-existente conhecida é `RelatorioPdfServiceTest.php:277` (caminho absoluto
-  de outra máquina, veio do Plano 21).
+- **Suíte completa: 1620 testes, 12276 asserções, 2 falhas** (807s).
+  - `RelatorioPdfServiceTest.php:277` — **pré-existente**, veio do Plano 21:
+    grava num caminho absoluto de scratchpad de outra máquina
+    (`/private/tmp/claude-501/-Users-miqueias-...`). Falha em qualquer
+    computador que não seja o do autor original.
+  - `FinancialEndpointTest.php:787` — **regressão do Plano 28, já corrigida** no
+    commit `7fd654c`. Ver a seção abaixo.
 - O rótulo `DEPR` em toda a saída é ruído pré-existente do PHP 8.5
   (`PDO::MYSQL_ATTR_SSL_CA`, `config/database.php:81`), não é falha.
+
+## A regressão que a suíte completa pegou (commit `7fd654c`)
+
+`FinancialEndpointTest::test_as_permissoes_novas_estao_no_catalogo` afirmava que
+existe **exatamente uma** permissão contendo `estornar` no catálogo inteiro. A
+intenção, vinda da Task 18.4, era impedir uma segunda permissão de estorno **no
+financeiro**: baixar e estornar são distintas de propósito, e duplicar o estorno
+faria a separação virar decoração.
+
+Escrita globalmente, a asserção só passava enquanto o financeiro fosse o único
+domínio com estorno. `epi-estornar` foi o primeiro a esbarrar nela.
+
+Reaproveitar `financeiro-estornar` para o EPI seria a correção errada — quem
+corrige ficha de EPI não é quem mexe no caixa. O filtro passou a ser por prefixo
+do domínio, que é o que a asserção sempre quis medir. **Vale conferir se outras
+asserções de catálogo têm a mesma fragilidade**, porque o Plano 29 acrescenta
+mais permissões.
+
+Nenhum dos testes focados rodados durante a execução das tasks pegaria isso: o
+teste que quebrou é de outro módulo, e só a suíte completa o alcança. É a razão
+de a suíte completa ser obrigatória antes do merge.
 
 ## Decisões tomadas nesta sessão que a próxima precisa conhecer
 
