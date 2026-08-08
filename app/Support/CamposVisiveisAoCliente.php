@@ -222,6 +222,26 @@ final class CamposVisiveisAoCliente
             'additional_clause' => $contrato->additional_clause,
             'jurisdiction' => $contrato->jurisdiction,
             'address' => $contrato->address?->full_address,
+            // Assinatura eletrônica (Plano 26, Task 26.4). Só a situação e a
+            // data: o cliente precisa saber que o contrato está em assinatura,
+            // ou que já foi assinado e a via está disponível.
+            //
+            // O link do provedor **não** entra aqui, de propósito. Quem
+            // autentica o signatário é o provedor, pelo convite que ele mesmo
+            // manda; republicar esse link numa tela autenticada por outra
+            // credencial (a do portal) permitiria que qualquer pessoa com
+            // acesso ao portal do cliente assinasse em nome de quem foi
+            // convidado, e é exatamente a comprovação de autoria que dá valor
+            // ao contrato assinado a distância.
+            'situacao_assinatura' => $contrato->situacao_assinatura,
+            'assinado_em' => $contrato->assinado_em?->toIso8601String(),
+            // Verdadeiro quando existe arquivo assinado arquivado, e portanto
+            // quando o download faz sentido na tela.
+            'tem_via_assinada' => $contrato->situacao_assinatura === 'assinado'
+                && $contrato->signatureRequests()
+                    ->where('situacao', 'assinado')
+                    ->whereNotNull('arquivo_assinado_path')
+                    ->exists(),
         ];
     }
 

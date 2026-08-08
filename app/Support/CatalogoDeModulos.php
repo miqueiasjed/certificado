@@ -40,6 +40,12 @@ final class CatalogoDeModulos
             // Pix a partir do título a receber, régua de cobrança e
             // conciliação com o gateway de pagamento do tenant.
             ['chave' => 'cobranca_recorrente', 'nome' => 'Cobrança recorrente', 'descricao' => 'Emissão de boleto e Pix, régua de cobrança automática e conciliação com o gateway de pagamento.', 'sempre_ativo' => false],
+            // Assinatura eletrônica de contratos (Plano 26, Task 26.4).
+            // Nasce desligado para todos, e é o único jeito de um tenant sem
+            // conta no provedor não ver na tela um botão que só saberia
+            // devolver erro. Ligar depende de a empresa ter contratado o
+            // provedor e cadastrado a credencial dela.
+            ['chave' => 'assinatura_eletronica', 'nome' => 'Assinatura eletrônica de contratos', 'descricao' => 'Envio do contrato para assinatura eletrônica com validade jurídica, acompanhamento da situação e arquivo assinado no portal do cliente.', 'sempre_ativo' => false],
         ];
     }
 }

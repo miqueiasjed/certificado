@@ -70,6 +70,8 @@ use App\Http\Controllers\SatisfactionSurveyController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ServiceInvoiceController;
 use App\Http\Controllers\ServiceOrderController;
+use App\Http\Controllers\SignatureProviderConfigController;
+use App\Http\Controllers\SignatureRequestController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\UserController;
@@ -956,6 +958,69 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
         Route::post('/cobrancas/configuracao/validar', [ChargeController::class, 'validarCredencial'])
             ->middleware('permission:cobranca-configurar')
             ->name('cobrancas.configuracao.validar');
+    });
+
+    // Assinatura eletrônica de contratos (Plano 26, Task 26.4).
+    //
+    // `module:assinatura_eletronica` no grupo inteiro, mesmo critério do bloco
+    // de cobrança acima: o bloco nasce inteiro nesta task, e o módulo nasce
+    // **desligado para todos** (`CatalogoDeModulos`), então nenhum tenant vê
+    // botão de uma integração que ele não contratou.
+    //
+    // Duas permissões, com alcances deliberadamente diferentes:
+    //
+    // - `contrato-enviar-assinatura` cobre enviar, ver a situação, reenviar,
+    //   cancelar e baixar o documento. Entra pelo prefixo `contrato-` que o
+    //   papel comercial já recebe (RolesAndPermissionsSeeder), porque quem
+    //   fecha a venda é quem manda o contrato para o cliente assinar — é o
+    //   "coordenador" que a task menciona. Continua fora do papel leitura,
+    //   que filtra por sufixo `-ver`.
+    // - `assinatura-eletronica-configurar` fica reservada ao administrador
+    //   (nenhum prefixo do seeder a alcança), mesmo critério de
+    //   `cobranca-configurar`: a credencial guardada aqui assina contrato em
+    //   nome da empresa, e isso não pode ficar ao alcance de quem só envia
+    //   contrato no dia a dia.
+    //
+    // As rotas de configuração vêm **antes** das de `{contract}` de propósito?
+    // Não é necessário: os caminhos não colidem (`/assinaturas/configuracao`
+    // x `/contratos/{contract}/assinatura`). Ficam juntas por assunto.
+    Route::middleware('module:assinatura_eletronica')->group(function () {
+        Route::get('/contratos/{contract}/assinatura', [SignatureRequestController::class, 'show'])
+            ->middleware('permission:contrato-enviar-assinatura')
+            ->name('contratos.assinatura.show');
+        Route::post('/contratos/{contract}/assinatura', [SignatureRequestController::class, 'store'])
+            ->middleware('permission:contrato-enviar-assinatura')
+            ->name('contratos.assinatura.store');
+
+        // O pedido vem sempre aninhado no contrato, e não solto em
+        // `/assinaturas/{id}`: o escopo global por empresa barra pedido de
+        // outro tenant, mas só o vínculo explícito com o contrato da rota
+        // impede que um id de pedido de OUTRO contrato da mesma empresa seja
+        // cancelado por engano (ver `SignatureRequestController`).
+        Route::post('/contratos/{contract}/assinatura/{assinatura}/reenviar', [SignatureRequestController::class, 'reenviar'])
+            ->middleware('permission:contrato-enviar-assinatura')
+            ->name('contratos.assinatura.reenviar');
+        Route::post('/contratos/{contract}/assinatura/{assinatura}/cancelar', [SignatureRequestController::class, 'cancelar'])
+            ->middleware('permission:contrato-enviar-assinatura')
+            ->name('contratos.assinatura.cancelar');
+        Route::get('/contratos/{contract}/assinatura/{assinatura}/documento', [SignatureRequestController::class, 'documento'])
+            ->middleware('permission:contrato-enviar-assinatura')
+            ->name('contratos.assinatura.documento');
+
+        Route::get('/assinaturas/configuracao', [SignatureProviderConfigController::class, 'index'])
+            ->middleware('permission:assinatura-eletronica-configurar')
+            ->name('assinaturas.configuracao.index');
+        Route::put('/assinaturas/configuracao', [SignatureProviderConfigController::class, 'update'])
+            ->middleware('permission:assinatura-eletronica-configurar')
+            ->name('assinaturas.configuracao.update');
+        Route::post('/assinaturas/configuracao/validar', [SignatureProviderConfigController::class, 'validar'])
+            ->middleware('permission:assinatura-eletronica-configurar')
+            ->name('assinaturas.configuracao.validar');
+        // Endpoint separado porque revela o webhook_token em claro — ver o
+        // cabeçalho de `SignatureProviderConfigController::webhookUrl()`.
+        Route::get('/assinaturas/configuracao/webhook', [SignatureProviderConfigController::class, 'webhookUrl'])
+            ->middleware('permission:assinatura-eletronica-configurar')
+            ->name('assinaturas.configuracao.webhook');
     });
 
     Route::middleware('module:nfse')->group(function () {

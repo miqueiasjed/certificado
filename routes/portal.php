@@ -167,5 +167,21 @@ Route::middleware(AutenticarCliente::class)->group(function () {
         Route::get('/documentos/{tipo}/{id}', [PortalDocumentController::class, 'download'])
             ->whereNumber('id')
             ->name('documentos.download');
+
+        // Via assinada do contrato (Plano 26, Task 26.4). Rota separada de
+        // `documentos/{tipo}/{id}` de propósito: ali o PDF é **gerado** na
+        // hora a partir do model, e aqui o arquivo é o que o provedor
+        // devolveu, arquivado em disco privado no ato da assinatura. Servir o
+        // contrato regerado no lugar do assinado entregaria ao cliente um
+        // documento sem assinatura nenhuma com cara de documento assinado.
+        //
+        // Sem `module:` próprio: o portal inteiro já está atrás de
+        // `portal_cliente`, e a via assinada é um documento do cliente como
+        // os outros. O módulo `assinatura_eletronica` controla quem *envia*
+        // contrato para assinatura, no painel da empresa; desligá-lo depois
+        // não pode esconder do cliente um contrato que ele já assinou.
+        Route::get('/contratos/{id}/assinado', [PortalDocumentController::class, 'contratoAssinado'])
+            ->whereNumber('id')
+            ->name('contratos.assinado');
     });
 });

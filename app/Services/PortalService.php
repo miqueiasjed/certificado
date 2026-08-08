@@ -9,6 +9,7 @@ use App\Models\Contract;
 use App\Models\PaymentDetail;
 use App\Models\ReceivableInstallment;
 use App\Models\ServiceInvoice;
+use App\Models\SignatureRequest;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderAdequation;
 use App\Support\BusinessDate;
@@ -224,6 +225,36 @@ class PortalService
     public function notaFiscal(int $id): ServiceInvoice
     {
         return $this->consultaDeNotasFiscais()->findOrFail($id);
+    }
+
+    /**
+     * Pedido de assinatura concluído de um contrato do cliente, para o
+     * download da via assinada (Plano 26, Task 26.4).
+     *
+     * Passa por `buscarContrato()`, e não por uma consulta direta a
+     * `signature_requests`, de propósito: é ali que mora a regra de dono do
+     * portal (empresa **e** cliente, sempre as duas), e reaproveitá-la é o que
+     * garante que "aparece na lista de contratos" e "pode ser baixado" nunca
+     * divirjam. Uma consulta própria por `signature_request_id` teria que
+     * repetir a mesma checagem, e repetir é como as duas acabam divergindo.
+     *
+     * Só devolve pedido `assinado` com arquivo arquivado: enquanto a
+     * assinatura não terminou, não existe via assinada para entregar, e
+     * entregar o arquivo original como se fosse a via assinada seria entregar
+     * um documento sem valor como se tivesse.
+     *
+     * @throws ModelNotFoundException Contrato de outro cliente/empresa, ou sem via assinada.
+     */
+    public function pedidoDeAssinaturaAssinado(int $contratoId): SignatureRequest
+    {
+        $contrato = $this->buscarContrato($contratoId);
+
+        return $contrato->signatureRequests()
+            ->where('situacao', 'assinado')
+            ->whereNotNull('arquivo_assinado_path')
+            ->latest('id')
+            ->first()
+            ?? throw (new ModelNotFoundException)->setModel(SignatureRequest::class, [$contratoId]);
     }
 
     /**

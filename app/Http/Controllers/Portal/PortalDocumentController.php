@@ -12,12 +12,14 @@ use App\Models\WorkOrder;
 use App\Services\CertificateService;
 use App\Services\ContractService;
 use App\Services\PortalService;
+use App\Services\SignatureRequestService;
 use App\Services\WorkOrderService;
 use Barryvdh\DomPDF\Facade\Pdf as FacadePdf;
 use Barryvdh\DomPDF\PDF;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 /**
@@ -69,6 +71,49 @@ class PortalDocumentController extends Controller
         // `Content-Disposition: attachment` (stream() grava `inline`, para
         // abrir no navegador em vez de baixar).
         return $pdf->download($nomeArquivo);
+    }
+
+    /**
+     * Via assinada do contrato (Plano 26, Task 26.4).
+     *
+     * Método próprio, e não mais um tipo de `download()`, porque a natureza
+     * do arquivo é outra: aqui nada é gerado. O PDF assinado foi produzido
+     * pelo provedor, baixado no ato da conclusão e arquivado em disco privado
+     * (`SignatureRequestService`), e é esse byte a byte que o cliente precisa
+     * receber — é ele que tem a assinatura e a trilha de auditoria. Gerar o
+     * contrato de novo aqui, como faz `pdfDoContrato()`, devolveria um PDF sem
+     * assinatura nenhuma com cara de documento assinado.
+     *
+     * A regra de dono é a de sempre: `PortalService` resolve o pedido a partir
+     * do contrato do cliente autenticado, e contrato de outro cliente ou sem
+     * via assinada vira 404 pela `ModelNotFoundException`.
+     */
+    public function contratoAssinado(int $id): Response
+    {
+        $pedido = $this->portal->pedidoDeAssinaturaAssinado($id);
+        $caminho = (string) $pedido->arquivo_assinado_path;
+
+        // O caminho é conferido contra o formato que o Service grava antes de
+        // qualquer leitura: caminho vindo de coluna nunca é usado cru para
+        // abrir arquivo. Mesmo critério de
+        // `DriverDeEmail::contratoAssinadoDoContexto()`.
+        $esperado = "contratos/assinatura/{$pedido->company_id}/{$pedido->id}-assinado.pdf";
+
+        if (! hash_equals($esperado, $caminho) || ! Storage::disk(SignatureRequestService::DISCO)->exists($caminho)) {
+            abort(404);
+        }
+
+        $this->registrarDownloadNaAuditoria('contrato_assinado', $pedido->contract);
+
+        return response(
+            Storage::disk(SignatureRequestService::DISCO)->get($caminho),
+            200,
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="Contrato-'
+                    .($pedido->contract?->contract_number ?: $pedido->contract_id).'-assinado.pdf"',
+            ]
+        );
     }
 
     /**
