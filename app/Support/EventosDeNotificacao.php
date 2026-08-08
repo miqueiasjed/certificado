@@ -460,6 +460,36 @@ final class EventosDeNotificacao
      */
     public const EPI_COM_TROCA_VENCIDA = 'epi_com_troca_vencida';
 
+    /**
+     * Ordem de serviço concluída com ao menos um EPI **obrigatório** marcado
+     * como não usado pelo técnico (Plano 29, Task 29.2), enfileirado por
+     * `App\Services\Ppe\ConfirmacaoDeEpiService::avisarExecucaoSemEpi()`.
+     *
+     * Aviso interno, mesmo critério dos três eventos de EPI acima: quem responde
+     * por segurança do trabalho é a empresa, nunca o cliente final, e por isso só
+     * aceita e-mail.
+     *
+     * É **evento, não vencimento**, e essa é a diferença para
+     * `EPI_COM_TROCA_VENCIDA`: sai uma vez por OS, na conclusão, e nunca é
+     * reenviado por rotina diária. A garantia é a chave de idempotência do
+     * `NotificationService` (evento + destinatário + a própria OS), sem marco —
+     * a execução já aconteceu, e repetir o aviso não muda o que foi feito naquele
+     * dia. Insistir semanalmente sobre um fato encerrado é o caminho mais curto
+     * para o gestor ignorar também os avisos que ainda dão para resolver.
+     *
+     * **O aviso não bloqueia nada.** Decisão registrada do plano: pendência de
+     * EPI é problema de escritório, e travar o técnico em campo por causa dela
+     * tira a operação do ar. O sistema informa, registra e comprova. Se o volume
+     * incomodar, a saída é o gestor desligar o evento na central de notificações,
+     * e não afrouxar a regra — porque é este registro que dá lastro ao que o
+     * contrato promete ao cliente e ao que a RDC 622/2022 cobra no POP da
+     * empresa especializada.
+     *
+     * `epis_em_falta` e `justificativas` chegam pelas `variaveis` do disparo; as
+     * demais são derivadas da OS por `NotificationService::variaveisDaReferencia()`.
+     */
+    public const EXECUCAO_SEM_EPI_EXIGIDO = 'execucao_sem_epi_exigido';
+
     public const NFSE_EMITIDA = 'nfse_emitida';
 
     public const NFSE_CANCELADA = 'nfse_cancelada';
@@ -1665,6 +1695,38 @@ final class EventosDeNotificacao
                         ."técnico tem em mãos: equipamento vencido em campo não protege ninguém.\n\n"
                         .'Registre a entrega do substituto, ou a devolução do item. Feito isso, este aviso '
                         .'para; enquanto a pendência existir, ele é repetido semanalmente.',
+                ],
+            ],
+        ],
+
+        self::EXECUCAO_SEM_EPI_EXIGIDO => [
+            'rotulo' => 'Ordem de serviço executada sem EPI exigido',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'cliente_nome',
+                'os_numero',
+                'tecnico_nome',
+                'data_execucao',
+                'endereco',
+                'epis_em_falta',
+                'justificativas',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Execução sem EPI exigido: ordem de serviço {{os_numero}}',
+                    'corpo' => 'A ordem de serviço {{os_numero}}, do cliente {{cliente_nome}}, executada em '
+                        .'{{data_execucao}} no endereço {{endereco}}, foi concluída com EPI obrigatório '
+                        ."marcado como não usado pelo técnico {{tecnico_nome}}.\n\n"
+                        ."EPI em falta: {{epis_em_falta}}\n"
+                        ."Justificativa registrada: {{justificativas}}\n\n"
+                        .'Aplicação de saneante é exposição química, e o contrato assinado com o cliente '
+                        .'afirma que a equipe trabalha protegida. Confira a ficha de EPI do técnico: pode ser '
+                        .'falta de equipamento em estoque, item vencido em campo ou troca não registrada.'
+                        ."\n\n"
+                        .'Este aviso sai uma vez por ordem de serviço e não se repete: a execução já aconteceu, '
+                        .'e o que fica é o registro.',
                 ],
             ],
         ],
