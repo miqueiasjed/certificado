@@ -19,6 +19,7 @@ use Database\Factories\AddressFactory;
 use Database\Factories\ClientFactory;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
@@ -154,6 +155,13 @@ class AppointmentRequestTest extends TestCase
 
     public function test_confirmar_pedido_de_nao_cliente_cria_cliente_e_endereco(): void
     {
+        // O endereço novo criado aqui dispara App\Jobs\GeocodificarEnderecoJob
+        // (Plano 22, Task 22.2). Sem Queue::fake(), QUEUE_CONNECTION=sync do
+        // ambiente de teste (phpunit.xml) rodaria o job na hora, chamando o
+        // provedor de geocodificação de verdade - este teste não tem nada a
+        // ver com geocodificação e não pode depender de rede.
+        Queue::fake();
+
         $pedido = $this->criarPedido(['client_id' => null, 'address_id' => null]);
 
         $this->assertSame(0, Client::query()->count(), 'o pedido não pode ter criado cliente sozinho');

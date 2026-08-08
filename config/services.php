@@ -106,4 +106,34 @@ return [
         'timeout' => (int) env('PAGBANK_TIMEOUT', 20),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Geocodificação de endereços (Plano 22, Task 22.2)
+    |--------------------------------------------------------------------------
+    |
+    | Classe que implementa App\Services\Geo\ProvedorDeGeocodificacao, ligada
+    | pelo AppServiceProvider. Nominatim (OpenStreetMap) é o provedor de hoje
+    | (App\Services\Geo\ProvedorNominatim): gratuito, sem chave de API - ver o
+    | cabeçalho daquela classe para o porquê. Trocar para um provedor pago
+    | (Google Maps, Mapbox etc.) é criar outra classe atrás da mesma
+    | interface e mudar GEOCODIFICACAO_PROVEDOR_DRIVER, sem tocar em
+    | GeocodificacaoService nem no comando enderecos:geocodificar.
+    |
+    */
+
+    'geocodificacao' => [
+        'provedor' => env('GEOCODIFICACAO_PROVEDOR_DRIVER', \App\Services\Geo\ProvedorNominatim::class),
+
+        'nominatim' => [
+            'url' => env('GEOCODIFICACAO_NOMINATIM_URL', 'https://nominatim.openstreetmap.org/search'),
+
+            // Nominatim exige um User-Agent identificando a aplicação
+            // (política de uso deles); sem valor configurado, cai para o
+            // nome e a URL da aplicação (config('app.name') / config('app.url')).
+            'user_agent' => env('GEOCODIFICACAO_USER_AGENT'),
+
+            'timeout' => (int) env('GEOCODIFICACAO_TIMEOUT', 10),
+        ],
+    ],
+
 ];

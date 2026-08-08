@@ -24,3 +24,20 @@
         @apply bg-white shadow-sm rounded-lg border border-gray-200;
     }
 }
+
+/* Impressão (Plano 22, Task 22.6): a sidebar, a topbar mobile e o rodapé são
+   do AuthenticatedLayout, compartilhados por toda página autenticada - regra
+   global aqui em vez de repetida em cada página que precisar imprimir algo
+   em uma folha só. Cada página cuida do próprio conteúdo (mapa, filtros,
+   botões) com a variante `print:` do Tailwind; isto só cuida do que é comum
+   a todas. */
+@media print {
+    .sidebar,
+    footer {
+        display: none !important;
+    }
+
+    main {
+        overflow: visible !important;
+    }
+}

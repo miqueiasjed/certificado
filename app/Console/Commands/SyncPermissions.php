@@ -352,6 +352,36 @@ class SyncPermissions extends Command
                 'monitoramento-gerar',
                 'monitoramento-publicar',
             ],
+            // Roteirização e rastreamento em campo (Plano 22, Task 22.5). O
+            // arquivo da task pedia "roteiros.ver"/"roteiros.gerenciar"/
+            // "enderecos.geo", com ponto e no plural; valem os nomes abaixo,
+            // no padrão "recurso-acao" no singular do resto do catálogo,
+            // mesma correção já aplicada às Tasks 14.6, 16.4, 17.7, 18.4,
+            // 19.6, 21.4 e 21.5.
+            //
+            // - `roteiro-ver`: o roteiro do dia (painel e app do técnico) e o
+            //   mapa das paradas. Leitura pura. Termina em "-ver", então
+            //   entra automaticamente no papel `leitura` pelo filtro
+            //   genérico de `RolesAndPermissionsSeeder`; entra também,
+            //   explicitamente, no papel `tecnico` - é o técnico quem
+            //   precisa ver o próprio roteiro em campo.
+            // - `roteiro-gerenciar`: reotimizar e reordenar manualmente.
+            //   Fica de fora do papel `tecnico` de propósito: decidir a
+            //   ordem do dia inteiro (obra na rua, cliente que só recebe
+            //   depois das 14h) é ação de quem coordena a operação, não do
+            //   técnico individual executando uma parada de cada vez.
+            // - `endereco-geo`: pendências de geocodificação, correção
+            //   manual de coordenada e nova tentativa. Coordenada errada
+            //   quebra o roteiro do dia inteiro (regra de negócio
+            //   inegociável da Task 22.5), então fica reservada ao mesmo
+            //   critério de `planta-gerenciar`/`cobranca-configurar`:
+            //   nenhum prefixo ou sufixo de `RolesAndPermissionsSeeder` a
+            //   alcança, só administrador recebe.
+            'roteirizacao' => [
+                'roteiro-ver',
+                'roteiro-gerenciar',
+                'endereco-geo',
+            ],
         ];
     }
 

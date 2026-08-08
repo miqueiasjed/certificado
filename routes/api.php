@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AppAuthController;
 use App\Http\Controllers\Api\AppSyncDownloadController;
 use App\Http\Controllers\Api\AppSyncUploadController;
+use App\Http\Controllers\RouteController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -36,6 +37,16 @@ Route::prefix('app')->name('app.')->group(function () {
         // Carga do dia do técnico (Task 12.3): ordens de serviço do período
         // pedido mais os catálogos de apoio, sem nenhum campo financeiro.
         Route::get('/carga', [AppSyncDownloadController::class, 'carga'])->name('carga');
+
+        // Roteiro do dia do técnico logado (Plano 22, Task 22.5): ordem,
+        // coordenadas e chegada estimada de cada parada. Além desta rota (útil
+        // para um pedido pontual, ex. "atualizar o roteiro de hoje"), o mesmo
+        // resumo entra dentro da CARGA do dia acima
+        // (`AppDayLoadService::carregar()`, chave `roteiro`), porque é de lá
+        // que o técnico sem sinal em campo lê o próprio roteiro offline - sem
+        // isso, esta rota sozinha não ajudaria em nada assim que o aparelho
+        // perdesse a conexão.
+        Route::get('/roteiro', [RouteController::class, 'appRoteiro'])->name('roteiro');
 
         // Sincronização em lote e envio de foto (Task 12.5). O limite de
         // taxa é por token (RateLimiter "app-sincronizacao", registrado em

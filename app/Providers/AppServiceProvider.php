@@ -7,6 +7,7 @@ use App\Listeners\RegistraAcesso;
 use App\Listeners\RegistraExecucaoAgendada;
 use App\Models\WorkOrder;
 use App\Observers\WorkOrderNotificationObserver;
+use App\Services\Geo\ProvedorDeGeocodificacao;
 use App\Support\TenantAtual;
 use Illuminate\Auth\Events\Failed;
 use Illuminate\Auth\Events\Login;
@@ -29,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->registrarGatewayDeAssinatura();
+        $this->registrarProvedorDeGeocodificacao();
     }
 
     /**
@@ -258,6 +260,24 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(GatewayAssinatura::class, function ($app) {
             return $app->make(config('services.gateway_assinatura'));
+        });
+    }
+
+    /**
+     * Liga `App\Services\Geo\ProvedorDeGeocodificacao` à implementação
+     * escolhida em `config('services.geocodificacao.provedor')` (Plano 22,
+     * Task 22.2).
+     *
+     * Mesmo raciocínio de `registrarGatewayDeAssinatura()`: resolução por
+     * configuração, não por uma classe fixa aqui, para trocar de provedor de
+     * geocodificação (hoje Nominatim, amanhã talvez Google Maps ou Mapbox)
+     * sem tocar em `GeocodificacaoService` nem no comando
+     * `enderecos:geocodificar`, que dependem só da interface.
+     */
+    private function registrarProvedorDeGeocodificacao(): void
+    {
+        $this->app->bind(ProvedorDeGeocodificacao::class, function ($app) {
+            return $app->make(config('services.geocodificacao.provedor'));
         });
     }
 }

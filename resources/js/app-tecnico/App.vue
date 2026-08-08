@@ -27,6 +27,14 @@
     assinatura), o que troca um estado pelo outro; `Assinatura.vue` emite
     `voltar` para devolver a tela a `AppLayout`/`Dia.vue`, do mesmo jeito que
     `Execucao.vue`.
+
+    O Roteiro do dia (`Roteiro.vue`, Task 22.7) entra como uma quarta aba
+    comum dentro de `AppLayout` (`paginaAtual === 'roteiro'`), ao lado de
+    Dia/Pendências/Conta - diferente de Execução/Assinatura, não é um estado
+    de tela cheia: é só mais uma lista, do mesmo jeito que `Dia.vue`. Tocar
+    numa parada emite `abrir-ordem`, tratado exatamente como o mesmo evento de
+    `Dia.vue` - abre a mesma `Execucao.vue`, não existe uma segunda tela de
+    execução por caminho de entrada.
 -->
 <template>
     <div v-if="verificandoSessao" class="min-h-screen flex items-center justify-center bg-gray-50 px-6">
@@ -49,6 +57,7 @@
 
     <AppLayout v-else :pagina-atual="paginaAtual" @navegar="paginaAtual = $event">
         <Dia v-if="paginaAtual === 'dia'" @abrir-ordem="ordemEmExecucaoId = $event" />
+        <Roteiro v-else-if="paginaAtual === 'roteiro'" @abrir-ordem="ordemEmExecucaoId = $event" />
         <Pendencias v-else-if="paginaAtual === 'pendencias'" />
         <Conta v-else-if="paginaAtual === 'conta'" />
     </AppLayout>
@@ -59,6 +68,7 @@ import { onMounted, ref } from 'vue';
 import AppLayout from './Layouts/AppLayout.vue';
 import Login from './Pages/Login.vue';
 import Dia from './Pages/Dia.vue';
+import Roteiro from './Pages/Roteiro.vue';
 import Pendencias from './Pages/Pendencias.vue';
 import Conta from './Pages/Conta.vue';
 import Execucao from './Pages/Execucao.vue';

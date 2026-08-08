@@ -8,14 +8,14 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 22.1 | Coordenadas, roteiro e local da execução | backend-estrutura | ⏳ | média |
-| 22.2 | Geocodificação dos endereços e correção manual | backend-logica | ⏳ | alta |
-| 22.3 | Roteiro por proximidade e estimativa de deslocamento | backend-logica | ⏳ | alta |
-| 22.4 | Registro do local da execução e divergência | backend-logica | ⏳ | média |
-| 22.5 | Endpoints de roteiro, mapa e coordenada | backend-endpoint | ⏳ | média |
-| 22.6 | Tela de roteiro e mapa das visitas | frontend-pagina | ⏳ | alta |
-| 22.7 | Roteiro e registro de local no aplicativo | frontend-componente | ⏳ | média |
-| 22.8 | Testes de geocodificação, roteiro e divergência | teste | ⏳ | alta |
+| 22.1 | Coordenadas, roteiro e local da execução | backend-estrutura | ✅ | média |
+| 22.2 | Geocodificação dos endereços e correção manual | backend-logica | ✅ | alta |
+| 22.3 | Roteiro por proximidade e estimativa de deslocamento | backend-logica | ✅ | alta |
+| 22.4 | Registro do local da execução e divergência | backend-logica | ✅ | média |
+| 22.5 | Endpoints de roteiro, mapa e coordenada | backend-endpoint | ✅ | média |
+| 22.6 | Tela de roteiro e mapa das visitas | frontend-pagina | ✅ | alta |
+| 22.7 | Roteiro e registro de local no aplicativo | frontend-componente | ✅ | média |
+| 22.8 | Testes de geocodificação, roteiro e divergência | teste | ✅ | alta |
 
 ## Ordem de execução
 

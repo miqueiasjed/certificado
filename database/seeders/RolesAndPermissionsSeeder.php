@@ -144,6 +144,13 @@ class RolesAndPermissionsSeeder extends Seeder
             // `SyncPermissions::catalogo()`).
             'monitoramento-ver',
             'monitoramento-gerar',
+            // Plano 22, Task 22.5: o técnico vê o próprio roteiro do dia (o
+            // aplicativo consome `GET /api/app/roteiro`, e a carga offline do
+            // Plano 12 já embute o mesmo resumo). `roteiro-gerenciar`
+            // (reotimizar/reordenar) fica de fora de propósito - decidir a
+            // ordem do dia inteiro é ação de quem coordena a operação, não
+            // do técnico individual (ver `SyncPermissions::catalogo()`).
+            'roteiro-ver',
         ];
     }
 

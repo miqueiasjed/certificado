@@ -51,6 +51,11 @@ use App\Models\ProductBatch;
 use App\Models\Receivable;
 use App\Models\ReceivableInstallment;
 use App\Models\Room;
+// Alias por causa da colisão com a facade Illuminate\Support\Facades\Route,
+// já usada neste arquivo (Route::has, Route::getRoutes) e importada mais
+// abaixo. Mesmo cuidado documentado no cabeçalho de App\Models\Route.
+use App\Models\Route as RouteModel;
+use App\Models\RouteStop;
 use App\Models\SatisfactionSurvey;
 use App\Models\Service;
 use App\Models\ServiceInvoice;
@@ -63,6 +68,7 @@ use App\Models\Supplier;
 use App\Models\SyncConflict;
 use App\Models\SyncOperation;
 use App\Models\Technician;
+use App\Models\TechnicianTrackingSetting;
 use App\Models\User;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderAdequation;
@@ -1907,6 +1913,38 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'gerado_em' => now(),
                 'gerado_por' => $autor->id,
                 'dados' => ['marca' => $marca],
+            ]);
+
+            // Roteiro do dia do técnico e a parada que representa a OS
+            // (Plano 22, Task 22.1). Nenhum dos dois tem rota de CRUD ainda
+            // (só migrations e models nesta task), mesmo critério já usado
+            // para floorPlan/devicePosition acima: o objetivo aqui é só o
+            // model de domínio ter dado no cenário.
+            $dados['route'] = RouteModel::create([
+                'technician_id' => $dados['technician']->id,
+                'data' => '2026-07-05',
+                'situacao' => 'planejada',
+            ]);
+
+            $dados['routeStop'] = RouteStop::create([
+                'route_id' => $dados['route']->id,
+                'work_order_id' => $dados['workOrder']->id,
+                'ordem' => 1,
+            ]);
+
+            // Consentimento de rastreamento contínuo do técnico (Plano 22,
+            // Task 22.4). Sem endpoint de CRUD ainda: o objetivo aqui é só o
+            // model de domínio ter dado no cenário, mesmo critério de
+            // route/routeStop acima. Ligado de propósito (com consentido_em/
+            // consentido_por preenchidos, a única forma válida): é o cenário
+            // mais completo para a varredura de vazamento cobrir também
+            // `rastreamento_continuo`/`consentido_por`, não só as colunas
+            // sempre presentes.
+            $dados['technicianTrackingSetting'] = TechnicianTrackingSetting::create([
+                'technician_id' => $dados['technician']->id,
+                'rastreamento_continuo' => true,
+                'consentido_em' => now(),
+                'consentido_por' => $autor->id,
             ]);
 
             return $dados;

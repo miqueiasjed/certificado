@@ -82,6 +82,8 @@ final class DominioMultiempresa
         'receivable_installments',
         'receivables',
         'rooms',
+        'route_stops',
+        'routes',
         'satisfaction_surveys',
         'service_invoices',
         'service_orders',
@@ -93,6 +95,7 @@ final class DominioMultiempresa
         'suppliers',
         'sync_conflicts',
         'sync_operations',
+        'technician_tracking_settings',
         'technicians',
         'users',
         'work_order_adequations',
@@ -217,6 +220,8 @@ final class DominioMultiempresa
         \App\Models\Receivable::class,
         \App\Models\ReceivableInstallment::class,
         \App\Models\Room::class,
+        \App\Models\Route::class,
+        \App\Models\RouteStop::class,
         \App\Models\SatisfactionSurvey::class,
         \App\Models\Service::class,
         \App\Models\ServiceInvoice::class,
@@ -229,6 +234,7 @@ final class DominioMultiempresa
         \App\Models\SyncConflict::class,
         \App\Models\SyncOperation::class,
         \App\Models\Technician::class,
+        \App\Models\TechnicianTrackingSetting::class,
         \App\Models\User::class,
         \App\Models\WorkOrder::class,
         \App\Models\WorkOrderAdequation::class,
@@ -289,6 +295,19 @@ final class DominioMultiempresa
             'indice' => 'work_orders_order_number_unique',
             'colunas' => ['order_number'],
             'motivo' => 'Colisão de numeração entre empresas.',
+        ],
+        'routes' => [
+            'indice' => 'routes_company_id_technician_id_data_unique',
+            'colunas' => ['technician_id', 'data'],
+            'motivo' => 'Um técnico tem um roteiro por dia (Plano 22, Task 22.1). `routes` é tabela nova, sem '
+                .'existência anterior sem tenant, e nasce nesta migration já com a unique composta '
+                .'`[company_id, technician_id, data]` (as três colunas pedidas na especificação, e não só '
+                .'`company_id` + a FK, que é o padrão mais comum do restante do schema). Entra aqui, e não em '
+                .'UNIQUES_GLOBAIS_MANTIDOS, porque `conferirUniques()` aceita uma entrada de UNIQUES_A_COMPOR em '
+                .'dois estados (ainda global ou já composta com company_id); `routes` simplesmente nunca passou '
+                .'pelo primeiro estado, mas o formato composto é o mesmo que esta lista já sabe validar. '
+                .'UNIQUES_GLOBAIS_MANTIDOS é para unique que fica global de propósito (sem company_id), que não é '
+                .'o caso: aqui company_id está presente e é a própria unique que o exige.',
         ],
     ];
 
@@ -361,6 +380,13 @@ final class DominioMultiempresa
                 'indice' => 'device_positions_floor_plan_id_device_id_unique',
                 'colunas' => ['floor_plan_id', 'device_id'],
                 'motivo' => 'Unique composta sobre as duas chaves estrangeiras (Plano 21): a planta (floor_plan_id) já pertence a uma empresa só, então a unique não bloqueia o segundo tenant, mesmo raciocínio já registrado para receivable_installments.receivable_id_numero_unique.',
+            ],
+        ],
+        'route_stops' => [
+            [
+                'indice' => 'route_stops_route_id_work_order_id_unique',
+                'colunas' => ['route_id', 'work_order_id'],
+                'motivo' => 'Unique composta sobre as duas chaves estrangeiras (Plano 22, Task 22.1): o roteiro (route_id) já pertence a uma empresa só, então a unique não bloqueia o segundo tenant, mesmo raciocínio já registrado para device_positions.floor_plan_id_device_id_unique.',
             ],
         ],
         'notification_queue' => [

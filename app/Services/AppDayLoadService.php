@@ -6,9 +6,12 @@ use App\Models\AuditLog;
 use App\Models\BaitType;
 use App\Models\EventType;
 use App\Models\Product;
+use App\Models\Route;
+use App\Models\RouteStop;
 use App\Models\Technician;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Services\Routing\LocalDeExecucaoService;
 use App\Support\BusinessDate;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
@@ -78,7 +81,10 @@ class AppDayLoadService
         'other' => 'Outros',
     ];
 
-    public function __construct(private readonly WorkOrderAccessService $workOrderAccessService) {}
+    public function __construct(
+        private readonly WorkOrderAccessService $workOrderAccessService,
+        private readonly LocalDeExecucaoService $localDeExecucaoService,
+    ) {}
 
     /**
      * Monta a carga do dia para o usuário autenticado.
@@ -113,6 +119,14 @@ class AppDayLoadService
             'tipos_de_isca' => $this->carregarTiposDeIsca($desde),
             'pragas' => $this->catalogoDePragas(),
             'produtos' => $this->carregarProdutos($desde),
+            // Roteiro do dia (Plano 22, Task 22.5): ver `carregarRoteiro()`
+            // para o porquê de entrar aqui, e não só como endpoint separado.
+            'roteiro' => $this->carregarRoteiro($usuario, $tecnicoAlvo, $periodo),
+            // Rastreamento contínuo (Plano 22, Task 22.4 grava a
+            // configuração; buraco de integração fechado nesta Task 22.7):
+            // ver `rastreamentoContinuoLigado()` abaixo para o porquê desta
+            // chave precisar existir.
+            'rastreamento_continuo_ligado' => $this->rastreamentoContinuoLigado($usuario, $tecnicoAlvo),
             'removidos' => [
                 'ordens' => $this->ordensRemovidasDesde($usuario, $tecnicoAlvo, $periodo, $desde),
                 'produtos' => $this->produtosRemovidosDesde($desde),
@@ -495,6 +509,109 @@ class AppDayLoadService
             'responsavel_tecnico_titulo' => $empresa->technical_responsible_title,
             'updated_at' => optional($empresa->updated_at)->toIso8601String(),
         ];
+    }
+
+    // -----------------------------------------------------------------
+    // Roteiro do dia
+    // -----------------------------------------------------------------
+
+    /**
+     * Resumo do roteiro do técnico para o dia de referência da carga
+     * (`$periodo['de']`, hoje por padrão) - Plano 22, Task 22.5. É a razão de
+     * o técnico em campo, sem sinal, continuar enxergando o próprio roteiro:
+     * sem esta chave, ele só teria acesso a ele via `GET /api/app/roteiro`,
+     * uma chamada de rede que também falharia offline.
+     *
+     * Só leitura, como todo o resto deste Service (`carregar()` nunca grava
+     * nada, ver o docblock da classe): se o roteiro daquele dia ainda não foi
+     * montado (ninguém abriu a tela de roteiro nem chamou
+     * `GET /api/app/roteiro` ainda, que monta sob demanda), esta consulta
+     * simplesmente não acha nada e devolve `null` - a carga não cria um
+     * roteiro por conta própria.
+     *
+     * Sem técnico resolvido (usuário sem vínculo de técnico, ou
+     * coordenador/administrador sem `tecnico_id` na chamada e sem técnico
+     * vinculado ao próprio usuário), devolve `null`: roteiro é sempre de UM
+     * técnico, não existe "roteiro da empresa".
+     *
+     * @param  array{de: CarbonImmutable, ate: CarbonImmutable}  $periodo
+     * @return array<string, mixed>|null
+     */
+    private function carregarRoteiro(User $usuario, ?int $tecnicoAlvo, array $periodo): ?array
+    {
+        $tecnicoId = $tecnicoAlvo ?? $usuario->technician?->id;
+
+        if ($tecnicoId === null) {
+            return null;
+        }
+
+        // `Route::stops()` já ordena por `ordem` na própria definição da
+        // relação (`App\Models\Route::stops()`), então basta o eager load
+        // comum, sem um closure de ordenação repetido aqui.
+        $rota = Route::query()
+            ->where('technician_id', $tecnicoId)
+            ->where('data', $periodo['de']->toDateString())
+            ->with('stops.workOrder.address')
+            ->first();
+
+        if ($rota === null) {
+            return null;
+        }
+
+        return [
+            'id' => $rota->id,
+            'data' => $rota->data->toDateString(),
+            'situacao' => $rota->situacao,
+            'ordenacao_manual' => (bool) $rota->ordenacao_manual,
+            'distancia_total_km' => $rota->distancia_total_km !== null ? (float) $rota->distancia_total_km : null,
+            'duracao_estimada_min' => $rota->duracao_estimada_min,
+            'paradas' => $rota->stops->map(function (RouteStop $parada): array {
+                $endereco = $parada->workOrder?->address;
+
+                return [
+                    'work_order_id' => $parada->work_order_id,
+                    'ordem' => $parada->ordem,
+                    'chegada_estimada' => $parada->chegada_estimada,
+                    'latitude' => $endereco?->latitude !== null ? (float) $endereco->latitude : null,
+                    'longitude' => $endereco?->longitude !== null ? (float) $endereco->longitude : null,
+                ];
+            })->values()->all(),
+        ];
+    }
+
+    /**
+     * Se o rastreamento contínuo (Plano 22, Task 22.4:
+     * `LocalDeExecucaoService`/`TechnicianTrackingSetting`) está ligado para
+     * o técnico desta carga agora.
+     *
+     * Buraco de integração fechado nesta Task 22.7: até esta chave existir,
+     * nada expunha ao aplicativo se o rastreamento contínuo estava ligado -
+     * nem esta carga, nem nenhum endpoint. A 22.7 exige uma faixa
+     * PERMANENTE e visível no aplicativo exatamente quando isso acontece
+     * ("monitorar pessoa sem indicação visível é o que a fronteira do plano
+     * proíbe"), e o app não tem outra fonte offline para esse booleano.
+     *
+     * Mesmo critério de técnico-alvo de `carregarRoteiro()` acima (o técnico
+     * da carga, não necessariamente o usuário logado): `false` quando não há
+     * técnico resolvido, ou quando o id resolvido não corresponde a um
+     * técnico de verdade (nunca deveria acontecer, mas `false` - "sem
+     * rastreamento" - é a leitura segura de um estado inconsistente).
+     */
+    private function rastreamentoContinuoLigado(User $usuario, ?int $tecnicoAlvo): bool
+    {
+        $tecnicoId = $tecnicoAlvo ?? $usuario->technician?->id;
+
+        if ($tecnicoId === null) {
+            return false;
+        }
+
+        $tecnico = Technician::find($tecnicoId);
+
+        if ($tecnico === null) {
+            return false;
+        }
+
+        return $this->localDeExecucaoService->rastreamentoContinuoLigado($tecnico);
     }
 
     // -----------------------------------------------------------------

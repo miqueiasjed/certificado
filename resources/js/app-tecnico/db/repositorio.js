@@ -236,6 +236,28 @@ export async function salvarCarga(payload) {
         if (typeof payload.ordens_tem_mais === 'boolean') {
             await db.meta.put({ chave: 'ordens_tem_mais', valor: payload.ordens_tem_mais });
         }
+
+        // Roteiro do dia (Plano 22, Task 22.5/22.7): `AppDayLoadService::carregar()`
+        // já manda esta chave desde a Task 22.5, mas nada aqui a salvava até
+        // agora - buraco fechado nesta Task 22.7, porque sem isso o roteiro
+        // nunca sobreviveria a um reload offline, mesmo chegando certinho na
+        // carga. `undefined` (carga antiga em cache, de antes da Task 22.5)
+        // não sobrescreve o que já estava salvo; `null` explícito (carga
+        // atual, sem roteiro montado para o dia ainda) sobrescreve, porque é
+        // um valor válido e atual vindo do servidor.
+        if (payload.roteiro !== undefined) {
+            await db.meta.put({ chave: 'roteiro', valor: payload.roteiro });
+        }
+
+        // Rastreamento contínuo (Plano 22, Task 22.4/22.7): mesma razão da
+        // chave `roteiro` acima - sem salvar isso localmente, a faixa
+        // permanente da Task 22.7 não sobreviveria a um reload offline.
+        if (typeof payload.rastreamento_continuo_ligado === 'boolean') {
+            await db.meta.put({
+                chave: 'rastreamento_continuo_ligado',
+                valor: payload.rastreamento_continuo_ligado,
+            });
+        }
     });
 
     // Sem armazenamento persistente, o Android é livre para limpar o

@@ -224,6 +224,24 @@
             <span v-if="!collapsed">Agenda</span>
           </Link>
         </li>
+        <li v-if="podeVerRoteiro">
+          <Link
+            :href="route('roteiros.painel')"
+            :class="[
+              isCurrentRoute('/roteiros')
+                ? 'bg-green-700 text-white'
+                : 'text-green-100 hover:bg-green-700 hover:text-white',
+              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+            ]">
+            <svg :class="[
+              isCurrentRoute('/roteiros') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              'h-5 w-5 shrink-0 transition-colors'
+            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+            </svg>
+            <span v-if="!collapsed">Roteiro do dia</span>
+          </Link>
+        </li>
         <li v-if="podeVerCertificados">
           <Link
             :href="'/certificates'"
@@ -521,8 +539,9 @@ const podeVerCadastros = computed(() => pode('cadastro-ver'));
 const podeVerOrdensServico = computed(() => pode('ordem-servico-ver'));
 const podeVerCertificados = computed(() => pode('certificado-ver'));
 const podeVerContratos = computed(() => pode('contrato-ver') && temModulo('contratos'));
+const podeVerRoteiro = computed(() => pode('roteiro-ver') && temModulo('roteirizacao'));
 const mostrarBlocoOperacional = computed(() =>
-  podeVerCadastros.value || podeVerOrdensServico.value || podeVerCertificados.value || podeVerContratos.value
+  podeVerCadastros.value || podeVerOrdensServico.value || podeVerCertificados.value || podeVerContratos.value || podeVerRoteiro.value
 );
 
 // Gestão Financeira

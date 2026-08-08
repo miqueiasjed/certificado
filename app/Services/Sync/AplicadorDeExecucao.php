@@ -4,6 +4,7 @@ namespace App\Services\Sync;
 
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Services\Routing\LocalDeExecucaoService;
 use App\Services\Sync\Concerns\OperacaoDeCampo;
 use App\Services\WorkOrderService;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +30,18 @@ use Illuminate\Validation\ValidationException;
  * instante do servidor (`now()`), o instante do celular é corrigido logo
  * depois, sem tocar em `WorkOrderService.php` nem duplicar a regra de
  * fechamento em si (só o valor de um campo, depois que a regra já rodou).
+ *
+ * **Local da execução (Plano 22, Task 22.4).** O payload de `iniciar` e de
+ * `concluir` aceita, opcionalmente, `latitude` e `longitude` (float): a
+ * coordenada do aparelho no momento de cada ação, quando o técnico autorizou
+ * a localização. As duas ações usam as mesmas duas chaves porque `acao` já
+ * desambigua qual delas está em jogo - não existem `inicio_latitude`/
+ * `fim_latitude` no payload, só no banco, e é este aplicador quem faz essa
+ * tradução ao chamar `LocalDeExecucaoService`. Ausência de uma das duas
+ * chaves (ou das duas) é tratada como "sem autorização", nunca como erro de
+ * validação: `LocalDeExecucaoService::registrarInicio()`/`registrarFim()`
+ * gravam o instante de qualquer forma e deixam a coordenada de fora. A Task
+ * 22.7 (aplicativo do técnico) lê este contrato para saber o que enviar.
  */
 class AplicadorDeExecucao implements AplicadorDeOperacao
 {
@@ -47,6 +60,7 @@ class AplicadorDeExecucao implements AplicadorDeOperacao
 
     public function __construct(
         private readonly WorkOrderService $workOrderService,
+        private readonly LocalDeExecucaoService $localDeExecucaoService,
     ) {}
 
     public function tipo(): string
@@ -92,6 +106,20 @@ class AplicadorDeExecucao implements AplicadorDeOperacao
             $workOrder->update($dados);
         }
 
+        // Local do início (Task 22.4): sempre grava o instante, e a
+        // coordenada só quando as duas chaves vieram no payload. Roda mesmo
+        // quando `$dados` ficou vazio (reenvio de "iniciar" já processado),
+        // porque `inicio_registrado_em`/`inicio_latitude`/`inicio_longitude`
+        // não têm a mesma trava de "só o primeiro" que `start_time` tem: não
+        // há regra de negócio pedindo isso, e reenviar o mesmo instante do
+        // celular não causa dano.
+        $this->localDeExecucaoService->registrarInicio(
+            $workOrder,
+            $this->coordenadaDoPayload($payload, 'latitude'),
+            $this->coordenadaDoPayload($payload, 'longitude'),
+            $instante,
+        );
+
         return $workOrder->fresh();
     }
 
@@ -107,6 +135,34 @@ class AplicadorDeExecucao implements AplicadorDeOperacao
         // baixa registrada no dia da sincronização, que pode ser dias à frente.
         $this->workOrderService->markAsCompleted($workOrder, ['end_time' => $instante]);
 
+        // Local do fim e divergência (Task 22.4): roda depois da conclusão já
+        // aplicada, nunca antes e nunca impede o fechamento. `registrarFim()`
+        // não lança exceção; na pior hipótese a divergência fica `null`.
+        $this->localDeExecucaoService->registrarFim(
+            $workOrder,
+            $this->coordenadaDoPayload($payload, 'latitude'),
+            $this->coordenadaDoPayload($payload, 'longitude'),
+            $instante,
+        );
+
         return $workOrder->fresh();
+    }
+
+    /**
+     * Lê `latitude`/`longitude` do payload como float, ou `null` quando a
+     * chave não veio, veio vazia, ou não é um número válido. Payload
+     * malformado no campo de apoio de coordenada nunca vira erro de
+     * validação: `LocalDeExecucaoService` trata `null` como "sem
+     * autorização", o caso normal de quem recusou a localização no aparelho.
+     */
+    private function coordenadaDoPayload(array $payload, string $chave): ?float
+    {
+        $valor = $payload[$chave] ?? null;
+
+        if ($valor === null || $valor === '' || ! is_numeric($valor)) {
+            return null;
+        }
+
+        return (float) $valor;
     }
 }

@@ -31,6 +31,26 @@
   método) - por isso `osTravada` abaixo já reflete de verdade uma OS assinada
   que o aparelho só viu numa carga posterior à sincronização da assinatura,
   e não fica mais permanentemente falsa como antes dessa correção.
+
+  Local de início/fim e faixa de rastreamento contínuo (Plano 22, Task 22.7):
+
+  - `iniciarExecucao()` e `concluirVisita()` pedem a localização com
+    `useLocalizacao().pedirLocalizacao()` ANTES de montar o payload, e só
+    incluem `latitude`/`longitude` quando a chamada devolve coordenada -
+    exatamente o contrato opcional que `AplicadorDeExecucao` já espera (ver o
+    docblock daquela classe). Recusa/erro/timeout nunca impedem o
+    `enfileirar()` que vem a seguir, com ou sem as duas chaves.
+  - A explicação ("uma frase antes do pedido", regra da 22.7) aparece numa
+    faixa simples abaixo do cabeçalho enquanto o pedido está em andamento
+    (`pedindoLocalizacao`) - o composable garante sozinho que isso nunca
+    repete para a mesma ação (iniciar/concluir) desta mesma OS.
+  - Quando o rastreamento contínuo está ligado para o técnico
+    (`rastreamento_continuo_ligado` da carga do dia, buraco fechado em
+    `AppDayLoadService::carregar()` nesta mesma task), uma segunda faixa,
+    permanente enquanto a tela estiver aberta, avisa isso - replicada aqui do
+    `AppLayout.vue`: esta tela é uma das duas do aplicativo que roda FORA da
+    casca comum (a outra é `Assinatura.vue`), então a faixa do layout
+    compartilhado não alcança este componente sozinha.
 -->
 <template>
   <div class="flex min-h-screen flex-col bg-gray-50">
@@ -54,6 +74,22 @@
         <p class="text-xs text-gray-500">{{ horarioDaOrdem }}</p>
       </div>
     </header>
+
+    <!-- Rastreamento contínuo ligado (Plano 22, Task 22.7): faixa permanente
+         enquanto esta tela estiver aberta, mesma frase e mesmo padrão de
+         `AppLayout.vue` - ver o comentário no topo do arquivo para o porquê
+         de repetir aqui. -->
+    <div v-if="rastreamentoContinuoLigado" class="border-b border-blue-200 bg-blue-50 px-4 py-2">
+      <p class="text-xs text-blue-800">Localização sendo registrada durante o expediente.</p>
+    </div>
+
+    <!-- Explicação do pedido de localização, mostrada ANTES do próprio pedido
+         (o navegador não deixa customizar o prompt nativo, então esta frase
+         é a explicação própria do app - regra da Task 22.7). Desaparece
+         assim que `pedirLocalizacao()` resolve, com ou sem coordenada. -->
+    <div v-if="pedindoLocalizacao" class="border-b border-gray-200 bg-gray-100 px-4 py-2">
+      <p class="text-xs text-gray-700">{{ explicacaoLocalizacao }}</p>
+    </div>
 
     <main class="flex-1 overflow-y-auto px-4 py-4 pb-28">
       <p v-if="carregandoOrdem" class="text-sm text-gray-500">Carregando ordem de serviço...</p>
@@ -151,9 +187,10 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { obterOrdem } from '../db/repositorio';
+import { obterMeta, obterOrdem } from '../db/repositorio';
 import { aoMudar, enfileirar, listarPelaOrdem } from '../sync/fila';
 import { formatarHora } from '@/utils/formatDate';
+import { useLocalizacao } from '../Composables/useLocalizacao';
 import ListaDeDispositivos from '../Components/ListaDeDispositivos.vue';
 
 const TIPO_EXECUCAO = 'execucao';
@@ -163,6 +200,14 @@ const TIPO_EXECUCAO = 'execucao';
 // rodapé, nunca o conteúdo da assinatura/recusa em si.
 const TIPO_ASSINATURA = 'assinatura';
 const TIPO_RECUSA_ASSINATURA = 'recusa_assinatura';
+
+// Explicação exigida pela Task 22.7 ("uma frase antes do pedido"), uma para
+// cada ação - iniciar e concluir são momentos diferentes, e por isso pedem a
+// localização (e podem ser recusados) de forma independente.
+const EXPLICACAO_LOCALIZACAO_INICIO =
+  'Este aparelho vai pedir sua localização para registrar onde a visita começou. Recusar não impede iniciar.';
+const EXPLICACAO_LOCALIZACAO_FIM =
+  'Este aparelho vai pedir sua localização para registrar onde a visita terminou. Recusar não impede concluir.';
 
 const ABAS = [
   { chave: 'dispositivos', rotulo: 'Dispositivos' },
@@ -185,7 +230,12 @@ const carregandoOrdem = ref(true);
 const abaAtual = ref('dispositivos');
 const operacoesDaOrdem = ref([]);
 const enviandoAcaoExecucao = ref(false);
+const rastreamentoContinuoLigado = ref(false);
 let pararDeEscutarFila = null;
+
+// Ver o comentário no topo do arquivo: pedido de localização com explicação
+// prévia e sem repetição na mesma ação/OS, delegado inteiro a este composable.
+const { pedirLocalizacao, pedindoLocalizacao, explicacaoAtual: explicacaoLocalizacao } = useLocalizacao();
 
 const workOrderIdNumerico = computed(() => Number(props.ordemId));
 
@@ -295,10 +345,20 @@ async function iniciarExecucao() {
   enviandoAcaoExecucao.value = true;
 
   try {
+    // Localização pedida ANTES de montar o payload (Task 22.7): `null` em
+    // recusa/erro/timeout/pedido repetido, nunca uma exceção - o
+    // `enfileirar()` a seguir roda sempre, com ou sem coordenada. Funciona
+    // offline: `navigator.geolocation` não depende de rede (usa o GPS do
+    // aparelho quando há sinal de satélite).
+    const coordenada = await pedirLocalizacao(EXPLICACAO_LOCALIZACAO_INICIO, {
+      workOrderId: workOrderIdNumerico.value,
+      acao: 'iniciar',
+    });
+
     await enfileirar({
       tipo: TIPO_EXECUCAO,
       work_order_id: workOrderIdNumerico.value,
-      payload: { acao: 'iniciar' },
+      payload: { acao: 'iniciar', ...(coordenada ?? {}) },
       updated_at_conhecido: ordem.value?.updated_at ?? null,
     });
 
@@ -316,10 +376,19 @@ async function concluirVisita() {
   enviandoAcaoExecucao.value = true;
 
   try {
+    // Mesma lógica de `iniciarExecucao()`: pede antes de montar o payload,
+    // `null` nunca impede a conclusão. Ação diferente ('concluir'), então o
+    // composable pede de novo mesmo que 'iniciar' já tenha sido recusado
+    // para esta OS - são pedidos independentes por design (Task 22.7).
+    const coordenada = await pedirLocalizacao(EXPLICACAO_LOCALIZACAO_FIM, {
+      workOrderId: workOrderIdNumerico.value,
+      acao: 'concluir',
+    });
+
     await enfileirar({
       tipo: TIPO_EXECUCAO,
       work_order_id: workOrderIdNumerico.value,
-      payload: { acao: 'concluir' },
+      payload: { acao: 'concluir', ...(coordenada ?? {}) },
       updated_at_conhecido: ordem.value?.updated_at ?? null,
     });
 
@@ -339,6 +408,11 @@ onMounted(async () => {
   await carregarOrdem();
   await atualizarOperacoesDaOrdem();
   pararDeEscutarFila = aoMudar(atualizarOperacoesDaOrdem);
+
+  // Ver o comentário no topo do arquivo: mesma leitura de `AppLayout.vue`,
+  // repetida aqui porque esta tela roda fora daquela casca. Só leitura, uma
+  // vez na montagem - mesmo padrão já usado ali para `meta.empresa`.
+  rastreamentoContinuoLigado.value = (await obterMeta('rastreamento_continuo_ligado')) === true;
 });
 
 onUnmounted(() => {

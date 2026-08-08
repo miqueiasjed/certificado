@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ActiveIngredientController;
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\AddressGeoController;
 use App\Http\Controllers\AgendaController;
 use App\Http\Controllers\AntidoteController;
 use App\Http\Controllers\AppointmentRequestController;
@@ -59,6 +60,7 @@ use App\Http\Controllers\ProductBatchController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReceivableController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\RouteController;
 use App\Http\Controllers\SatisfactionSurveyController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ServiceInvoiceController;
@@ -1042,18 +1044,97 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
             ->name('plantas.croqui');
     });
 
+    // Roteirização e rastreamento em campo (Plano 22, Task 22.5): roteiro do
+    // dia por técnico, otimização, reordenação manual, mapa das paradas e
+    // pendências/correção de coordenada de endereço.
+    //
+    // `module:roteirizacao` no grupo inteiro, mesmo critério dos blocos de
+    // estoque, cobrança recorrente e monitoramento acima: o bloco nasce
+    // inteiro nesta task, então a garantia estrutural ("rota nova já nasce
+    // bloqueada para tenant sem o módulo") vale mais que replicar o
+    // middleware rota a rota.
+    //
+    // Três permissões, cada uma com um alcance diferente:
+    //
+    // - `roteiro-ver`: o roteiro do dia e o mapa das paradas. Leitura pura.
+    //   Termina em "-ver", então entra automaticamente no papel `leitura`
+    //   pelo filtro genérico de `RolesAndPermissionsSeeder`; entra também,
+    //   explicitamente, no papel `tecnico` - é o técnico que precisa ver o
+    //   próprio roteiro (o `GET /roteiros` do painel cobre o mesmo caso de
+    //   uso do `GET /api/app/roteiro` do aplicativo, para quem também usa o
+    //   painel web).
+    // - `roteiro-gerenciar`: reotimizar (`POST /roteiros/otimizar`) e
+    //   reordenar manualmente (`PUT /roteiros/{route}/ordem`). Fica de fora
+    //   do papel `tecnico` de propósito: decidir a ordem do dia inteiro
+    //   (obra na rua, cliente que só recebe depois das 14h) é ação de quem
+    //   coordena a operação, não do técnico individual executando uma
+    //   parada de cada vez.
+    // - `endereco-geo`: pendências de geocodificação, correção manual de
+    //   coordenada e nova tentativa. Coordenada errada quebra o roteiro do
+    //   dia inteiro (regra de negócio inegociável da Task 22.5), então fica
+    //   reservada ao mesmo critério de `planta-gerenciar`/`cobranca-configurar`:
+    //   nenhum prefixo ou sufixo de `RolesAndPermissionsSeeder` a alcança,
+    //   só administrador recebe.
+    Route::middleware('module:roteirizacao')->group(function () {
+        // `/roteiros/painel` e `/enderecos/pendencias-geo/painel` (Task
+        // 22.6): casca Inertia de `Roteiros/Index.vue` e
+        // `Enderecos/PendenciasGeo.vue`. Buraco de integração da Task 22.5,
+        // que só expôs os dois blocos abaixo como JSON puro - ver o
+        // docblock de `RouteController::painel()` para o raciocínio
+        // completo. Path próprio, não `/roteiros`/`/enderecos/pendencias-geo`
+        // com `wantsJson()`: não sobrecarrega a rota JSON já testada
+        // (`RouteEndpointTest`).
+        Route::get('/roteiros/painel', [RouteController::class, 'painel'])
+            ->middleware('permission:roteiro-ver')
+            ->name('roteiros.painel');
+        Route::get('/roteiros', [RouteController::class, 'index'])
+            ->middleware('permission:roteiro-ver')
+            ->name('roteiros.index');
+        // `POST /roteiros/simular` (Task 22.6): mesma permissão de
+        // `otimizar`, mesmo corpo (`OtimizarRotaRequest`), mas não persiste -
+        // devolve a comparação "ordem atual vs. ordem otimizada" que a tela
+        // mostra ANTES do usuário confirmar a otimização de verdade. Ver o
+        // docblock de `RouteService::simularOtimizacao()`.
+        Route::post('/roteiros/simular', [RouteController::class, 'simular'])
+            ->middleware('permission:roteiro-gerenciar')
+            ->name('roteiros.simular');
+        Route::post('/roteiros/otimizar', [RouteController::class, 'otimizar'])
+            ->middleware('permission:roteiro-gerenciar')
+            ->name('roteiros.otimizar');
+        Route::put('/roteiros/{route}/ordem', [RouteController::class, 'ordem'])
+            ->middleware('permission:roteiro-gerenciar')
+            ->name('roteiros.ordem');
+        Route::get('/roteiros/{route}/mapa', [RouteController::class, 'mapa'])
+            ->middleware('permission:roteiro-ver')
+            ->name('roteiros.mapa');
+
+        Route::get('/enderecos/pendencias-geo/painel', [AddressGeoController::class, 'painel'])
+            ->middleware('permission:endereco-geo')
+            ->name('enderecos.pendencias-geo.painel');
+        Route::get('/enderecos/pendencias-geo', [AddressGeoController::class, 'pendencias'])
+            ->middleware('permission:endereco-geo')
+            ->name('enderecos.pendencias-geo');
+        Route::put('/enderecos/{address}/coordenada', [AddressGeoController::class, 'definirCoordenada'])
+            ->middleware('permission:endereco-geo')
+            ->name('enderecos.coordenada.update');
+        Route::post('/enderecos/{address}/geocodificar', [AddressGeoController::class, 'geocodificar'])
+            ->middleware('permission:endereco-geo')
+            ->name('enderecos.geocodificar');
+    });
+
     // Módulos ainda sem nenhuma rota no sistema (`portal_cliente`,
-    // `app_tecnico`, `roteirizacao`, `laudo_ia`): seguem só
-    // declarados em `CatalogoDeModulos` e ganham `module:<chave>` na task que
-    // implementar o respectivo plano.
+    // `app_tecnico`, `laudo_ia`): seguem só declarados em
+    // `CatalogoDeModulos` e ganham `module:<chave>` na task que implementar
+    // o respectivo plano.
     //
     // `notificacoes` (Plano 14) é exceção diferente das demais: já tem rota
     // registrada (grupo "Rotas de Notificações", abaixo) mas ainda sem
     // `module:notificacoes` - fica para quando o módulo entrar no escopo de
     // uma task dedicada, para não gatilhar bloqueio sem o resto do fluxo
-    // (telas, aviso de plano) pronto. `monitoramento` deixou de ser exceção
-    // nesta task: a rota de relatório de monitoramento nasceu já com
-    // `module:monitoramento` desde o primeiro deploy dela, ver o bloco acima.
+    // (telas, aviso de plano) pronto. `monitoramento` e `roteirizacao`
+    // deixaram de ser exceção, cada um na task que deu a ele a primeira rota:
+    // nasceram já com o respectivo `module:<chave>` desde o primeiro deploy,
+    // ver os blocos acima.
 
     // Rotas para criação rápida
     // Registradas depois dos resources, estas quatro substituem o store de cada

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\GeocodificarEnderecoJob;
 use App\Models\Address;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -44,12 +45,19 @@ class AddressService
 
     public function createAddress(array $data): Address
     {
-        return Address::create($data);
+        $address = Address::create($data);
+
+        // Geocodificação em fila, nunca na requisição (Plano 22, Task 22.2):
+        // o cadastro do endereço não pode esperar a resposta do provedor.
+        GeocodificarEnderecoJob::dispatch($address->id);
+
+        return $address;
     }
 
     public function updateAddress(Address $address, array $data): Address
     {
         $address->update($data);
+
         return $address->fresh();
     }
 
@@ -81,10 +89,3 @@ class AddressService
             ->get();
     }
 }
-
-
-
-
-
-
-

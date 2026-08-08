@@ -1740,3 +1740,74 @@ precisam do mesmo subconjunto de dado (aqui, "endereços ativos do cliente"),
 cada parte deve receber a coleção já resolvida, não recalcular o próprio
 filtro - divergência entre partes do mesmo documento é sutil e só aparece
 testando o campo específico, não por inspeção visual do todo.
+
+## Plano 22 - Roteirização e rastreamento em campo (07/08/2026)
+
+Concluído, 8 tasks. Suíte completa do projeto fechou em 1.285 testes e 10.745
+asserções. O plano entrega coordenada de endereço (geocodificação via
+Nominatim, gratuito), roteiro do dia por técnico ordenado por proximidade com
+âncora de horário, mapa das visitas, registro de local de início/fim de
+execução com consentimento, divergência de local e rastreamento contínuo
+opcional desligado por padrão.
+
+### Coordenada de sede fictícia inflava a distância total do roteiro
+
+`RouteController::sedeCoordenada()` (Task 22.5) devolvia um ponto fixo
+`(0, 0)` (Golfo da Guiné) como fallback, porque `companies` não tem
+`latitude`/`longitude` (decisão de escopo já tomada na Task 22.3). Como
+`RouteService::gravarParadas()` soma a distância do ponto de partida até a
+primeira parada no total do roteiro, todo roteiro gerado carregava um trecho
+fictício de milhares de quilômetros somado a `distancia_total_km`, tornando o
+número inútil (um dia real de 30 km apareceria como "7.400 km"). A própria
+classe `Coordenada` (Task 22.3) já registrava o princípio contrário
+("`Coordenada::apartirDe()` devolve `null` quando faltar qualquer um dos
+dois: um endereço sem coordenada não pode virar uma `Coordenada` de mentira
+em `0.0, 0.0`"), mas o mesmo cuidado não foi replicado para a sede na task
+seguinte. Achado e corrigido na revisão: `?Coordenada $partida` nulável em
+toda a cadeia (`RouteController`, `RouteService`, `OtimizadorDeRota`) - sem
+sede conhecida, o primeiro trecho simplesmente não entra no total, mesmo
+tratamento já dado a uma parada sem coordenada boa. **Regra que fica:**
+quando uma dependência de dado real (coordenada, preço, config) não existe
+ainda, o valor ausente é `null` propagado, nunca um "valor neutro" inventado
+(`0`, `(0,0)`, string vazia) que passa despercebido pelas contas seguintes -
+um `null` quebra alto (ou é tratado explicitamente); um zero ou uma
+coordenada inventada se disfarça de dado real e corrompe silenciosamente
+qualquer soma/média que passar por cima dele.
+
+### Divergência de local zerada abaixo do limiar apagava o dado que a task existe para preservar
+
+`LocalDeExecucaoService::calcularDivergencia()` (Task 22.4) devolvia `null`
+tanto para "não dá para comparar" (sem coordenada, endereço com precisão
+`cidade`) quanto para "a distância calculada não passa de 300 m" - o próprio
+valor do campo era a sinalização. O problema: o PRD deste plano justifica o
+registro de local exatamente como "o que resolve disputa com cliente", e
+zerar a distância abaixo do limiar apaga o dado bruto (ex. "ficou a 250 m")
+que seria a evidência numa disputa, deixando indistinguível de "sem
+localização nenhuma". Corrigido para `divergencia_local_metros` sempre
+gravar a distância real quando calculável, com `divergenciaSinalizada()`
+como método separado para decidir o alerta. **Regra que fica:** um campo de
+auditoria/evidência (local registrado, distância, log) não deve ser zerado
+por estar "abaixo do interessante" - separar sempre o dado bruto (gravar) da
+decisão de alertar (calcular no momento da leitura), porque quem revisa
+depois pode precisar exatamente do valor que pareceu pequeno demais para
+importar na hora.
+
+### Buracos de integração previstos, mas só fechados na prática
+
+Como no Plano 21, tasks "independentes" da mesma cadeia deixaram pontas que
+só apareceram ao rodar: a 22.5 criou o endpoint de roteiro sem rota Inertia
+nenhuma apontando para a tela que a 22.6 ainda ia criar (a 22.6 teve que
+adicionar `GET /roteiros/painel`); a 22.5 também não tinha como mostrar
+"ordem atual vs. otimizada" antes de aplicar a otimização (a 22.6 teve que
+criar `POST /roteiros/simular`, uma simulação que nunca persiste); e nada
+expunha ao aplicativo se o rastreamento contínuo estava ligado até a 22.7
+adicionar a chave na carga do dia. Duas dessas idas e vindas (22.6 e 22.7)
+também encontraram bugs reais em código já revisado de tasks anteriores
+(`reordenarManualmente()` não recalculava totais; roteiro nunca era
+persistido offline apesar de chegar na carga). **Regra que fica:** mesmo
+padrão já registrado no Plano 21 - ao decompor um plano em tasks que formam
+uma cadeia de produtor/consumidor, vale nomear explicitamente qual task fecha
+a integração final, porque cada agente resolve o próprio pedaço de forma
+correta e completa por si só, mas ninguém ata as pontas sem alguém apontar
+isso; a revisão do orquestrador (ou, mais barato, a task seguinte da própria
+cadeia) é onde esses buracos aparecem de verdade.

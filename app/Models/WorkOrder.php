@@ -63,6 +63,18 @@ class WorkOrder extends Model
         // do negócio só na exibição, via BusinessDate.
         'assinada_em' => 'datetime',
         'recusa_registrada_em' => 'datetime',
+        // Local da execução (Plano 22, Task 22.1, colunas; Task 22.4,
+        // primeiro uso e casts). Instantes: gravados em UTC, convertidos para
+        // o fuso do negócio só na exibição. Coordenada: mesma precisão de
+        // `Address::$casts` ('decimal:7', ~1cm), para devolver string com a
+        // precisão exata em vez de float sujeito a arredondamento binário.
+        'inicio_latitude' => 'decimal:7',
+        'inicio_longitude' => 'decimal:7',
+        'inicio_registrado_em' => 'datetime',
+        'fim_latitude' => 'decimal:7',
+        'fim_longitude' => 'decimal:7',
+        'fim_registrado_em' => 'datetime',
+        'divergencia_local_metros' => 'integer',
     ];
 
     protected $appends = [
