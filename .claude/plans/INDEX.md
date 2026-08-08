@@ -1,7 +1,9 @@
 # INDEX - Planos do Sistema de Certificados
 
-> Última atualização: 08/08/2026 — os 27 planos estão concluídos e mergeados
-> em `main`. Nada foi publicado: push permanece pendente de autorização.
+> Última atualização: 08/08/2026 — os planos 1 a 27 estão concluídos e
+> mergeados em `main`. Nada foi publicado: push permanece pendente de
+> autorização. Os planos 28 e 29 (controle de EPI) nasceram depois, de uma
+> lacuna de conformidade encontrada fora do roteiro original.
 > Fonte de requisitos: `.claude/prd/` (índice em `.claude/prd/README.md`)
 
 ## Legenda
@@ -83,7 +85,14 @@ bloqueio.
 | 26 | Assinatura eletrônica de contratos | ✅ | 14, 15 | 6 |
 | 27 | Frota e veículos | ✅ | 17, 22 | 6 |
 
-Total: 262 tasks decompostas nos 27 planos.
+### Segurança do trabalho
+
+| # | Nome | Status | Depende de | Tasks |
+|---|------|--------|------------|-------|
+| 28 | Controle de EPI: cadastro, CA e ficha de entrega | ⏳ | 6, 13, 14 | 7 |
+| 29 | EPI em campo e na conformidade | 🔒 | 28, 13, 24 | 6 |
+
+Total: 275 tasks decompostas nos 29 planos.
 
 A decomposição real ficou ~40% acima da estimativa inicial de ~185 tasks. O
 motivo é o limite de dimensionamento: nenhuma task mistura backend com frontend,
@@ -105,6 +114,8 @@ próprio. Os planos que mais cresceram são os que tocam schema com dado existen
                                  +-> 21, 22, 23, 24
                                           |
                                           +-> 25, 26, 27
+                                          |
+                                          +-> 28 -> 29
 ```
 
 Linear até o 8, porque a base multiempresa é pré-requisito de quase tudo. Depois
@@ -126,3 +137,10 @@ baratos justamente por isso.
 
 Planos 25, 26 e 27 são últimos por escolha, não por esquecimento: nenhum deles
 decide venda hoje.
+
+Planos 28 e 29 fecham uma exposição, não uma lacuna competitiva: o contrato que
+o sistema emite promete ao cliente que a equipe usa EPI, e o checklist do Plano
+24 declara por escrito que EPI é parte do que o sistema não enxerga. O registro
+do fornecimento de EPI é obrigação do empregador pela NR-6, e a falta dele é
+autuável — independentemente de mercado ou concorrência. O 28 vale sozinho; o 29
+só faz sentido depois dele.

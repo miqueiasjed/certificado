@@ -47,6 +47,21 @@ class Technician extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * Ficha de EPI do técnico (Plano 28, Task 28.1), da entrega mais recente
+     * para a mais antiga.
+     *
+     * A ficha sobrevive ao técnico: o desligamento inativa o cadastro
+     * (`is_active`), e as entregas continuam consultáveis e extraíveis, porque é
+     * delas que sai a prova exigida pela NR-6.
+     */
+    public function ppeDeliveries(): HasMany
+    {
+        return $this->hasMany(PpeDelivery::class)
+            ->orderByDesc('entregue_em')
+            ->orderByDesc('id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

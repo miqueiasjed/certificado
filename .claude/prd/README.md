@@ -48,7 +48,9 @@ cobrança recorrente (19), NFS-e (20), tendência de monitoramento CIP e mapa de
 pontos (21), roteirização (22), comissões e metas (23).
 
 Conformidade: a RDC 52/2009 foi substituída pela RDC 622/2022, vigente desde
-01/04/2022. Documentos emitidos precisam de revisão (24).
+01/04/2022. Documentos emitidos precisam de revisão (24). O registro de entrega
+de EPI aos técnicos, obrigatório pela NR-6 e hoje inexistente no sistema, é a
+lacuna dos planos 28 e 29 — levantada em 08/08/2026, fora do roteiro original.
 
 Diferenciais: laudo assistido por IA (25), assinatura eletrônica de contrato
 (26), agendamento online e NPS (16), frota (27).
@@ -74,4 +76,5 @@ Diferenciais: laudo assistido por IA (25), assinatura eletrônica de contrato
 | `financeiro-fiscal.md` | Estoque, contas a receber e pagar, cobrança, NFS-e |
 | `monitoramento-cip.md` | Tendência de infestação, mapa de pontos, RDC 622/2022 |
 | `gestao-comercial.md` | Comissões, metas, renovação de contrato, frota |
+| `seguranca-do-trabalho.md` | EPI do técnico: ficha de entrega, CA, uso em campo |
 | `divida-tecnica.md` | Correções pendentes mapeadas na auditoria |

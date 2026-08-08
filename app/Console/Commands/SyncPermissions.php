@@ -566,6 +566,49 @@ class SyncPermissions extends Command
                 'frota-ver',
                 'frota-gerenciar',
             ],
+            // Controle de EPI (Plano 28, Task 28.4). O arquivo da task pedia
+            // "epi.visualizar"/"epi.gerenciar"/"epi.entregar"/"epi.estornar",
+            // com ponto; valem os nomes abaixo, no padrão "recurso-acao" com
+            // hífen do resto do catálogo (a família "os.*" das Tasks 13.3/13.4
+            // segue a única exceção, por um motivo documentado ali). Mesma
+            // correção já aplicada às Tasks 14.6, 16.4, 17.7, 18.4, 19.6, 21.4,
+            // 21.5, 22.5, 23.6, 24.5, 25.5, 26.4 e 27.4. "epi-ver" em vez de
+            // "epi-visualizar" pelo mesmo motivo: é o sufixo que o papel
+            // `leitura` reconhece em `RolesAndPermissionsSeeder`.
+            //
+            // Quatro permissões, e não duas, porque as ações têm consequências
+            // diferentes sobre um documento com valor perante fiscalização:
+            //
+            // - `epi-ver`: lista dos modelos de EPI, ficha do técnico, ficha em
+            //   PDF e extração por período (Task 28.5). Leitura pura. Termina em
+            //   "-ver", então entra no papel `leitura` pelo filtro genérico do
+            //   `RolesAndPermissionsSeeder`.
+            // - `epi-gerenciar`: cadastro do modelo de EPI — nome, fabricante,
+            //   número do CA, validade e vida útil. É o cadastro que alimenta a
+            //   cópia do CA gravada em cada entrega, então quem edita aqui
+            //   decide o que sairá impresso nas fichas futuras.
+            // - `epi-entregar`: registrar a entrega, colher a assinatura de
+            //   recebimento e registrar a devolução. Separada de
+            //   `epi-gerenciar` porque quem entrega o equipamento no almoxarifado
+            //   não é necessariamente quem mantém o cadastro regulatório.
+            // - `epi-estornar`: **altera prova documental**. O estorno é a única
+            //   correção possível de uma entrega (não há edição nem exclusão), e
+            //   é o que declara errada uma linha já assinada pelo técnico.
+            //   Separada de propósito, mesmo critério de `financeiro-estornar`.
+            //
+            // Nenhuma das três de escrita é alcançada por prefixo ou sufixo do
+            // `RolesAndPermissionsSeeder`, então só `administrador` recebe, que
+            // já ganha o catálogo inteiro. Estender `epi-entregar` ao papel
+            // `tecnico` é decisão de produto para a task que fizer a tela do app
+            // do técnico — o técnico é a contraparte que **assina** o
+            // recebimento, e deixá-lo registrar a própria entrega esvaziaria a
+            // separação entre quem fornece e quem recebe.
+            'epi' => [
+                'epi-ver',
+                'epi-gerenciar',
+                'epi-entregar',
+                'epi-estornar',
+            ],
         ];
     }
 

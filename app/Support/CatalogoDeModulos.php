@@ -68,6 +68,22 @@ final class CatalogoDeModulos
             // alerta (`frota:verificar`, que também nasce sem agendamento)
             // avisar sobre dado incompleto.
             ['chave' => 'frota', 'nome' => 'Frota e veículos', 'descricao' => 'Cadastro de veículos, abastecimento, manutenção preventiva e custo de deslocamento no serviço.', 'sempre_ativo' => false],
+            // Controle de EPI (Plano 28, Task 28.4). Nasce desligado como todo
+            // módulo que não é `sempre_ativo`, e aqui isso é mais do que
+            // convenção: a ficha de entrega é documento oponível, com
+            // arquivamento recomendado de 20 anos, e ligar o módulo antes de os
+            // modelos de EPI estarem cadastrados **com CA e validade** faria a
+            // primeira entrega nascer sem o número do certificado — que é
+            // justamente o dado que a ficha existe para provar.
+            //
+            // O interruptor também vale para a rotina diária de alertas
+            // (`epi:verificar`, Task 28.3), que pula o tenant sem o módulo
+            // ativo. É essa combinação que permite subir o código com o módulo
+            // desligado (Deploy 1), cadastrar os EPIs e as entregas em aberto
+            // com calma, e só então ligar — sem que a primeira varredura
+            // dispare uma leva de avisos sobre entrega retroativa que já nasce
+            // com a troca vencida.
+            ['chave' => 'epi', 'nome' => 'Controle de EPI', 'descricao' => 'Registro de entrega de equipamento de proteção individual aos técnicos, com CA, validade e assinatura de recebimento.', 'sempre_ativo' => false],
         ];
     }
 }

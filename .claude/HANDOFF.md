@@ -1,13 +1,30 @@
 # Handoff
 
-Plano: 24, 25, 26 e 27
+Plano: 28 e 29 (planejados, não iniciados)
 Task: -
-Estado: **Concluídos e mergeados em `main` (local). Push não autorizado.**
+Estado: **Pendentes.** 28 está liberado; 29 fica bloqueado até o 28 fechar.
 Tentativas: -
-Base Git: `d9a3a9c`
+Base Git: `6159986`
 
-Com isso, **os 27 planos do roteiro estão concluídos**. `.claude/plans/INDEX.md`
-e os quatro `.claude/tasks/N/INDEX.md` estão marcados.
+Os planos 1 a 27 estão concluídos e mergeados em `main` (local, sem push).
+
+## Planejamento acrescentado em 08/08/2026
+
+Levantado que **o sistema não tem nenhum controle de EPI**. A palavra aparece em
+dois lugares e em nenhum deles é dado: o contrato emitido promete ao cliente que
+a equipe usa EPI, e o `ChecklistService` do Plano 24 declara por escrito que EPI
+é parte do que "o sistema nem enxerga". A NR-6 obriga o registro do fornecimento
+de EPI e a falta dele é autuável.
+
+Criados, sem escrever código:
+
+- `.claude/prd/seguranca-do-trabalho.md` — requisitos, normas e o modelo de dados
+- `.claude/plans/28.md` + `.claude/tasks/28/` (7 tasks) — cadastro, CA, ficha
+- `.claude/plans/29.md` + `.claude/tasks/29/` (6 tasks) — campo e conformidade
+
+A Task **1.14** foi marcada como concluída: os arquivos existiam e os testes
+foram conferidos por execução (39 testes, 200 asserções, 0 falhas). Só a
+marcação estava desatualizada.
 
 ## O que foi feito nesta sessão
 
@@ -138,9 +155,11 @@ Reverter com `SET GLOBAL net_read_timeout = 30;` e
 
 ## Próxima ação
 
-Nenhuma pendente nos planos. O que resta é decisão da usuária:
-
-1. **Push** — nada foi publicado. `main` local está 5 commits à frente.
-2. **Limpar os worktrees e branches** de `.claude/worktrees/plano-2{4,5,6,7}`,
+1. **Executar o Plano 28** (`run-plan`). Está liberado e é o mais seguro de
+   aplicar do roteiro recente: migration inteiramente aditiva, duas tabelas
+   novas, nenhuma coluna em tabela com dado em produção.
+2. **Push** — nada foi publicado. `main` local está à frente do remoto.
+3. **Limpar os worktrees e branches** de `.claude/worktrees/plano-2{4,5,6,7}`,
    já mergeados.
-3. Escolher se algum item do follow-up acima vira plano novo.
+4. Escolher se algum item do follow-up acima vira plano novo. O candidato mais
+   sério continua sendo as `exists:` sem escopo de tenant do `WorkOrderRequest`.
