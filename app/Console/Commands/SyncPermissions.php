@@ -457,6 +457,24 @@ class SyncPermissions extends Command
             'metas' => [
                 'meta-gerenciar',
             ],
+            // Conformidade com a RDC 622/2022 (Plano 24, Task 24.5). O
+            // arquivo da task pedia "conformidade.ver" e
+            // "conformidade.gerenciar", com ponto; valem os nomes abaixo, no
+            // padrão "recurso-acao" do resto do catálogo, mesmo critério já
+            // registrado para "meta-gerenciar" logo acima. Plural em
+            // "conformidade" não se aplica (é substantivo abstrato), então
+            // aqui o singular do padrão coincide com a chave do módulo.
+            //
+            // Duas permissões, e não uma: quem consulta o checklist antes de
+            // uma fiscalização (qualquer pessoa do escritório) não é
+            // necessariamente quem decide o texto legal que sai nos
+            // documentos emitidos nem quem manda recalcular. "-ver" cobre o
+            // checklist e as pendências de execução; "-gerenciar" cobre o
+            // recálculo sob demanda e o CRUD da referência normativa.
+            'conformidade' => [
+                'conformidade-ver',
+                'conformidade-gerenciar',
+            ],
         ];
     }
 
