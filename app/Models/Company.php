@@ -38,6 +38,16 @@ class Company extends Model
         'signature_chemical_path',
         'signature_responsible_path',
 
+        // Validade dos documentos regulatórios exigidos pela RDC nº 622/2022
+        // (Plano 24, Task 24.1). Nascem nulas em todo tenant existente, e
+        // **validade nula significa "não informado", nunca "vencido"**: quem
+        // ainda não preencheu o cadastro não está irregular. O preenchimento é
+        // do próprio tenant, na tela da Task 24.6.
+        'registro_conselho_validade',
+        'licenca_sanitaria_validade',
+        'licenca_ambiental_validade',
+        'licenca_funcionamento_validade',
+
         // Identidade visual do portal do cliente (Plano 15, Task 15.6).
         // Nenhum formulário grava aqui ainda: ver o docblock da migration
         // `add_cores_de_marca_to_companies_table`.
@@ -65,6 +75,16 @@ class Company extends Model
 
     protected $casts = [
         'is_internal' => 'boolean',
+
+        // Validades regulatórias (Plano 24): representam um dia, sem hora
+        // relevante, então `date` e nunca `datetime`. Converter fuso em campo
+        // que não tem hora é o que produz o erro de um dia numa data de
+        // vencimento.
+        'registro_conselho_validade' => 'date',
+        'licenca_sanitaria_validade' => 'date',
+        'licenca_ambiental_validade' => 'date',
+        'licenca_funcionamento_validade' => 'date',
+
         'trial_ends_at' => 'date',
         'suspensa_em' => 'datetime',
         'ultimo_acesso_em' => 'datetime',
