@@ -380,6 +380,15 @@
         </div>
     </div>
 
+    {{-- Referência normativa (Plano 24, Task 24.2): vem do cadastro
+         (`normative_references`), nunca do código. Omitida por completo quando
+         não há referência cadastrada. --}}
+    @if(!empty($referenciaNormativa ?? ''))
+        <p style="text-align: center; font-size: 9px; color: #666; margin-top: 12px;">
+            Serviço prestado em conformidade com a {{ $referenciaNormativa }}.
+        </p>
+    @endif
+
 </body>
 
 </html>

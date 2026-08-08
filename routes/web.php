@@ -23,6 +23,7 @@ use App\Http\Controllers\ClientRequestAdminController;
 use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\CommissionRuleController;
 use App\Http\Controllers\CompanyAvailabilitySettingController;
+use App\Http\Controllers\ComplianceController;
 use App\Http\Controllers\ContaSuspensaController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractRenewalController;
@@ -73,7 +74,9 @@ use App\Http\Controllers\ServiceOrderController;
 use App\Http\Controllers\StockController;
 use App\Http\Controllers\TechnicianController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\ValidadesRegulatoriasController;
 use App\Http\Controllers\Webhooks\CobrancaWebhookController;
+use App\Http\Controllers\NormativeReferenceController;
 use App\Http\Controllers\WorkOrderAdequationController;
 use App\Http\Controllers\WorkOrderController;
 use App\Http\Controllers\WorkOrderFinancialController;
@@ -1002,6 +1005,81 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
     // - `planta-gerenciar` (já existe desde a Task 21.4): cobre toda ação de
     //   planta, inclusive a listagem - o catálogo não tem uma permissão
     //   "planta-ver" separada, decisão já tomada na Task 21.4.
+    // Conformidade com a RDC 622/2022 (Plano 24, Task 24.5).
+    //
+    // `module:conformidade` no grupo inteiro, mesmo critério dos blocos de
+    // monitoramento e roteirização: o módulo nasce desligado
+    // (`CatalogoDeModulos`, `sempre_ativo => false`), e é o mesmo
+    // interruptor que a rotina `conformidade:verificar-validades` consulta.
+    // Isso é o que permite subir esta entrega (Deploy 3) sem tela nova e sem
+    // aviso nenhum, preencher as validades reais do tenant com calma e só
+    // então ligar (Deploy 4).
+    //
+    // Duas permissões:
+    //
+    // - `conformidade-ver`: o checklist e as pendências de documentação das
+    //   execuções. Leitura, e por isso entra no papel `leitura` pelo sufixo
+    //   `-ver` de `RolesAndPermissionsSeeder`.
+    // - `conformidade-gerenciar`: recalcular o checklist sob demanda e o CRUD
+    //   da referência normativa. Mais restrita de propósito: o texto legal
+    //   que sai nos documentos emitidos vai para a mão de fiscal, e quem
+    //   consulta o checklist antes de uma fiscalização não é necessariamente
+    //   quem decide esse texto. Nenhum prefixo ou sufixo do seeder a alcança,
+    //   então só administrador recebe, mesmo critério de
+    //   `planta-gerenciar`/`cobranca-configurar`/`endereco-geo`.
+    //
+    // `/conformidade/referencias` vem declarado como rotas soltas, e não como
+    // `Route::resource`, porque não existe tela de criação nem de edição em
+    // página própria: o cadastro inteiro acontece em modal dentro do índice
+    // (Task 24.6), então `create` e `edit` não teriam destino.
+    Route::middleware('module:conformidade')->group(function () {
+        Route::get('/conformidade', [ComplianceController::class, 'index'])
+            ->middleware('permission:conformidade-ver')
+            ->name('conformidade.index');
+
+        Route::post('/conformidade/verificar', [ComplianceController::class, 'verificar'])
+            ->middleware('permission:conformidade-gerenciar')
+            ->name('conformidade.verificar');
+
+        Route::get('/conformidade/pendencias-de-execucao', [ComplianceController::class, 'pendenciasDeExecucao'])
+            ->middleware('permission:conformidade-ver')
+            ->name('conformidade.pendencias-de-execucao');
+
+        Route::get('/conformidade/referencias', [NormativeReferenceController::class, 'index'])
+            ->middleware('permission:conformidade-gerenciar')
+            ->name('conformidade.referencias.index');
+        Route::post('/conformidade/referencias', [NormativeReferenceController::class, 'store'])
+            ->middleware('permission:conformidade-gerenciar')
+            ->name('conformidade.referencias.store');
+        // `{referencia}` chega por route-model binding. `NormativeReference`
+        // NÃO tem escopo global por empresa (a linha de company_id nulo é a
+        // referência padrão da plataforma, e o escopo a esconderia), então o
+        // binding sozinho não separa tenant nenhum: quem separa é
+        // `NormativeReferenceController::garantirQueEDoTenant()`, chamado nas
+        // duas rotas abaixo, com resposta 404 para registro de outra empresa.
+        Route::put('/conformidade/referencias/{referencia}', [NormativeReferenceController::class, 'update'])
+            ->middleware('permission:conformidade-gerenciar')
+            ->name('conformidade.referencias.update');
+        Route::delete('/conformidade/referencias/{referencia}', [NormativeReferenceController::class, 'destroy'])
+            ->middleware('permission:conformidade-gerenciar')
+            ->name('conformidade.referencias.destroy');
+
+        // Validades dos documentos regulatórios da empresa (Task 24.6).
+        // Fica em `/settings`, junto das demais configurações da empresa, e
+        // não em `/conformidade`, porque é cadastro e não relatório: quem
+        // chega aqui vem de "Configurações" com os documentos na mão. A
+        // permissão é `conformidade-gerenciar`, e não `empresa-configurar`,
+        // porque é o mesmo conjunto de dados que o checklist e os avisos
+        // leem — quem pode mudar a validade é quem responde pela
+        // conformidade.
+        Route::get('/settings/validades', [ValidadesRegulatoriasController::class, 'edit'])
+            ->middleware('permission:conformidade-gerenciar')
+            ->name('settings.validades.edit');
+        Route::post('/settings/validades', [ValidadesRegulatoriasController::class, 'update'])
+            ->middleware('permission:conformidade-gerenciar')
+            ->name('settings.validades.update');
+    });
+
     Route::middleware('module:monitoramento')->group(function () {
         Route::get('/monitoramento', [MonitoringReportController::class, 'index'])
             ->middleware('permission:monitoramento-ver')

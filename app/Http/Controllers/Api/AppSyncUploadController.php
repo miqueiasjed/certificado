@@ -235,10 +235,23 @@ class AppSyncUploadController extends Controller
     private function paraResposta(string $uuid, ResultadoDeSincronizacao $resultado, bool $jaExistia): array
     {
         if ($resultado->foiAplicada()) {
-            return [
+            $resposta = [
                 'uuid' => $uuid,
                 'situacao' => $jaExistia ? 'duplicada' : 'aplicada',
             ];
+
+            // `avisos` só aparece quando existe algo a avisar (Plano 24, Task
+            // 24.4): a operação foi aplicada, e o técnico precisa saber de
+            // algo sobre o que acabou de registrar — hoje, produto com
+            // registro vencido ou cancelado na Anvisa. Chave omitida no caso
+            // comum para não obrigar versão nova do aplicativo a nada: quem
+            // não conhece o campo continua lendo `situacao` e ignorando o
+            // resto, e quem conhece mostra o texto de `detalhe`.
+            if ($resultado->avisos !== []) {
+                $resposta['avisos'] = $resultado->avisos;
+            }
+
+            return $resposta;
         }
 
         if ($resultado->estaEmConflito()) {

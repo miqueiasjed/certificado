@@ -19,12 +19,22 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class ResultadoDeSincronizacao
 {
+    /**
+     * @param  array<int, array{item: string, rotulo: string, detalhe: string, exigencia: string}>  $avisos
+     *                                                                                                       Informação que acompanha uma operação **aplicada com sucesso**
+     *                                                                                                       (Plano 24, Task 24.4): hoje, o produto aplicado estar com registro
+     *                                                                                                       vencido ou cancelado na Anvisa. Aviso nunca é recusa — quem precisa
+     *                                                                                                       impedir a operação lança `ValidationException` do aplicador, que vira
+     *                                                                                                       conflito. Sempre vazio em conflito e em recusa, onde não existe
+     *                                                                                                       registro gravado sobre o qual avisar.
+     */
     private function __construct(
         public readonly string $situacao,
         public readonly SyncOperation $operacao,
         public readonly ?SyncConflict $conflito,
         public readonly ?string $mensagem,
         public readonly ?Model $registro,
+        public readonly array $avisos = [],
     ) {}
 
     /**
@@ -32,10 +42,18 @@ final class ResultadoDeSincronizacao
      * pelo aplicador do tipo; fica `null` quando o resultado vem de um
      * reenvio (a operação já tinha sido aplicada antes, nesta ou em uma
      * chamada anterior do processo).
+     *
+     * `$avisos` chega dos aplicadores que implementam `AplicadorQueAvisa`, e é
+     * vazio para todos os outros. No reenvio de uma operação já aplicada a
+     * lista também sai vazia: o aplicador não roda de novo (é o que torna a
+     * sincronização idempotente), então não há aviso novo a produzir, e o
+     * aplicativo já recebeu o da primeira vez.
+     *
+     * @param  array<int, array{item: string, rotulo: string, detalhe: string, exigencia: string}>  $avisos
      */
-    public static function aplicada(SyncOperation $operacao, ?Model $registro): self
+    public static function aplicada(SyncOperation $operacao, ?Model $registro, array $avisos = []): self
     {
-        return new self('aplicada', $operacao, null, null, $registro);
+        return new self('aplicada', $operacao, null, null, $registro, $avisos);
     }
 
     /**

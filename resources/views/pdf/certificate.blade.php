@@ -343,6 +343,23 @@
         </table>
     @endif
 
+    {{-- Referência normativa (Plano 24, Task 24.2): vem do cadastro
+         (`normative_references`), nunca do código, porque a resolução da
+         Anvisa muda e o documento vai para a mão de fiscal. Fica fora do
+         `@if` das informações legais de propósito: a norma citada não depende
+         de a empresa ter preenchido licença nenhuma. Linha omitida por
+         completo quando não há referência cadastrada — o documento nunca deixa
+         de ser emitido por causa disto. --}}
+    @if(!empty($referenciaNormativa ?? ''))
+        <table>
+            <tr>
+                <td style="padding: 6px; font-size: 9px;">
+                    Serviço prestado em conformidade com a {{ $referenciaNormativa }}.
+                </td>
+            </tr>
+        </table>
+    @endif
+
     <!-- Tabela: Assinaturas -->
     @if($sigOpSrc || $sigChemSrc)
         <table class="signature-table">

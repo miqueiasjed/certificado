@@ -10,6 +10,8 @@ use App\Models\Product;
 use App\Models\Technician;
 use App\Models\Service;
 use App\Models\Certificate;
+use App\Services\Compliance\ChecklistService;
+use App\Services\ModuleService;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -95,6 +97,40 @@ class DashboardController extends Controller
             'recentEntries' => $recentEntries,
             'recentServiceOrders' => $recentWorkOrders,
             'recentCertificates' => collect(), // Empty collection for now
+            'conformidade' => $this->resumoDeConformidade($request),
         ]);
+    }
+
+    /**
+     * Resumo do checklist de conformidade para o painel (Plano 24, Task 24.5).
+     *
+     * `null` (e o painel não mostra o bloco) em três casos, cada um por um
+     * motivo diferente:
+     *
+     * - módulo `conformidade` desligado no tenant, que é como ele nasce;
+     * - usuário sem `conformidade-ver`, mesmo critério já aplicado ao bloco
+     *   financeiro acima: sem a permissão, a consulta nem roda;
+     * - verificação nunca executada nesta empresa (`verificado_em` nulo), caso
+     *   em que "0 irregulares" seria uma afirmação falsa — não é que esteja
+     *   tudo certo, é que ninguém verificou ainda.
+     *
+     * A leitura é uma agregação em `compliance_checks`, e nunca a montagem do
+     * checklist inteiro: ver o docblock de `ChecklistService::resumoParaPainel()`.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function resumoDeConformidade(Request $request): ?array
+    {
+        if (! $request->user()?->can('conformidade-ver')) {
+            return null;
+        }
+
+        if (! app(ModuleService::class)->ativo('conformidade')) {
+            return null;
+        }
+
+        $resumo = app(ChecklistService::class)->resumoParaPainel();
+
+        return $resumo['verificado_em'] === null ? null : $resumo;
     }
 }

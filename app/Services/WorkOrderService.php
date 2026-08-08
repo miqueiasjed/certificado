@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\OsTravadaException;
 use App\Models\WorkOrder;
+use App\Services\Compliance\ConformidadeDaExecucaoService;
 use App\Support\BusinessDate;
 use Closure;
 use Illuminate\Database\QueryException;
@@ -23,7 +24,38 @@ class WorkOrderService
     public function __construct(
         private readonly WorkOrderStockService $estoqueDaOs,
         private readonly ServiceInvoiceService $notasFiscais,
+        private readonly ConformidadeDaExecucaoService $conformidadeDaExecucao,
     ) {}
+
+    /**
+     * Conferência da documentação da execução à luz da RDC 622/2022
+     * (Plano 24, Task 24.4), para a tela da OS no escritório.
+     *
+     * Delega inteira a `ConformidadeDaExecucaoService`: a regra de quais itens
+     * a norma exige vive lá, e este Service só é o caminho que a tela de OS já
+     * conhece. Nada aqui bloqueia coisa alguma — é leitura pura, e **nenhum**
+     * dos métodos de conclusão, assinatura ou emissão consulta este resultado.
+     *
+     * Nunca lança: OS com dado inconsistente não pode derrubar a tela em que a
+     * pessoa iria justamente corrigir esse dado. A falha vai para o log e a
+     * resposta sai com a conferência indisponível.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function conformidadeDaExecucao(WorkOrder $workOrder): ?array
+    {
+        try {
+            return $this->conformidadeDaExecucao->conferir($workOrder);
+        } catch (Throwable $falha) {
+            Log::error('[conformidade] Conferência da execução falhou na tela da OS.', [
+                'work_order_id' => $workOrder->id,
+                'order_number' => $workOrder->order_number,
+                'erro' => $falha->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
 
     /**
      * Nível de aninhamento do modo que ignora o travamento de OS assinada.

@@ -246,5 +246,17 @@
             Data: _________________________________
         </div>
     </div>
+
+    {{-- Referência normativa (Plano 24, Task 24.2): vem do cadastro
+         (`normative_references`), nunca do código. Esta view é a única das
+         cinco que não recebe `$company` de quem a carrega, e por isso a
+         referência chega pelo view composer de `AppServiceProvider`, que cai
+         no tenant corrente. Omitida por completo quando não há referência
+         cadastrada. --}}
+    @if(!empty($referenciaNormativa ?? ''))
+        <p style="text-align: center; font-size: 11px; color: #666; margin-top: 24px;">
+            Serviço prestado em conformidade com a {{ $referenciaNormativa }}.
+        </p>
+    @endif
 </body>
 </html>

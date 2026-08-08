@@ -104,6 +104,26 @@ final class RotinasAgendadas
         // documentada para as demais rotinas que alimentam a fila de
         // notificações do dia.
         'cobrancas:regua' => '06:30',
+        // 06:45, entre a régua de cobrança (06:30) e os avisos diários
+        // (07:00). Sem dependência de dado com nenhuma das duas: lê validade
+        // em `companies` e `organ_registrations`, que rotina nenhuma desta
+        // lista escreve. Fica antes das 07:00 pela mesma folga já
+        // documentada para `estoque:verificar` e `cobrancas:regua`: o aviso
+        // precisa estar na fila quando o despachante de notificações passar
+        // às 08:00, senão só sai na manhã seguinte.
+        //
+        // Diária, e não semanal, mesmo o reenvio do documento vencido sendo
+        // semanal: quem decide a cadência de cada aviso é o marco da chave de
+        // idempotência (`ValidadeService::marcoSemanal()`/`marcoMensal()`), e
+        // não a frequência da rotina. Passando todo dia, o documento que
+        // cruza o marco de 60, 30 ou 7 dias é avisado no próprio dia, e o
+        // `compliance_checks` que a tela lê nunca fica com a foto da semana
+        // passada.
+        //
+        // A rotina pula o tenant sem o módulo `conformidade` ativo, e o
+        // módulo nasce desligado: é assim que esta entrega sobe sem disparar
+        // aviso nenhum até a empresa preencher as validades reais.
+        'conformidade:verificar-validades' => '06:45',
         // 07:00: depois de tudo que muda o dado que ela lê (status de
         // certificado, status de pagamento e geração de visitas, entre 00:10 e
         // 01:00), e antes das 08:00, que é a hora padrão de envio da central de

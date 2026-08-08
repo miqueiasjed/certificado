@@ -476,7 +476,9 @@ class RotinasAgendadasTest extends TestCase
 
         $eventos = collect($this->app->make(Schedule::class)->events());
 
-        $this->assertCount(16, RotinasAgendadas::DIARIAS, 'a lista de rotinas diárias mudou de tamanho');
+        // 17 desde o Plano 24, Task 24.3, que acrescentou
+        // `conformidade:verificar-validades` às 06:45.
+        $this->assertCount(17, RotinasAgendadas::DIARIAS, 'a lista de rotinas diárias mudou de tamanho');
 
         foreach (RotinasAgendadas::DIARIAS as $assinatura => $horario) {
             $agendados = $eventos->filter(

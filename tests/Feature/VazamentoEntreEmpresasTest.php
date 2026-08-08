@@ -24,6 +24,7 @@ use App\Models\Company;
 use App\Models\CompanyAvailabilitySetting;
 use App\Models\CompanyBillingSetting;
 use App\Models\CompanyContractAlertSetting;
+use App\Models\ComplianceCheck;
 use App\Models\Contract;
 use App\Models\ContractVisitJustification;
 use App\Models\DailyCashBalance;
@@ -1883,6 +1884,27 @@ class VazamentoEntreEmpresasTest extends TestCase
             // tela), mesmo critério de companyBillingSetting acima.
             $dados['companyContractAlertSetting'] = CompanyContractAlertSetting::create([
                 'dias_antecedencia' => [60, 30, 15],
+            ]);
+
+            // Resultado da última verificação do checklist de conformidade
+            // (Plano 24, Task 24.1). Não tem rota de CRUD direta: é escrito
+            // pela rotina `conformidade:verificar-validades` e pelo botão de
+            // recalcular, e lido pela tela de conformidade. Entra aqui pelo
+            // mesmo motivo de companyContractAlertSetting acima, para a
+            // varredura permanente cobrir o model de domínio novo.
+            //
+            // `NormativeReference`, criado na mesma task, deliberadamente
+            // NÃO entra: ele está em `MODELS_FORA_DO_ESCOPO`, porque a linha
+            // de `company_id` nulo é a referência padrão da plataforma e o
+            // escopo global a esconderia (o motivo completo está no cabeçalho
+            // do model). O isolamento dele é feito explicitamente em
+            // `NormativeReferenceController` e coberto por
+            // `ReferenciaNormativaTest`.
+            $dados['complianceCheck'] = ComplianceCheck::create([
+                'item' => 'licenca_sanitaria',
+                'situacao' => ComplianceCheck::SITUACAO_ATENCAO,
+                'detalhe' => 'Licença sanitária '.$marca,
+                'verificado_em' => now(),
             ]);
 
             // Configuração fiscal e nota de serviço (Plano 20, Task 20.1).

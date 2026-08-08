@@ -10,6 +10,41 @@
         <Alert v-if="$page.props.flash.success" type="success" title="Sucesso!" :message="$page.props.flash.success" class="mb-4" />
         <Alert v-if="$page.props.flash.error" type="error" title="Erro!" :message="$page.props.flash.error" class="mb-4" />
 
+        <!--
+          Conformidade da execução (Plano 24, Task 24.4). Fica logo no topo,
+          antes do detalhe da OS: quem abre esta tela para conferir antes de
+          uma fiscalização precisa ver a pendência sem procurar. Some por
+          completo quando não há nada a apontar.
+        -->
+        <div
+          v-if="conformidade && (conformidade.pendencias.length > 0 || conformidade.avisos.length > 0)"
+          class="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3"
+        >
+          <div>
+            <h3 class="text-sm font-semibold text-amber-900">Conformidade da execução</h3>
+            <p class="mt-1 text-sm text-amber-800">{{ conformidade.ressalva }}</p>
+          </div>
+
+          <ul class="space-y-2">
+            <li v-for="(item, indice) in conformidade.pendencias" :key="`cp-${indice}`" class="text-sm">
+              <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                Falta documentar
+              </span>
+              <span class="ml-2 font-medium text-gray-900">{{ item.rotulo }}:</span>
+              <span class="text-gray-700"> {{ item.detalhe }}</span>
+              <span class="block text-gray-500">{{ item.exigencia }}</span>
+            </li>
+            <li v-for="(item, indice) in conformidade.avisos" :key="`ca-${indice}`" class="text-sm">
+              <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                Aviso de registro
+              </span>
+              <span class="ml-2 font-medium text-gray-900">{{ item.rotulo }}:</span>
+              <span class="text-gray-700"> {{ item.detalhe }}</span>
+              <span class="block text-gray-500">{{ item.exigencia }}</span>
+            </li>
+          </ul>
+        </div>
+
         <!-- Breadcrumb de Navegação -->
         <div class="bg-white rounded-lg shadow-sm border border-gray-200">
           <div class="px-6 py-4">
@@ -460,6 +495,12 @@ import { formatarData } from '@/utils/formatDate';
     // URL assinada do recibo, gerada no backend. Vem null quando a OS não está
     // paga. Nunca montar esta URL aqui com route(): a rota exige assinatura.
     reciboUrl: { type: String, default: null },
+    // Conferência de conformidade com a RDC 622/2022 (Plano 24, Task 24.4).
+    // Informativa: lista o que falta na documentação da execução e avisa
+    // quando o produto aplicado estava com registro vencido na data. Nunca
+    // impede nada. Vem null quando a conferência falhou no backend, e nesse
+    // caso o bloco simplesmente não aparece.
+    conformidade: { type: Object, default: null },
   });
 
   const activeTab = ref('financial');
