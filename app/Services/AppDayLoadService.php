@@ -8,6 +8,7 @@ use App\Models\EventType;
 use App\Models\Product;
 use App\Models\Route;
 use App\Models\RouteStop;
+use App\Models\Service;
 use App\Models\Technician;
 use App\Models\User;
 use App\Models\WorkOrder;
@@ -81,9 +82,19 @@ class AppDayLoadService
         'other' => 'Outros',
     ];
 
+    /**
+     * Chave do módulo que liga a etapa de confirmação de EPI (Plano 29).
+     *
+     * Tenant sem ele não recebe EPI nenhum na carga, e a etapa simplesmente não
+     * aparece no aplicativo: o pacote continua exatamente do tamanho que era
+     * antes do Plano 29 para quem não usa o módulo.
+     */
+    private const MODULO_EPI = 'epi';
+
     public function __construct(
         private readonly WorkOrderAccessService $workOrderAccessService,
         private readonly LocalDeExecucaoService $localDeExecucaoService,
+        private readonly ModuleService $moduleService,
     ) {}
 
     /**
@@ -293,6 +304,8 @@ class AppDayLoadService
      */
     private function carregarOrdens(User $usuario, ?int $tecnicoAlvo, array $periodo, ?Carbon $desde): array
     {
+        $comEpi = $this->moduloDeEpiLigado($usuario);
+
         $consulta = $this->escopoBase($usuario, $tecnicoAlvo)
             ->select([
                 'work_orders.id',
@@ -338,6 +351,7 @@ class AppDayLoadService
                 'services:id,name,category',
                 'products:id,name',
             ])
+            ->when($comEpi, fn (Builder $q) => $q->with($this->relacoesDeEpi()))
             ->orderBy('scheduled_date')
             ->orderBy('start_time')
             ->orderBy('work_orders.id')
@@ -347,7 +361,7 @@ class AppDayLoadService
         $temMais = $consulta->count() > self::LIMITE_ORDENS;
 
         $itens = $consulta->take(self::LIMITE_ORDENS)
-            ->map(fn (WorkOrder $ordem) => $this->mapearOrdem($ordem))
+            ->map(fn (WorkOrder $ordem) => $this->mapearOrdem($ordem, $comEpi))
             ->values()
             ->all();
 
@@ -355,10 +369,65 @@ class AppDayLoadService
     }
 
     /**
+     * O tenant desta carga tem o módulo `epi` ligado?
+     *
+     * A empresa é a do usuário autenticado, informada explicitamente em vez de
+     * deixar `ModuleService::ativo()` cair em `Company::current()`: este Service
+     * também é chamado fora de uma requisição HTTP (ver `RouteEndpointTest`), e
+     * ali o tenant corrente pode não estar resolvido.
+     *
+     * Usuário sem empresa é falso, não erro: sem empresa não há módulo
+     * contratado, e a carga segue sem a etapa de EPI — nunca uma exceção que
+     * derruba o dia inteiro do técnico por causa de uma etapa acessória.
+     */
+    private function moduloDeEpiLigado(User $usuario): bool
+    {
+        $empresa = $usuario->company;
+
+        if ($empresa === null) {
+            return false;
+        }
+
+        return $this->moduleService->ativo(self::MODULO_EPI, $empresa);
+    }
+
+    /**
+     * Eager load das exigências de EPI dos serviços da ordem de serviço.
+     *
+     * Carregado em duas relações aninhadas, e não por consulta dentro do laço de
+     * `mapearOrdem()`: 200 ordens de serviço com três serviços cada produziriam
+     * 600 consultas em uma chamada que o técnico faz com sinal ruim.
+     *
+     * `personal_protective_equipments` entra com **três colunas** (`id`, `nome`,
+     * `tipo`). CA, validade, fabricante, vida útil e observações ficam de fora, e
+     * isso é decisão registrada do plano, não economia distraída: o aparelho só
+     * precisa desenhar a etapa de confirmação, o número do CA não muda nada do
+     * que o técnico responde, e a carga do dia é justamente o ponto onde o
+     * aplicativo fica pesado.
+     *
+     * Só EPI **ativo**: modelo inativado no cadastro é o que a empresa deixou de
+     * usar, e continuar cobrando confirmação dele em campo produziria uma
+     * pendência que ninguém consegue resolver. A exigência continua no banco (o
+     * `ExigenciaDeEpiService` não apaga nada quando um EPI é inativado); ela só
+     * para de ir ao aparelho.
+     *
+     * @return array<string, mixed>
+     */
+    private function relacoesDeEpi(): array
+    {
+        return [
+            'services.ppeRequirements:id,service_id,personal_protective_equipment_id,obrigatorio',
+            'services.ppeRequirements.personalProtectiveEquipment' => fn ($relacao) => $relacao
+                ->select(['id', 'nome', 'tipo'])
+                ->where('ativo', true),
+        ];
+    }
+
+    /**
      * Campos seguros de uma ordem de serviço para o aplicativo do técnico.
      * Nenhum campo de valor, custo ou margem entra aqui.
      */
-    private function mapearOrdem(WorkOrder $ordem): array
+    private function mapearOrdem(WorkOrder $ordem, bool $comEpi = false): array
     {
         return [
             'id' => $ordem->id,
@@ -434,7 +503,82 @@ class AppDayLoadService
                 'unidade' => $produto->pivot->unit,
                 'observacoes' => $produto->pivot->observations,
             ])->values()->all(),
+            // Plano 29, Task 29.3: a etapa de confirmação de EPI da execução.
+            // Lista vazia quando o tenant não tem o módulo `epi`, quando nenhum
+            // serviço da OS exige EPI ou quando todos os exigidos foram
+            // inativados no cadastro — os três são o estado normal, e nenhum é
+            // irregularidade.
+            'epis_exigidos' => $this->episExigidosDaOrdem($ordem, $comEpi),
         ];
+    }
+
+    /**
+     * EPIs que os serviços desta ordem de serviço exigem, sem repetição.
+     *
+     * Três campos por item, e só três: `id`, `nome` e `tipo` do EPI, mais
+     * `obrigatorio`. É o mínimo para desenhar a etapa — decisão registrada do
+     * plano. CA, validade e fabricante **não** vão para o aparelho: eles não
+     * mudam nada do que o técnico responde, e a carga do dia é o ponto onde o
+     * aplicativo fica pesado, com quem sofre sendo justamente quem está no campo
+     * com sinal ruim.
+     *
+     * `obrigatorio` entra porque não é um dado do EPI, é a força da exigência
+     * **naquele serviço**, e sem ele a etapa não teria como separar o que a
+     * empresa cobra do que ela recomenda. É a mesma distinção que decide o aviso
+     * ao gestor (`ConfirmacaoDeEpiService::avisarExecucaoSemEpi()` só olha os
+     * obrigatórios), e um booleano por item não é o que faz o pacote crescer.
+     *
+     * **O mais exigente vence na deduplicação.** Dois serviços da mesma OS podem
+     * exigir o mesmo respirador, um como obrigatório e o outro como recomendado:
+     * a linha sai uma vez só, marcada como obrigatória. Rebaixar a exigência
+     * porque outro serviço é mais frouxo esconderia justamente a falta que gera o
+     * aviso ao gestor.
+     *
+     * O item some da lista quando a exigência é removida no escritório, mas só na
+     * **próxima carga completa**: uma carga incremental (`desde`) só reenvia
+     * ordens de serviço cujo `updated_at` mudou, e mexer na exigência de um
+     * serviço não toca em `work_orders`. É o mesmo comportamento que `servicos` e
+     * `produtos_previstos` já têm hoje, e a alternativa — tocar a OS a cada
+     * mudança de cadastro — reenviaria o roteiro inteiro por causa de um clique
+     * no escritório.
+     *
+     * @return array<int, array{id: int, nome: string, tipo: string|null, obrigatorio: bool}>
+     */
+    private function episExigidosDaOrdem(WorkOrder $ordem, bool $comEpi): array
+    {
+        if (! $comEpi) {
+            return [];
+        }
+
+        $itens = [];
+
+        foreach ($ordem->services as $servico) {
+            /** @var Service $servico */
+            foreach ($servico->ppeRequirements as $exigencia) {
+                $epi = $exigencia->personalProtectiveEquipment;
+
+                // Nulo quando o modelo de EPI foi inativado no cadastro: o eager
+                // load de `relacoesDeEpi()` filtra por `ativo`.
+                if ($epi === null) {
+                    continue;
+                }
+
+                $id = (int) $epi->id;
+                $obrigatorio = (bool) $exigencia->obrigatorio;
+
+                $itens[$id] = [
+                    'id' => $id,
+                    'nome' => $epi->nome,
+                    'tipo' => $epi->tipo,
+                    // O mais exigente vence. Ver o docblock.
+                    'obrigatorio' => $obrigatorio || ($itens[$id]['obrigatorio'] ?? false),
+                ];
+            }
+        }
+
+        ksort($itens);
+
+        return array_values($itens);
     }
 
     /**
