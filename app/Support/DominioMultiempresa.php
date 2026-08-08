@@ -94,6 +94,9 @@ final class DominioMultiempresa
         'service_orders',
         'service_types',
         'services',
+        'signature_provider_configs',
+        'signature_requests',
+        'signature_signers',
         'stock_balances',
         'stock_locations',
         'stock_movements',
@@ -237,6 +240,9 @@ final class DominioMultiempresa
         \App\Models\ServiceInvoice::class,
         \App\Models\ServiceOrder::class,
         \App\Models\ServiceType::class,
+        \App\Models\SignatureProviderConfig::class,
+        \App\Models\SignatureRequest::class,
+        \App\Models\SignatureSigner::class,
         \App\Models\StockBalance::class,
         \App\Models\StockLocation::class,
         \App\Models\StockMovement::class,
@@ -425,6 +431,13 @@ final class DominioMultiempresa
                 'indice' => 'payment_gateway_configs_webhook_token_hash_unique',
                 'colunas' => ['webhook_token_hash'],
                 'motivo' => 'Índice de busca do webhook_token cifrado (Plano 19, Task 19.4): o webhook de cobrança chega em POST /webhooks/cobranca/{webhookToken} sem sessão e sem tenant resolvido, e é esta coluna (hash HMAC-SHA256 determinístico do token em claro, calculado em PaymentGatewayConfig::hashDoWebhookToken()) que PaymentGatewayConfig::paraToken() consulta para descobrir de qual empresa é o token. Compor com company_id inverteria a causalidade: o objetivo desta consulta é justamente descobrir o company_id a partir do hash, não filtrar dentro de um company_id já conhecido. Mesmo raciocínio já registrado para invitations.token_unique e satisfaction_surveys.token_unique: token resolvido antes de existir tenant no contexto da requisição.',
+            ],
+        ],
+        'signature_provider_configs' => [
+            [
+                'indice' => 'signature_provider_configs_webhook_token_hash_unique',
+                'colunas' => ['webhook_token_hash'],
+                'motivo' => 'Índice de busca do webhook_token cifrado (Plano 26, Task 26.1): o webhook de assinatura chega em POST /webhooks/assinatura/{webhookToken} sem sessão e sem tenant resolvido, e é esta coluna (hash HMAC-SHA256 determinístico do token em claro, calculado em SignatureProviderConfig::hashDoWebhookToken()) que SignatureProviderConfig::paraToken() consulta para descobrir de qual empresa é o token. Compor com company_id inverteria a causalidade: o objetivo desta consulta é descobrir o company_id a partir do hash, não filtrar dentro de um company_id já conhecido. Mesmo raciocínio, e mesma solução, já registrados para payment_gateway_configs.webhook_token_hash_unique.',
             ],
         ],
         // As demais vivem em tabelas fora do escopo e ficam aqui só como registro.
