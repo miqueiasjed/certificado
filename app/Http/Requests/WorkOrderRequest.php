@@ -23,6 +23,14 @@ class WorkOrderRequest extends FormRequest
             'client_id' => $this->isMethod('POST') ? 'required|exists:clients,id' : 'sometimes|exists:clients,id',
             'address_id' => 'nullable|exists:addresses,id',
             'technician_id' => 'nullable|exists:users,id',
+            // Frota (Plano 27, Task 27.4). Nullable e continua nullable: nem
+            // toda empresa controla frota, e o módulo `frota` é opcional. Sem
+            // `vehicle_id` informado, `WorkOrderService` preenche com o
+            // veículo do técnico designado, quando ele tem exatamente um;
+            // informado, o que veio do formulário vence, porque troca de
+            // veículo acontece.
+            'vehicle_id' => 'nullable|exists:vehicles,id',
+            'km_deslocamento' => 'nullable|integer|min:0',
             'technicians' => 'nullable|array',
             'technicians.*' => 'nullable|exists:technicians,id',
             'products' => 'nullable|array',

@@ -543,6 +543,29 @@ class SyncPermissions extends Command
                 'ia-gerar',
                 'ia-revisar',
             ],
+            // Frota e veículos (Plano 27, Task 27.4). O arquivo da task pedia
+            // "frota.ver"/"frota.gerenciar", com ponto; valem os nomes abaixo,
+            // no padrão "recurso-acao" com hífen do resto do catálogo (mesmo
+            // ajuste já registrado para `meta-gerenciar` e para as permissões
+            // de comissão).
+            //
+            // - `frota-ver`: lista de veículos, ficha (consumo, custo por
+            //   quilômetro, próximas manutenções, documentos e saldo do
+            //   estoque do veículo) e os históricos. Leitura pura; termina em
+            //   "-ver", então entra no papel `leitura` pelo filtro genérico de
+            //   `RolesAndPermissionsSeeder`.
+            // - `frota-gerenciar`: tudo que escreve — cadastro do veículo,
+            //   registro de abastecimento e de manutenção, documentos e a
+            //   geração do título a pagar. Nenhum prefixo ou sufixo do seeder
+            //   a alcança, então só `administrador` recebe, mesmo critério de
+            //   `planta-gerenciar` e `endereco-geo`: registrar abastecimento
+            //   move `vehicles.km_atual`, que é de onde sai o custo por
+            //   quilômetro que entra na margem financeira das ordens de
+            //   serviço.
+            'frota' => [
+                'frota-ver',
+                'frota-gerenciar',
+            ],
         ];
     }
 

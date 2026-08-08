@@ -4,6 +4,7 @@ namespace App\Services\Financial;
 
 use App\Models\Receivable;
 use App\Models\WorkOrder;
+use App\Services\Fleet\RateioDeDeslocamentoService;
 use App\Services\WorkOrderStockService;
 use App\Support\Dinheiro;
 
@@ -40,14 +41,35 @@ use App\Support\Dinheiro;
  * parcial: um número de mão de obra chutado seria pior que nenhum número,
  * porque passaria a impressão de custo real conhecido.
  *
- * Custo de deslocamento: estimativa nesta entrega
- * ------------------------------------------------
- * O cálculo por rota/quilômetro é o Plano 27 (frota), que ainda não existe.
- * Até lá, o custo de deslocamento é um valor **fixo por visita**
- * (`CUSTO_DESLOCAMENTO_POR_VISITA_CENTAVOS`), e o retorno carrega
- * `deslocamento_e_estimado => true` sempre - inclusive quando a margem não é
- * parcial por nenhum outro motivo - para a tela nunca dar a entender que esse
- * componente é custo real de rota.
+ * Custo de deslocamento: calculado pela frota desde o Plano 27
+ * -------------------------------------------------------------
+ * Até o Plano 26 este componente era um valor **fixo por visita** (R$ 50,00), e
+ * o retorno carregava `deslocamento_e_estimado => true` sempre. A Task 27.2
+ * substituiu o fixo pelo cálculo real: quando a OS tem veículo vinculado,
+ * `RateioDeDeslocamentoService` multiplica a quilometragem do deslocamento
+ * (informada em `work_orders.km_deslocamento`, ou estimada pelo roteiro do
+ * Plano 22) pelo custo por quilômetro do veículo no período.
+ *
+ * O fixo continua existindo como reserva, em duas situações:
+ *
+ * - **OS sem veículo vinculado.** Empresa que não controla frota não perde a
+ *   margem: o Plano 18 continua funcionando exatamente como antes, e a margem
+ *   **não** é marcada como parcial por isso. Não ter frota não é falta de dado.
+ * - **OS com veículo vinculado, mas sem quilometragem ou sem custo por
+ *   quilômetro.** Aí é falta de dado de verdade — a empresa optou pela frota e
+ *   o número não fechou —, então o fixo entra e a margem sai **parcial**, com o
+ *   motivo correspondente.
+ *
+ * `deslocamento_e_estimado` continua verdadeiro sempre que o componente não for
+ * custo medido: no fixo de reserva, na quilometragem estimada pelo roteiro e no
+ * custo por quilômetro vindo do `custo_km_padrao` do veículo. Só sai falso com
+ * quilometragem informada e custo apurado sobre histórico de tanque cheio
+ * suficiente.
+ *
+ * **Efeito sobre margem histórica.** O cálculo é feito na leitura e nada é
+ * reescrito, mas a margem exibida de OS antigas muda assim que o módulo de
+ * frota é ligado e os veículos passam a ser vinculados. É mudança esperada, e
+ * precisa ser comunicada à empresa antes de ligar o módulo.
  *
  * Margem parcial
  * ---------------
@@ -76,17 +98,42 @@ class WorkOrderMarginService
     public const MOTIVO_TECNICO_SEM_CUSTO_HORA = 'tecnico_sem_custo_hora';
 
     /**
-     * Custo fixo de deslocamento por visita, em centavos, enquanto o cálculo
-     * por rota do Plano 27 não existe. R$ 50,00.
+     * OS com veículo vinculado, mas sem quilometragem informada nem estimada
+     * pelo roteiro: o deslocamento cai no fixo de reserva (Plano 27).
+     */
+    public const MOTIVO_DESLOCAMENTO_SEM_QUILOMETRAGEM = 'deslocamento_sem_quilometragem';
+
+    /**
+     * OS com veículo vinculado e quilometragem conhecida, mas sem custo por
+     * quilômetro: histórico de tanque cheio insuficiente e `custo_km_padrao`
+     * não cadastrado no veículo (Plano 27).
+     */
+    public const MOTIVO_DESLOCAMENTO_SEM_CUSTO_KM = 'deslocamento_sem_custo_km';
+
+    /**
+     * Deslocamento calculado pela frota (Plano 27).
+     */
+    public const FONTE_DESLOCAMENTO_FROTA = 'frota';
+
+    /**
+     * Deslocamento vindo do valor fixo por visita, a reserva do Plano 18.
+     */
+    public const FONTE_DESLOCAMENTO_FIXA = 'fixa';
+
+    /**
+     * Custo fixo de deslocamento por visita, em centavos. R$ 50,00.
      *
-     * Ver o cabeçalho da classe: este valor nunca deve ser lido como custo
-     * real de deslocamento, e por isso o retorno sempre marca
-     * `deslocamento_e_estimado => true`.
+     * Deixou de ser o cálculo padrão na Task 27.2 e virou a reserva: vale para
+     * OS sem veículo vinculado (empresa que não controla frota) e para OS cujo
+     * rateio não fechou por falta de dado. Ver o cabeçalho da classe. Este
+     * valor nunca deve ser lido como custo real de deslocamento, e por isso
+     * quem cai nele sempre recebe `deslocamento_e_estimado => true`.
      */
     private const CUSTO_DESLOCAMENTO_POR_VISITA_CENTAVOS = 5000;
 
     public function __construct(
         private readonly WorkOrderStockService $estoque,
+        private readonly RateioDeDeslocamentoService $deslocamento,
     ) {}
 
     /**
@@ -103,6 +150,11 @@ class WorkOrderMarginService
      *     horas_de_execucao: float,
      *     custo_hora_tecnico: ?string,
      *     deslocamento_e_estimado: bool,
+     *     deslocamento_fonte: string,
+     *     deslocamento_km: ?float,
+     *     deslocamento_origem_km: ?string,
+     *     deslocamento_custo_por_km: ?string,
+     *     deslocamento_origem_custo_km: ?string,
      *     parcial: bool,
      *     motivos_parcial: list<string>
      * }
@@ -119,7 +171,9 @@ class WorkOrderMarginService
         ['centavos' => $custoMaoDeObraCentavos, 'motivo' => $motivoMaoDeObra] = $this->custoDeMaoDeObra($os);
         $this->registrarMotivo($motivosParcial, $motivoMaoDeObra);
 
-        $custoDeslocamentoCentavos = self::CUSTO_DESLOCAMENTO_POR_VISITA_CENTAVOS;
+        $rateio = $this->custoDeDeslocamento($os);
+        $this->registrarMotivo($motivosParcial, $rateio['motivo']);
+        $custoDeslocamentoCentavos = $rateio['centavos'];
 
         $custoTotalCentavos = $custoProdutoCentavos + $custoMaoDeObraCentavos + $custoDeslocamentoCentavos;
         $margemCentavos = $receitaCentavos - $custoTotalCentavos;
@@ -136,7 +190,12 @@ class WorkOrderMarginService
             'margem' => Dinheiro::paraDecimal($margemCentavos),
             'horas_de_execucao' => (float) $os->duration_hours,
             'custo_hora_tecnico' => $tecnico?->custo_hora !== null ? (string) $tecnico->custo_hora : null,
-            'deslocamento_e_estimado' => true,
+            'deslocamento_e_estimado' => $rateio['estimado'],
+            'deslocamento_fonte' => $rateio['fonte'],
+            'deslocamento_km' => $rateio['km'],
+            'deslocamento_origem_km' => $rateio['origem_km'],
+            'deslocamento_custo_por_km' => $rateio['custo_por_km'],
+            'deslocamento_origem_custo_km' => $rateio['origem_custo_km'],
             'parcial' => $motivosParcial !== [],
             'motivos_parcial' => array_values($motivosParcial),
         ];
@@ -182,6 +241,60 @@ class WorkOrderMarginService
         $custoReais = round($horas * (float) $tecnico->custo_hora, 2);
 
         return ['centavos' => Dinheiro::centavos($custoReais), 'motivo' => null];
+    }
+
+    /**
+     * Custo de deslocamento: rateio da frota quando dá, fixo de reserva quando
+     * não dá.
+     *
+     * Só marca a margem como parcial quando a OS **tem** veículo vinculado e
+     * ainda assim o rateio não fechou. Sem veículo não é falta de dado: é
+     * empresa que não controla frota, e o Plano 18 continua valendo para ela
+     * exatamente como antes desta entrega.
+     *
+     * @return array{
+     *     centavos: int,
+     *     fonte: string,
+     *     estimado: bool,
+     *     km: ?float,
+     *     origem_km: ?string,
+     *     custo_por_km: ?string,
+     *     origem_custo_km: ?string,
+     *     motivo: ?string
+     * }
+     */
+    private function custoDeDeslocamento(WorkOrder $os): array
+    {
+        $rateio = $this->deslocamento->daOs($os);
+
+        if ($rateio['aplicavel']) {
+            return [
+                'centavos' => Dinheiro::centavos($rateio['valor']),
+                'fonte' => self::FONTE_DESLOCAMENTO_FROTA,
+                'estimado' => $rateio['estimado'],
+                'km' => $rateio['km'],
+                'origem_km' => $rateio['origem_km'],
+                'custo_por_km' => $rateio['custo_por_km'],
+                'origem_custo_km' => $rateio['origem_custo_km'],
+                'motivo' => null,
+            ];
+        }
+
+        return [
+            'centavos' => self::CUSTO_DESLOCAMENTO_POR_VISITA_CENTAVOS,
+            'fonte' => self::FONTE_DESLOCAMENTO_FIXA,
+            'estimado' => true,
+            'km' => $rateio['km'],
+            'origem_km' => $rateio['origem_km'],
+            'custo_por_km' => null,
+            'origem_custo_km' => null,
+            'motivo' => match ($rateio['motivo']) {
+                RateioDeDeslocamentoService::MOTIVO_SEM_QUILOMETRAGEM => self::MOTIVO_DESLOCAMENTO_SEM_QUILOMETRAGEM,
+                RateioDeDeslocamentoService::MOTIVO_SEM_CUSTO_KM => self::MOTIVO_DESLOCAMENTO_SEM_CUSTO_KM,
+                // MOTIVO_SEM_VEICULO cai aqui de propósito: ver o cabeçalho.
+                default => null,
+            },
+        ];
     }
 
     /**

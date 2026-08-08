@@ -43,6 +43,14 @@ class WorkOrder extends Model
         'assinada_em',
         'recusa_motivo',
         'recusa_registrada_em',
+        // Frota (Plano 27, Task 27.1): veículo usado na execução e a
+        // quilometragem do deslocamento até o cliente. Os dois são nullable e
+        // continuam nullable — nem toda empresa controla frota, e o módulo
+        // `frota` é opcional desde o Plano 6. Quando `km_deslocamento` é nulo,
+        // o rateio da Task 27.2 cai na distância estimada do roteiro (Plano
+        // 22) e marca a origem do número como estimada.
+        'vehicle_id',
+        'km_deslocamento',
     ];
 
     protected $casts = [
@@ -75,6 +83,10 @@ class WorkOrder extends Model
         'fim_longitude' => 'decimal:7',
         'fim_registrado_em' => 'datetime',
         'divergencia_local_metros' => 'integer',
+        // Frota (Plano 27, Task 27.1): quilometragem do deslocamento até o
+        // cliente, informada por quem executou. Nula quando ninguém informou,
+        // e é a nulidade que faz o rateio cair na estimativa do roteiro.
+        'km_deslocamento' => 'integer',
     ];
 
     protected $appends = [
@@ -119,6 +131,18 @@ class WorkOrder extends Model
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
+    }
+
+    /**
+     * Veículo usado na execução desta OS (Plano 27), quando existe.
+     *
+     * Nulo é o caso comum e legítimo: empresa que não controla frota nunca
+     * preenche este vínculo, e o rateio de deslocamento simplesmente não entra
+     * na margem dela.
+     */
+    public function vehicle(): BelongsTo
+    {
+        return $this->belongsTo(Vehicle::class);
     }
 
     public function technicians(): BelongsToMany

@@ -242,6 +242,24 @@
             <span v-if="!collapsed">Roteiro do dia</span>
           </Link>
         </li>
+        <li v-if="podeVerFrota">
+          <Link
+            :href="route('frota.index')"
+            :class="[
+              isCurrentRoute('/veiculos')
+                ? 'bg-green-700 text-white'
+                : 'text-green-100 hover:bg-green-700 hover:text-white',
+              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+            ]">
+            <svg :class="[
+              isCurrentRoute('/veiculos') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              'h-5 w-5 shrink-0 transition-colors'
+            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 17a2 2 0 100-4 2 2 0 000 4zm8 0a2 2 0 100-4 2 2 0 000 4zM3 13h18l-1.5-5H4.5L3 13z"></path>
+            </svg>
+            <span v-if="!collapsed">Frota</span>
+          </Link>
+        </li>
         <li v-if="podeVerCertificados">
           <Link
             :href="'/certificates'"
@@ -540,8 +558,12 @@ const podeVerOrdensServico = computed(() => pode('ordem-servico-ver'));
 const podeVerCertificados = computed(() => pode('certificado-ver'));
 const podeVerContratos = computed(() => pode('contrato-ver') && temModulo('contratos'));
 const podeVerRoteiro = computed(() => pode('roteiro-ver') && temModulo('roteirizacao'));
+// Frota (Plano 27): o item só aparece com a permissão E com o módulo ligado.
+// O módulo nasce desligado para todos os tenants, então a barra lateral
+// continua exatamente como está hoje até alguém pedir a frota.
+const podeVerFrota = computed(() => pode('frota-ver') && temModulo('frota'));
 const mostrarBlocoOperacional = computed(() =>
-  podeVerCadastros.value || podeVerOrdensServico.value || podeVerCertificados.value || podeVerContratos.value || podeVerRoteiro.value
+  podeVerCadastros.value || podeVerOrdensServico.value || podeVerCertificados.value || podeVerContratos.value || podeVerRoteiro.value || podeVerFrota.value
 );
 
 // Gestão Financeira

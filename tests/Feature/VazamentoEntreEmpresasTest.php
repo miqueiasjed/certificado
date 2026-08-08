@@ -57,6 +57,7 @@ use App\Models\Procedure;
 use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\Receivable;
+use App\Models\Refueling;
 use App\Models\ReceivableInstallment;
 use App\Models\Room;
 // Alias por causa da colisão com a facade Illuminate\Support\Facades\Route,
@@ -82,6 +83,9 @@ use App\Models\SyncOperation;
 use App\Models\Technician;
 use App\Models\TechnicianTrackingSetting;
 use App\Models\User;
+use App\Models\Vehicle;
+use App\Models\VehicleDocument;
+use App\Models\VehicleMaintenance;
 use App\Models\WorkOrder;
 use App\Models\WorkOrderAdequation;
 use App\Models\WorkOrderDeviceEvent;
@@ -2116,6 +2120,53 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'custo_estimado' => '0.014100',
                 'duracao_ms' => 1500,
                 'sucesso' => true,
+            ]);
+
+            // Frota (Plano 27, Task 27.1): veículo, abastecimento, manutenção e
+            // documento. A placa carrega o sufixo do tenant de propósito: ela é
+            // única por empresa (`vehicles.[company_id, placa]`), então dois
+            // tenants podem ter a mesma, e é justamente por isso que ela serve
+            // de marca textual — a placa do tenant 2 aparecendo numa resposta
+            // do tenant 1 é vazamento, não coincidência.
+            $dados['vehicle'] = Vehicle::create([
+                'placa' => 'FRT'.$this->sufixo($marca).'AA',
+                'modelo' => 'Saveiro '.$marca,
+                'marca' => 'Volkswagen',
+                'ano' => 2022,
+                'tipo' => 'utilitario',
+                'technician_id' => $dados['technician']->id,
+                'km_atual' => 10000,
+                'situacao' => 'ativo',
+                'custo_km_padrao' => '0.9000',
+            ]);
+
+            $dados['refueling'] = Refueling::create([
+                'vehicle_id' => $dados['vehicle']->id,
+                'data' => '2026-07-05',
+                'km' => 10400,
+                'litros' => '40.000',
+                'valor_total' => '200.00',
+                'valor_litro' => '5.0000',
+                'tipo_combustivel' => 'gasolina',
+                'posto' => 'Posto '.$marca,
+                'tanque_cheio' => true,
+                'user_id' => $autor->id,
+            ]);
+
+            $dados['vehicleMaintenance'] = VehicleMaintenance::create([
+                'vehicle_id' => $dados['vehicle']->id,
+                'tipo' => 'preventiva',
+                'descricao' => 'Troca de óleo '.$marca,
+                'proxima_em_data' => '2026-12-01',
+                'proxima_em_km' => 20000,
+                'situacao' => 'agendada',
+            ]);
+
+            $dados['vehicleDocument'] = VehicleDocument::create([
+                'vehicle_id' => $dados['vehicle']->id,
+                'tipo' => 'licenciamento',
+                'numero' => 'CRLV-'.$this->sufixo($marca),
+                'validade' => '2026-12-31',
             ]);
 
             return $dados;

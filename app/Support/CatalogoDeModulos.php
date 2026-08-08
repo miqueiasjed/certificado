@@ -60,6 +60,14 @@ final class CatalogoDeModulos
             // devolver erro. Ligar depende de a empresa ter contratado o
             // provedor e cadastrado a credencial dela.
             ['chave' => 'assinatura_eletronica', 'nome' => 'Assinatura eletrônica de contratos', 'descricao' => 'Envio do contrato para assinatura eletrônica com validade jurídica, acompanhamento da situação e arquivo assinado no portal do cliente.', 'sempre_ativo' => false],
+            // Frota e veículos (Plano 27, Task 27.4). Nasce desligado para
+            // todos os tenants, como todo módulo que não é `sempre_ativo`, e
+            // continua desligado até alguém pedir: só compensa para empresa
+            // com várias equipes. Ligar o módulo antes de os veículos estarem
+            // cadastrados e com histórico de abastecimento faria a rotina de
+            // alerta (`frota:verificar`, que também nasce sem agendamento)
+            // avisar sobre dado incompleto.
+            ['chave' => 'frota', 'nome' => 'Frota e veículos', 'descricao' => 'Cadastro de veículos, abastecimento, manutenção preventiva e custo de deslocamento no serviço.', 'sempre_ativo' => false],
         ];
     }
 }

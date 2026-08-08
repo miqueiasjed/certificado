@@ -348,6 +348,55 @@ final class EventosDeNotificacao
      */
     public const CONTRATO_PENDENTE_DE_ASSINATURA = 'contrato_pendente_de_assinatura';
 
+    /**
+     * Manutenção preventiva do veículo entrando em janela de alerta (Plano 27,
+     * Task 27.3), enfileirado pela rotina `frota:verificar`.
+     *
+     * Aviso interno, mesmo critério de `ESTOQUE_ABAIXO_DO_MINIMO`: quem leva o
+     * carro à oficina é a empresa, nunca o cliente final, e por isso só aceita
+     * e-mail.
+     *
+     * Um evento e um template para os dois critérios (data e quilometragem) e
+     * para as duas janelas de cada um, mesmo critério de
+     * `LOTE_PROXIMO_DO_VENCIMENTO` e de `COBRANCA_EM_ATRASO`: quem diferencia
+     * os disparos é a opção `marco` de `NotificationService::enfileirar()`
+     * (`data-30`, `data-7`, `km-1000`, `km-200`), decidida pela rotina, e o
+     * texto usa `criterio`/`restante_texto` para dizer em palavras qual dos
+     * dois chegou primeiro.
+     */
+    public const MANUTENCAO_DE_VEICULO_A_VENCER = 'manutencao_de_veiculo_a_vencer';
+
+    /**
+     * Documento do veículo (licenciamento, seguro ou outro) perto de perder a
+     * validade, ou já vencido (Plano 27, Task 27.3), enfileirado pela mesma
+     * rotina `frota:verificar`.
+     *
+     * Aviso interno, pelo mesmo motivo do evento acima. O documento vencido é a
+     * exceção de "um aviso por marco": `VerificarFrota` reenvia este evento
+     * semanalmente enquanto a validade não for atualizada, mesmo critério do
+     * lote vencido do Plano 17. Circular com licenciamento vencido é infração e
+     * sinistro com seguro vencido é prejuízo inteiro, então o silêncio depois
+     * do primeiro aviso não é aceitável aqui.
+     */
+    public const DOCUMENTO_DE_VEICULO_A_VENCER = 'documento_de_veiculo_a_vencer';
+
+    /**
+     * Veículo sem abastecimento registrado há trinta dias ou mais (Plano 27,
+     * Task 27.3).
+     *
+     * Existe como evento próprio, e não como detalhe do alerta de manutenção,
+     * porque é uma falha de outra natureza: sem `km_atual` atualizado, o alerta
+     * de manutenção por quilometragem **não dispara**, e não disparar é
+     * indistinguível de "está tudo em dia". Este aviso é o que torna esse
+     * silêncio visível.
+     *
+     * Sem marco de propósito, mesmo critério de `ESTOQUE_ABAIXO_DO_MINIMO`: a
+     * chave de idempotência (evento + destinatário + veículo) faz o aviso sair
+     * uma vez só enquanto a situação durar. O e-mail é o empurrão inicial; a
+     * ficha do veículo é quem mostra a pendência todo dia depois disso.
+     */
+    public const QUILOMETRAGEM_DE_VEICULO_DESATUALIZADA = 'quilometragem_de_veiculo_desatualizada';
+
     public const NFSE_EMITIDA = 'nfse_emitida';
 
     public const NFSE_CANCELADA = 'nfse_cancelada';
@@ -1034,6 +1083,88 @@ final class EventosDeNotificacao
                         ."Saldo por local: {{locais}}.\n\n"
                         .'Lote vencido precisa ser descartado com registro; até lá, este aviso é repetido '
                         .'semanalmente.',
+                ],
+            ],
+        ],
+
+        self::MANUTENCAO_DE_VEICULO_A_VENCER => [
+            'rotulo' => 'Manutenção de veículo a vencer',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'veiculo_placa',
+                'veiculo_modelo',
+                'manutencao_descricao',
+                'criterio',
+                'restante_texto',
+                'proxima_em_data',
+                'proxima_em_km',
+                'km_atual',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Manutenção a vencer: {{veiculo_placa}} ({{manutencao_descricao}})',
+                    'corpo' => 'A manutenção "{{manutencao_descricao}}" do veículo {{veiculo_placa}} '
+                        ."({{veiculo_modelo}}) está próxima do vencimento.\n\n"
+                        ."Critério que chegou primeiro: {{criterio}}.\n"
+                        ."Falta: {{restante_texto}}.\n"
+                        ."Previsão por data: {{proxima_em_data}}.\n"
+                        ."Previsão por quilometragem: {{proxima_em_km}} (hodômetro atual: {{km_atual}}).\n\n"
+                        .'Data e quilometragem são critérios independentes: vence o que chegar primeiro. '
+                        .'Programe a oficina antes que o veículo saia de operação sem aviso.',
+                ],
+            ],
+        ],
+
+        self::DOCUMENTO_DE_VEICULO_A_VENCER => [
+            'rotulo' => 'Documento de veículo a vencer ou já vencido',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'veiculo_placa',
+                'veiculo_modelo',
+                'documento_tipo',
+                'documento_numero',
+                'data_vencimento',
+                'dias_para_vencer',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Documento do veículo {{veiculo_placa}}: atenção à validade',
+                    'corpo' => 'O documento de {{documento_tipo}} do veículo {{veiculo_placa}} '
+                        ."({{veiculo_modelo}}) tem validade em {{data_vencimento}}.\n\n"
+                        ."Número do documento: {{documento_numero}}.\n"
+                        ."Dias até o vencimento: {{dias_para_vencer}} (número negativo indica documento já vencido).\n\n"
+                        .'Circular com o licenciamento vencido é infração e sinistro com seguro vencido é prejuízo '
+                        .'inteiro. Enquanto a validade não for atualizada, este aviso é repetido semanalmente.',
+                ],
+            ],
+        ],
+
+        self::QUILOMETRAGEM_DE_VEICULO_DESATUALIZADA => [
+            'rotulo' => 'Quilometragem de veículo desatualizada',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'veiculo_placa',
+                'veiculo_modelo',
+                'km_atual',
+                'dias_sem_abastecimento',
+                'ultimo_abastecimento',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Quilometragem sem atualização: {{veiculo_placa}}',
+                    'corpo' => 'O veículo {{veiculo_placa}} ({{veiculo_modelo}}) está há '
+                        ."{{dias_sem_abastecimento}} dia(s) sem abastecimento registrado.\n\n"
+                        ."Último abastecimento: {{ultimo_abastecimento}}.\n"
+                        ."Hodômetro registrado no sistema: {{km_atual}} km.\n\n"
+                        .'Enquanto a quilometragem não for atualizada, o alerta de manutenção por quilometragem '
+                        .'não dispara para este veículo, e a ausência de aviso passa a ser indistinguível de '
+                        .'"está tudo em dia". Registre o próximo abastecimento com a leitura do hodômetro.',
                 ],
             ],
         ],
