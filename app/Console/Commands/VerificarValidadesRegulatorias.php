@@ -4,8 +4,8 @@ namespace App\Console\Commands;
 
 use App\Console\Commands\Concerns\OperaPorTenant;
 use App\Models\Company;
-use App\Models\ComplianceCheck;
 use App\Models\OrganRegistration;
+use App\Services\Compliance\ChecklistService;
 use App\Services\Compliance\ValidadeService;
 use App\Services\ModuleService;
 use App\Services\NotificationService;
@@ -75,6 +75,8 @@ class VerificarValidadesRegulatorias extends Command
 
     private ?ModuleService $modulos = null;
 
+    private ?ChecklistService $checklist = null;
+
     /**
      * Contagem da empresa corrente, zerada a cada volta do laço por tenant.
      *
@@ -92,11 +94,16 @@ class VerificarValidadesRegulatorias extends Command
      */
     private bool $algumRegistroFalhou = false;
 
-    public function handle(NotificationService $notificacoes, ValidadeService $validades, ModuleService $modulos): int
-    {
+    public function handle(
+        NotificationService $notificacoes,
+        ValidadeService $validades,
+        ModuleService $modulos,
+        ChecklistService $checklist
+    ): int {
         $this->notificacoes = $notificacoes;
         $this->validades = $validades;
         $this->modulos = $modulos;
+        $this->checklist = $checklist;
 
         $this->info('Verificando validades regulatórias (RDC 622/2022)...');
 
@@ -143,7 +150,7 @@ class VerificarValidadesRegulatorias extends Command
         $this->avisarDocumentosDaEmpresa($empresa, $resultado['documentos']);
         $this->avisarRegistrosDeProduto($resultado['registros']);
         $this->avisarCadastroIncompleto($empresa, $resultado);
-        $this->gravarChecklist($resultado);
+        $this->gravarChecklist($empresa);
 
         $this->line("  Avisos novos: {$this->contagem['enfileirados']}");
         $this->line("  Já estavam na fila: {$this->contagem['duplicados']}");
@@ -255,105 +262,37 @@ class VerificarValidadesRegulatorias extends Command
     // -----------------------------------------------------------------
 
     /**
-     * Grava em `compliance_checks` o estado atual de cada item.
+     * Grava o estado atual de cada item do checklist em `compliance_checks`.
      *
-     * Os quatro documentos da empresa viram um item cada. Os registros de
-     * produto viram **um item só** (`registros_de_produto`), com a situação
-     * mais grave encontrada e o detalhe listando os problemáticos: a tabela tem
-     * unique `[company_id, item]` com `item` em `varchar(60)`, então uma chave
-     * por registro faria a tabela crescer junto com o catálogo sem caber num
-     * checklist legível.
+     * Delega inteiro a `ChecklistService::verificar()`, e não monta os itens
+     * aqui: o botão "recalcular agora" da tela (Task 24.5) chama exatamente o
+     * mesmo método, e duas implementações do mesmo checklist divergiriam no
+     * primeiro item novo — a rotina gravaria cinco linhas e a tela oito, e o
+     * resumo do painel principal mostraria um número diferente conforme quem
+     * tivesse passado por último.
      *
-     * `updateOrCreate`, e não `insert`: a tabela guarda o estado atual, não o
-     * histórico. Histórico de conformidade é a auditoria do Plano 3.
-     *
-     * @param  array{documentos: array<int, array<string, mixed>>, registros: array<int, array<string, mixed>>}  $resultado
+     * Isolado em try/catch pelo mesmo motivo dos disparos: um item do
+     * checklist que estoure (por exemplo, o módulo de contratos com dado
+     * inconsistente) não pode impedir que os avisos de vencimento desta
+     * empresa, já enfileirados acima, contem como sucesso.
      */
-    private function gravarChecklist(array $resultado): void
+    private function gravarChecklist(Company $empresa): void
     {
-        $agora = BusinessDate::agora();
+        try {
+            $this->checklist->verificar($empresa);
+        } catch (Throwable $erro) {
+            $this->contagem['erros']++;
+            $this->algumRegistroFalhou = true;
 
-        foreach ($resultado['documentos'] as $documento) {
-            ComplianceCheck::query()->updateOrCreate(
-                ['item' => (string) $documento['item']],
-                [
-                    'situacao' => $this->situacaoDoChecklist((string) $documento['situacao']),
-                    'detalhe' => (string) $documento['detalhe'],
-                    'verificado_em' => $agora,
-                ]
-            );
+            report($erro);
+
+            Log::error('Falha ao gravar o checklist de conformidade.', [
+                'company_id' => $empresa->id,
+                'mensagem' => $erro->getMessage(),
+            ]);
+
+            $this->error("  Falha ao gravar o checklist da empresa #{$empresa->id}: {$erro->getMessage()}");
         }
-
-        ComplianceCheck::query()->updateOrCreate(
-            ['item' => ValidadeService::ITEM_REGISTROS_DE_PRODUTO],
-            $this->resumoDosRegistros($resultado['registros'], $agora)
-        );
-    }
-
-    /**
-     * Situação agregada dos registros de produto e a frase que a explica.
-     *
-     * Vale a **pior** situação encontrada, porque um único registro vencido já
-     * é o que a fiscalização enxerga. Sem registro nenhum cadastrado o item é
-     * `nao_aplicavel`, e não `irregular`: empresa que ainda não cadastrou
-     * produto não está descumprindo nada.
-     *
-     * @param  array<int, array<string, mixed>>  $registros
-     * @return array<string, mixed>
-     */
-    private function resumoDosRegistros(array $registros, mixed $agora): array
-    {
-        if ($registros === []) {
-            return [
-                'situacao' => ComplianceCheck::SITUACAO_NAO_APLICAVEL,
-                'detalhe' => 'Nenhum registro de produto na Anvisa cadastrado.',
-                'verificado_em' => $agora,
-            ];
-        }
-
-        $porSituacao = collect($registros)->groupBy('situacao');
-
-        $pior = collect([
-            ValidadeService::SITUACAO_IRREGULAR,
-            ValidadeService::SITUACAO_ATENCAO,
-            ValidadeService::SITUACAO_NAO_INFORMADO,
-            ValidadeService::SITUACAO_REGULAR,
-        ])->first(fn (string $situacao): bool => $porSituacao->has($situacao)) ?? ValidadeService::SITUACAO_REGULAR;
-
-        $problemas = collect($registros)
-            ->filter(fn (array $linha): bool => $linha['situacao'] !== ValidadeService::SITUACAO_REGULAR)
-            ->map(fn (array $linha): string => (string) $linha['detalhe'])
-            ->take(20)
-            ->implode(' ');
-
-        $total = count($registros);
-
-        return [
-            'situacao' => $this->situacaoDoChecklist($pior),
-            'detalhe' => $problemas === ''
-                ? "Os {$total} registro(s) de produto cadastrados estão com registro válido na Anvisa."
-                : $problemas,
-            'verificado_em' => $agora,
-        ];
-    }
-
-    /**
-     * Traduz a situação do `ValidadeService` para a do checklist.
-     *
-     * `nao_informado` vira `nao_aplicavel`, e **nunca** `irregular`: a coluna
-     * `situacao` de `compliance_checks` não tem um quarto estado para "campo em
-     * branco", e mapear lacuna de cadastro para irregularidade é exatamente a
-     * informação falsa que este plano existe para não produzir. O texto de
-     * `detalhe` explica que a validade não foi informada.
-     */
-    private function situacaoDoChecklist(string $situacao): string
-    {
-        return match ($situacao) {
-            ValidadeService::SITUACAO_REGULAR => ComplianceCheck::SITUACAO_REGULAR,
-            ValidadeService::SITUACAO_ATENCAO => ComplianceCheck::SITUACAO_ATENCAO,
-            ValidadeService::SITUACAO_IRREGULAR => ComplianceCheck::SITUACAO_IRREGULAR,
-            default => ComplianceCheck::SITUACAO_NAO_APLICAVEL,
-        };
     }
 
     // -----------------------------------------------------------------
