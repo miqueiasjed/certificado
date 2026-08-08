@@ -15,7 +15,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="flex flex-1 flex-col px-4 py-4">
+    <nav class="flex flex-1 flex-col overflow-y-auto min-h-0 px-4 py-4">
       <ul role="list" class="flex flex-1 flex-col gap-y-1">
         <!-- Dashboard -->
         <li>
@@ -410,98 +410,96 @@
           </Link>
         </li>
 
-        <!-- Spacer -->
-        <li class="mt-auto">
-          <div class="border-t border-green-700 pt-4">
-            <!-- User Menu -->
-            <div class="relative">
-              <button
-                @click="toggleUserMenu"
-                :class="[
-                  'group flex w-full items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-green-100 hover:bg-green-700 hover:text-white transition-colors'
-                ]">
-                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500">
-                  <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                  </svg>
-                </div>
-                <span v-if="!collapsed" class="truncate">{{ userName }}</span>
-                <svg v-if="!collapsed" class="ml-auto h-4 w-4 shrink-0" :class="{ 'rotate-180': userMenuOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
-
-              <!-- User Dropdown -->
-              <transition
-                enter-active-class="transition ease-out duration-100"
-                enter-from-class="transform opacity-0 scale-95"
-                enter-to-class="transform opacity-100 scale-100"
-                leave-active-class="transition ease-in duration-75"
-                leave-from-class="transform opacity-100 scale-100"
-                leave-to-class="transform opacity-0 scale-95">
-                <div v-if="userMenuOpen && !collapsed"
-                     class="absolute bottom-full left-0 right-0 mb-2 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
-                  <div class="px-4 py-3">
-                    <p class="text-sm font-medium text-gray-900 truncate">{{ userName }}</p>
-                    <p class="text-sm text-gray-500 truncate">{{ userEmail }}</p>
-                  </div>
-                  <div class="py-1">
-                    <Link
-                      v-if="podeConfigurarEmpresa"
-                      :href="route('settings.company.edit')"
-                      class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                      <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                      </svg>
-                      Configurações
-                    </Link>
-                    <Link
-                      v-if="podeConfigurarDisponibilidade"
-                      :href="route('settings.disponibilidade.edit')"
-                      class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                      <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                      </svg>
-                      Disponibilidade
-                    </Link>
-                    <Link
-                      v-if="podeVerUsuarios"
-                      :href="route('settings.users.index')"
-                      class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                      <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-                      </svg>
-                      Usuários
-                    </Link>
-                    <Link
-                      v-if="podeConvidarUsuarios"
-                      :href="route('settings.convites.index')"
-                      class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                      <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 8v6m3-3h-6"></path>
-                      </svg>
-                      Convites
-                    </Link>
-                    <form @submit.prevent="logout">
-                      <button
-                        type="submit"
-                        class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                        <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                        </svg>
-                        Sair
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              </transition>
-            </div>
-          </div>
-        </li>
       </ul>
     </nav>
+
+    <!-- User Menu (fixo, fora da área rolável do menu) -->
+    <div class="shrink-0 border-t border-green-700 p-4">
+      <div class="relative">
+        <button
+          @click="toggleUserMenu"
+          :class="[
+            'group flex w-full items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-green-100 hover:bg-green-700 hover:text-white transition-colors'
+          ]">
+          <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-500">
+            <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+          </div>
+          <span v-if="!collapsed" class="truncate">{{ userName }}</span>
+          <svg v-if="!collapsed" class="ml-auto h-4 w-4 shrink-0" :class="{ 'rotate-180': userMenuOpen }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+
+        <!-- User Dropdown -->
+        <transition
+          enter-active-class="transition ease-out duration-100"
+          enter-from-class="transform opacity-0 scale-95"
+          enter-to-class="transform opacity-100 scale-100"
+          leave-active-class="transition ease-in duration-75"
+          leave-from-class="transform opacity-100 scale-100"
+          leave-to-class="transform opacity-0 scale-95">
+          <div v-if="userMenuOpen && !collapsed"
+               class="absolute bottom-full left-0 right-0 mb-2 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+            <div class="px-4 py-3">
+              <p class="text-sm font-medium text-gray-900 truncate">{{ userName }}</p>
+              <p class="text-sm text-gray-500 truncate">{{ userEmail }}</p>
+            </div>
+            <div class="py-1">
+              <Link
+                v-if="podeConfigurarEmpresa"
+                :href="route('settings.company.edit')"
+                class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                Configurações
+              </Link>
+              <Link
+                v-if="podeConfigurarDisponibilidade"
+                :href="route('settings.disponibilidade.edit')"
+                class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                Disponibilidade
+              </Link>
+              <Link
+                v-if="podeVerUsuarios"
+                :href="route('settings.users.index')"
+                class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                </svg>
+                Usuários
+              </Link>
+              <Link
+                v-if="podeConvidarUsuarios"
+                :href="route('settings.convites.index')"
+                class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 8v6m3-3h-6"></path>
+                </svg>
+                Convites
+              </Link>
+              <form @submit.prevent="logout">
+                <button
+                  type="submit"
+                  class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                  <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                  </svg>
+                  Sair
+                </button>
+              </form>
+            </div>
+          </div>
+        </transition>
+      </div>
+    </div>
 
     <!-- Collapse Toggle -->
     <div class="border-t border-green-700 p-4">
