@@ -111,6 +111,12 @@ final class CamposVisiveisAoCliente
         'additional_clause',
         'jurisdiction',
         'address',
+        // Assinatura eletrônica (Plano 26, Task 26.4). Só a situação, a data e
+        // se existe via assinada para baixar. O link do provedor nunca entra
+        // aqui — ver o comentário em `contrato()`.
+        'situacao_assinatura',
+        'assinado_em',
+        'tem_via_assinada',
     ];
 
     /**

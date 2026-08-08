@@ -66,6 +66,10 @@ use App\Models\Service;
 use App\Models\ServiceInvoice;
 use App\Models\ServiceOrder;
 use App\Models\ServiceType;
+use App\Models\SignatureEvent;
+use App\Models\SignatureProviderConfig;
+use App\Models\SignatureRequest;
+use App\Models\SignatureSigner;
 use App\Models\StockBalance;
 use App\Models\StockLocation;
 use App\Models\StockMovement;
@@ -1866,6 +1870,51 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'valor' => '500.00',
                 'vencimento' => '2026-08-05',
                 'situacao' => 'emitida',
+            ]);
+
+            // Assinatura eletrônica de contrato (Plano 26, Tasks 26.1 e
+            // 26.3). As rotas ficam sob `/contratos/{contract}/assinatura`,
+            // aninhadas no contrato, e não em uma base de recurso própria,
+            // então não entram em basesDeRecurso(): mesmo critério já usado
+            // para charge/paymentGatewayConfig acima. Entram aqui para que a
+            // varredura permanente cubra os quatro models de domínio novos.
+            //
+            // `credenciais`, `webhook_token` e `provedor_documento_id`
+            // carregam texto carimbado com a marca pelo mesmo motivo da
+            // configuração de gateway: o dado do tenant 2 nunca pode coincidir
+            // com o do tenant 1 nas asserções deste teste.
+            $dados['signatureProviderConfig'] = SignatureProviderConfig::create([
+                'provedor' => 'zapsign',
+                'ambiente' => 'sandbox',
+                'credenciais' => ['token' => 'assinatura-'.$baixo],
+                'webhook_token' => 'assinatura-webhook-'.$baixo.'-0123456789abcdef0123456789ab',
+                'ativo' => true,
+            ]);
+
+            $dados['signatureRequest'] = SignatureRequest::create([
+                'contract_id' => $dados['contract']->id,
+                'provedor' => 'zapsign',
+                'provedor_documento_id' => 'DOC-'.$this->sufixo($marca),
+                'situacao' => 'enviado',
+                'enviado_em' => '2026-08-01 10:00:00',
+                'expira_em' => '2026-08-20',
+            ]);
+
+            $dados['signatureSigner'] = SignatureSigner::create([
+                'signature_request_id' => $dados['signatureRequest']->id,
+                'nome' => 'Signatario '.$marca,
+                'email' => 'signatario-'.$baixo.'@exemplo.test',
+                'papel' => 'contratante',
+                'ordem' => 1,
+                'situacao' => 'pendente',
+            ]);
+
+            $dados['signatureEvent'] = SignatureEvent::create([
+                'provedor' => 'zapsign',
+                'evento_id' => 'zapsign-DOC-'.$this->sufixo($marca).'-doc_viewed',
+                'tipo' => 'doc_viewed',
+                'signature_request_id' => $dados['signatureRequest']->id,
+                'payload' => ['event_type' => 'doc_viewed', 'token' => 'DOC-'.$this->sufixo($marca)],
             ]);
 
             // Configuração da régua de cobrança e da emissão recorrente

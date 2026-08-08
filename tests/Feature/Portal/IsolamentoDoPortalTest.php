@@ -154,6 +154,12 @@ class IsolamentoDoPortalTest extends TestCase
         // empresa devolve 404.
         'portal.relatorios.show',
         'portal.relatorios.pdf',
+        // Plano 26, Task 26.4: via assinada do contrato. Recebe o id do
+        // contrato e resolve o pedido por `PortalService::pedidoDeAssinaturaAssinado()`,
+        // que passa pelo mesmo `buscarContrato()` das demais rotas de detalhe
+        // (escopo por empresa E por cliente). Contrato de outro cliente devolve
+        // 404, que é exatamente o que esta varredura confere.
+        'portal.contratos.assinado',
     ];
 
     /**
