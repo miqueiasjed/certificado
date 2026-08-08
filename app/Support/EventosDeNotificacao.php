@@ -469,24 +469,42 @@ final class EventosDeNotificacao
         ],
 
         self::CONTRATO_A_VENCER => [
-            'rotulo' => 'Contrato próximo do vencimento',
+            'rotulo' => 'Contrato próximo do vencimento ou vencido sem tratativa',
             'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
             'canais' => [self::CANAL_EMAIL],
+            // `valor` e `historico_renovacoes` chegam pelas `variaveis` do
+            // disparo (Task 23.5, `VerificarContratosAVencer`):
+            // `NotificationService::variaveisDaReferencia()` não conhece os
+            // dois, porque um é derivado (quantidade de renovações
+            // anteriores na cadeia) e o outro é uma decisão de formatação
+            // (moeda brasileira) que não faz sentido generalizar para todo
+            // model.
             'variaveis' => [
                 'cliente_nome',
                 'empresa_nome',
                 'contrato_numero',
+                'valor',
                 'data_vencimento',
                 'dias_para_vencer',
                 'endereco',
+                'historico_renovacoes',
             ],
             'padrao' => [
                 self::CANAL_EMAIL => [
-                    'assunto' => 'Contrato {{contrato_numero}} vence em {{data_vencimento}}',
-                    'corpo' => 'O contrato {{contrato_numero}}, do cliente {{cliente_nome}}, '
-                        ."vence em {{data_vencimento}}, daqui a {{dias_para_vencer}} dias.\n"
-                        ."Endereço: {{endereco}}.\n\n"
-                        .'Combine a renovação antes do fim da vigência para não interromper as visitas periódicas.',
+                    'assunto' => 'Contrato {{contrato_numero}}: vencimento em {{data_vencimento}}',
+                    // Mesmo evento cobre o contrato ainda vigente e o já
+                    // vencido sem tratativa (Task 23.5, mesmo critério de
+                    // `LOTE_PROXIMO_DO_VENCIMENTO`): `dias_para_vencer`
+                    // negativo é o que distingue os dois casos, por isso o
+                    // texto explica a leitura em vez de assumir só o
+                    // vencimento futuro.
+                    'corpo' => 'O contrato {{contrato_numero}}, do cliente {{cliente_nome}}, no valor de {{valor}}, '
+                        ."vence em {{data_vencimento}} ({{dias_para_vencer}} dia(s); número negativo indica "
+                        ."contrato já vencido, sem decisão de renovação registrada).\n"
+                        ."Endereço: {{endereco}}.\n"
+                        ."Histórico de renovações: {{historico_renovacoes}}\n\n"
+                        .'Combine a renovação o quanto antes: contrato vencido sem tratativa continua '
+                        .'avisando semanalmente até a decisão ser registrada.',
                 ],
             ],
         ],

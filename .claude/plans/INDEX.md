@@ -71,7 +71,7 @@ bloqueio.
 |---|------|--------|------------|-------|
 | 21 | Monitoramento CIP: tendência e mapa de pontos | ✅ | 6, 13, 15 | 9 |
 | 22 | Roteirização e rastreamento em campo | ✅ | 10, 13 | 8 |
-| 23 | Comissões, metas e renovação de contratos | ⏳ | 14, 18 | 9 |
+| 23 | Comissões, metas e renovação de contratos | ✅ | 14, 18 | 9 |
 | 24 | Conformidade RDC 622/2022 | ⏳ | 14, 17 | 7 |
 
 ### Diferenciais

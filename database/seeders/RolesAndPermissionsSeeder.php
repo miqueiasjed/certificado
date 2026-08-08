@@ -81,6 +81,19 @@ class RolesAndPermissionsSeeder extends Seeder
      * necessário de ordem de serviço e certificado para fechar uma venda.
      * Sem nenhuma permissão financeira ou de pagamento.
      *
+     * `contrato-renovar` (Plano 23, Task 23.6) entra sozinha pelo prefixo
+     * `contrato-` já filtrado abaixo: renovar, registrar não renovação e
+     * marcar em negociação são ações do dia a dia comercial, não
+     * administrativas.
+     *
+     * `comissoes-ver` e `meta-gerenciar` (Plano 23, Task 23.6) entram
+     * explícitas, como as demais específicas: é o papel comercial quem
+     * vende (e por isso comissiona) e quem tem meta de venda.
+     * `comissoes-ver-todas`/`comissoes-apurar`/`comissoes-fechar` ficam de
+     * fora de propósito - ver a comissão de um colega ou fechar a
+     * competência de todo mundo é ação de quem gerencia a comissão, não do
+     * vendedor individual.
+     *
      * @param  \Illuminate\Support\Collection<int, string>  $todasAsPermissoes
      * @return array<int, string>
      */
@@ -105,6 +118,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'dispositivo-ver',
             'tecnico-ver',
             'cadastro-ver',
+            'comissoes-ver',
+            'meta-gerenciar',
         ];
 
         return array_values(array_unique(array_merge($porPrefixo, $especificas)));
@@ -151,15 +166,25 @@ class RolesAndPermissionsSeeder extends Seeder
             // ordem do dia inteiro é ação de quem coordena a operação, não
             // do técnico individual (ver `SyncPermissions::catalogo()`).
             'roteiro-ver',
+            // Plano 23, Task 23.6: comissão do técnico por serviço executado
+            // (`CommissionCalculationService`, base "executado"). O técnico
+            // vê a própria comissão pelo mesmo motivo do vendedor no papel
+            // comercial; `comissoes-ver-todas`/`comissoes-apurar`/
+            // `comissoes-fechar` ficam de fora, mesmo critério de
+            // `permissoesComercial()`.
+            'comissoes-ver',
         ];
     }
 
     /**
      * Permissões do papel leitura: todas as permissões terminadas em "-ver"
-     * do catálogo, exceto financeiro-ver, pagamento-ver, cobranca-ver e
-     * usuario-ver. As três primeiras porque leitura não alcança dinheiro
-     * (cobrança recorrente, Plano 19, Task 19.6, entra no mesmo critério de
-     * financeiro-ver/pagamento-ver); a quarta porque a tela de usuários é
+     * do catálogo, exceto financeiro-ver, pagamento-ver, cobranca-ver,
+     * comissoes-ver e usuario-ver. As três primeiras porque leitura não
+     * alcança dinheiro (cobrança recorrente, Plano 19, Task 19.6, entra no
+     * mesmo critério de financeiro-ver/pagamento-ver); comissoes-ver (Plano
+     * 23, Task 23.6) pelo mesmo motivo - quanto uma pessoa ganha de comissão
+     * também é dinheiro, mesmo que `CommissionController` já restrinja a
+     * consulta à própria comissão; a última porque a tela de usuários é
      * administração da empresa, não consulta de dado.
      *
      * auditoria-ver e acesso-log-ver também ficam de fora: o histórico mostra
@@ -177,6 +202,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'financeiro-ver',
                 'pagamento-ver',
                 'cobranca-ver',
+                'comissoes-ver',
                 'usuario-ver',
                 'auditoria-ver',
                 'acesso-log-ver',

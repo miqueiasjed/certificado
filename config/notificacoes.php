@@ -4,27 +4,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Antecedência do aviso de contrato a vencer
-    |--------------------------------------------------------------------------
-    |
-    | Dias antes de `contracts.end_date` em que a rotina
-    | `notificacoes:avisos-diarios` avisa a empresa que o contrato está
-    | terminando. O aviso sai uma vez, no dia exato em que faltam estes dias,
-    | e não todo dia da contagem regressiva: alerta repetido vira regra de
-    | caixa de entrada e para de ser lido.
-    |
-    | Limitação conhecida: o valor é global da aplicação, não por tenant. O
-    | Plano 14 previa "prazo configurado pelo tenant", mas não existe coluna
-    | em `companies` nem tela para isso, e criá-las está fora do escopo da
-    | Task 14.4. Quando a configuração por empresa entrar, esta chave vira o
-    | padrão de quem não configurou.
-    |
-    */
-
-    'dias_aviso_contrato_vencer' => (int) env('NOTIFICACOES_DIAS_AVISO_CONTRATO_VENCER', 30),
-
-    /*
-    |--------------------------------------------------------------------------
     | Marcos do aviso de certificado a vencer
     |--------------------------------------------------------------------------
     |
@@ -70,12 +49,13 @@ return [
     | e leia a contagem, ou chame `SatisfactionSurveyService::criarParaVisita()`
     | em uma visita escolhida.
     |
-    | Limitação conhecida, mesma de `dias_aviso_contrato_vencer`: o valor é
-    | global da aplicação, não por tenant. Não existe coluna nem tela para uma
-    | chave por empresa, e criá-las está fora do escopo desta task. Quando a
-    | configuração por tenant entrar (o lugar natural é
-    | `company_availability_settings`, junto de `aceita_agendamento_online`),
-    | esta chave vira o padrão de quem não configurou.
+    | Limitação conhecida: o valor é global da aplicação, não por tenant. Não
+    | existe coluna nem tela para uma chave por empresa, e criá-las está fora
+    | do escopo desta task. Quando a configuração por tenant entrar (o lugar
+    | natural é `company_availability_settings`, junto de
+    | `aceita_agendamento_online`), esta chave vira o padrão de quem não
+    | configurou. Mesmo caminho que a Task 23.5 já percorreu para o prazo de
+    | aviso de contrato a vencer, hoje em `CompanyContractAlertSetting`.
     |
     */
 

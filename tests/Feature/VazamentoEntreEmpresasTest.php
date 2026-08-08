@@ -17,9 +17,13 @@ use App\Models\ChemicalGroup;
 use App\Models\Client;
 use App\Models\ClientRequest;
 use App\Models\ClientUser;
+use App\Models\Commission;
+use App\Models\CommissionItem;
+use App\Models\CommissionRule;
 use App\Models\Company;
 use App\Models\CompanyAvailabilitySetting;
 use App\Models\CompanyBillingSetting;
+use App\Models\CompanyContractAlertSetting;
 use App\Models\Contract;
 use App\Models\ContractVisitJustification;
 use App\Models\DailyCashBalance;
@@ -31,6 +35,7 @@ use App\Models\EventType;
 use App\Models\FinancialEntry;
 use App\Models\FiscalConfig;
 use App\Models\FloorPlan;
+use App\Models\Goal;
 use App\Models\Inventory;
 use App\Models\InventoryItem;
 use App\Models\Invitation;
@@ -500,6 +505,21 @@ class VazamentoEntreEmpresasTest extends TestCase
             ['POST', "/payment-details/{$dois['paymentDetail']->id}/reopen"],
             ['POST', "/payment-details/{$dois['paymentDetail']->id}/create-financial-entry"],
             ['POST', "/budgets/{$dois['budget']->id}/convert"],
+            // Comissão, meta e renovação de contrato (Plano 23, Task 23.6):
+            // nenhuma das quatro tem rota `{base}.show/edit/update/destroy`
+            // no padrão de `basesDeRecurso()` (CRUD por modal, sem resource
+            // completo), então entram aqui, não lá.
+            ['POST', "/comissoes/{$dois['commission']->id}/fechar"],
+            ['POST', "/comissoes/{$dois['commission']->id}/reabrir"],
+            ['POST', "/comissoes/{$dois['commission']->id}/pagar"],
+            ['PUT', "/comissoes/regras/{$dois['commissionRule']->id}"],
+            ['DELETE', "/comissoes/regras/{$dois['commissionRule']->id}"],
+            ['PUT', "/metas/{$dois['goal']->id}"],
+            ['DELETE', "/metas/{$dois['goal']->id}"],
+            ['GET', "/contracts/{$dois['contract']->id}/renovar/previa"],
+            ['POST', "/contracts/{$dois['contract']->id}/renovar"],
+            ['POST', "/contracts/{$dois['contract']->id}/nao-renovar"],
+            ['POST', "/contracts/{$dois['contract']->id}/em-negociacao"],
         ];
 
         foreach ($casos as [$metodo, $url]) {
@@ -1858,6 +1878,13 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'antecedencia_emissao_dias' => 10,
             ]);
 
+            // Prazo de alerta de contrato a vencer (Plano 23, Task 23.5). Sem
+            // rota de CRUD direta ainda (só a Task 23.7/23.8 introduz a
+            // tela), mesmo critério de companyBillingSetting acima.
+            $dados['companyContractAlertSetting'] = CompanyContractAlertSetting::create([
+                'dias_antecedencia' => [60, 30, 15],
+            ]);
+
             // Configuração fiscal e nota de serviço (Plano 20, Task 20.1).
             // Ainda não há endpoint nesta task, então entram apenas para que
             // a varredura permanente cubra os dois models de domínio novos.
@@ -1945,6 +1972,45 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'rastreamento_continuo' => true,
                 'consentido_em' => now(),
                 'consentido_por' => $autor->id,
+            ]);
+
+            // Regra de comissão, comissão apurada, item da apuração e meta
+            // (Plano 23, Task 23.1). Nenhum dos quatro tem rota de CRUD
+            // ainda (só migrations e models nesta task), mesmo critério já
+            // usado para route/routeStop/technicianTrackingSetting acima: o
+            // objetivo aqui é só o model de domínio ter dado no cenário.
+            $dados['commissionRule'] = CommissionRule::create([
+                'user_id' => $autor->id,
+                'tipo' => 'vendedor',
+                'forma' => 'percentual',
+                'valor' => '5.0000',
+                'vigencia_inicio' => '2026-01-01',
+                'ativa' => true,
+            ]);
+
+            $dados['commission'] = Commission::create([
+                'user_id' => $autor->id,
+                'competencia' => '2026-07',
+                'situacao' => 'aberta',
+                'valor_total' => '25.00',
+            ]);
+
+            $dados['commissionItem'] = CommissionItem::create([
+                'commission_id' => $dados['commission']->id,
+                'origem_tipo' => 'orcamento',
+                'origem_id' => $dados['budget']->id,
+                'commission_rule_id' => $dados['commissionRule']->id,
+                'base_valor' => '500.00',
+                'percentual_ou_fixo' => '5.0000',
+                'valor' => '25.00',
+                'ocorrido_em' => '2026-07-05',
+            ]);
+
+            $dados['goal'] = Goal::create([
+                'user_id' => $autor->id,
+                'tipo' => 'valor_vendido',
+                'competencia' => '2026-07',
+                'alvo' => '10000.00',
             ]);
 
             return $dados;

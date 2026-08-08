@@ -8,15 +8,15 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 23.1 | Migrations e models de comissão, meta e renovação | backend-estrutura | ⏳ | média |
-| 23.2 | Apuração de comissão, fechamento e histórico | backend-logica | ⏳ | alta |
-| 23.3 | Metas e indicadores comerciais | backend-logica | ⏳ | média |
-| 23.4 | Renovação de contrato com reajuste e histórico | backend-logica | ⏳ | alta |
-| 23.5 | Alertas de contrato a vencer e pendência | backend-logica | ⏳ | média |
-| 23.6 | Endpoints de comissão, meta e renovação | backend-endpoint | ⏳ | alta |
-| 23.7 | Telas de comissão e de metas | frontend-pagina | ⏳ | alta |
-| 23.8 | Painel comercial e painel de contratos a vencer | frontend-pagina | ⏳ | alta |
-| 23.9 | Testes de comissão, meta e renovação | teste | ⏳ | alta |
+| 23.1 | Migrations e models de comissão, meta e renovação | backend-estrutura | ✅ | média |
+| 23.2 | Apuração de comissão, fechamento e histórico | backend-logica | ✅ | alta |
+| 23.3 | Metas e indicadores comerciais | backend-logica | ✅ | média |
+| 23.4 | Renovação de contrato com reajuste e histórico | backend-logica | ✅ | alta |
+| 23.5 | Alertas de contrato a vencer e pendência | backend-logica | ✅ | média |
+| 23.6 | Endpoints de comissão, meta e renovação | backend-endpoint | ✅ | alta |
+| 23.7 | Telas de comissão e de metas | frontend-pagina | ✅ | alta |
+| 23.8 | Painel comercial e painel de contratos a vencer | frontend-pagina | ✅ | alta |
+| 23.9 | Testes de comissão, meta e renovação | teste | ✅ | alta |
 
 ## Ordem de execução
 

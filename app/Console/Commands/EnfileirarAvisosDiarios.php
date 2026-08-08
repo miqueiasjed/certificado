@@ -20,15 +20,25 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Rotina diária que enfileira os seis avisos que nascem da passagem do tempo,
- * e não de uma ação do usuário (Task 14.4):
+ * Rotina diária que enfileira os cinco avisos abaixo, que nascem da passagem
+ * do tempo, e não de uma ação do usuário (Task 14.4):
  *
  * - lembrete na véspera da visita;
  * - certificado a vencer, em três marcos;
- * - contrato a vencer;
  * - pagamento vencido;
  * - orçamento perto de expirar sem resposta;
  * - visita periódica prevista e não gerada.
+ *
+ * "Contrato a vencer" morou aqui até a Task 23.5, com um único marco de
+ * configuração global e sem filtrar `situacao_renovacao`. Um contrato já
+ * renovado (Task 23.4 preserva o anterior na tabela, com `end_date` no
+ * passado) voltava a gerar aviso para sempre quando `end_date` dele
+ * coincidisse com o marco configurado (bug real de produção), corrigido ao
+ * mudar o aviso para `App\Console\Commands\VerificarContratosAVencer`, que
+ * também resolve o prazo configurável por tenant que esta rotina nunca teve
+ * (ver o comentário histórico em `config/notificacoes.php`, chave removida
+ * na mesma task). O evento do catálogo continua o mesmo
+ * (`EventosDeNotificacao::CONTRATO_A_VENCER`); só o disparo mudou de dono.
  *
  * Roda uma passada por empresa, cada uma dentro do tenant dela
  * (`OperaPorTenant`): sem isso as consultas sairiam sem escopo e uma empresa
@@ -51,14 +61,6 @@ use Throwable;
  * Todo corte usa `BusinessDate::hoje()`, nunca `now()` nem `today()`. A rotina
  * roda de manhã em Brasília, mas a aplicação está em UTC: comparar em UTC faria
  * o aviso de vencimento sair um dia antes.
- *
- * Prazo do contrato a vencer
- * --------------------------
- * `config('notificacoes.dias_aviso_contrato_vencer')` é global da aplicação, não
- * por tenant. O plano previa prazo configurado por empresa, mas não existe
- * coluna em `companies` nem tela de configuração para isso, e criá-las está fora
- * do escopo desta task. Quando a configuração por tenant entrar, ela passa a
- * vencer esta chave, que vira o padrão de quem não configurou.
  */
 class EnfileirarAvisosDiarios extends Command
 {
@@ -66,7 +68,7 @@ class EnfileirarAvisosDiarios extends Command
 
     protected $signature = 'notificacoes:avisos-diarios';
 
-    protected $description = 'Enfileira os avisos diários da central de notificações: véspera de visita, certificado e contrato a vencer, pagamento vencido, orçamento a expirar e visita periódica não gerada.';
+    protected $description = 'Enfileira os avisos diários da central de notificações: véspera de visita, certificado a vencer, pagamento vencido, orçamento a expirar e visita periódica não gerada.';
 
     /**
      * Status de OS que ainda espera acontecer. Visita concluída, cancelada ou em
@@ -152,7 +154,6 @@ class EnfileirarAvisosDiarios extends Command
 
         $this->lembretesDeVespera();
         $this->certificadosAVencer();
-        $this->contratosAVencer();
         $this->pagamentosVencidos();
         $this->orcamentosAExpirar();
         $this->visitasPeriodicasNaoGeradas();
@@ -259,40 +260,6 @@ class EnfileirarAvisosDiarios extends Command
                     $rotulo.' (cópia interna)'
                 );
             }
-        }
-    }
-
-    // -----------------------------------------------------------------
-    // Contrato a vencer
-    // -----------------------------------------------------------------
-
-    /**
-     * Contrato terminando no prazo configurado. Aviso interno: quem renova
-     * contrato é a empresa, e é ela que precisa fazer o contato.
-     */
-    private function contratosAVencer(): void
-    {
-        $dias = (int) config('notificacoes.dias_aviso_contrato_vencer', 30);
-        $vencimento = BusinessDate::hoje()->addDays($dias)->toDateString();
-
-        $contratos = Contract::query()
-            ->whereDate('end_date', $vencimento)
-            ->with('address.client')
-            ->orderBy('id')
-            ->get();
-
-        $this->line("  Contratos a {$dias} dia(s) do fim da vigência ({$vencimento}): {$contratos->count()}");
-
-        foreach ($contratos as $contrato) {
-            // O marco leva o prazo configurado: mudar a configuração de 30 para
-            // 15 dias faz o mesmo contrato ser avisado de novo no prazo novo, em
-            // vez de a chave antiga engolir o segundo aviso em silêncio.
-            $this->enfileirar(
-                EventosDeNotificacao::CONTRATO_A_VENCER,
-                $contrato,
-                ['marco' => (string) $dias],
-                "contrato #{$contrato->id}"
-            );
         }
     }
 

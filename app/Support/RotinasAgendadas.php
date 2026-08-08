@@ -34,6 +34,13 @@ final class RotinasAgendadas
         // 00:40), que ela não depende, e antes da purga de auditoria
         // (02:00), para não competir com a rotina mais pesada da janela.
         'contratos:gerar-visitas' => '01:00',
+        // 01:15, logo depois da geração de visitas do contrato (01:00), sem
+        // dependência de dado entre as duas: uma gera OS a partir do
+        // calendário do contrato, a outra lê `end_date`/`situacao_renovacao`
+        // e grava fila de notificação mais o próprio `situacao_renovacao`
+        // (marcação de `pendente`, Task 23.5). Ficam próximas por serem as
+        // duas rotinas diárias de `contracts`, não por ordem obrigatória.
+        'contratos:verificar-vencimento' => '01:15',
         // 02:00, fora da janela das outras: é a rotina mais pesada, porque
         // percorre e apaga em lotes as tabelas de auditoria inteiras.
         'auditoria:purge' => '02:00',
@@ -113,6 +120,26 @@ final class RotinasAgendadas
         // do dia esperaria a manhã inteira. Meia hora de folga cobre uma passada
         // de avisos diários mais lenta que o normal.
         'pesquisas:enviar' => '07:30',
+    ];
+
+    /**
+     * Assinatura do comando => dia do mês e horário do disparo mensal, no
+     * fuso do negócio.
+     *
+     * Lista própria, e não mais uma entrada em `DIARIAS`: lá o valor da
+     * chave é só o horário (`dailyAt()`), e a rotina mensal precisa também do
+     * dia do mês (`monthlyOn()`). Hoje tem uma única rotina: a apuração de
+     * comissão (Plano 23, Task 23.2), no dia 1, depois que o mês anterior
+     * inteiro já fechou. `01:40` fica na mesma janela das rotinas diárias de
+     * madrugada, depois da purga de auditoria (02:00 é mais tarde, mas esta
+     * roda só uma vez por mês, então o risco de disputa é baixo) e da
+     * apuração de uso (03:00); a folga de minutos entre elas é só para não
+     * cravarem o mesmo instante, sem dependência de dado entre uma e outra.
+     *
+     * @var array<string, array{dia: int, horario: string}>
+     */
+    public const MENSAIS = [
+        'comissoes:apurar' => ['dia' => 1, 'horario' => '01:40'],
     ];
 
     /**
@@ -205,6 +232,15 @@ final class RotinasAgendadas
     public const MINUTOS_DE_UM_DIA = 1440;
 
     /**
+     * Minutos do mês mais longo do calendário (31 dias). Rotina mensal fixada
+     * no dia 1 (`MENSAIS`) tem, no pior caso, 31 dias entre uma rodada e a
+     * seguinte (ex.: de 1º de janeiro a 1º de fevereiro); usar o mês mais
+     * longo como referência, e não uma média de 30 dias, é o que evita cobrar
+     * "atrasada" uma rotina que só ainda não chegou o dia 1 do mês seguinte.
+     */
+    public const MINUTOS_DE_UM_MES = 31 * self::MINUTOS_DE_UM_DIA;
+
+    /**
      * Folga somada ao intervalo da rotina antes de ela ser dada como parada.
      *
      * Duas horas é o número do plano: uma diária só é cobrada depois de 26 horas
@@ -221,14 +257,18 @@ final class RotinasAgendadas
     public const MINUTOS_DE_TOLERANCIA_EXTRA = 120;
 
     /**
-     * Todas as rotinas agendadas, diárias e de intervalo curto, com a descrição
-     * do horário em que rodam.
+     * Todas as rotinas agendadas, diárias, mensais e de intervalo curto, com
+     * a descrição do horário em que rodam.
      *
      * @return array<string, string>
      */
     public static function todas(): array
     {
         $rotinas = self::DIARIAS;
+
+        foreach (self::MENSAIS as $assinatura => $quando) {
+            $rotinas[$assinatura] = sprintf('todo dia %d, %s', $quando['dia'], $quando['horario']);
+        }
 
         foreach (self::POR_INTERVALO as $assinatura => $minutos) {
             $rotinas[$assinatura] = "a cada {$minutos} min";
@@ -255,6 +295,10 @@ final class RotinasAgendadas
     {
         if (array_key_exists($assinatura, self::DIARIAS)) {
             return self::MINUTOS_DE_UM_DIA;
+        }
+
+        if (array_key_exists($assinatura, self::MENSAIS)) {
+            return self::MINUTOS_DE_UM_MES;
         }
 
         return self::POR_INTERVALO[$assinatura] ?? null;

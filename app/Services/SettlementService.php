@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Receivable;
 use App\Models\ReceivableInstallment;
 use App\Models\User;
+use App\Services\Commission\CommissionCalculationService;
 use App\Services\Financial\IntegracaoComCaixa;
 use App\Support\BusinessDate;
 use App\Support\Dinheiro;
@@ -96,6 +97,7 @@ class SettlementService
     public function __construct(
         private readonly IntegracaoComCaixa $caixa,
         private readonly ServiceInvoiceService $notasFiscais,
+        private readonly CommissionCalculationService $comissoes,
     ) {}
 
     /**
@@ -187,6 +189,15 @@ class SettlementService
      * O dia do estorno é hoje, no fuso do negócio, e não o dia do recebimento
      * original: o caixa de um dia já fechado não muda depois.
      *
+     * Depois que o estorno é confirmado, ajusta a comissão apurada sobre esta
+     * parcela na base `recebido` (Plano 23, `CommissionCalculationService::tratarEstornoDeParcela()`):
+     * reduz o item se a competência original ainda está aberta, ou lança um
+     * item negativo na competência atual se ela já está fechada. O ajuste roda
+     * FORA da transação do estorno, e uma falha nele nunca desfaz o estorno em
+     * si nem impede a resposta ao usuário - mesmo critério de
+     * `emitirNotaFiscalDoTituloQuitado()`: o estorno do dinheiro é o que
+     * importa mais, e a falha vai para o log da aplicação.
+     *
      * @throws AuthorizationException Usuário sem a permissão `financeiro-estornar` (403).
      * @throws ValidationException Motivo ausente ou curto demais, parcela sem
      *                             recebimento para estornar.
@@ -198,7 +209,7 @@ class SettlementService
         $motivo = $this->motivoValido($motivo);
         $dia = BusinessDate::hoje()->toDateString();
 
-        return DB::transaction(function () use ($parcela, $motivo, $usuario, $dia) {
+        $estornada = DB::transaction(function () use ($parcela, $motivo, $usuario, $dia) {
             $parcela = $this->travar($parcela);
 
             $recebidoEmCentavos = Dinheiro::centavos($parcela->valor_pago);
@@ -231,6 +242,26 @@ class SettlementService
 
             return $parcela->refresh();
         });
+
+        $this->ajustarComissaoAposEstorno($estornada, $usuario);
+
+        return $estornada;
+    }
+
+    /**
+     * Acessório ao estorno: nunca pode fazer o estorno falhar. Ver o
+     * docblock de `estornar()`.
+     */
+    private function ajustarComissaoAposEstorno(ReceivableInstallment $parcela, User $usuario): void
+    {
+        try {
+            $this->comissoes->tratarEstornoDeParcela($parcela, $usuario);
+        } catch (Throwable $falha) {
+            Log::error('[comissao] Ajuste de comissão após estorno de parcela falhou.', [
+                'receivable_installment_id' => $parcela->id,
+                'erro' => $falha->getMessage(),
+            ]);
+        }
     }
 
     /**

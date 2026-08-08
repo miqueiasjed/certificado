@@ -1811,3 +1811,56 @@ a integração final, porque cada agente resolve o próprio pedaço de forma
 correta e completa por si só, mas ninguém ata as pontas sem alguém apontar
 isso; a revisão do orquestrador (ou, mais barato, a task seguinte da própria
 cadeia) é onde esses buracos aparecem de verdade.
+
+## Plano 23 - Comissões, metas e renovação de contratos
+
+### Renovação de contrato expôs uma relação `HasOne` que só era segura por acaso
+
+`Address::contract()` (Task 23.4) sempre foi `hasOne(Contract::class)` sem
+nenhuma ordenação, e isso nunca foi um problema até a Task 23.4 introduzir
+`ContractRenewalService::renovar()`: renovar preserva o contrato anterior na
+tabela (histórico), então um endereço passou a poder ter mais de um
+`Contract`. Sem ordenação, a relação resolve para o registro que o banco
+devolver primeiro (na prática, o mais antigo, já renovado), e
+`ContractController::generatePDF()` passaria a gerar o PDF do contrato
+errado - documento com valor perante fiscalização, exatamente o tipo de
+regressão silenciosa que `CLAUDE.md` pede para nunca deixar passar. Corrigido
+com `latestOfMany()` antes de fechar o plano, mais um teste de regressão.
+**Regra que fica:** toda vez que uma task passa a permitir mais de uma linha
+onde antes só existia uma (histórico, versionamento, série), vale grepar por
+relações `hasOne`/`belongsTo` já existentes daquele mesmo par de tabelas -
+eram seguras pela invariante antiga, e a invariante nova pode quebrá-las sem
+nenhum teste existente detectar, porque o código antigo nunca teve motivo
+para testar "e se houver dois".
+
+### Bug do mesmo formato encontrado em plano anterior já em produção
+
+Ao construir o aviso de contrato a vencer da Task 23.5, apareceu que
+`EnfileirarAvisosDiarios::contratosAVencer()` (Plano 14, já em produção) tinha
+o mesmo problema da seção acima (não filtrava `situacao_renovacao`) somado a
+um prazo só global, nunca por tenant - um contrato renovado com `end_date` no
+marco configurado voltaria a avisar para sempre. Como as duas rotinas
+mandariam o mesmo evento (`CONTRATO_A_VENCER`) com regras diferentes,
+manter as duas vivas seria pior que substituir: o método antigo, a config
+`notificacoes.dias_aviso_contrato_vencer` e os testes que dependiam dela
+foram removidos, e `VerificarContratosAVencer` assumiu o aviso inteiro.
+**Regra que fica:** confirma o padrão já registrado nos Planos 21/22 - vale
+corrigir na hora um bug real encontrado em código de outro plano, mesmo que
+isso signifique remover uma rotina inteira, em vez de deixar duas fontes do
+mesmo aviso convivendo com regras diferentes.
+
+### Mesma heurística de "vendedor do recebimento" implementada duas vezes, de forma independente
+
+`CommissionCalculationService::resolverVendedorDoRecebimento()` (Task 23.2) e
+o cálculo equivalente dentro de `GoalService` (Task 23.3) chegaram, cada um
+por conta própria (duas tasks do mesmo lote, executadas em paralelo por
+agentes sem visibilidade um do outro), à mesma aproximação: sem `budget_id`
+em `work_orders`/`receivables`, o vendedor de um valor recebido é o do
+orçamento aprovado/convertido mais recente do mesmo cliente. As duas
+implementações são coerentes entre si (mesmo critério, mesmo resultado), mas
+duplicadas. Não é um bug hoje, e por isso não foi tocado dentro do próprio
+Plano 23. **Regra que fica:** se um terceiro consumidor precisar da mesma
+heurística (candidato natural: Task 23.8, que já lê os dois números lado a
+lado), vale a pena extrair um resolvedor único antes de crescer para um
+terceiro lugar - e se a limitação de schema for corrigida (`work_orders.budget_id`
+nullable), os dois pontos precisam mudar juntos.

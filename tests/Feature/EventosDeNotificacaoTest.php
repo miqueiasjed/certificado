@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Budget;
 use App\Models\Certificate;
 use App\Models\Company;
-use App\Models\Contract;
 use App\Models\NotificationQueue;
 use App\Models\PaymentDetail;
 use App\Models\WorkOrder;
@@ -36,8 +35,11 @@ use Tests\TestCase;
  * - `WorkOrderNotificationObserver`, para o que nasce de uma ação do usuário
  *   (visita agendada, técnico a caminho, OS concluída);
  * - `notificacoes:avisos-diarios`, para o que nasce da passagem do tempo
- *   (lembrete de véspera, certificado e contrato a vencer, pagamento vencido,
- *   orçamento a expirar).
+ *   (lembrete de véspera, certificado a vencer, pagamento vencido, orçamento
+ *   a expirar). "Contrato a vencer" morou aqui até a Task 23.5, quando passou
+ *   para `App\Console\Commands\VerificarContratosAVencer` (marcos
+ *   configuráveis por tenant e filtro de `situacao_renovacao`); a cobertura
+ *   dele está em `ContractAlertServiceTest`.
  *
  * Três cenários deste arquivo são obrigatórios pelo plano, e nenhum é
  * decorativo:
@@ -288,21 +290,6 @@ class EventosDeNotificacaoTest extends TestCase
         $this->assertStringContainsString('R$ 500,00', $doCliente->corpo);
     }
 
-    public function test_contrato_a_vencer_enfileira_aviso_interno_para_a_empresa(): void
-    {
-        $dias = (int) config('notificacoes.dias_aviso_contrato_vencer');
-        $contrato = $this->criarContrato($this->empresaA, $this->diaEmBrasilia($dias));
-
-        $this->artisan('notificacoes:avisos-diarios')->assertSuccessful();
-
-        $avisos = $this->itensDoEvento(EventosDeNotificacao::CONTRATO_A_VENCER);
-
-        $this->assertCount(1, $avisos);
-        $this->assertSame(NotificationQueue::DESTINATARIO_EMPRESA, $avisos[0]->destinatario_tipo);
-        $this->assertSame($this->empresaA->email, $avisos[0]->destino);
-        $this->assertStringContainsString((string) $contrato->contract_number, $avisos[0]->corpo);
-    }
-
     public function test_orcamento_sem_resposta_perto_da_validade_enfileira_aviso_interno(): void
     {
         $dias = (int) config('notificacoes.dias_aviso_orcamento_a_expirar');
@@ -355,7 +342,6 @@ class EventosDeNotificacaoTest extends TestCase
         foreach ([$this->empresaA, $this->empresaB] as $empresa) {
             $this->criarCertificado($empresa, $this->diaEmBrasilia(30));
             $this->criarParcelaVencida($empresa, $this->diaEmBrasilia(-1));
-            $this->criarContrato($empresa, $this->diaEmBrasilia((int) config('notificacoes.dias_aviso_contrato_vencer')));
             $this->criarOrcamento($empresa, $this->diaEmBrasilia((int) config('notificacoes.dias_aviso_orcamento_a_expirar')));
             $this->criarVisita($empresa, ['scheduled_date' => $this->diaEmBrasilia(1), 'status' => 'scheduled']);
         }
@@ -596,25 +582,6 @@ class EventosDeNotificacaoTest extends TestCase
             return PaymentDetailFactory::new()->create([
                 'work_order_id' => $ordem->id,
                 'payment_due_date' => $vencimento,
-            ]);
-        });
-    }
-
-    private function criarContrato(Company $empresa, string $fimDaVigencia): Contract
-    {
-        return $this->naEmpresa($empresa, function () use ($fimDaVigencia): Contract {
-            $cliente = ClientFactory::new()->create();
-            $endereco = AddressFactory::new()->create(['client_id' => $cliente->id]);
-
-            return Contract::create([
-                'address_id' => $endereco->id,
-                'contract_number' => 'CONT-'.uniqid(),
-                'start_date' => $this->diaEmBrasilia(-365),
-                'end_date' => $fimDaVigencia,
-                'service_value' => 1200.00,
-                // Pontual de propósito: contrato periódico entraria também no
-                // painel de pendências, e o cenário perderia o foco.
-                'service_type' => 'pontual',
             ]);
         });
     }

@@ -20,9 +20,12 @@ use App\Http\Controllers\ChartOfAccountController;
 use App\Http\Controllers\ChemicalGroupController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ClientRequestAdminController;
+use App\Http\Controllers\CommissionController;
+use App\Http\Controllers\CommissionRuleController;
 use App\Http\Controllers\CompanyAvailabilitySettingController;
 use App\Http\Controllers\ContaSuspensaController;
 use App\Http\Controllers\ContractController;
+use App\Http\Controllers\ContractRenewalController;
 use App\Http\Controllers\ContractVisitController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeviceController;
@@ -39,6 +42,8 @@ use App\Http\Controllers\FiscalClientController;
 use App\Http\Controllers\FiscalConfigController;
 use App\Http\Controllers\FloorPlanController;
 use App\Http\Controllers\GatewayWebhookController;
+use App\Http\Controllers\GoalController;
+use App\Http\Controllers\IndicadoresComerciaisController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\MonitoringReportController;
@@ -418,8 +423,14 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
     // O painel de pendências (Task 9.7) precisa ser registrado antes do
     // resource: GET /contracts/{contract} (show) casaria com
     // /contracts/pendencias primeiro, tentando bindar um contrato com id
-    // "pendencias" e devolvendo 404 em vez do painel.
+    // "pendencias" e devolvendo 404 em vez do painel. Mesmo motivo para
+    // /contracts/a-vencer (Task 23.5/23.6), logo abaixo.
     Route::get('/contracts/pendencias', [ContractVisitController::class, 'pendencias'])->middleware(['permission:contrato-ver', 'module:contratos'])->name('contracts.pendencias');
+
+    // Painel de contratos a vencer, por marco configurado, e vencidos sem
+    // tratativa (Plano 23, Task 23.5/23.6). Leitura de
+    // `ContractAlertService`, mesma permissão de `contracts.pendencias`.
+    Route::get('/contracts/a-vencer', [ContractRenewalController::class, 'aVencer'])->middleware(['permission:contrato-ver', 'module:contratos'])->name('contracts.a-vencer');
 
     Route::resource('contracts', ContractController::class)
         ->middlewareFor(['index', 'show'], 'permission:contrato-ver')
@@ -441,6 +452,18 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
     // `atualizar()` quando muda o calendário. Mesma permissão de editar, por
     // isso: não pode ficar mais frouxo do que editar o contrato.
     Route::post('/contracts/{contract}/encerrar', [ContractController::class, 'encerrar'])->middleware(['permission:contrato-editar', 'module:contratos'])->name('contracts.encerrar');
+
+    // Renovação de contrato (Plano 23, Task 23.4/23.6): renovar, registrar
+    // não renovação e marcar em negociação são as três saídas do painel de
+    // contratos a vencer, todas atrás da mesma permissão `contrato-renovar`
+    // (ver o comentário dela em `SyncPermissions::catalogo()`). A prévia
+    // (`renovar/previa`) é GET e não grava nada, mas fica atrás da mesma
+    // permissão de renovar, e não de `contrato-ver`: ela só importa para
+    // quem está prestes a renovar, não para consulta geral do contrato.
+    Route::get('/contracts/{contract}/renovar/previa', [ContractRenewalController::class, 'previa'])->middleware(['permission:contrato-renovar', 'module:contratos'])->name('contracts.renovar.previa');
+    Route::post('/contracts/{contract}/renovar', [ContractRenewalController::class, 'renovar'])->middleware(['permission:contrato-renovar', 'module:contratos'])->name('contracts.renovar');
+    Route::post('/contracts/{contract}/nao-renovar', [ContractRenewalController::class, 'naoRenovar'])->middleware(['permission:contrato-renovar', 'module:contratos'])->name('contracts.nao-renovar');
+    Route::post('/contracts/{contract}/em-negociacao', [ContractRenewalController::class, 'emNegociacao'])->middleware(['permission:contrato-renovar', 'module:contratos'])->name('contracts.em-negociacao');
 
     // Visitas do contrato (Task 9.7): leitura exige contrato-ver, geração sob
     // demanda exige contrato-editar por ser escrita na agenda.
@@ -1153,6 +1176,58 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
         ->middlewareFor('destroy', 'permission:orcamento-excluir');
     Route::get('/budgets/{budget}/pdf', [BudgetController::class, 'pdf'])->middleware('permission:orcamento-ver')->name('budgets.pdf');
     Route::post('/budgets/{budget}/convert', [BudgetController::class, 'convert'])->middleware('permission:orcamento-converter')->name('budgets.convert');
+
+    // Rotas de Comissão, Meta e Indicadores Comerciais (Plano 23, Task 23.6)
+    //
+    // Sem `module:<chave>` neste bloco: `CatalogoDeModulos` ainda não tem um
+    // módulo "comercial"/"comissões" (mesmo caso de `notificacoes` até a task
+    // que lhe desse módulo próprio - ver o comentário logo acima, nas rotas
+    // de Endereço/Roteirização). Cada rota carrega só a permissão do
+    // catálogo desta task.
+    //
+    // Não há `GET /comissoes/{comissao}` (a Task 23.6 não pede exibição de
+    // uma comissão avulsa, só a listagem por competência, logo abaixo), então
+    // `/comissoes/regras` não corre o risco de colisão que `/contracts/pendencias`
+    // tem com o `show` do resource de contrato.
+    Route::get('/comissoes/regras', [CommissionRuleController::class, 'index'])->middleware('permission:comissoes-apurar')->name('comissoes.regras.index');
+    Route::post('/comissoes/regras', [CommissionRuleController::class, 'store'])->middleware('permission:comissoes-apurar')->name('comissoes.regras.store');
+    Route::put('/comissoes/regras/{regra}', [CommissionRuleController::class, 'update'])->middleware('permission:comissoes-apurar')->name('comissoes.regras.update');
+    Route::delete('/comissoes/regras/{regra}', [CommissionRuleController::class, 'destroy'])->middleware('permission:comissoes-apurar')->name('comissoes.regras.destroy');
+
+    // Listagem por competência: a restrição a "só a própria comissão" salvo
+    // `comissoes-ver-todas` é feita dentro do controller
+    // (`CommissionController::escopoDoUsuario()`), não pelo middleware - é
+    // autorização a nível de dado, não de rota.
+    Route::get('/comissoes', [CommissionController::class, 'index'])->middleware('permission:comissoes-ver')->name('comissoes.index');
+    Route::post('/comissoes/apurar', [CommissionController::class, 'apurar'])->middleware('permission:comissoes-apurar')->name('comissoes.apurar');
+    Route::post('/comissoes/{comissao}/fechar', [CommissionController::class, 'fechar'])->middleware('permission:comissoes-fechar')->name('comissoes.fechar');
+    // `comissoes-reabrir` já existe desde a Task 23.2 e é conferida de novo
+    // dentro do próprio `CommissionClosingService::reabrir()`: defesa em
+    // profundidade, mesmo critério de `financeiro-estornar`/`pagamento-reabrir`.
+    Route::post('/comissoes/{comissao}/reabrir', [CommissionController::class, 'reabrir'])->middleware('permission:comissoes-reabrir')->name('comissoes.reabrir');
+    // `pagar` reaproveita `comissoes-fechar`: marcar como paga só é possível
+    // a partir de uma comissão já fechada, e é a continuação natural do
+    // mesmo fluxo de encerramento, não uma ação nova (ver o comentário da
+    // permissão em `SyncPermissions::catalogo()`).
+    Route::post('/comissoes/{comissao}/pagar', [CommissionController::class, 'pagar'])->middleware('permission:comissoes-fechar')->name('comissoes.pagar');
+
+    // Metas: toda escrita (CRUD e lote) exige `meta-gerenciar`;
+    // `acompanhamento` é liberada a qualquer autenticado, com a própria
+    // restrição de "só a própria meta" dentro do controller
+    // (`GoalController::acompanhamento()`), mesmo padrão de
+    // `CommissionController::index()`.
+    Route::get('/metas/acompanhamento', [GoalController::class, 'acompanhamento'])->name('metas.acompanhamento');
+    Route::get('/metas', [GoalController::class, 'index'])->middleware('permission:meta-gerenciar')->name('metas.index');
+    Route::post('/metas', [GoalController::class, 'store'])->middleware('permission:meta-gerenciar')->name('metas.store');
+    Route::post('/metas/lote', [GoalController::class, 'storeLote'])->middleware('permission:meta-gerenciar')->name('metas.lote');
+    Route::put('/metas/{meta}', [GoalController::class, 'update'])->middleware('permission:meta-gerenciar')->name('metas.update');
+    Route::delete('/metas/{meta}', [GoalController::class, 'destroy'])->middleware('permission:meta-gerenciar')->name('metas.destroy');
+
+    // Painel comercial: conversão, ticket médio e tempo até o fechamento
+    // (Task 23.3/23.6). Gate por `orcamento-ver` - ver o docblock de
+    // `IndicadoresComerciaisController` para o motivo de reaproveitar essa
+    // permissão em vez de criar uma nova.
+    Route::get('/comercial/indicadores', [IndicadoresComerciaisController::class, 'index'])->middleware('permission:orcamento-ver')->name('comercial.indicadores');
 
     // Rotas de Notificações (Plano 14)
     // /notificacoes/templates tem dois segmentos e /notificacoes/{item}/... tem

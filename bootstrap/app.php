@@ -195,6 +195,18 @@ return Application::configure(basePath: dirname(__DIR__))
                 ->storeOutput());
         }
 
+        // Rotina mensal (Plano 23, Task 23.2): apuração de comissão, no dia
+        // do mês declarado em RotinasAgendadas::MENSAIS. Mesmo fuso e mesma
+        // trava de sobreposição das diárias; só o método de agendamento muda
+        // (monthlyOn em vez de dailyAt).
+        foreach (RotinasAgendadas::MENSAIS as $comando => $quando) {
+            $auditar($schedule->command($comando)
+                ->monthlyOn($quando['dia'], $quando['horario'])
+                ->timezone(config('app.business_timezone'))
+                ->withoutOverlapping(RotinasAgendadas::MINUTOS_DE_TRAVA)
+                ->storeOutput());
+        }
+
         // Rotinas por intervalo (Plano 14): o despacho da fila de notificações,
         // de 5 em 5 minutos, e a verificação de rotina parada, de hora em hora.
         // Sem `timezone()` aqui de propósito: a expressão só tem minutos, então

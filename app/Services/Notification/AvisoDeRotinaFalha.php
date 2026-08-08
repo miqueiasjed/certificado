@@ -328,6 +328,12 @@ class AvisoDeRotinaFalha
             return "todo dia às {$horario} (".BusinessDate::fuso().')';
         }
 
+        $mensal = RotinasAgendadas::MENSAIS[$assinatura] ?? null;
+
+        if ($mensal !== null) {
+            return "todo dia {$mensal['dia']} do mês, às {$mensal['horario']} (".BusinessDate::fuso().')';
+        }
+
         $minutos = RotinasAgendadas::POR_INTERVALO[$assinatura] ?? null;
 
         return $minutos !== null ? "a cada {$minutos} minutos" : 'sem horário declarado';

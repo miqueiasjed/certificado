@@ -49,15 +49,55 @@ class ContractService
     public function criar(Address $address, array $dados): Contract
     {
         $dados = $this->comPeriodicidadeResolvida($dados);
-
-        if (empty($dados['contract_number'])) {
-            $dados['contract_number'] = 'CONT-' . str_pad((string) $address->id, 6, '0', STR_PAD_LEFT) . '-' . date('Ymd');
-        }
+        $dados = $this->comNumeroDeContrato($address->id, $dados);
 
         return $address->contract()->updateOrCreate(
             ['address_id' => $address->id],
             $dados
         );
+    }
+
+    /**
+     * Cria um contrato novo para o endereço, sempre em uma linha nova
+     * (`Contract::create`), nunca atualizando um contrato existente do mesmo
+     * endereço.
+     *
+     * Reaproveitado por `ContractRenewalService` (Task 23.4): no momento da
+     * renovação o endereço já tem uma linha em `contracts`, e o
+     * `updateOrCreate` de `criar()` sobrescreveria o contrato anterior em vez
+     * de preservá-lo como histórico.
+     *
+     * Ao contrário de `criar()`, não passa os dados por
+     * `comPeriodicidadeResolvida`: quem chama aqui já entrega
+     * `visit_frequency_valor`/`visit_frequency_unidade` prontos, copiados do
+     * contrato anterior, e reprocessar o texto livre de `visit_frequency`
+     * arriscaria recalcular um valor diferente do que foi copiado de
+     * propósito.
+     *
+     * @param  array<string, mixed>  $dados  Dados já resolvidos do contrato
+     *                                       novo, exceto `address_id` e
+     *                                       (quando ausente) `contract_number`.
+     */
+    public function criarNovo(Address $address, array $dados): Contract
+    {
+        $dados = $this->comNumeroDeContrato($address->id, $dados);
+        $dados['address_id'] = $address->id;
+
+        return Contract::create($dados);
+    }
+
+    /**
+     * Preenche `contract_number` com o padrão `CONT-000000-AAAAMMDD` quando
+     * ainda não veio definido. Extraído de `criar()` para `criarNovo()`
+     * reaproveitar a mesma regra sem duplicá-la.
+     */
+    private function comNumeroDeContrato(int $addressId, array $dados): array
+    {
+        if (empty($dados['contract_number'])) {
+            $dados['contract_number'] = 'CONT-' . str_pad((string) $addressId, 6, '0', STR_PAD_LEFT) . '-' . date('Ymd');
+        }
+
+        return $dados;
     }
 
     /**

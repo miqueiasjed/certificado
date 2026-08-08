@@ -121,6 +121,16 @@ class SyncPermissions extends Command
                 'contrato-criar',
                 'contrato-editar',
                 'contrato-excluir',
+                // Renovação, não renovação e negociação de renovação (Plano
+                // 23, Task 23.6): `ContractRenewalController::renovar()`,
+                // `naoRenovar()` e `emNegociacao()`. Uma permissão só para as
+                // três, porque são as três saídas possíveis do mesmo painel
+                // de contratos a vencer (Task 23.5/23.8) - separar criaria a
+                // chance de alguém decidir "não renovar" sem poder registrar
+                // "em negociação" do mesmo contrato, o que não faz sentido
+                // operacional. Entra no papel `comercial` pelo prefixo
+                // `contrato-` já filtrado em `RolesAndPermissionsSeeder`.
+                'contrato-renovar',
             ],
             'orcamentos' => [
                 'orcamento-ver',
@@ -381,6 +391,71 @@ class SyncPermissions extends Command
                 'roteiro-ver',
                 'roteiro-gerenciar',
                 'endereco-geo',
+            ],
+            // Comissão de vendedor e de técnico (Plano 23, Task 23.2/23.6).
+            // "reabrir" já existia desde a Task 23.2; as quatro abaixo são a
+            // Task 23.6. O arquivo da task pedia "comissoes.ver"/
+            // "comissoes.ver_todas"/"comissoes.apurar"/"comissoes.fechar",
+            // com ponto; valem os nomes abaixo, com hífen, no mesmo prefixo
+            // plural que `comissoes-reabrir` já usa neste catálogo (única
+            // família do sistema que usa o recurso no plural - manter as
+            // cinco consistentes entre si importa mais que voltar ao singular
+            // predominante do resto do catálogo).
+            //
+            // - `comissoes-ver`: acesso à própria comissão. Explicitamente
+            //   atribuída aos papéis `comercial` e `tecnico` em
+            //   `RolesAndPermissionsSeeder` - as duas pessoas que a
+            //   apuração desta Task realmente comissiona (vendedor e
+            //   técnico) precisam ver ao menos a própria.
+            // - `comissoes-ver-todas`: eleva a listagem para todo mundo da
+            //   empresa no mesmo payload. Comissão é informação sensível
+            //   entre colegas (quanto o colega ganhou); só quem gerencia
+            //   comissão recebe.
+            // - `comissoes-apurar`: dispara o recálculo manual da
+            //   competência (`CommissionCalculationService::apurar()`).
+            //   Também reaproveitada pelo cadastro de `CommissionRule`
+            //   (Task 23.6): a regra é o insumo direto da apuração, e criar
+            //   uma sétima permissão só para o cadastro dela espalharia o
+            //   mesmo controle de acesso em duas permissões que sempre
+            //   andam juntas.
+            // - `comissoes-fechar`: fecha a competência
+            //   (`CommissionClosingService::fechar()`) e, na sequência do
+            //   mesmo fluxo, marca como paga
+            //   (`CommissionClosingService::marcarComoPaga()`) - reaproveitada
+            //   ali por ser a continuação natural do fechamento, não uma
+            //   ação nova.
+            //
+            // Nenhuma das quatro entra no papel `leitura` pelo filtro
+            // genérico de sufixo "-ver" (`comissoes-ver-todas` também
+            // termina em "-todas", não em "-ver" sozinho, e por isso fica de
+            // fora do filtro; ver o comentário em `permissoesLeitura()`), e
+            // só `comissoes-ver` entra
+            // explicitamente em `comercial`/`tecnico`; as outras três ficam
+            // só com administrador, que recebe o catálogo inteiro.
+            'comissoes' => [
+                'comissoes-reabrir',
+                'comissoes-ver',
+                'comissoes-ver-todas',
+                'comissoes-apurar',
+                'comissoes-fechar',
+            ],
+            // Meta por pessoa e por competência (Plano 23, Task 23.6). O
+            // arquivo da task pedia "metas.gerenciar", com ponto e no
+            // plural; vale o nome abaixo, no padrão "recurso-acao" no
+            // singular do resto do catálogo (mesmo critério de
+            // "comodo-gerenciar", "planta-gerenciar", "servico-gerenciar":
+            // toda permissão "-gerenciar" do catálogo é singular, diferente
+            // da exceção "comissoes-*" logo acima).
+            //
+            // Uma permissão só cobre o CRUD inteiro (criação em lote
+            // incluída) e a listagem crua: só quem gerencia a equipe
+            // comercial decide a meta de outra pessoa. O acompanhamento do
+            // atingimento (`GoalController::acompanhamento()`) não exige
+            // esta permissão - qualquer autenticado consulta a própria meta,
+            // mesmo critério de "minhas metas" já prometido no docblock de
+            // `GoalService::acompanhamento()`.
+            'metas' => [
+                'meta-gerenciar',
             ],
         ];
     }

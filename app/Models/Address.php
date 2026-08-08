@@ -86,9 +86,27 @@ class Address extends Model
         return $this->hasMany(PestSighting::class);
     }
 
+    /**
+     * Contrato vigente do endereço. Desde a Task 23.4 (renovação), um
+     * endereço pode ter mais de um `Contract` (o anterior fica preservado
+     * como histórico), então esta relação precisa de `latestOfMany()` para
+     * sempre resolver o mais recente. Sem isso, código existente como
+     * `ContractController::generatePDF()` geraria o PDF do contrato antigo e
+     * já renovado, documento com valor perante fiscalização.
+     */
     public function contract(): HasOne
     {
-        return $this->hasOne(Contract::class);
+        return $this->hasOne(Contract::class)->latestOfMany();
+    }
+
+    /**
+     * Todos os contratos do endereço, do mais antigo ao mais novo,
+     * incluindo os já renovados. Use para navegar o histórico; para o
+     * contrato vigente, use `contract()`.
+     */
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(Contract::class);
     }
 
     public function devices(): HasMany
