@@ -282,7 +282,13 @@ class ValidadeService
             return null;
         }
 
-        foreach (self::MARCOS as $marco) {
+        // Do marco mais apertado para o mais largo: um documento a 30 dias de
+        // vencer atinge o marco 30, e não o 60. Percorrer na ordem declarada
+        // devolveria sempre o primeiro que couber (o 60), e aí o documento
+        // repetiria o mesmo marco em toda a janela e nunca chegaria aos avisos
+        // de 30 e de 7 — que são justamente os que a empresa precisa receber
+        // quando o prazo aperta.
+        foreach (array_reverse(self::MARCOS) as $marco) {
             if ($diasParaVencer <= $marco) {
                 return $marco;
             }
