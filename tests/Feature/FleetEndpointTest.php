@@ -4,12 +4,14 @@ namespace Tests\Feature;
 
 use App\Console\Commands\SyncPermissions;
 use App\Models\Company;
+use App\Models\Module;
 use App\Models\StockLocation;
 use App\Models\Supplier;
 use App\Models\Technician;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\WorkOrder;
+use App\Services\ModuleService;
 use App\Services\WorkOrderService;
 use App\Support\BusinessDate;
 use App\Support\TenantAtual;
@@ -199,6 +201,29 @@ class FleetEndpointTest extends TestCase
         $this->assertSame('veiculo', $local->tipo);
         $this->assertSame('Veículo EST0Q01', $local->nome);
         $this->assertNull($local->technician_id, 'local de veículo não é van de técnico');
+    }
+
+    /**
+     * Com o módulo de estoque desligado, o local não é criado: local de
+     * estoque para quem não usa estoque só polui um cadastro que a empresa
+     * nunca vai abrir. O veículo continua sendo cadastrado normalmente.
+     */
+    public function test_sem_o_modulo_de_estoque_o_veiculo_nasce_sem_local_de_estoque(): void
+    {
+        $this->desligarModulo('estoque');
+
+        $resposta = $this->actingAs($this->administrador)->postJson('/veiculos', [
+            'placa' => 'SEM0EST',
+            'modelo' => 'Kangoo',
+            'marca' => 'Renault',
+        ]);
+
+        $resposta->assertCreated();
+
+        $veiculo = Vehicle::query()->findOrFail($resposta->json('veiculo.id'));
+
+        $this->assertNull($veiculo->stock_location_id);
+        $this->assertSame(0, $this->comTenant(fn (): int => StockLocation::query()->where('tipo', 'veiculo')->count()));
     }
 
     // -----------------------------------------------------------------
@@ -556,6 +581,19 @@ class FleetEndpointTest extends TestCase
             'km_atual' => 0,
             'situacao' => 'ativo',
         ], $atributos)));
+    }
+
+    /**
+     * Bloqueia o módulo para a empresa do teste, pelo mesmo caminho que o
+     * super admin usa (`ModuleService::bloquearPara()`), em vez de mexer em
+     * `company_modules` na mão: é o único jeito de o cache de módulos ser
+     * invalidado junto.
+     */
+    private function desligarModulo(string $chave): void
+    {
+        $modulo = Module::query()->where('chave', $chave)->firstOrFail();
+
+        app(ModuleService::class)->bloquearPara($this->empresa, $modulo, 'Desligado no teste.');
     }
 
     private function criarFornecedor(): Supplier

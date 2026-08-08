@@ -13,7 +13,7 @@
 | 27.3 | Alertas de manutenção e de documentação | backend-logica | ✅ | média |
 | 27.4 | Endpoints e integração com estoque e financeiro | backend-endpoint | ✅ | alta |
 | 27.5 | Telas de frota | frontend-pagina | ✅ | alta |
-| 27.6 | Testes de consumo, rateio e alertas | teste | ⏳ | alta |
+| 27.6 | Testes de consumo, rateio e alertas | teste | ✅ | alta |
 
 ## Ordem de execução
 

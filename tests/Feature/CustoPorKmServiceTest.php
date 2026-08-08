@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\Receivable;
 use App\Models\Refueling;
 use App\Models\Route as RouteModel;
 use App\Models\RouteStop;
@@ -11,6 +12,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\VehicleMaintenance;
 use App\Models\WorkOrder;
+use App\Services\Financial\WorkOrderMarginService;
 use App\Services\Fleet\CustoPorKmService;
 use App\Services\Fleet\RateioDeDeslocamentoService;
 use App\Support\TenantAtual;
@@ -265,6 +267,66 @@ class CustoPorKmServiceTest extends TestCase
     }
 
     // -----------------------------------------------------------------
+    // Margem do Plano 18: o fixo vira reserva, e o rateio entra no lugar
+    // -----------------------------------------------------------------
+
+    /**
+     * Empresa que não controla frota não perde a margem: sem veículo
+     * vinculado, o deslocamento continua sendo o fixo por visita do Plano 18,
+     * e a margem **não** fica parcial por isso. Não ter frota não é falta de
+     * dado.
+     */
+    public function test_os_sem_veiculo_mantem_o_deslocamento_fixo_do_plano_18(): void
+    {
+        $os = $this->criarOsComTitulo(1000.00, ['vehicle_id' => null]);
+
+        $margem = $this->comTenant(fn () => app(WorkOrderMarginService::class)->margem($os));
+
+        $this->assertSame('50.00', $margem['custo_deslocamento']);
+        $this->assertSame(WorkOrderMarginService::FONTE_DESLOCAMENTO_FIXA, $margem['deslocamento_fonte']);
+        $this->assertTrue($margem['deslocamento_e_estimado']);
+        $this->assertNotContains(
+            WorkOrderMarginService::MOTIVO_DESLOCAMENTO_SEM_QUILOMETRAGEM,
+            $margem['motivos_parcial']
+        );
+    }
+
+    public function test_os_com_veiculo_usa_o_deslocamento_calculado_pela_frota(): void
+    {
+        $veiculo = $this->criarVeiculoComHistorico();
+        $os = $this->criarOsComTitulo(1000.00, ['vehicle_id' => $veiculo->id, 'km_deslocamento' => 40]);
+
+        $margem = $this->comTenant(fn () => app(WorkOrderMarginService::class)->margem($os));
+
+        $this->assertSame(WorkOrderMarginService::FONTE_DESLOCAMENTO_FROTA, $margem['deslocamento_fonte']);
+        $this->assertSame('20.00', $margem['custo_deslocamento'], '40 km x R$ 0,50/km');
+        $this->assertSame('0.5000', $margem['deslocamento_custo_por_km']);
+        $this->assertSame(RateioDeDeslocamentoService::ORIGEM_KM_INFORMADA, $margem['deslocamento_origem_km']);
+        $this->assertFalse($margem['deslocamento_e_estimado'], 'km informado e custo medido');
+    }
+
+    /**
+     * Aqui a falta de dado é real: a empresa optou pela frota, vinculou o
+     * veículo e ainda assim o rateio não fechou. O fixo entra como reserva e a
+     * margem sai parcial, com o motivo.
+     */
+    public function test_os_com_veiculo_e_sem_quilometragem_cai_no_fixo_e_marca_a_margem_como_parcial(): void
+    {
+        $veiculo = $this->criarVeiculoComHistorico();
+        $os = $this->criarOsComTitulo(1000.00, ['vehicle_id' => $veiculo->id, 'km_deslocamento' => null]);
+
+        $margem = $this->comTenant(fn () => app(WorkOrderMarginService::class)->margem($os));
+
+        $this->assertSame('50.00', $margem['custo_deslocamento']);
+        $this->assertSame(WorkOrderMarginService::FONTE_DESLOCAMENTO_FIXA, $margem['deslocamento_fonte']);
+        $this->assertTrue($margem['parcial']);
+        $this->assertContains(
+            WorkOrderMarginService::MOTIVO_DESLOCAMENTO_SEM_QUILOMETRAGEM,
+            $margem['motivos_parcial']
+        );
+    }
+
+    // -----------------------------------------------------------------
     // Isolamento entre empresas
     // -----------------------------------------------------------------
 
@@ -359,6 +421,45 @@ class CustoPorKmServiceTest extends TestCase
             'tanque_cheio' => $tanqueCheio,
             'user_id' => $this->usuario->id,
         ]));
+    }
+
+    /**
+     * OS com título a receber gerado, para a margem do Plano 18 ter receita.
+     * Uma hora de execução e técnico com custo/hora, para os demais
+     * componentes não marcarem a margem como parcial por conta própria.
+     *
+     * @param  array<string, mixed>  $atributos
+     */
+    private function criarOsComTitulo(float $valorDoTitulo, array $atributos): WorkOrder
+    {
+        return $this->comTenant(function () use ($valorDoTitulo, $atributos): WorkOrder {
+            $tecnico = Technician::create([
+                'name' => 'Técnico da margem',
+                'email' => 'margem'.uniqid().'@dedetizadora.test',
+                'phone' => '11999990000',
+                'is_active' => true,
+                'custo_hora' => 40.00,
+            ]);
+
+            $os = WorkOrderFactory::new()->create(array_merge([
+                'technician_id' => $tecnico->id,
+                'scheduled_date' => self::HOJE,
+                'start_time' => self::HOJE.' 08:00:00',
+                'end_time' => self::HOJE.' 09:00:00',
+                'final_amount' => $valorDoTitulo,
+            ], $atributos));
+
+            Receivable::create([
+                'client_id' => $os->client_id,
+                'work_order_id' => $os->id,
+                'descricao' => "Ordem de serviço {$os->order_number}",
+                'valor_total' => $valorDoTitulo,
+                'emitido_em' => self::HOJE,
+                'situacao' => 'aberto',
+            ]);
+
+            return $os;
+        });
     }
 
     /**
