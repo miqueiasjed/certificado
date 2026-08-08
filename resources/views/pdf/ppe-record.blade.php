@@ -5,7 +5,7 @@
     é oponível: arquivamento recomendado de 20 anos e prova do empregador em
     reclamatória trabalhista.
 
-    Três regras que esta view não pode quebrar:
+    Quatro regras que esta view não pode quebrar:
 
     - O CA impresso é o da entrega (cópia gravada no ato), nunca o do cadastro.
       Quem monta os dados é o FichaDeEpiService; aqui não se lê relação nenhuma.
@@ -13,6 +13,11 @@
       branco. Entrega estornada sai marcada, com o motivo — omiti-la seria
       adulterar o registro.
     - Nenhuma data é formatada aqui. Tudo chega em texto, já no fuso do negócio.
+    - A declaração de recebimento e a linha de assinatura do trabalhador só saem
+      quando há entrega **válida** (`$resumo['validas']`), e o texto delas não
+      afirma nada além do que a ficha lista. Pedir assinatura de recebimento
+      onde só há estorno, ou declarar treinamento e estado de conservação que o
+      sistema não registra, é produzir prova contra quem emitiu o documento.
 
     O rodapé afirma o que o documento é, e não que a empresa está regular:
     treinamento, uso em campo, higienização e guarda o sistema não enxerga.
@@ -414,7 +419,12 @@
                                         Assinatura registrada
                                     @endif
                                 </span>
-                            @else
+                            @elseif(! $entrega['estornada'])
+                                {{-- Entrega estornada não é pendência de
+                                     assinatura: a empresa já declarou a linha
+                                     errada, e cobrar a assinatura dela
+                                     contradiria o resumo do rodapé, que a
+                                     exclui da contagem de pendentes. --}}
                                 <span class="badge badge-pendente">Pendente de assinatura</span>
                             @endif
                         </td>
@@ -458,17 +468,27 @@
         </div>
     @endif
 
-    {{-- Sem entrega nenhuma não há o que declarar recebido: a ficha vazia sai
-         sem a declaração e sem as linhas de assinatura, para que ninguém assine
-         um recebimento que não houve. --}}
-    @if(count($entregas) > 0)
+    {{-- Sem entrega **válida** não há o que declarar recebido: a ficha sai sem a
+         declaração e sem as linhas de assinatura, para que ninguém assine um
+         recebimento que não houve. A conta é `validas`, e não `count($entregas)`:
+         o técnico cuja única entrega foi estornada tem linha na tabela e não tem
+         recebimento nenhum — pedir a assinatura dele seria colher a firma do
+         trabalhador em algo que a própria empresa registrou como inexistente.
+
+         O texto declara só o que esta ficha prova: o recebimento dos itens
+         listados, nas datas e com os CA listados. Estado de conservação na
+         entrega, treinamento e orientação de uso não existem como registro em
+         lugar nenhum do sistema — o próprio rodapé desta folha diz isso —, e
+         declará-los aqui faria o documento afirmar contra si mesmo. --}}
+    @if($resumo['validas'] > 0)
     <div class="fecho">
     <div class="declaracao">
         Declaro ter recebido os equipamentos de proteção individual relacionados nesta ficha,
-        em perfeitas condições de uso, bem como as orientações sobre a sua utilização.
-        Comprometo-me a usá-los apenas para a finalidade a que se destinam, a responsabilizar-me
-        pela guarda e conservação, a comunicar qualquer alteração que os torne impróprios para uso
-        e a devolvê-los quando solicitado ou ao término do contrato de trabalho.
+        exceto os registros marcados como estornados, nas datas e com os números de Certificado
+        de Aprovação nela listados. Comprometo-me a usá-los apenas para a finalidade a que se
+        destinam, a responsabilizar-me pela guarda e conservação, a comunicar qualquer alteração
+        que os torne impróprios para uso e a devolvê-los quando solicitado ou ao término do
+        contrato de trabalho.
     </div>
 
     <table class="assinaturas">

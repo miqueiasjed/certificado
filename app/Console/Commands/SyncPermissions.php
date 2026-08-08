@@ -573,16 +573,18 @@ class SyncPermissions extends Command
             // segue a única exceção, por um motivo documentado ali). Mesma
             // correção já aplicada às Tasks 14.6, 16.4, 17.7, 18.4, 19.6, 21.4,
             // 21.5, 22.5, 23.6, 24.5, 25.5, 26.4 e 27.4. "epi-ver" em vez de
-            // "epi-visualizar" pelo mesmo motivo: é o sufixo que o papel
-            // `leitura` reconhece em `RolesAndPermissionsSeeder`.
+            // "epi-visualizar" por coerência com o padrão do catálogo.
             //
             // Quatro permissões, e não duas, porque as ações têm consequências
             // diferentes sobre um documento com valor perante fiscalização:
             //
             // - `epi-ver`: lista dos modelos de EPI, ficha do técnico, ficha em
-            //   PDF e extração por período (Task 28.5). Leitura pura. Termina em
-            //   "-ver", então entra no papel `leitura` pelo filtro genérico do
-            //   `RolesAndPermissionsSeeder`.
+            //   PDF e extração por período (Task 28.5). Leitura pura, mas fica
+            //   **fora** do papel `leitura`: apesar do sufixo "-ver", está na
+            //   lista de exceções do `RolesAndPermissionsSeeder`, junto de
+            //   `comissoes-ver`. A ficha traz nome, matrícula, histórico e
+            //   assinatura do trabalhador, e a extração despeja isso de todos os
+            //   técnicos — dado pessoal de funcionário se concede explícito.
             // - `epi-gerenciar`: cadastro do modelo de EPI — nome, fabricante,
             //   número do CA, validade e vida útil. É o cadastro que alimenta a
             //   cópia do CA gravada em cada entrega, então quem edita aqui

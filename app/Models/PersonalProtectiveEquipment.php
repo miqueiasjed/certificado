@@ -53,6 +53,28 @@ class PersonalProtectiveEquipment extends Model
     ];
 
     /**
+     * Rótulo legível de cada tipo, na mesma ordem de `TIPOS`.
+     *
+     * Fica aqui, colado no enum que descreve, porque o vocabulário do banco
+     * (sem acento e com sublinhado) não é o que a pessoa lê: o mesmo texto sai
+     * na ficha entregue à fiscalização e no e-mail de aviso, e cópias separadas
+     * já divergiram uma vez — "protetor auricular" no aviso e "Protetor
+     * auricular" no documento. Quem acrescentar um tipo em `TIPOS` acrescenta o
+     * rótulo aqui, e `FichaDeEpiServiceTest` cobra as duas listas juntas.
+     *
+     * @var array<string, string>
+     */
+    public const ROTULOS_DE_TIPO = [
+        'respirador' => 'Respirador',
+        'luva' => 'Luva',
+        'oculos' => 'Óculos',
+        'protetor_auricular' => 'Protetor auricular',
+        'calcado' => 'Calçado',
+        'vestimenta' => 'Vestimenta',
+        'outro' => 'Outro',
+    ];
+
+    /**
      * Declarado à mão porque "equipment" é incontável em inglês: a
      * pluralização do Eloquent devolveria `personal_protective_equipment`, no
      * singular, e a tabela é `personal_protective_equipments`, no plural, como

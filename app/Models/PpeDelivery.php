@@ -62,6 +62,25 @@ class PpeDelivery extends Model
         'outro',
     ];
 
+    /**
+     * Rótulo legível de cada motivo, na mesma ordem de `MOTIVOS`.
+     *
+     * Mesma razão do `ROTULOS_DE_TIPO` do cadastro de EPI: o rótulo mora junto
+     * do enum que descreve, para que a ficha, a extração e qualquer aviso falem
+     * o mesmo texto. Quem acrescentar um motivo em `MOTIVOS` acrescenta o rótulo
+     * aqui.
+     *
+     * @var array<string, string>
+     */
+    public const ROTULOS_DE_MOTIVO = [
+        'primeira_entrega' => 'Primeira entrega',
+        'substituicao' => 'Substituição',
+        'dano' => 'Dano',
+        'perda' => 'Perda',
+        'vencimento' => 'Vencimento',
+        'outro' => 'Outro',
+    ];
+
     protected $fillable = [
         'technician_id',
         'personal_protective_equipment_id',

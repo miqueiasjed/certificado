@@ -302,17 +302,20 @@ class VerificarEpi extends Command
     // -----------------------------------------------------------------
 
     /**
-     * Tipo do EPI em texto legível: `protetor_auricular` vira "protetor
-     * auricular", `oculos` vira "óculos".
+     * Tipo do EPI em texto legível: `protetor_auricular` vira "Protetor
+     * auricular", `oculos` vira "Óculos".
      *
      * O enum é o vocabulário do banco, sem acento e com sublinhado, e não o do
      * e-mail: o texto que a empresa lê é o mesmo que ela encaminha ao técnico de
-     * segurança do trabalho e, no limite, ao fiscal. Valor fora da lista cai no
-     * tratamento genérico em vez de sumir, porque um tipo novo no enum não pode
-     * apagar a informação do aviso enquanto ninguém lembra de atualizar aqui.
+     * segurança do trabalho e, no limite, ao fiscal — e é o mesmo que sai na
+     * ficha de EPI. Por isso o rótulo vem de
+     * `PersonalProtectiveEquipment::ROTULOS_DE_TIPO`, e não de uma tabela
+     * própria daqui: havia duas, e elas divergiram ("protetor auricular" no
+     * aviso, "Protetor auricular" no documento, para o mesmo item).
      *
-     * A lista de tipos válidos continua sendo só uma:
-     * `PersonalProtectiveEquipment::TIPOS`.
+     * Valor fora da lista cai no tipo cru em vez de sumir, porque um tipo novo
+     * no enum não pode apagar a informação do aviso enquanto ninguém lembra de
+     * cadastrar o rótulo.
      */
     private function tipoEmTexto(?string $tipo): string
     {
@@ -320,12 +323,7 @@ class VerificarEpi extends Command
             return 'não informado';
         }
 
-        return match ($tipo) {
-            'oculos' => 'óculos',
-            'protetor_auricular' => 'protetor auricular',
-            'calcado' => 'calçado',
-            default => str_replace('_', ' ', $tipo),
-        };
+        return PersonalProtectiveEquipment::ROTULOS_DE_TIPO[$tipo] ?? $tipo;
     }
 
     /**

@@ -58,11 +58,19 @@ use Illuminate\Support\Collection;
  * - CA a vencer e CA vencido param quando a `validade_ca` do cadastro é
  *   atualizada, ou quando o modelo de EPI é marcado como inativo — que é como
  *   se aposenta um modelo substituído por outro cadastro.
- * - Troca vencida para quando a entrega é devolvida, estornada **ou substituída
- *   por uma entrega mais recente do mesmo EPI ao mesmo técnico**. Esta última é
- *   o caso equivalente ao do `d9a3a9c`: ninguém edita a entrega antiga (ela é
- *   imutável, por ser documento oponível), registra-se a entrega do substituto,
- *   e sem este critério a linha velha avisaria toda semana para sempre.
+ * - Troca vencida para quando a entrega é devolvida, estornada, **substituída
+ *   por uma entrega mais recente e ainda em vigor do mesmo EPI ao mesmo
+ *   técnico** ou quando o técnico é desligado (`technicians.is_active`). A
+ *   substituição é o caso equivalente ao do `d9a3a9c`: ninguém edita a entrega
+ *   antiga (ela é imutável, por ser documento oponível), registra-se a entrega
+ *   do substituto, e sem este critério a linha velha avisaria toda semana para
+ *   sempre.
+ *
+ * Critério de parada, porém, nunca pode virar silêncio indevido: quem para o
+ * aviso é o fato que resolve a pendência, não qualquer fato posterior. Um
+ * substituto que foi **devolvido** não resolve nada — o técnico continua sem o
+ * equipamento —, e por isso ele não cala a entrega anterior (ver
+ * `entregaMaisRecentePorTecnicoEEpi()`).
  *
  * Datas
  * -----
@@ -127,9 +135,31 @@ class AlertaDeEpiService
     /**
      * Entregas cuja troca programada já passou e que continuam valendo: nem
      * devolvidas, nem estornadas, nem substituídas por uma entrega mais recente
-     * do mesmo EPI ao mesmo técnico.
+     * do mesmo EPI ao mesmo técnico, e sempre de técnico na ativa.
      *
      * `trocar_ate` nulo é "sem troca programada" e nunca entra aqui.
+     *
+     * Técnico desligado sai da varredura
+     * ----------------------------------
+     * Por simetria com o `ativo` do modelo de EPI em `certificadosEntre()`:
+     * assim como cobrar a renovação do certificado de um modelo aposentado é
+     * ruído garantido, cobrar a troca do respirador de quem não trabalha mais na
+     * empresa é um aviso sem critério de parada nenhum. `is_active = false` com
+     * entrega antiga sem devolução registrada reenviaria `EPI_COM_TROCA_VENCIDA`
+     * toda semana, indefinidamente, sobre alguém que não vai trocar coisa
+     * alguma — e é assim que o usuário aprende a ignorar o alerta inteiro.
+     *
+     * Fica registrado o que este aviso **não** cobre: o item que o técnico levou
+     * embora e ninguém deu baixa no desligamento continua sem devolução no
+     * sistema, e isso é problema de escritório (acerto de rescisão, conferência
+     * da ficha do Plano 28), não pendência de troca. Alertar troca vencida
+     * eternamente não recupera equipamento nenhum; quem cobra a devolução é a
+     * ficha do técnico, que sobrevive ao desligamento de propósito.
+     *
+     * O critério não vale para os alertas de CA (`certificadosAVencer()`), que
+     * são sobre o cadastro do modelo de EPI e não sobre um técnico específico: o
+     * CA vencido de um respirador segue sendo problema real mesmo que ninguém o
+     * tenha na mão hoje.
      *
      * @return Collection<int, array{
      *     entrega: PpeDelivery,
@@ -151,6 +181,9 @@ class AlertaDeEpiService
             // entrega foi registrada por engano e nunca existiu de verdade.
             ->whereNull('devolvido_em')
             ->whereNull('estornada_em')
+            // Técnico desligado não troca EPI: ver o bloco no docblock deste
+            // método. Mesmo papel do `ativo` do EPI em `certificadosEntre()`.
+            ->whereHas('technician', static fn ($consulta) => $consulta->where('is_active', true))
             ->orderBy('trocar_ate')
             ->orderBy('id')
             ->get()
@@ -193,6 +226,13 @@ class AlertaDeEpiService
      * modelo que saiu de uso — cobrar a renovação do certificado dele seria
      * ruído garantido, e desativar é justamente como a empresa aposenta o
      * cadastro que foi substituído por outro.
+     *
+     * O filtro de técnico ativo que existe em `trocasVencidas()` **não** tem
+     * equivalente aqui, de propósito: este alerta é sobre o cadastro do modelo
+     * de EPI, e não sobre um técnico específico. O CA vencido de um respirador
+     * segue impedindo novas entregas (regra da Task 28.2) mesmo que ninguém o
+     * tenha na mão hoje, e o critério de parada dele já é outro — renovar a
+     * validade ou inativar o modelo.
      *
      * @return Collection<int, array{
      *     epi: PersonalProtectiveEquipment,
@@ -243,10 +283,31 @@ class AlertaDeEpiService
      *
      * Entrega estornada não conta como substituta: estorno é a declaração de
      * que aquela entrega nunca existiu, e deixá-la calar a entrega anterior
-     * apagaria justamente o aviso que o estorno faz voltar a valer. Entrega
-     * devolvida **conta**: o item chegou às mãos do técnico e substituiu o
-     * anterior, e a devolução do substituto é uma pendência daquela linha, não
-     * desta.
+     * apagaria justamente o aviso que o estorno faz voltar a valer.
+     *
+     * Entrega devolvida também não conta — e esta decisão mudou
+     * ---------------------------------------------------------
+     * A versão original desta classe dizia o contrário, com este argumento: "o
+     * item chegou às mãos do técnico e substituiu o anterior, e a devolução do
+     * substituto é uma pendência daquela linha, não desta". A premissa era
+     * falsa: a pendência daquela linha não era alertada por caminho nenhum,
+     * porque `trocasVencidas()` exclui as entregas devolvidas da varredura. As
+     * duas exclusões se combinavam num silêncio completo:
+     *
+     * - entrega em `hoje-200`, com a troca vencida há 170 dias;
+     * - substituto entregue em `hoje-10` e devolvido em `hoje-5`, por dano;
+     * - o substituto devolvido calava a linha antiga, e ele mesmo estava fora da
+     *   varredura por estar devolvido.
+     *
+     * Resultado: o técnico há cinco dias sem respirador nenhum e o sistema mudo,
+     * que é o pior modo de um alerta falhar — pior que o aviso repetido, porque
+     * ninguém descobre que ele não veio.
+     *
+     * A regra correta é a que o critério de parada sempre quis dizer: só cala a
+     * entrega anterior o substituto que **está com o técnico**. Devolvido é item
+     * que voltou ao estoque; sem nada na mão, a pendência volta a ser a da linha
+     * antiga, e é ela que volta a avisar. Estorno e devolução, aqui, levam ao
+     * mesmo lugar por motivos diferentes.
      *
      * @param  Collection<int, PpeDelivery>  $candidatas
      * @return array<string, array{dia: string, id: int}>
@@ -260,6 +321,7 @@ class AlertaDeEpiService
 
         PpeDelivery::query()
             ->whereNull('estornada_em')
+            ->whereNull('devolvido_em')
             ->whereIn('technician_id', $tecnicos)
             ->whereIn('personal_protective_equipment_id', $epis)
             ->get(['id', 'technician_id', 'personal_protective_equipment_id', 'entregue_em'])

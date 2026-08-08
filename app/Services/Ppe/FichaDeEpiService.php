@@ -68,34 +68,12 @@ use RuntimeException;
 class FichaDeEpiService
 {
     /**
-     * Rótulos dos motivos de entrega, na ordem do enum `PpeDelivery::MOTIVOS`.
-     *
-     * @var array<string, string>
+     * Os rótulos de tipo e de motivo moram nos models, colados nos enums que
+     * descrevem: `PersonalProtectiveEquipment::ROTULOS_DE_TIPO` e
+     * `PpeDelivery::ROTULOS_DE_MOTIVO`. Havia cópia aqui e cópia no comando de
+     * aviso, e as duas divergiram — o e-mail dizia "protetor auricular" e a
+     * ficha, "Protetor auricular", para o mesmo item.
      */
-    private const ROTULOS_DE_MOTIVO = [
-        'primeira_entrega' => 'Primeira entrega',
-        'substituicao' => 'Substituição',
-        'dano' => 'Dano',
-        'perda' => 'Perda',
-        'vencimento' => 'Vencimento',
-        'outro' => 'Outro',
-    ];
-
-    /**
-     * Rótulos dos tipos de EPI, na ordem do enum
-     * `PersonalProtectiveEquipment::TIPOS`.
-     *
-     * @var array<string, string>
-     */
-    private const ROTULOS_DE_TIPO = [
-        'respirador' => 'Respirador',
-        'luva' => 'Luva',
-        'oculos' => 'Óculos',
-        'protetor_auricular' => 'Protetor auricular',
-        'calcado' => 'Calçado',
-        'vestimenta' => 'Vestimenta',
-        'outro' => 'Outro',
-    ];
 
     /**
      * Texto exibido no lugar de um dado que o tenant não preencheu. Estado
@@ -335,7 +313,7 @@ class FichaDeEpiService
             // neutro, nunca irregularidade.
             'numero_ca' => $entrega->numero_ca ?: self::NAO_INFORMADO,
             'validade_ca' => $this->dia($entrega->validade_ca) ?? self::NAO_INFORMADO,
-            'motivo' => self::ROTULOS_DE_MOTIVO[$entrega->motivo] ?? (string) $entrega->motivo,
+            'motivo' => PpeDelivery::ROTULOS_DE_MOTIVO[$entrega->motivo] ?? (string) $entrega->motivo,
             // Nulo é "sem troca programada", não pendência. A marca separada
             // existe para a view não comparar texto para decidir a cor.
             'tem_troca_programada' => $entrega->trocar_ate !== null,
@@ -364,7 +342,10 @@ class FichaDeEpiService
 
         return [
             $tecnico?->name ?? self::NAO_INFORMADO,
-            $tecnico?->is_active ? 'Ativo' : 'Inativo',
+            // Técnico ausente é dado que falta, não trabalhador desligado:
+            // imprimir "Inativo" aqui afirmaria ao fiscal uma situação
+            // cadastral que ninguém registrou.
+            $tecnico === null ? self::NAO_INFORMADO : ($tecnico->is_active ? 'Ativo' : 'Inativo'),
             (string) $dados['entregue_em'],
             (string) $dados['epi'],
             (string) $dados['tipo'],
@@ -465,7 +446,7 @@ class FichaDeEpiService
             return self::NAO_INFORMADO;
         }
 
-        return self::ROTULOS_DE_TIPO[$epi->tipo] ?? (string) $epi->tipo;
+        return PersonalProtectiveEquipment::ROTULOS_DE_TIPO[$epi->tipo] ?? (string) $epi->tipo;
     }
 
     /**

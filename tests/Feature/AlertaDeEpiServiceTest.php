@@ -522,6 +522,122 @@ class AlertaDeEpiServiceTest extends TestCase
         $this->assertStringContainsString('Joana da Silva', (string) $avisos->first()->corpo);
     }
 
+    /**
+     * O buraco entre os dois critérios de parada, achado por revisão
+     * independente: substituto **devolvido** não cala a entrega anterior.
+     *
+     * A regra original dizia que a entrega devolvida contava como substituta,
+     * porque "o item chegou às mãos do técnico" e a devolução dele seria
+     * pendência da linha nova. Não era: a linha nova está fora da varredura de
+     * troca vencida justamente por estar devolvida, então ninguém alertava nada.
+     * O técnico ficava sem respirador e o sistema calado — falha silenciosa, que
+     * é pior que o aviso repetido, porque ninguém percebe que ele não veio.
+     */
+    public function test_substituto_devolvido_nao_cala_a_entrega_antiga(): void
+    {
+        Carbon::setTestNow(self::AGORA);
+
+        $epi = $this->criarEpi(['vida_util_dias' => 30]);
+
+        // Entregue há 200 dias: a troca venceu há 170.
+        $this->entregar($epi, $this->emDias(-200), ['quantidade' => 1]);
+
+        // Substituto entregue há 10 dias e devolvido há 5, por dano. Ele mesmo
+        // não tem troca vencida (trocaria daqui a 20 dias) e, por estar
+        // devolvido, não aparece na varredura por caminho nenhum.
+        $this->entregar($epi, $this->emDias(-10), [
+            'quantidade' => 7,
+            'motivo' => 'dano',
+            'devolvido_em' => $this->emDias(-5),
+            'motivo_devolucao' => 'Danificado em campo.',
+        ]);
+
+        $this->artisan('epi:verificar')->assertSuccessful();
+
+        $avisos = $this->itensDoEvento(EventosDeNotificacao::EPI_COM_TROCA_VENCIDA);
+
+        $this->assertCount(
+            1,
+            $avisos,
+            'o técnico está sem o equipamento: a entrega antiga precisava voltar a avisar'
+        );
+        $this->assertStringContainsString('1 unidade(s)', (string) $avisos->first()->corpo);
+        $this->assertStringContainsString('há 170 dia(s)', (string) $avisos->first()->corpo);
+    }
+
+    /**
+     * Contraprova do caso acima: o substituto que **continua com o técnico**
+     * cala a entrega antiga, como sempre calou. O critério de parada não foi
+     * removido — só deixou de valer para o item que voltou ao estoque.
+     */
+    public function test_substituto_nao_devolvido_continua_calando_a_entrega_antiga(): void
+    {
+        Carbon::setTestNow(self::AGORA);
+
+        $epi = $this->criarEpi(['vida_util_dias' => 30]);
+
+        $this->entregar($epi, $this->emDias(-200), ['quantidade' => 1]);
+        $this->entregar($epi, $this->emDias(-10), ['quantidade' => 7, 'motivo' => 'dano']);
+
+        $this->artisan('epi:verificar')->assertSuccessful();
+
+        $this->assertCount(
+            0,
+            $this->itensDoEvento(EventosDeNotificacao::EPI_COM_TROCA_VENCIDA),
+            'o substituto está na mão do técnico: a linha antiga tinha de continuar calada'
+        );
+    }
+
+    /**
+     * Alerta sem critério de parada, achado por revisão independente: o técnico
+     * desligado com entrega antiga e sem devolução registrada recebia
+     * `EPI_COM_TROCA_VENCIDA` toda semana, para sempre, sobre alguém que não
+     * trabalha mais na empresa.
+     *
+     * É simetria com o `ativo` do modelo de EPI, que já saía da varredura de CA.
+     * O item que ninguém deu baixa no desligamento continua sendo problema de
+     * escritório — acerto de rescisão e conferência da ficha —, e não pendência
+     * de troca: alertar troca eternamente não recupera equipamento nenhum.
+     */
+    public function test_entrega_de_tecnico_desligado_nao_gera_aviso_de_troca(): void
+    {
+        Carbon::setTestNow(self::AGORA);
+
+        $desligado = $this->criarTecnico('Rafael Antunes', ativo: false);
+        $epi = $this->criarEpi(['vida_util_dias' => 30]);
+
+        $this->entregarPara($desligado, $epi, $this->emDias(-200));
+
+        $this->artisan('epi:verificar')->assertSuccessful();
+
+        $this->assertCount(
+            0,
+            $this->itensDoEvento(EventosDeNotificacao::EPI_COM_TROCA_VENCIDA),
+            'quem não trabalha mais na empresa não tem troca de EPI a fazer'
+        );
+    }
+
+    /**
+     * Contraprova: o mesmo cenário, mudando só `is_active`, avisa. É o que
+     * garante que o filtro novo não calou a varredura inteira.
+     */
+    public function test_o_mesmo_cenario_com_tecnico_ativo_gera_aviso_de_troca(): void
+    {
+        Carbon::setTestNow(self::AGORA);
+
+        $ativo = $this->criarTecnico('Rafael Antunes');
+        $epi = $this->criarEpi(['vida_util_dias' => 30]);
+
+        $this->entregarPara($ativo, $epi, $this->emDias(-200));
+
+        $this->artisan('epi:verificar')->assertSuccessful();
+
+        $avisos = $this->itensDoEvento(EventosDeNotificacao::EPI_COM_TROCA_VENCIDA);
+
+        $this->assertCount(1, $avisos);
+        $this->assertStringContainsString('Rafael Antunes', (string) $avisos->first()->corpo);
+    }
+
     // -----------------------------------------------------------------
     // Simulação e interruptor do módulo
     // -----------------------------------------------------------------
@@ -587,13 +703,13 @@ class AlertaDeEpiServiceTest extends TestCase
         return TenantAtual::comTenant($this->empresa->getKey(), $callback);
     }
 
-    private function criarTecnico(string $nome): Technician
+    private function criarTecnico(string $nome, bool $ativo = true): Technician
     {
         return $this->naEmpresa(fn (): Technician => Technician::create([
             'name' => $nome,
             'email' => 'tecnico-'.uniqid().'@dedetizadora.test',
             'phone' => '11999990000',
-            'is_active' => true,
+            'is_active' => $ativo,
         ]));
     }
 
@@ -629,8 +745,24 @@ class AlertaDeEpiServiceTest extends TestCase
         string $dia,
         array $atributos = []
     ): PpeDelivery {
+        return $this->entregarPara($this->tecnico, $epi, $dia, $atributos);
+    }
+
+    /**
+     * A mesma entrega, para um técnico qualquer: os cenários de técnico
+     * desligado precisam de outro cadastro, porque o `$this->tecnico` do `setUp`
+     * nasce ativo e é usado pelo resto do arquivo.
+     *
+     * @param  array<string, mixed>  $atributos
+     */
+    private function entregarPara(
+        Technician $tecnico,
+        PersonalProtectiveEquipment $epi,
+        string $dia,
+        array $atributos = []
+    ): PpeDelivery {
         return $this->naEmpresa(fn (): PpeDelivery => PpeDeliveryFactory::new()
-            ->entregueA($this->tecnico, $epi, $dia)
+            ->entregueA($tecnico, $epi, $dia)
             ->create($atributos));
     }
 

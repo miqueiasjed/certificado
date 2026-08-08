@@ -112,9 +112,10 @@ class EpiEndpointTest extends TestCase
     // -----------------------------------------------------------------
 
     /**
-     * Hífen, não ponto: `-ver` é o sufixo que `RolesAndPermissionsSeeder`
-     * reconhece para compor o papel de leitura, e é a convenção do catálogo
-     * inteiro.
+     * Hífen, não ponto: é a convenção do catálogo inteiro. O sufixo `-ver` é o
+     * que `RolesAndPermissionsSeeder` reconhece para compor o papel de leitura —
+     * mas `epi-ver` está na lista de exceções de propósito, e o teste do papel
+     * `leitura` mais abaixo é quem guarda essa decisão.
      */
     public function test_as_quatro_permissoes_estao_no_catalogo(): void
     {
@@ -225,9 +226,16 @@ class EpiEndpointTest extends TestCase
     }
 
     /**
-     * Quem só lê não cadastra e não entrega. O papel `leitura` recebe `epi-ver`
-     * pelo filtro de sufixo do seeder, e é o perfil mais comum a esbarrar nestas
-     * rotas.
+     * Quem só lê não cadastra e não entrega — e, no EPI, também não lê.
+     *
+     * `epi-ver` está na lista de exceções de `permissoesLeitura()`, junto de
+     * `comissoes-ver`: apesar do sufixo `-ver`, a ficha traz nome, matrícula,
+     * histórico e assinatura do trabalhador, e a extração despeja isso de todos
+     * os técnicos de uma vez. É dado pessoal de funcionário, e se concede
+     * explicitamente a quem responde pela segurança do trabalho.
+     *
+     * Este teste é o que impede o papel de reganhar a permissão em silêncio, se
+     * alguém tirar a exceção do seeder.
      */
     public function test_quem_so_le_nao_cadastra_nem_entrega(): void
     {
@@ -240,8 +248,11 @@ class EpiEndpointTest extends TestCase
             return $usuario;
         });
 
-        $this->actingAs($leitor)->getJson('/epis')->assertOk();
-        $this->actingAs($leitor)->getJson("/epis/tecnicos/{$this->tecnico->getKey()}")->assertOk();
+        $this->assertFalse($leitor->can('epi-ver'), 'O papel `leitura` não pode alcançar a ficha de EPI.');
+
+        $this->actingAs($leitor)->getJson('/epis')->assertForbidden();
+        $this->actingAs($leitor)->getJson("/epis/tecnicos/{$this->tecnico->getKey()}")->assertForbidden();
+        $this->actingAs($leitor)->get('/epis/extracao?inicio=2026-08-01&fim=2026-08-31')->assertForbidden();
 
         $this->actingAs($leitor)
             ->postJson('/epis', ['nome' => 'EPI que não deveria nascer'])
@@ -514,6 +525,9 @@ class EpiEndpointTest extends TestCase
         $this->actingAs($this->administrador)
             ->postJson("/epis/entregas/{$entregaDaOutra->getKey()}/assinatura", ['assinatura' => base64_encode('x')])
             ->assertNotFound();
+        $this->actingAs($this->administrador)
+            ->postJson("/epis/entregas/{$entregaDaOutra->getKey()}/devolucao")
+            ->assertNotFound();
 
         // Nada da outra empresa foi tocado.
         TenantAtual::comTenant($this->outraEmpresa()->getKey(), function () use ($entregaDaOutra, $epiDaOutra): void {
@@ -557,18 +571,33 @@ class EpiEndpointTest extends TestCase
      *
      * A varredura na tabela de rotas é o que pega a regressão de verdade — um
      * `Route::delete` novo apareceria aqui antes de qualquer teste de resposta.
-     * `epi.destroy` é do **cadastro** de EPI, e é a única exclusão do módulo.
+     *
+     * O recorte é `epis/entregas`, e não o módulo inteiro: `epi.destroy` é do
+     * **cadastro** de EPI e continua legítimo, e um plano posterior que
+     * acrescente exclusão a outro recurso sob `/epis` não pode falhar aqui com
+     * uma mensagem que fala de entrega. É a mesma armadilha de escopo que o
+     * `7fd654c` corrigiu no catálogo de permissões.
      */
     public function test_nao_existe_rota_de_exclusao_de_entrega(): void
     {
         $exclusoes = collect(Route::getRoutes()->getRoutes())
-            ->filter(fn ($rota): bool => in_array('DELETE', $rota->methods(), true))
-            ->filter(fn ($rota): bool => str_starts_with($rota->uri(), 'epis'))
-            ->map(fn ($rota): string => $rota->getName().' '.$rota->uri())
-            ->values()
-            ->all();
+            ->filter(fn ($rota): bool => in_array('DELETE', $rota->methods(), true));
 
-        $this->assertSame(['epi.destroy epis/{epi}'], $exclusoes);
+        $this->assertSame(
+            [],
+            $exclusoes
+                ->filter(fn ($rota): bool => str_starts_with($rota->uri(), 'epis/entregas'))
+                ->map(fn ($rota): string => $rota->getName().' '.$rota->uri())
+                ->values()
+                ->all(),
+            'Entrega de EPI não se exclui: a correção é o estorno com motivo, que preserva a linha.'
+        );
+
+        // A exclusão do cadastro continua existindo, e é outra coisa.
+        $this->assertContains(
+            'epi.destroy epis/{epi}',
+            $exclusoes->map(fn ($rota): string => $rota->getName().' '.$rota->uri())->all()
+        );
     }
 
     public function test_delete_em_uma_entrega_nao_responde_e_a_linha_permanece(): void

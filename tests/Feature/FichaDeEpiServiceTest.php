@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Console\Commands\VerificarEpi;
 use App\Models\Company;
 use App\Models\PersonalProtectiveEquipment;
 use App\Models\PpeDelivery;
@@ -17,6 +18,7 @@ use Database\Factories\PersonalProtectiveEquipmentFactory;
 use Database\Factories\PpeDeliveryFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
+use ReflectionMethod;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -395,6 +397,131 @@ class FichaDeEpiServiceTest extends TestCase
         $this->assertStringStartsWith('%PDF', $binario);
     }
 
+    /**
+     * O fecho da ficha — a declaração de recebimento e a linha de assinatura do
+     * trabalhador — não sai quando não há nenhuma entrega válida.
+     *
+     * O caso que motivou a trava: técnico cuja única entrega foi estornada
+     * ("Lançada no técnico errado"). A linha aparece na tabela, marcada como
+     * estornada, porque estorno omitido é adulteração de registro — mas embaixo
+     * dela não pode vir "Declaro ter recebido" com a firma do trabalhador. Seria
+     * colher a assinatura dele no recebimento de algo que a própria empresa
+     * registrou como inexistente, e o papel assinado passaria a valer contra
+     * quem o emitiu.
+     *
+     * A asserção é sobre o HTML da view, e não sobre o binário do dompdf: é o
+     * HTML que decide o que vai impresso, e o binário quebraria por motivo
+     * errado.
+     */
+    public function test_ficha_cuja_unica_entrega_foi_estornada_nao_traz_declaracao_nem_assinatura_do_trabalhador(): void
+    {
+        $entrega = $this->registrar($this->criarEpi(), ['entregue_em' => '2026-07-10']);
+
+        $this->naEmpresa(fn () => $this->entregas->estornar($entrega, 'Lançada no técnico errado.'));
+
+        $html = $this->htmlDaFicha();
+
+        $this->assertStringNotContainsString('Declaro ter recebido', $html);
+        $this->assertStringNotContainsString('class="linha-assinatura"', $html);
+        $this->assertStringNotContainsString('Responsável pela entrega', $html);
+
+        // Contraprova: o estorno continua impresso. O fecho sumiu porque não há
+        // recebimento a declarar, e não porque a ficha escondeu a entrega.
+        $this->assertStringContainsString('Entrega estornada', $html);
+        $this->assertStringContainsString('Lançada no técnico errado.', $html);
+    }
+
+    /**
+     * A linha estornada não cobra assinatura.
+     *
+     * O resumo do rodapé já exclui as estornadas da contagem de pendentes; a
+     * célula da tabela contradizia esse resumo, imprimindo "0 pendente(s)" em
+     * cima e "Pendente de assinatura" na linha. Num documento que o fiscal lê,
+     * a empresa não pede assinatura de recebimento numa entrega que ela própria
+     * declarou errada.
+     */
+    public function test_entrega_estornada_nao_sai_marcada_como_pendente_de_assinatura(): void
+    {
+        $entrega = $this->registrar($this->criarEpi(), ['entregue_em' => '2026-07-10']);
+
+        $this->naEmpresa(fn () => $this->entregas->estornar($entrega, 'Lançada no técnico errado.'));
+
+        $html = $this->htmlDaFicha();
+
+        $this->assertStringContainsString('Estornada', $html);
+        $this->assertStringNotContainsString('Pendente de assinatura', $html);
+    }
+
+    /**
+     * Contraprova do teste acima: a entrega válida sem assinatura continua
+     * cobrando. É essa pendência que a NR-6 quer visível.
+     */
+    public function test_entrega_valida_sem_assinatura_continua_marcada_como_pendente(): void
+    {
+        $this->registrar($this->criarEpi(), ['entregue_em' => '2026-07-10']);
+
+        $this->assertStringContainsString('Pendente de assinatura', $this->htmlDaFicha());
+    }
+
+    /**
+     * Ficha sem entrega nenhuma também não tem o que declarar recebido.
+     */
+    public function test_ficha_sem_entrega_nenhuma_nao_traz_declaracao(): void
+    {
+        $html = $this->htmlDaFicha();
+
+        $this->assertStringNotContainsString('Declaro ter recebido', $html);
+        $this->assertStringNotContainsString('class="linha-assinatura"', $html);
+    }
+
+    /**
+     * O outro lado da trava: basta uma entrega válida para o fecho voltar. A
+     * ficha com a errada estornada e a certa logo abaixo é o caso comum, e nela
+     * há sim recebimento a declarar.
+     */
+    public function test_uma_entrega_valida_ao_lado_da_estornada_traz_a_declaracao_de_volta(): void
+    {
+        $epi = $this->criarEpi();
+
+        $errada = $this->registrar($epi, ['entregue_em' => '2026-07-10']);
+        $this->naEmpresa(fn () => $this->entregas->estornar($errada, 'Quantidade errada.'));
+
+        $this->registrar($epi, ['entregue_em' => '2026-07-11', 'motivo' => 'substituicao']);
+
+        $html = $this->htmlDaFicha();
+
+        $this->assertStringContainsString('Declaro ter recebido', $html);
+        $this->assertStringContainsString('class="linha-assinatura"', $html);
+        $this->assertStringContainsString('Responsável pela entrega', $html);
+    }
+
+    /**
+     * A declaração só afirma o que esta ficha prova: o recebimento dos itens
+     * listados, nas datas e com os CA listados, ressalvados os estornos.
+     *
+     * Estado de conservação no ato da entrega, treinamento e orientação de uso
+     * não existem como registro em lugar nenhum do Plano 28 — não há coluna,
+     * campo, evento nem tela que os capture —, e o rodapé desta mesma folha diz
+     * que treinamento, uso em campo, higienização e guarda não são verificados
+     * por este sistema. Declarar essas coisas aqui faria o documento afirmar
+     * contra si mesmo, em papel que vale perante a fiscalização do trabalho.
+     */
+    public function test_a_declaracao_nao_afirma_o_que_o_sistema_nao_registra(): void
+    {
+        $this->registrar($this->criarEpi(), ['entregue_em' => '2026-07-10']);
+
+        $html = $this->htmlDaFicha();
+
+        $this->assertStringContainsString('Declaro ter recebido', $html);
+        $this->assertStringNotContainsString('perfeitas condições de uso', $html);
+        $this->assertStringNotContainsString('orientações sobre a sua utilização', $html);
+
+        // O que ficou é a ressalva do estorno e o vínculo com o que está na
+        // tabela: datas e números de CA.
+        $this->assertStringContainsString('exceto os registros marcados como estornados', $html);
+        $this->assertStringContainsString('Certificado', $html);
+    }
+
     public function test_o_nome_do_arquivo_identifica_o_tecnico(): void
     {
         $this->assertSame(
@@ -674,6 +801,128 @@ class FichaDeEpiServiceTest extends TestCase
         $this->assertSame('Técnico do EPI', $linhas[1][0]);
     }
 
+    /**
+     * Entrega cujo técnico não é alcançável sai com o técnico **não informado**,
+     * e não como "Inativo".
+     *
+     * "Inativo" é uma situação cadastral: quem lê a relação entende trabalhador
+     * desligado. Imprimir isso para um técnico que o sistema simplesmente não
+     * conseguiu carregar afirmaria ao fiscal um fato que ninguém registrou —
+     * dado que falta não é dado negativo, a mesma regra do CA em branco.
+     *
+     * O caso é montado com a entrega gravada na empresa do contexto e o técnico
+     * em outra: é a inconsistência que o escopo global do multiempresa produz
+     * quando ela existe no banco, sem violar a chave estrangeira.
+     */
+    public function test_entrega_sem_tecnico_alcancavel_sai_como_nao_informado_na_extracao(): void
+    {
+        $outra = Company::create([
+            'name' => 'Empresa do técnico solto',
+            'cnpj' => '66.666.666/0001-66',
+            'email' => 'contato@tecnico-solto.test',
+        ]);
+
+        $tecnicoDeFora = TenantAtual::comTenant($outra->getKey(), fn (): Technician => Technician::create([
+            'name' => 'Técnico fora do alcance',
+            'email' => 'tecnico-fora-do-alcance@concorrente.test',
+            'phone' => '11966665555',
+            'is_active' => true,
+        ]));
+
+        $epi = $this->criarEpi();
+
+        $this->naEmpresa(fn (): PpeDelivery => PpeDelivery::create([
+            'technician_id' => $tecnicoDeFora->getKey(),
+            'personal_protective_equipment_id' => $epi->getKey(),
+            'quantidade' => 1,
+            'entregue_em' => '2026-07-10',
+            'motivo' => 'primeira_entrega',
+        ]));
+
+        $linha = $this->linhas($this->extrair('2026-07-01', '2026-07-31'))[1];
+
+        $this->assertSame('—', $linha[0]);
+        $this->assertSame('—', $linha[1], 'técnico ausente virou "Inativo" na relação entregue ao fiscal');
+    }
+
+    // -----------------------------------------------------------------
+    // Um vocabulário só para tipo e motivo
+    // -----------------------------------------------------------------
+
+    /**
+     * Os rótulos cobrem exatamente os enums do banco, e cada enum tem uma tabela
+     * de rótulos só.
+     *
+     * Nada amarrava as listas antes, e elas já divergiram: o aviso por e-mail
+     * dizia "protetor auricular" e a ficha, "Protetor auricular", para o mesmo
+     * item — a empresa recebe o aviso e vai conferir no documento que entrega ao
+     * fiscal. Tipo novo no enum sem rótulo cadastrado cai aqui, antes de sair
+     * impresso cru.
+     */
+    public function test_os_rotulos_cobrem_exatamente_os_enums_de_tipo_e_de_motivo(): void
+    {
+        $this->assertSame(
+            PersonalProtectiveEquipment::TIPOS,
+            array_keys(PersonalProtectiveEquipment::ROTULOS_DE_TIPO),
+            'a tabela de rótulos de tipo saiu de sincronia com o enum da coluna'
+        );
+
+        $this->assertSame(
+            PpeDelivery::MOTIVOS,
+            array_keys(PpeDelivery::ROTULOS_DE_MOTIVO),
+            'a tabela de rótulos de motivo saiu de sincronia com o enum da coluna'
+        );
+
+        foreach (PersonalProtectiveEquipment::ROTULOS_DE_TIPO as $tipo => $rotulo) {
+            $this->assertNotSame('', trim($rotulo), "o tipo {$tipo} ficou sem rótulo");
+        }
+
+        foreach (PpeDelivery::ROTULOS_DE_MOTIVO as $motivo => $rotulo) {
+            $this->assertNotSame('', trim($rotulo), "o motivo {$motivo} ficou sem rótulo");
+        }
+    }
+
+    /**
+     * O aviso por e-mail e o documento falam o mesmo texto.
+     *
+     * A conferência chega no método privado do comando de propósito: o que se
+     * quer travar é justamente que ele não volte a ter tabela própria. Um teste
+     * pelo e-mail renderizado provaria o mesmo com muito mais montagem e cairia
+     * por motivos alheios a este.
+     */
+    public function test_o_aviso_por_email_usa_o_mesmo_rotulo_de_tipo_da_ficha(): void
+    {
+        $comando = new VerificarEpi;
+
+        $tipoEmTexto = new ReflectionMethod($comando, 'tipoEmTexto');
+
+        foreach (PersonalProtectiveEquipment::TIPOS as $tipo) {
+            $epi = $this->criarEpi(['tipo' => $tipo]);
+
+            $this->registrar($epi, ['entregue_em' => '2026-07-10']);
+
+            $naFicha = $this->ficha()['entregas'][0]['tipo'];
+
+            $this->assertSame(
+                PersonalProtectiveEquipment::ROTULOS_DE_TIPO[$tipo],
+                $naFicha,
+                "a ficha imprimiu outro texto para o tipo {$tipo}"
+            );
+
+            $this->assertSame(
+                $naFicha,
+                $tipoEmTexto->invoke($comando, $tipo),
+                "o aviso por e-mail e a ficha divergem no tipo {$tipo}"
+            );
+
+            // A ficha é lida sempre pela primeira entrega: cada volta do laço
+            // recomeça com o técnico limpo.
+            $this->naEmpresa(fn () => PpeDelivery::query()->delete());
+        }
+
+        $this->assertSame('não informado', $tipoEmTexto->invoke($comando, null));
+    }
+
     // -----------------------------------------------------------------
     // Apoio
     // -----------------------------------------------------------------
@@ -689,6 +938,20 @@ class FichaDeEpiServiceTest extends TestCase
     private function ficha(): array
     {
         return $this->naEmpresa(fn (): array => $this->fichas->dadosDaFicha($this->tecnico));
+    }
+
+    /**
+     * A ficha renderizada em HTML, que é o que o dompdf transforma em papel.
+     *
+     * É aqui que se confere o que sai impresso e o que não sai — declaração de
+     * recebimento e linhas de assinatura, por exemplo, que vivem só na view.
+     * Abrir o binário do PDF provaria o mesmo e quebraria por motivo errado.
+     */
+    private function htmlDaFicha(): string
+    {
+        return $this->naEmpresa(
+            fn (): string => view('pdf.ppe-record', $this->fichas->dadosDaFicha($this->tecnico))->render()
+        );
     }
 
     private function extrair(string $inicio, string $fim): string
