@@ -13,7 +13,7 @@
 | 25.3 | Rascunho de parecer e bloqueio de emissão | backend-logica | ✅ | alta |
 | 25.4 | Sugestão de preço pelo histórico do tenant | backend-logica | ✅ | média |
 | 25.5 | Endpoints, medição de uso e teto por plano | backend-endpoint | ✅ | média |
-| 25.6 | Editor do rascunho com aviso de não revisado | frontend-pagina | ⏳ | alta |
+| 25.6 | Editor do rascunho com aviso de não revisado | frontend-pagina | ✅ | alta |
 | 25.7 | Testes de isolamento, bloqueio e medição | teste | ⏳ | alta |
 
 ## Ordem de execução

@@ -1,26 +1,26 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Http\Requests\WorkOrderRequest;
-use App\Models\WorkOrder;
-use App\Models\Client;
 use App\Models\Address;
-use App\Models\User;
-use App\Models\Technician;
+use App\Models\AiDraft;
+use App\Models\Client;
+use App\Models\Company;
 use App\Models\Device;
-use App\Models\ServiceType;
 use App\Models\Product;
 use App\Models\Service;
+use App\Models\Technician;
+use App\Models\WorkOrder;
 use App\Models\WorkOrderDeviceEvent;
-use App\Models\Company;
-use App\Services\WorkOrderService;
 use App\Services\WorkOrderAccessService;
+use App\Services\WorkOrderService;
 use App\Support\TenantAtual;
+use Barryvdh\DomPDF\Facade\Pdf as FacadePdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
-use Barryvdh\DomPDF\Facade\Pdf as FacadePdf;
 
 class WorkOrderController extends Controller
 {
@@ -127,7 +127,7 @@ class WorkOrderController extends Controller
                 'priority_level',
                 'service_id',
                 'date_from',
-                'date_to'
+                'date_to',
             ]),
             'clients' => $clients,
             'addresses' => $addresses,
@@ -211,7 +211,7 @@ class WorkOrderController extends Controller
                     'pest_sighting_date',
                     'pest_location',
                     'pest_quantity',
-                    'pest_observation'
+                    'pest_observation',
                 ]);
             },
             'devices' => function ($query) {
@@ -230,7 +230,7 @@ class WorkOrderController extends Controller
             },
             'pestSightings' => function ($query) {
                 $query->with([
-                    'address.client'
+                    'address.client',
                 ])->orderBy('sighting_date', 'desc');
             },
             'adequations' => function ($query) {
@@ -245,7 +245,6 @@ class WorkOrderController extends Controller
             ->groupBy('room_id')
             ->map(fn ($group) => $group->values())
             ->toArray();
-
 
         // Accessors já estão incluídos automaticamente via $appends no modelo
 
@@ -279,7 +278,24 @@ class WorkOrderController extends Controller
             ? $this->workOrderService->urlAssinadaDoRecibo($workOrder)
             : null;
 
+        // Rascunho de parecer assistido por IA desta OS (Plano 25, Task 25.6).
+        // Nulo é o caso comum: o recurso é opcional, o módulo `laudo_ia` nasce
+        // desligado e quem escreve o parecer à mão nunca cria rascunho.
+        // Descartado fica de fora — ele existe só para o histórico.
+        $rascunhoDeParecer = AiDraft::query()
+            ->where('tipo', AiDraft::TIPO_PARECER_OS)
+            ->where('origem_tipo', WorkOrder::class)
+            ->where('origem_id', $workOrder->id)
+            ->whereIn('situacao', [
+                AiDraft::SITUACAO_GERADO,
+                AiDraft::SITUACAO_EM_REVISAO,
+                AiDraft::SITUACAO_REVISADO,
+            ])
+            ->latest('id')
+            ->first();
+
         return Inertia::render('WorkOrders/Show', [
+            'rascunhoDeParecer' => $rascunhoDeParecer,
             'workOrder' => $workOrder,
             'roomEventPhotos' => $roomEventPhotos,
             'availableAddresses' => $availableAddresses,
@@ -312,9 +328,9 @@ class WorkOrderController extends Controller
             },
             'pestSightings' => function ($query) {
                 $query->with([
-                    'address.client'
+                    'address.client',
                 ])->orderBy('sighting_date', 'desc');
-            }
+            },
         ]);
 
         // Accessors já estão incluídos automaticamente via $appends no modelo
@@ -339,7 +355,7 @@ class WorkOrderController extends Controller
             $workOrder->client->load([
                 'addresses.rooms' => function ($query) {
                     $query->where('active', true);
-                }
+                },
             ]);
 
             foreach ($workOrder->client->addresses as $address) {
@@ -347,7 +363,7 @@ class WorkOrderController extends Controller
                     $rooms->push([
                         'id' => $room->id,
                         'name' => $room->name,
-                        'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
+                        'full_name' => $room->name.' - '.($address->nickname ?? $address->short_address),
                         'address' => $address->nickname ?? $address->short_address,
                     ]);
                 }
@@ -376,12 +392,13 @@ class WorkOrderController extends Controller
             return redirect()->route('work-orders.show', $workOrder)
                 ->with('success', 'Ordem de serviço atualizada com sucesso!');
         } catch (\Exception $e) {
-            Log::error('Error updating work order: ' . $e->getMessage(), [
+            Log::error('Error updating work order: '.$e->getMessage(), [
                 'work_order_id' => $workOrder->id,
                 'data' => $request->all(),
-                'error' => $e->getTraceAsString()
+                'error' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['error' => 'Erro ao atualizar ordem de serviço: ' . $e->getMessage()]);
+
+            return back()->withErrors(['error' => 'Erro ao atualizar ordem de serviço: '.$e->getMessage()]);
         }
     }
 
@@ -532,7 +549,7 @@ class WorkOrderController extends Controller
         if ($workOrder->payment_status !== 'paid') {
             Log::warning('Emissão de recibo negada: ordem de serviço não está paga', [
                 'work_order_id' => $workOrder->id,
-                'payment_status' => $workOrder->payment_status
+                'payment_status' => $workOrder->payment_status,
             ]);
 
             return $this->avisoDoRecibo(
@@ -558,12 +575,12 @@ class WorkOrderController extends Controller
                 return FacadePdf::loadView('pdf.receipt', $dados)->setPaper('a4', 'landscape');
             });
 
-            return $pdf->stream('recibo-pagamento-' . $workOrder->id . '.pdf');
+            return $pdf->stream('recibo-pagamento-'.$workOrder->id.'.pdf');
         } catch (\Exception $e) {
             Log::error('Erro ao gerar recibo', [
                 'work_order_id' => $workOrder->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             // Mensagem genérica de propósito: quem abre o link pode ser o
@@ -611,17 +628,17 @@ class WorkOrderController extends Controller
             $pdf = FacadePdf::loadView('pdf.work-order', $data);
             $pdf->setPaper('A4', 'portrait');
 
-            $filename = 'OS-' . $workOrder->order_number . '-' . now()->format('Y-m-d') . '.pdf';
+            $filename = 'OS-'.$workOrder->order_number.'-'.now()->format('Y-m-d').'.pdf';
 
             return $pdf->stream($filename);
         } catch (\Exception $e) {
             Log::error('Error generating work order PDF', [
                 'work_order_id' => $workOrder->id,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            return redirect()->back()->with('error', 'Erro ao gerar PDF da OS: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Erro ao gerar PDF da OS: '.$e->getMessage());
         }
     }
 
@@ -636,7 +653,7 @@ class WorkOrderController extends Controller
             $request->validate([
                 'quantity' => 'nullable|numeric|min:0',
                 'unit' => 'nullable|string',
-                'observations' => 'nullable|string|max:500'
+                'observations' => 'nullable|string|max:500',
             ]);
 
             // Verificar se o produto já está vinculado à OS
@@ -650,13 +667,13 @@ class WorkOrderController extends Controller
                 'unit' => $request->unit,
                 'observations' => $request->observations,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             return back()->with('success', 'Produto adicionado à OS com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao adicionar produto: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao adicionar produto: '.$e->getMessage()]);
         }
     }
 
@@ -668,11 +685,11 @@ class WorkOrderController extends Controller
             $request->validate([
                 'quantity' => 'nullable|numeric|min:0',
                 'unit' => 'nullable|string',
-                'observations' => 'nullable|string|max:500'
+                'observations' => 'nullable|string|max:500',
             ]);
 
             // Verificar se o produto está vinculado à OS
-            if (!$workOrder->products()->where('product_id', $product->id)->exists()) {
+            if (! $workOrder->products()->where('product_id', $product->id)->exists()) {
                 return back()->withErrors(['message' => 'Produto não encontrado nesta ordem de serviço']);
             }
 
@@ -681,13 +698,13 @@ class WorkOrderController extends Controller
                 'quantity' => $request->quantity,
                 'unit' => $request->unit,
                 'observations' => $request->observations,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             return back()->with('success', 'Produto atualizado com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao atualizar produto: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao atualizar produto: '.$e->getMessage()]);
         }
     }
 
@@ -700,7 +717,7 @@ class WorkOrderController extends Controller
 
         try {
             // Verificar se o produto está vinculado à OS
-            if (!$workOrder->products()->where('product_id', $product->id)->exists()) {
+            if (! $workOrder->products()->where('product_id', $product->id)->exists()) {
                 return back()->withErrors(['message' => 'Produto não encontrado nesta ordem de serviço']);
             }
 
@@ -710,7 +727,7 @@ class WorkOrderController extends Controller
             return back()->with('success', 'Produto removido com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao remover produto: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao remover produto: '.$e->getMessage()]);
         }
     }
 
@@ -723,7 +740,7 @@ class WorkOrderController extends Controller
 
         try {
             $request->validate([
-                'observations' => 'nullable|string|max:500'
+                'observations' => 'nullable|string|max:500',
             ]);
 
             // Verificar se o serviço já está vinculado à OS
@@ -735,13 +752,13 @@ class WorkOrderController extends Controller
             $workOrder->services()->attach($service->id, [
                 'observations' => $request->observations,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             return back()->with('success', 'Serviço adicionado à OS com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao adicionar serviço: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao adicionar serviço: '.$e->getMessage()]);
         }
     }
 
@@ -751,24 +768,24 @@ class WorkOrderController extends Controller
 
         try {
             $request->validate([
-                'observations' => 'nullable|string|max:500'
+                'observations' => 'nullable|string|max:500',
             ]);
 
             // Verificar se o serviço está vinculado à OS
-            if (!$workOrder->services()->where('service_id', $service->id)->exists()) {
+            if (! $workOrder->services()->where('service_id', $service->id)->exists()) {
                 return back()->withErrors(['message' => 'Serviço não encontrado nesta ordem de serviço']);
             }
 
             // Atualizar dados do pivot
             $workOrder->services()->updateExistingPivot($service->id, [
                 'observations' => $request->observations,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             return back()->with('success', 'Serviço atualizado com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao atualizar serviço: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao atualizar serviço: '.$e->getMessage()]);
         }
     }
 
@@ -781,7 +798,7 @@ class WorkOrderController extends Controller
 
         try {
             // Verificar se o serviço está vinculado à OS
-            if (!$workOrder->services()->where('service_id', $service->id)->exists()) {
+            if (! $workOrder->services()->where('service_id', $service->id)->exists()) {
                 return back()->withErrors(['message' => 'Serviço não encontrado nesta ordem de serviço']);
             }
 
@@ -791,7 +808,7 @@ class WorkOrderController extends Controller
             return back()->with('success', 'Serviço removido com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao remover serviço: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao remover serviço: '.$e->getMessage()]);
         }
     }
 
@@ -804,7 +821,7 @@ class WorkOrderController extends Controller
 
         try {
             $request->validate([
-                'is_primary' => 'nullable|boolean'
+                'is_primary' => 'nullable|boolean',
             ]);
 
             if ($workOrder->technicians()->where('technician_id', $technician->id)->exists()) {
@@ -814,21 +831,20 @@ class WorkOrderController extends Controller
             // Se está marcando como principal, remover principal de outros técnicos
             if ($request->boolean('is_primary')) {
                 $workOrder->technicians()->updateExistingPivot($workOrder->technicians->pluck('id')->toArray(), [
-                    'is_primary' =>
-                        false
+                    'is_primary' => false,
                 ]);
             }
 
             $workOrder->technicians()->attach($technician->id, [
                 'is_primary' => $request->boolean('is_primary', false),
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             return back()->with('success', 'Técnico adicionado à OS com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao adicionar técnico: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao adicionar técnico: '.$e->getMessage()]);
         }
     }
 
@@ -840,7 +856,7 @@ class WorkOrderController extends Controller
         $this->garantirAcesso($workOrder);
 
         try {
-            if (!$workOrder->technicians()->where('technician_id', $technician->id)->exists()) {
+            if (! $workOrder->technicians()->where('technician_id', $technician->id)->exists()) {
                 return back()->withErrors(['message' => 'Técnico não encontrado nesta ordem de serviço']);
             }
 
@@ -849,7 +865,7 @@ class WorkOrderController extends Controller
             return back()->with('success', 'Técnico removido com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao remover técnico: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao remover técnico: '.$e->getMessage()]);
         }
     }
 
@@ -862,22 +878,22 @@ class WorkOrderController extends Controller
 
         try {
             $request->validate([
-                'observation' => 'nullable|string|max:500'
+                'observation' => 'nullable|string|max:500',
             ]);
 
-            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+            if (! $workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
             }
 
             $workOrder->rooms()->updateExistingPivot($roomId, [
                 'observation' => $request->observation,
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             return back()->with('success', 'Observação atualizada com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao atualizar observação: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao atualizar observação: '.$e->getMessage()]);
         }
     }
 
@@ -910,7 +926,7 @@ class WorkOrderController extends Controller
                 'pest_type' => 'nullable|string|max:255',
                 'pest_sighting_date' => 'nullable|date',
                 'pest_location' => 'nullable|string|max:255',
-                'pest_observation' => 'nullable|string|max:1000'
+                'pest_observation' => 'nullable|string|max:1000',
             ];
 
             // Só validar pest_quantity se não for null
@@ -937,13 +953,13 @@ class WorkOrderController extends Controller
                 'pest_quantity' => $request->pest_quantity ?: null,
                 'pest_observation' => $request->pest_observation ?: null,
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ]);
 
             return back()->with('success', 'Cômodo adicionado com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao adicionar cômodo: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao adicionar cômodo: '.$e->getMessage()]);
         }
     }
 
@@ -955,7 +971,7 @@ class WorkOrderController extends Controller
         $this->garantirAcesso($workOrder);
 
         try {
-            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+            if (! $workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
             }
 
@@ -964,7 +980,7 @@ class WorkOrderController extends Controller
             return back()->with('success', 'Cômodo removido com sucesso');
 
         } catch (\Exception $e) {
-            return back()->withErrors(['message' => 'Erro ao remover cômodo: ' . $e->getMessage()]);
+            return back()->withErrors(['message' => 'Erro ao remover cômodo: '.$e->getMessage()]);
         }
     }
 
@@ -978,14 +994,14 @@ class WorkOrderController extends Controller
         try {
             $client = $workOrder->client;
 
-            if (!$client) {
+            if (! $client) {
                 return response()->json(['rooms' => []]);
             }
 
             $client->load([
                 'addresses.rooms' => function ($query) {
                     $query->where('active', true);
-                }
+                },
             ]);
 
             $rooms = [];
@@ -993,12 +1009,12 @@ class WorkOrderController extends Controller
 
             foreach ($client->addresses as $address) {
                 foreach ($address->rooms as $room) {
-                    if (!in_array($room->id, $selectedRoomIds)) {
+                    if (! in_array($room->id, $selectedRoomIds)) {
                         $rooms[] = [
                             'id' => $room->id,
                             'name' => $room->name,
                             'address' => $address->nickname ?? $address->short_address,
-                            'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
+                            'full_name' => $room->name.' - '.($address->nickname ?? $address->short_address),
                         ];
                     }
                 }
@@ -1007,7 +1023,7 @@ class WorkOrderController extends Controller
             return response()->json(['rooms' => $rooms]);
 
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Erro ao buscar cômodos: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Erro ao buscar cômodos: '.$e->getMessage()], 500);
         }
     }
 
@@ -1018,17 +1034,17 @@ class WorkOrderController extends Controller
     {
         $clientId = $request->get('client_id');
 
-        if (!$clientId) {
+        if (! $clientId) {
             return response()->json(['rooms' => []]);
         }
 
         $client = Client::with([
             'addresses.rooms' => function ($query) {
                 $query->where('active', true);
-            }
+            },
         ])->find($clientId);
 
-        if (!$client) {
+        if (! $client) {
             return response()->json(['rooms' => []]);
         }
 
@@ -1039,7 +1055,7 @@ class WorkOrderController extends Controller
                     'id' => $room->id,
                     'name' => $room->name,
                     'address' => $address->nickname ?? $address->short_address,
-                    'full_name' => $room->name . ' - ' . ($address->nickname ?? $address->short_address),
+                    'full_name' => $room->name.' - '.($address->nickname ?? $address->short_address),
                 ];
             }
         }
@@ -1054,13 +1070,13 @@ class WorkOrderController extends Controller
     {
         $addressId = $request->get('address_id');
 
-        if (!$addressId) {
+        if (! $addressId) {
             return response()->json(['devices' => []]);
         }
 
         $address = Address::find($addressId);
 
-        if (!$address) {
+        if (! $address) {
             return response()->json(['devices' => []]);
         }
 
@@ -1074,7 +1090,7 @@ class WorkOrderController extends Controller
                     'id' => $device->id,
                     'label' => $device->label,
                     'number' => $device->number,
-                    'display_name' => $device->label . ' (' . $device->number . ')',
+                    'display_name' => $device->label.' ('.$device->number.')',
                     'bait_type' => $device->baitType ? $device->baitType->name : null,
                     'default_location_note' => $device->default_location_note,
                 ];
@@ -1105,7 +1121,7 @@ class WorkOrderController extends Controller
 
             $request->validate($validationRules);
 
-            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+            if (! $workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
             }
 
@@ -1130,9 +1146,10 @@ class WorkOrderController extends Controller
                 'work_order_id' => $workOrder->id,
                 'room_id' => $roomId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['message' => 'Erro ao adicionar evento: ' . $e->getMessage()]);
+
+            return back()->withErrors(['message' => 'Erro ao adicionar evento: '.$e->getMessage()]);
         }
     }
 
@@ -1147,7 +1164,6 @@ class WorkOrderController extends Controller
             // Preparar dados para validação
             $data = $request->all();
 
-
             $request->merge($data);
 
             $validationRules = [
@@ -1159,13 +1175,13 @@ class WorkOrderController extends Controller
 
             $request->validate($validationRules);
 
-            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+            if (! $workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
             }
 
             // Verificar se existe evento para este cômodo
             $room = $workOrder->rooms()->where('room_id', $roomId)->first();
-            if (!$room->pivot->event_type_id) {
+            if (! $room->pivot->event_type_id) {
                 return back()->withErrors(['message' => 'Nenhum evento encontrado para este cômodo']);
             }
 
@@ -1184,9 +1200,10 @@ class WorkOrderController extends Controller
                 'work_order_id' => $workOrder->id,
                 'room_id' => $roomId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['message' => 'Erro ao atualizar evento: ' . $e->getMessage()]);
+
+            return back()->withErrors(['message' => 'Erro ao atualizar evento: '.$e->getMessage()]);
         }
     }
 
@@ -1198,13 +1215,13 @@ class WorkOrderController extends Controller
         $this->garantirAcesso($workOrder);
 
         try {
-            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+            if (! $workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
             }
 
             // Verificar se existe evento para este cômodo
             $room = $workOrder->rooms()->where('room_id', $roomId)->first();
-            if (!$room->pivot->event_type_id) {
+            if (! $room->pivot->event_type_id) {
                 return back()->withErrors(['message' => 'Nenhum evento encontrado para este cômodo']);
             }
 
@@ -1223,9 +1240,10 @@ class WorkOrderController extends Controller
                 'work_order_id' => $workOrder->id,
                 'room_id' => $roomId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['message' => 'Erro ao remover evento: ' . $e->getMessage()]);
+
+            return back()->withErrors(['message' => 'Erro ao remover evento: '.$e->getMessage()]);
         }
     }
 
@@ -1251,7 +1269,7 @@ class WorkOrderController extends Controller
                 'pest_type' => 'required|string|max:255',
                 'pest_sighting_date' => 'required|date',
                 'pest_location' => 'nullable|string|max:255',
-                'pest_observation' => 'nullable|string|max:1000'
+                'pest_observation' => 'nullable|string|max:1000',
             ];
 
             // Só validar pest_quantity se não for null
@@ -1261,7 +1279,7 @@ class WorkOrderController extends Controller
 
             $request->validate($validationRules);
 
-            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+            if (! $workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
             }
 
@@ -1277,7 +1295,7 @@ class WorkOrderController extends Controller
                 'pest_sighting_date' => $request->pest_sighting_date,
                 'pest_location' => $request->pest_location ?: null,
                 'pest_quantity' => $request->pest_quantity ?: null,
-                'pest_observation' => $request->pest_observation ?: null
+                'pest_observation' => $request->pest_observation ?: null,
             ]);
 
             return back()->with('success', 'Avistamento adicionado com sucesso');
@@ -1287,9 +1305,10 @@ class WorkOrderController extends Controller
                 'work_order_id' => $workOrder->id,
                 'room_id' => $roomId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['message' => 'Erro ao adicionar avistamento: ' . $e->getMessage()]);
+
+            return back()->withErrors(['message' => 'Erro ao adicionar avistamento: '.$e->getMessage()]);
         }
     }
 
@@ -1315,7 +1334,7 @@ class WorkOrderController extends Controller
                 'pest_type' => 'required|string|max:255',
                 'pest_sighting_date' => 'required|date',
                 'pest_location' => 'nullable|string|max:255',
-                'pest_observation' => 'nullable|string|max:1000'
+                'pest_observation' => 'nullable|string|max:1000',
             ];
 
             // Só validar pest_quantity se não for null
@@ -1325,13 +1344,13 @@ class WorkOrderController extends Controller
 
             $request->validate($validationRules);
 
-            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+            if (! $workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
             }
 
             // Verificar se existe avistamento para este cômodo
             $room = $workOrder->rooms()->where('room_id', $roomId)->first();
-            if (!$room->pivot->pest_type) {
+            if (! $room->pivot->pest_type) {
                 return back()->withErrors(['message' => 'Nenhum avistamento encontrado para este cômodo']);
             }
 
@@ -1341,7 +1360,7 @@ class WorkOrderController extends Controller
                 'pest_sighting_date' => $request->pest_sighting_date,
                 'pest_location' => $request->pest_location ?: null,
                 'pest_quantity' => $request->pest_quantity ?: null,
-                'pest_observation' => $request->pest_observation ?: null
+                'pest_observation' => $request->pest_observation ?: null,
             ]);
 
             return back()->with('success', 'Avistamento atualizado com sucesso');
@@ -1351,9 +1370,10 @@ class WorkOrderController extends Controller
                 'work_order_id' => $workOrder->id,
                 'room_id' => $roomId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['message' => 'Erro ao atualizar avistamento: ' . $e->getMessage()]);
+
+            return back()->withErrors(['message' => 'Erro ao atualizar avistamento: '.$e->getMessage()]);
         }
     }
 
@@ -1365,13 +1385,13 @@ class WorkOrderController extends Controller
         $this->garantirAcesso($workOrder);
 
         try {
-            if (!$workOrder->rooms()->where('room_id', $roomId)->exists()) {
+            if (! $workOrder->rooms()->where('room_id', $roomId)->exists()) {
                 return back()->withErrors(['message' => 'Cômodo não encontrado nesta ordem de serviço']);
             }
 
             // Verificar se existe avistamento para este cômodo
             $room = $workOrder->rooms()->where('room_id', $roomId)->first();
-            if (!$room->pivot->pest_type) {
+            if (! $room->pivot->pest_type) {
                 return back()->withErrors(['message' => 'Nenhum avistamento encontrado para este cômodo']);
             }
 
@@ -1381,7 +1401,7 @@ class WorkOrderController extends Controller
                 'pest_sighting_date' => null,
                 'pest_location' => null,
                 'pest_quantity' => null,
-                'pest_observation' => null
+                'pest_observation' => null,
             ]);
 
             return back()->with('success', 'Avistamento removido com sucesso');
@@ -1391,9 +1411,10 @@ class WorkOrderController extends Controller
                 'work_order_id' => $workOrder->id,
                 'room_id' => $roomId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['message' => 'Erro ao remover avistamento: ' . $e->getMessage()]);
+
+            return back()->withErrors(['message' => 'Erro ao remover avistamento: '.$e->getMessage()]);
         }
     }
 
@@ -1438,9 +1459,10 @@ class WorkOrderController extends Controller
                 'work_order_id' => $workOrder->id,
                 'device_id' => $deviceId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['message' => 'Erro ao adicionar evento: ' . $e->getMessage()]);
+
+            return back()->withErrors(['message' => 'Erro ao adicionar evento: '.$e->getMessage()]);
         }
     }
 
@@ -1473,7 +1495,7 @@ class WorkOrderController extends Controller
                 ->where('device_id', $deviceId)
                 ->first();
 
-            if (!$event) {
+            if (! $event) {
                 return back()->withErrors(['message' => 'Evento não encontrado']);
             }
 
@@ -1493,9 +1515,10 @@ class WorkOrderController extends Controller
                 'device_id' => $deviceId,
                 'event_id' => $eventId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['message' => 'Erro ao atualizar evento: ' . $e->getMessage()]);
+
+            return back()->withErrors(['message' => 'Erro ao atualizar evento: '.$e->getMessage()]);
         }
     }
 
@@ -1519,7 +1542,7 @@ class WorkOrderController extends Controller
                 ->where('device_id', $deviceId)
                 ->first();
 
-            if (!$event) {
+            if (! $event) {
                 return back()->withErrors(['message' => 'Evento não encontrado']);
             }
 
@@ -1533,11 +1556,10 @@ class WorkOrderController extends Controller
                 'device_id' => $deviceId,
                 'event_id' => $eventId,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
-            return back()->withErrors(['message' => 'Erro ao remover evento: ' . $e->getMessage()]);
+
+            return back()->withErrors(['message' => 'Erro ao remover evento: '.$e->getMessage()]);
         }
     }
-
-
 }
