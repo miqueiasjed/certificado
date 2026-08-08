@@ -288,6 +288,12 @@ class WorkOrderController extends Controller
             'availableTechnicians' => $availableTechnicians,
             'eventTypes' => $eventTypes,
             'reciboUrl' => $reciboUrl,
+            // Conferência da documentação da execução à luz da RDC 622/2022
+            // (Plano 24, Task 24.4). Informativa: lista o que falta e avisa
+            // quando o produto aplicado estava com registro vencido na data da
+            // aplicação, sem impedir nada. `null` quando a conferência falha,
+            // e nesse caso a tela simplesmente não mostra o bloco.
+            'conformidade' => $this->workOrderService->conformidadeDaExecucao($workOrder),
         ]);
     }
 

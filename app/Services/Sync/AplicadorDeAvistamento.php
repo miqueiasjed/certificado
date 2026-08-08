@@ -5,6 +5,7 @@ namespace App\Services\Sync;
 use App\Models\Room;
 use App\Models\User;
 use App\Models\WorkOrder;
+use App\Services\Compliance\ConformidadeDaExecucaoService;
 use App\Services\PestSightingService;
 use App\Services\Sync\Concerns\OperacaoDeCampo;
 use Illuminate\Database\Eloquent\Model;
@@ -44,7 +45,7 @@ use Illuminate\Validation\ValidationException;
  * (edição da OS pelo painel, quando o formulário marca `status = completed`).
  * As duas chamam o mesmo `baixarEstoqueDaOs()`, sem duplicar a regra.
  */
-class AplicadorDeAvistamento implements AplicadorDeOperacao
+class AplicadorDeAvistamento implements AplicadorDeOperacao, AplicadorQueAvisa
 {
     use OperacaoDeCampo;
 
@@ -58,15 +59,33 @@ class AplicadorDeAvistamento implements AplicadorDeOperacao
 
     public function __construct(
         private readonly PestSightingService $pestSightingService,
+        private readonly ConformidadeDaExecucaoService $conformidade,
     ) {}
+
+    /**
+     * Avisos da última chamada a `aplicar()`, zerados no começo de cada uma.
+     *
+     * @var array<int, array{item: string, rotulo: string, detalhe: string, exigencia: string}>
+     */
+    private array $avisos = [];
 
     public function tipo(): string
     {
         return 'avistamento';
     }
 
+    /**
+     * @return array<int, array{item: string, rotulo: string, detalhe: string, exigencia: string}>
+     */
+    public function avisosDaUltimaAplicacao(): array
+    {
+        return $this->avisos;
+    }
+
     public function aplicar(array $payload, User $usuario): Model
     {
+        $this->avisos = [];
+
         $workOrder = $this->workOrderDestravada($payload);
 
         $pestType = trim((string) ($payload['pest_type'] ?? ''));
@@ -98,7 +117,43 @@ class AplicadorDeAvistamento implements AplicadorDeOperacao
             'registrada_em' => $instante,
         ];
 
-        return $this->pestSightingService->createPestSighting($dados);
+        $avistamento = $this->pestSightingService->createPestSighting($dados);
+
+        $this->avisarSeORegistroEstiverIrregular($payload, $instante);
+
+        return $avistamento;
+    }
+
+    /**
+     * Avisa quando o produto aplicado está com registro vencido ou cancelado
+     * na Anvisa (Plano 24, Task 24.4).
+     *
+     * **Depois** de gravar, e nunca antes: o aviso não pode impedir o registro
+     * de um serviço que já aconteceu no mundo real. O plano é explícito —
+     * aviso primeiro, bloqueio depois, e só com o cliente ciente. Se o aviso
+     * bloqueasse, o técnico ficaria com a visita executada e sem como
+     * registrá-la, que é o pior desfecho possível.
+     *
+     * A data comparada é `$instante`, o momento do celular em que o técnico
+     * registrou a aplicação, e nunca o momento em que o aparelho conseguiu
+     * sincronizar. Um técnico que aplica na sexta e sincroniza na segunda não
+     * pode ver a aplicação julgada pela segunda-feira. Mesma regra do lote
+     * vencido do Plano 17.
+     *
+     * `applied_product` é texto livre, sem vínculo com `products`; o casamento
+     * pelo nome e o silêncio quando ele não casa estão explicados em
+     * `ConformidadeDaExecucaoService::avisoDoProdutoPorNome()`.
+     */
+    private function avisarSeORegistroEstiverIrregular(array $payload, mixed $instante): void
+    {
+        $aviso = $this->conformidade->avisoDoProdutoPorNome(
+            $payload['applied_product'] ?? null,
+            $instante
+        );
+
+        if ($aviso !== null) {
+            $this->avisos[] = $aviso;
+        }
     }
 
     /**

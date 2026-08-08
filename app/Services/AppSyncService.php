@@ -15,6 +15,7 @@ use App\Services\Sync\AplicadorDeExecucao;
 use App\Services\Sync\AplicadorDeFoto;
 use App\Services\Sync\AplicadorDeOperacao;
 use App\Services\Sync\AplicadorDeRecusaDeAssinatura;
+use App\Services\Sync\AplicadorQueAvisa;
 use App\Services\Sync\ResultadoDeSincronizacao;
 use App\Support\TenantAtual;
 use Carbon\Carbon;
@@ -281,7 +282,15 @@ class AppSyncService
             'aplicada_em' => now(),
         ]);
 
-        return ResultadoDeSincronizacao::aplicada($syncOperation->fresh(), $registro);
+        // Avisos que acompanham a operação aplicada (Plano 24, Task 24.4):
+        // hoje, o produto aplicado estar com registro vencido ou cancelado na
+        // Anvisa. Só os aplicadores que declaram `AplicadorQueAvisa` são
+        // perguntados; os demais seguem sem alteração nenhuma. O aviso não
+        // muda a situação da operação, que continua `aplicada`: aviso não é
+        // recusa, e recusa sai por `ValidationException` do aplicador.
+        $avisos = $aplicador instanceof AplicadorQueAvisa ? $aplicador->avisosDaUltimaAplicacao() : [];
+
+        return ResultadoDeSincronizacao::aplicada($syncOperation->fresh(), $registro, $avisos);
     }
 
     /**
