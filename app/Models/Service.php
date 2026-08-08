@@ -36,6 +36,17 @@ class Service extends Model
         return $this->belongsToMany(Certificate::class, 'certificate_service');
     }
 
+    /**
+     * EPIs que a execução deste serviço exige (Plano 29, Task 29.1).
+     *
+     * Serviço sem nenhuma exigência cadastrada é o estado normal de quem acabou
+     * de ligar o módulo, e não é irregularidade.
+     */
+    public function ppeRequirements(): HasMany
+    {
+        return $this->hasMany(ServicePpeRequirement::class);
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

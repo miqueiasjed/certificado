@@ -71,6 +71,7 @@ use App\Models\SatisfactionSurvey;
 use App\Models\Service;
 use App\Models\ServiceInvoice;
 use App\Models\ServiceOrder;
+use App\Models\ServicePpeRequirement;
 use App\Models\ServiceType;
 use App\Models\SignatureEvent;
 use App\Models\SignatureProviderConfig;
@@ -92,6 +93,7 @@ use App\Models\WorkOrder;
 use App\Models\WorkOrderAdequation;
 use App\Models\WorkOrderDeviceEvent;
 use App\Models\WorkOrderPhoto;
+use App\Models\WorkOrderPpeConfirmation;
 use App\Models\WorkOrderSignature;
 use App\Services\WorkOrderService;
 use App\Support\DominioMultiempresa;
@@ -2201,6 +2203,26 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'numero_ca' => $dados['personalProtectiveEquipment']->numero_ca,
                 'validade_ca' => '2027-12-31',
                 'trocar_ate' => '2026-12-28',
+                'user_id' => $autor->id,
+            ]);
+
+            // EPI exigido por serviço e confirmação na OS (Plano 29, Task
+            // 29.1). São os dois registros que ligam o cadastro de EPI à
+            // operação, e por isso são criados a partir do serviço, da OS e do
+            // modelo de EPI do próprio tenant: o vazamento a caçar aqui é a
+            // exigência ou a confirmação de uma empresa aparecer na outra.
+            $dados['servicePpeRequirement'] = ServicePpeRequirement::create([
+                'service_id' => $dados['service']->id,
+                'personal_protective_equipment_id' => $dados['personalProtectiveEquipment']->id,
+                'obrigatorio' => true,
+            ]);
+
+            $dados['workOrderPpeConfirmation'] = WorkOrderPpeConfirmation::create([
+                'work_order_id' => $dados['workOrder']->id,
+                'personal_protective_equipment_id' => $dados['personalProtectiveEquipment']->id,
+                'confirmado' => true,
+                'justificativa' => null,
+                'confirmado_em' => '2026-07-05 11:00:00',
                 'user_id' => $autor->id,
             ]);
 
