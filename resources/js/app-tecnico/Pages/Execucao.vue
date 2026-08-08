@@ -44,6 +44,21 @@
     faixa simples abaixo do cabeçalho enquanto o pedido está em andamento
     (`pedindoLocalizacao`) - o composable garante sozinho que isso nunca
     repete para a mesma ação (iniciar/concluir) desta mesma OS.
+  Confirmação de EPI (Plano 29, Task 29.5):
+
+  - A aba "EPI" só existe quando os serviços daquela OS exigem algum EPI
+    (`ordem.epis_exigidos`, que a carga do dia traz desde a Task 29.3). Serviço
+    sem exigência cadastrada não mostra a etapa - etapa vazia em tela de campo é
+    atrito puro, e "não informado" nunca é irregularidade.
+  - A etapa NÃO trava nada: `podeConcluir` continua exatamente como estava, sem
+    nenhuma condição de EPI. Decisão registrada do Plano 29 - pendência de EPI é
+    problema de escritório, e travar o técnico em campo tira a operação do ar.
+    O sinal amarelo na aba informa; a pendência em si aparece no resumo da
+    visita (`ResumoDaVisita.vue`), que é onde o Plano 13 já concentra o que
+    ficou faltando.
+  - Toda a gravação é offline, pela mesma fila (`ConfirmacaoDeEpi.vue` e
+    `confirmacaoDeEpi.js`). Nenhuma requisição sai daqui.
+
   - Quando o rastreamento contínuo está ligado para o técnico
     (`rastreamento_continuo_ligado` da carga do dia, buraco fechado em
     `AppDayLoadService::carregar()` nesta mesma task), uma segunda faixa,
@@ -120,7 +135,7 @@
         <div v-else class="space-y-4">
           <nav class="flex border-b border-gray-200" role="tablist" aria-label="Etapas da execução">
             <button
-              v-for="aba in ABAS"
+              v-for="aba in abas"
               :key="aba.chave"
               type="button"
               role="tab"
@@ -130,6 +145,10 @@
               @click="abaAtual = aba.chave"
             >
               {{ aba.rotulo }}
+              <template v-if="aba.chave === 'epi' && episSemResposta > 0">
+                <span class="ml-1 inline-block h-2 w-2 rounded-full bg-yellow-500 align-middle"></span>
+                <span class="sr-only">com confirmação pendente</span>
+              </template>
             </button>
           </nav>
 
@@ -143,6 +162,14 @@
           <p v-else-if="abaAtual === 'adequacoes'" class="py-8 text-center text-sm text-gray-600">
             Adequações em breve.
           </p>
+
+          <ConfirmacaoDeEpi
+            v-else-if="abaAtual === 'epi'"
+            :ordem="ordem"
+            :somente-leitura="osTravada"
+            @salvo="atualizarPendenciaDeEpi"
+          />
+
           <p v-else class="py-8 text-center text-sm text-gray-600">Fotos em breve.</p>
         </div>
       </template>
@@ -192,6 +219,8 @@ import { aoMudar, enfileirar, listarPelaOrdem } from '../sync/fila';
 import { formatarHora } from '@/utils/formatDate';
 import { useLocalizacao } from '../Composables/useLocalizacao';
 import ListaDeDispositivos from '../Components/ListaDeDispositivos.vue';
+import ConfirmacaoDeEpi from '../Components/ConfirmacaoDeEpi.vue';
+import { resumoDeEpiDaOrdem } from '../Components/confirmacaoDeEpi';
 
 const TIPO_EXECUCAO = 'execucao';
 
@@ -216,6 +245,8 @@ const ABAS = [
   { chave: 'fotos', rotulo: 'Fotos' },
 ];
 
+const ABA_DE_EPI = { chave: 'epi', rotulo: 'EPI' };
+
 const props = defineProps({
   ordemId: {
     type: [Number, String],
@@ -231,6 +262,7 @@ const abaAtual = ref('dispositivos');
 const operacoesDaOrdem = ref([]);
 const enviandoAcaoExecucao = ref(false);
 const rastreamentoContinuoLigado = ref(false);
+const episSemResposta = ref(0);
 let pararDeEscutarFila = null;
 
 // Ver o comentário no topo do arquivo: pedido de localização com explicação
@@ -238,6 +270,13 @@ let pararDeEscutarFila = null;
 const { pedirLocalizacao, pedindoLocalizacao, explicacaoAtual: explicacaoLocalizacao } = useLocalizacao();
 
 const workOrderIdNumerico = computed(() => Number(props.ordemId));
+
+// A aba de EPI só entra quando os serviços desta OS exigem algum. Ver o
+// comentário no topo do arquivo: serviço sem exigência cadastrada não mostra a
+// etapa.
+const exigeEpi = computed(() => (ordem.value?.epis_exigidos?.length || 0) > 0);
+
+const abas = computed(() => (exigeEpi.value ? [...ABAS, ABA_DE_EPI] : ABAS));
 
 const enderecoResumido = computed(() => {
   const endereco = ordem.value?.endereco;
@@ -337,6 +376,14 @@ async function atualizarOperacoesDaOrdem() {
   operacoesDaOrdem.value = await listarPelaOrdem(workOrderIdNumerico.value);
 }
 
+/**
+ * Quantos EPIs exigidos ainda estão sem resposta nesta visita, só para o sinal
+ * amarelo na aba. Nada aqui entra em `podeConcluir`.
+ */
+async function atualizarPendenciaDeEpi() {
+  episSemResposta.value = (await resumoDeEpiDaOrdem(workOrderIdNumerico.value)).semResposta;
+}
+
 async function iniciarExecucao() {
   if (enviandoAcaoExecucao.value || mostrarAbas.value) {
     return;
@@ -407,6 +454,7 @@ async function concluirVisita() {
 onMounted(async () => {
   await carregarOrdem();
   await atualizarOperacoesDaOrdem();
+  await atualizarPendenciaDeEpi();
   pararDeEscutarFila = aoMudar(atualizarOperacoesDaOrdem);
 
   // Ver o comentário no topo do arquivo: mesma leitura de `AppLayout.vue`,
