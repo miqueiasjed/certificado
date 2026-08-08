@@ -457,6 +457,33 @@ class SyncPermissions extends Command
             'metas' => [
                 'meta-gerenciar',
             ],
+            // Laudo assistido por IA (Plano 25, Task 25.5). O arquivo da task
+            // pedia "ia.gerar"/"ia.revisar", com ponto; valem os nomes
+            // abaixo, com hífen, no padrão "recurso-acao" do resto do
+            // catálogo (mesma correção já aplicada às Tasks 14.6, 16.4, 17.7,
+            // 18.4, 19.6, 21.4, 21.5, 22.5 e 23.6).
+            //
+            // A separação entre as duas é a regra central do plano:
+            //
+            // - `ia-gerar`: produz o rascunho e pede sugestão de preço.
+            //   Rascunho não emite documento nenhum — a guarda de emissão
+            //   (`ParecerService::garantirParecerRevisado()`) recusa
+            //   justamente enquanto o texto estiver só gerado —, então a
+            //   permissão pode ser larga.
+            // - `ia-revisar`: aprova o texto e libera a emissão. Quem aprova
+            //   assina o laudo, e laudo técnico tem responsabilidade
+            //   profissional. Fica com administrador (que recebe o catálogo
+            //   inteiro) e é atribuída explicitamente ao papel `tecnico` em
+            //   `RolesAndPermissionsSeeder`, que é onde mora o responsável
+            //   técnico. Também cobre o descarte: decidir que um texto não
+            //   serve é julgamento de quem revisa.
+            //
+            // Nenhuma das duas entra no papel `leitura` pelo filtro genérico
+            // de sufixo "-ver": nenhuma termina em "-ver".
+            'laudo_ia' => [
+                'ia-gerar',
+                'ia-revisar',
+            ],
         ];
     }
 

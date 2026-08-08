@@ -9,10 +9,10 @@
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
 | 25.1 | Migrations e models de rascunho e uso | backend-estrutura | ✅ | média |
-| 25.2 | Provedor de IA com isolamento por tenant | backend-logica | ⏳ | alta |
-| 25.3 | Rascunho de parecer e bloqueio de emissão | backend-logica | ⏳ | alta |
-| 25.4 | Sugestão de preço pelo histórico do tenant | backend-logica | ⏳ | média |
-| 25.5 | Endpoints, medição de uso e teto por plano | backend-endpoint | ⏳ | média |
+| 25.2 | Provedor de IA com isolamento por tenant | backend-logica | ✅ | alta |
+| 25.3 | Rascunho de parecer e bloqueio de emissão | backend-logica | ✅ | alta |
+| 25.4 | Sugestão de preço pelo histórico do tenant | backend-logica | ✅ | média |
+| 25.5 | Endpoints, medição de uso e teto por plano | backend-endpoint | ✅ | média |
 | 25.6 | Editor do rascunho com aviso de não revisado | frontend-pagina | ⏳ | alta |
 | 25.7 | Testes de isolamento, bloqueio e medição | teste | ⏳ | alta |
 

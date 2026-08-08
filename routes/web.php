@@ -4,6 +4,7 @@ use App\Http\Controllers\ActiveIngredientController;
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AddressGeoController;
 use App\Http\Controllers\AgendaController;
+use App\Http\Controllers\AiDraftController;
 use App\Http\Controllers\AntidoteController;
 use App\Http\Controllers\AppointmentRequestController;
 use App\Http\Controllers\AssinaturaController;
@@ -1360,6 +1361,43 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
         ->where(['tipo' => '[a-z-]+', 'id' => '[0-9]+'])
         ->middleware('permission:auditoria-ver')
         ->name('audit-logs.index');
+
+    // Laudo assistido por IA (Plano 25, Task 25.5): geração do rascunho de
+    // parecer, revisão pelo responsável técnico, descarte e sugestão de preço
+    // pelo histórico da própria empresa.
+    //
+    // `module:laudo_ia` no grupo inteiro, mesmo critério dos blocos de
+    // estoque, cobrança recorrente, monitoramento e roteirização acima. O
+    // módulo nasce desligado para todos, então nenhum tenant alcança estas
+    // rotas até a liberação explícita.
+    //
+    // Duas permissões, e a separação entre elas é a regra central do plano:
+    //
+    // - `ia-gerar`: produz rascunho e pede sugestão de preço. Rascunho não
+    //   emite documento nenhum, então a permissão é larga.
+    // - `ia-revisar`: aprova o texto e libera a emissão. Quem aprova assume a
+    //   responsabilidade profissional pelo laudo, e por isso a permissão fica
+    //   com administrador e responsável técnico (ver `RolesAndPermissionsSeeder`).
+    //
+    // Descartar exige `ia-revisar` junto com gerar-de-novo: descartar é
+    // decidir que aquele texto não serve, que é julgamento de quem revisa.
+    Route::middleware('module:laudo_ia')->group(function () {
+        Route::post('/ia/pareceres', [AiDraftController::class, 'store'])
+            ->middleware('permission:ia-gerar')
+            ->name('ia.pareceres.store');
+        Route::get('/ia/rascunhos/{aiDraft}', [AiDraftController::class, 'show'])
+            ->middleware('permission:ia-gerar|ia-revisar')
+            ->name('ia.rascunhos.show');
+        Route::put('/ia/rascunhos/{aiDraft}/revisar', [AiDraftController::class, 'revisar'])
+            ->middleware('permission:ia-revisar')
+            ->name('ia.rascunhos.revisar');
+        Route::post('/ia/rascunhos/{aiDraft}/descartar', [AiDraftController::class, 'descartar'])
+            ->middleware('permission:ia-revisar')
+            ->name('ia.rascunhos.descartar');
+        Route::post('/ia/precos/sugerir', [AiDraftController::class, 'sugerirPreco'])
+            ->middleware('permission:ia-gerar')
+            ->name('ia.precos.sugerir');
+    });
 
     // Logout
     // Sem permissão: sair do sistema não pode depender de papel.

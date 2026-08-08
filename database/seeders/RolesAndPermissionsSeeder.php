@@ -173,6 +173,18 @@ class RolesAndPermissionsSeeder extends Seeder
             // `comissoes-fechar` ficam de fora, mesmo critério de
             // `permissoesComercial()`.
             'comissoes-ver',
+            // Plano 25, Task 25.5: laudo assistido por IA. As duas entram
+            // aqui porque é o responsável técnico quem assina o laudo, e o
+            // papel `tecnico` é onde ele mora neste sistema.
+            //
+            // `ia-revisar` é a permissão que carrega a responsabilidade
+            // profissional: quem aprova o texto responde pelo documento
+            // emitido. Nenhum outro papel a recebe além de administrador,
+            // que já leva o catálogo inteiro — nem `comercial`, nem
+            // `financeiro`, nem `leitura`. Parecer técnico não é revisão de
+            // texto comercial.
+            'ia-gerar',
+            'ia-revisar',
         ];
     }
 
