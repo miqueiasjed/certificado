@@ -1864,3 +1864,72 @@ heurística (candidato natural: Task 23.8, que já lê os dois números lado a
 lado), vale a pena extrair um resolvedor único antes de crescer para um
 terceiro lugar - e se a limitação de schema for corrigida (`work_orders.budget_id`
 nullable), os dois pontos precisam mudar juntos.
+
+## Planos 24 a 27 (execução paralela e merge sequencial) — 08/08/2026
+
+### `vendor/` symlinkado quebra worktree de projeto Laravel
+
+Os quatro planos rodaram em paralelo, um agente por `git worktree`. Para
+economizar disco, cada worktree recebeu symlink de `vendor/` e `node_modules/`
+apontando para a raiz. Isso quase invalidou o trabalho inteiro sem dar erro:
+o autoloader do Composer calcula `$baseDir` por `dirname(dirname(__DIR__))` a
+partir do **arquivo real**, então `App\` resolvia para o `app/` da raiz, não do
+worktree. Classe nova dava "Class not found" e arquivo modificado era testado
+na versão antiga, **passando enganosamente**. Há um segundo efeito
+independente: `Application::inferBasePath()` deduz a raiz pelo diretório do
+autoloader registrado, então o `TestCase` subia a aplicação da raiz, lendo
+`config/`, `routes/` e `database/migrations/` de lá — migration nova não era
+aplicada e `config/ai.php` "não existia".
+**Regra que fica:** worktree de projeto PHP precisa de `vendor/` real
+(`cp -R` + `composer dump-autoload`), nunca symlink. `vendor/bin/phpunit`
+também precisa ser real, senão o PHPUnit carrega o autoloader da raiz primeiro
+e o bootstrap estoura com `Cannot redeclare ComposerAutoloaderInit<hash>`.
+
+### Suítes concorrentes precisam de banco por execução, não só de worktree
+
+`phpunit.xml` fixa `DB_DATABASE=testing` e o `<env>` do PHPUnit **não**
+sobrescreve variável já presente no ambiente. Quatro agentes rodando ao mesmo
+tempo caíam todos no mesmo banco: deadlock em `drop table` e "table migrations
+already exists" no meio de `migrate:fresh` — resultado contaminado por
+concorrência, que parece falha de código e não é. O contorno é prefixar cada
+execução (`DB_DATABASE=testing_24 php artisan test`).
+**Regra que fica:** sqlite não substitui o MySQL aqui. Existem migrations com
+SQL específico de MySQL (`information_schema`, p.ex.
+`2025_10_08_131634_fix_certificates_work_order_id_foreign_key`) e a suíte
+inteira quebra na migração — 1272 falhas em `main` limpo.
+
+### Merge de planos paralelos: o conflito perigoso é o que divide o fechamento
+
+Os quatro planos conflitaram nos mesmos pontos de extensão
+(`SyncPermissions`, `CatalogoDeModulos`, `EventosDeNotificacao`,
+`DominioMultiempresa`, `routes/web.php`, `VazamentoEntreEmpresasTest`), todos
+por adição. O caso que não se resolve escolhendo um lado é quando os dois
+lados **compartilham as linhas de fechamento** (`],\n],\n],` de um item de
+array, ou o `/**` de abertura de um docblock): concatenar ours+theirs produz
+PHP sintaticamente quebrado, e escolher um lado apaga o outro em silêncio.
+Nesses, a resolução é dar a cada lado o próprio fechamento.
+**Regra que fica:** depois de resolver, conferir por execução, não por leitura
+— `php -r` listando as chaves do catálogo (17 módulos, 117 permissões, 38
+eventos) acusa item perdido que `php -l` não pega.
+
+### Guarda permanente pegou rota nova sem cobertura de isolamento
+
+`IsolamentoDoPortalTest::urlsDeDetalheParaOutro()` derruba a suíte quando uma
+rota entra em `ROTAS_DE_DETALHE` sem `case` no mapeamento. O Plano 26
+classificou `portal.contratos.assinado` e não mapeou; a guarda acusou no
+merge. **Regra que fica:** esse tipo de guarda (varredura que falha alto ao
+encontrar coisa nova não declarada) é o que faz plano executado por agente
+sem visão do todo não abrir buraco — vale mais que teste de caso.
+
+### `exists:` em FormRequest não passa pelo escopo global
+
+Revisão dos branches encontrou `vehicle_id`, `technician_id`,
+`chart_of_account_id` e `supplier_id` validados com `exists:tabela,id` cru. A
+regra roda no query builder, fora do Eloquent, então aceita id de outra
+empresa — e responde se aquele id existe em **algum** tenant, o que já é
+vazamento. Corrigido no Plano 27 com
+`Rule::exists(...)->where(DominioMultiempresa::COLUNA_TENANT, TenantAtual::exigirId())`.
+**Dívida aberta:** as demais `exists:` de `WorkOrderRequest` (`client_id`,
+`address_id`, `technician_id`, `service_id`, `products.*.id`, `rooms.*.id`,
+`devices.*.id`) têm o mesmo defeito e vêm de planos anteriores. Ficaram fora
+do escopo da correção, mas são a mesma falha.

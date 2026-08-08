@@ -1,43 +1,146 @@
 # Handoff
 
-Plano: 23
+Plano: 24, 25, 26 e 27
 Task: -
-Estado: Concluído e commitado (local), não publicado
+Estado: **Concluídos e mergeados em `main` (local). Push não autorizado.**
 Tentativas: -
-Base Git: ver `git log` (commit local do Plano 23 acima deste handoff)
-Feito: as 9 tasks do Plano 23 (Comissões, metas e renovação de contratos) completas. Migrations/models de comissão, meta e renovação (23.1); apuração com regra vigente na data do fato, fechamento imutável, reabertura auditada e estorno tratado (23.2); metas com projeção a partir do 5º dia útil e indicadores comerciais com corte de amostra pequena (23.3); renovação de contrato com reajuste, janela de 90/30 dias e cadeia navegável (23.4); alertas de contrato a vencer por marco configurável por tenant e pendência semanal de vencido sem tratativa (23.5); endpoints com "cada um vê só a própria comissão" e demais ações protegidas por permissão (23.6); telas de comissão/metas e painel comercial/contratos a vencer (23.7/23.8); suíte de testes ampliada, incluindo isolamento entre empresas na apuração (23.9). Suíte completa verde: 1370 testes, 11244 asserções. `npm run build` limpo.
-Achados corrigidos durante a execução (registrar em `.claude/progress.txt`):
-- `Address::contract()` era `HasOne` sem ordenação; após a Task 23.4, um endereço pode ter mais de um `Contract` (o renovado fica preservado), e a relação resolvia para o primeiro registro (o antigo), quebrando `ContractController::generatePDF()` (documento com valor perante fiscalização). Corrigido com `latestOfMany()` em `app/Models/Address.php`, mais `contracts()` (HasMany) para navegar o histórico. Teste de regressão em `ContractRenewalServiceTest`.
-- `EnfileirarAvisosDiarios::contratosAVencer()` (Plano 14) tinha o mesmo bug de não filtrar `situacao_renovacao` (contrato renovado voltava a alertar para sempre) e prazo só global, não por tenant. Substituído inteiramente por `VerificarContratosAVencer` (Task 23.5), que corrige os dois problemas; config e testes órfãos removidos junto.
-Falta: nenhuma ação pendente no Plano 23, exceto commit (feito) e push (pendente de autorização explícita do usuário).
-Erro reproduzível: nenhum erro ativo
-Arquivos alterados: ver `git show --stat` do commit do Plano 23 — schema (5 migrations aditivas/nullable), models, services (`Commission`, `Commercial`, `ContractRenewalService`, `ContractAlertService`), controllers e requests novos, rotas, permissões (`SyncPermissions`/`RolesAndPermissionsSeeder`), telas Vue (`Commissions/`, `Goals/`, `Comercial/Indicadores.vue`, `Contracts/AVencer.vue`, `RenovacaoModal.vue`) e testes do Plano 23 inteiro. `.claude/plans/INDEX.md` e `.claude/tasks/23/INDEX.md` marcados como concluídos.
-Risco residual: `CommissionCalculationService::resolverVendedorDoRecebimento()` (base "recebido") e o mesmo cálculo em `GoalService`/`IndicadoresComerciaisService` resolvem o vendedor pelo orçamento aprovado/convertido mais recente do cliente — heurística correta no caso comum, mas pode atribuir a pessoa errada se o mesmo cliente teve orçamentos aprovados por vendedores diferentes em sequência. Corrigir de vez exige `budget_id` nullable em `work_orders` (estrutura, sem backfill), fora do escopo deste plano. `CommissionRule.service_type_id` é inerte na base "executado" (nenhuma OS expõe tipo de serviço resolvível hoje). Pagar comissão como despesa (`CommissionClosingService::marcarComoPaga`) exige `supplier_id` de um fornecedor já cadastrado que represente a pessoa, por limitação do schema do Plano 18 (`payables.supplier_id` obrigatório, sem conceito de beneficiário interno).
-Próxima ação: cinco planos com dependências satisfeitas seguem liberados (23 concluído libera nada novo sozinho, mas 27 já estava liberado desde o Plano 22): 24 (Conformidade RDC 622/2022), 25 (Laudo assistido por IA), 26 (Assinatura eletrônica de contratos), 27 (Frota e veículos). Escolher pela ordem de execução recomendada em `.claude/plans/INDEX.md` ao retomar.
+Base Git: `d9a3a9c`
 
-## Histórico
+Com isso, **os 27 planos do roteiro estão concluídos**. `.claude/plans/INDEX.md`
+e os quatro `.claude/tasks/N/INDEX.md` estão marcados.
 
-### Plano 23 (concluído)
-Ver `.claude/progress.txt` para os aprendizados duráveis registrados.
-Feito: Plano 22 (Roteirização e rastreamento em campo) completo, 8 tasks. Coordenada de endereço (geocodificação via Nominatim, gratuito), roteiro do dia por técnico ordenado por proximidade com âncora de horário, mapa das visitas (Leaflet), registro de local de início/fim de execução com consentimento, divergência de local e rastreamento contínuo opcional desligado por padrão. Suíte completa do projeto: 1.285 testes, 10.745 asserções, tudo verde. `npm run build` limpo. Quatro achados corrigidos durante a execução (registrados em `.claude/progress.txt`): coordenada de sede fictícia `(0,0)` inflando a distância total do roteiro; divergência de local zerada abaixo do limiar (apagava o dado que a task existe para preservar); reordenação manual não recalculava totais; rastreamento contínuo não exposto ao aplicativo.
-Falta: nenhuma ação pendente no Plano 22, exceto commit (e push, se autorizado).
-Erro reproduzível: nenhum erro ativo
-Arquivos alterados: ver `git status` — abrange schema, models, services (Geo, Routing), controllers, rotas, permissões, seeders, telas web (painel de roteiro, mapa, pendências geo) e do app do técnico (roteiro, captura de local), e testes do Plano 22 inteiro. `.claude/plans/INDEX.md` e `.claude/tasks/22/INDEX.md` marcados como concluídos.
-Risco residual: geocodificação real em produção usa Nominatim (gratuito, sem chave) — respeitar a política de uso deles (User-Agent, ~1 req/s) ao rodar o backfill em lote real. Rastreamento contínuo de técnico é dado pessoal sensível: nasce desligado, só liga com consentimento registrado, precisa de decisão do responsável do tenant antes de ativar para qualquer técnico. Coordenada de sede ainda não existe (`companies` sem lat/lng) — o roteiro funciona sem ela (primeiro trecho não entra no total), mas fica menos preciso; task futura pode resolver. Deploy em quatro etapas conforme `.claude/tasks/22/INDEX.md` ("Ordem de aplicação em produção") — módulo `roteirizacao` desligado até o Deploy 3/4, geocodificação em lote rodada com `--dry-run` primeiro e pendências de precisão "cidade" corrigidas manualmente antes de seguir.
-Próxima ação: commitar localmente (sem push, sem autorização explícita do usuário para isso). Depois, cinco planos ficam com dependências satisfeitas: 23 (Comissões, metas e renovação de contratos), 24 (Conformidade RDC 622/2022), 25 (Laudo assistido por IA), 26 (Assinatura eletrônica de contratos), 27 (Frota e veículos, liberado agora que o 22 terminou). Escolher pela ordem de execução recomendada em `.claude/plans/INDEX.md` ao retomar.
+## O que foi feito nesta sessão
 
-Fora do escopo deste plano, deixados como estavam (não tocar sem pedido explícito):
-- `.claude/skills/run-plan/SKILL.md`: modificado, não commitado (sync de skill, sessão anterior).
-- `public/vendas.html`: arquivo novo não rastreado, sem relação com nenhum plano ativo.
-- `.DS_Store` / `public/.DS_Store`: lixo do macOS, nunca deve ir para commit.
+Os quatro planos já vinham implementados em branches (`plano-24` a `plano-27`),
+executados em paralelo em worktrees numa sessão anterior. Esta sessão fez o
+merge sequencial, a revisão independente e a validação:
 
-## Histórico
+| Commit | Conteúdo |
+|---|---|
+| `e9dc299` | merge do Plano 24 (feito na sessão anterior) |
+| `2093b50` | merge do Plano 25 — laudo assistido por IA |
+| `9301dd4` | merge do Plano 26 — assinatura eletrônica de contratos |
+| `92782f2` | merge do Plano 27 — frota e veículos |
+| `d9a3a9c` | correção dos quatro defeitos achados na revisão |
 
-### Plano 22 (concluído)
-Ver `.claude/progress.txt` para os quatro aprendizados duráveis registrados.
+Merge serializado de propósito, com a suíte completa a cada passo. Rodar as
+suítes em paralelo foi o que causou os deadlocks da sessão anterior.
 
-### Plano 21 (concluído)
-Ver `.claude/progress.txt` para os quatro aprendizados duráveis registrados. Commitado localmente em 9ebd7db, não publicado (push pendente de autorização).
+## Validação final
 
-### Plano 20 (concluído)
-Nota fiscal de serviço commitada (81 arquivos, +10339/-76) e enviada ao remoto (ddc674a..cac9ca4). Suíte completa (1.192 testes, 10.040 asserções) e build Vite confirmados antes do push.
+- Suíte completa: **1563 testes, 12082 asserções, 1 falha**.
+- A falha é **pré-existente e não relacionada**:
+  `tests/Feature/RelatorioPdfServiceTest.php:277` grava num caminho absoluto de
+  scratchpad de outra máquina
+  (`/private/tmp/claude-501/-Users-miqueias-.../scratchpad`). Veio no commit
+  `9ebd7db` (Plano 21) e falha em qualquer máquina que não seja a do autor.
+- `npm run build` limpo (205 entradas no precache do PWA).
+- Conferido por execução após os merges: 17 módulos, 117 permissões, 38 eventos,
+  com as chaves dos quatro planos presentes.
+- Conferido explicitamente: `RotinasAgendadas::A_CADA_HORAS` e o laço
+  correspondente em `bootstrap/app.php:244` sobreviveram ao merge — é o que faz
+  `assinaturas:sincronizar` realmente disparar, e é a rede de segurança do
+  webhook perdido.
+- Pint acusa 171 arquivos, **todos pré-existentes** (conferido: `routes/web.php`
+  já violava `ordered_imports` antes dos merges). O projeto não usa Pint como
+  gate; nada foi reformatado.
+
+## Defeitos corrigidos após a revisão (commit `d9a3a9c`)
+
+Dois revisores independentes leram os branches 26 e 27. Isolamento entre
+empresas nos models, autorização, idempotência do webhook, timezone e as
+divisões por zero do rateio foram conferidos e **estavam corretos**. O que não
+estava:
+
+1. `ContractService::encerrar()` não passava por
+   `exigirContratoForaDeAssinatura()`. Dava para encerrar (gravar `end_date`) um
+   contrato que o cliente estava lendo para assinar — documento oponível
+   divergindo do registro.
+2. `ContractController::destroy()`/`encerrar()` não capturavam a
+   `ContratoEmAssinaturaException` nova: a recusa virava 500.
+3. `vehicle_id`, `technician_id`, `chart_of_account_id` e `supplier_id` eram
+   validados com `exists:` cru, que não passa pelo escopo global — id de outra
+   empresa era aceito no corpo da requisição.
+4. Alerta de manutenção olhava só `situacao = 'agendada'` enquanto o custo por
+   km somava só `'realizada'`; e documento de veículo vencido reenviava aviso
+   semanal para sempre, mesmo depois de renovado por linha nova.
+
+13 testes de regressão acrescentados.
+
+## Follow-up conhecido (não bloqueia nada)
+
+Achados menores da revisão, deixados como estão de propósito:
+
+- **Plano 26:** salvar a credencial do provedor substitui o array inteiro e
+  apaga um `webhook_secret` já cadastrado; o webhook não tem throttle (o corpo
+  não decide nada, então a integridade está de pé — falta o custo);
+  `AvisoDeRotinaFalha::horarioEsperado()` não conhece `A_CADA_HORAS`, então o
+  e-mail de rotina parada sai sem horário; `RotinasAgendadasTest` só percorre
+  `DIARIAS`; N+1 em `CamposVisiveisAoCliente::tem_via_assinada`.
+- **Plano 27:** `RefuelingRequest.data` aceita data futura e não valida contra o
+  último abastecimento; manutenção grande rateada no período infla o custo por
+  km de toda OS dos 6 meses seguintes; `VehicleDocumentController` faz CRUD e
+  I/O de arquivo direto, sem Service; `StockLocation` do veículo fica órfão ao
+  excluir o veículo; placa não é normalizada na entrada.
+- **Dívida antiga exposta pela correção 3:** as demais `exists:` de
+  `WorkOrderRequest` (`client_id`, `address_id`, `technician_id`, `service_id`,
+  `products.*.id`, `rooms.*.id`, `devices.*.id`) têm exatamente o mesmo defeito
+  de escopo e vêm de planos anteriores.
+
+## Antes de aplicar em produção
+
+1. **Plano 24:** `php artisan db:seed --class=NormativeReferenceSeeder` **não**
+   está ligado ao `DatabaseSeeder`, e isso é deliberado (a linha padrão da
+   plataforma precisa de `company_id = null`, e o `DatabaseSeeder` envolve tudo
+   em `TenantAtual::comTenant()`). Se o passo for esquecido, **os documentos
+   emitidos saem sem citar a resolução** — sem erro, sem log, sem sintoma.
+   Documentado em `docs/conformidade-rdc-622.md`.
+2. **Rollback:** `migrate:rollback` reverte o **último batch**, não a última
+   migration. Se os quatro planos forem aplicados na mesma passada, um
+   `migrate:rollback` seco desfaz **os quatro de uma vez**. Para exercitar um
+   plano só: `migrate:rollback --step=1`.
+3. **Plano 27, `down()` destrutivo:** além dos quatro `DROP TABLE`, derruba a FK
+   `work_orders_vehicle_id_foreign` e faz `DROP COLUMN vehicle_id,
+   km_deslocamento` em `work_orders`, que é tabela com dado em produção. A ordem
+   está correta e nenhuma linha é apagada, mas o vínculo OS↔veículo e a
+   quilometragem informada somem sem volta. `DROP COLUMN` no MySQL 8.4 pode cair
+   em `ALGORITHM=COPY` e reescrever `work_orders` inteira — conferir com
+   `--pretend` se a janela for apertada. A **subida** é aditiva e nullable, mas
+   `foreignId()->constrained()` num único `ALTER TABLE` também força `COPY`:
+   vale separar coluna e FK em duas instruções, fora do horário de operação.
+4. Os quatro módulos (`conformidade`, `laudo_ia`, `assinatura_eletronica`,
+   `frota`) **nascem desligados**. Ligar é decisão por tenant, depois do dado
+   estar cadastrado.
+5. **Primeira execução de `frota:verificar`** depois de ligar o módulo pode
+   gerar uma leva inicial de avisos para manutenções antigas cuja próxima
+   prevista já passou (limitado a 2 avisos por registro, pela idempotência).
+   Conferir o volume antes.
+
+## Alteração feita na máquina, fora do repositório (não autorizada)
+
+Na sessão anterior, o agente do Plano 25 elevou as variáveis **globais** do
+MySQL `net_read_timeout` e `net_write_timeout` de 30 para 600 segundos. Motivo
+legítimo (sob carga dos quatro worktrees um DDL passava de 30s e o servidor
+derrubava a conexão), mas é mudança persistente no servidor da usuária.
+Reverter com `SET GLOBAL net_read_timeout = 30;` e
+`SET GLOBAL net_write_timeout = 60;` (padrões do MySQL 8.4), se ela quiser.
+
+## Defeitos pré-existentes em `main` (fora do escopo dos planos)
+
+1. `tests/Feature/RelatorioPdfServiceTest.php:277` — caminho absoluto de outra
+   máquina. **Confirmado**: é a única falha da suíte.
+2. `resources/views/pdf/service-order.blade.php` chama
+   `$serviceOrder->devices->count()`, mas `ServiceOrder` não tem a relação
+   `devices` — `GET /service-orders/{id}/pdf` estouraria. Apontado por um agente
+   do Plano 24, **não conferido pelo orquestrador**.
+3. `.gitignore` tem um marcador de conflito não resolvido na última linha
+   (`>>>>>>> ce53ae2 (First commit)`). Inócuo, mas é lixo versionado.
+
+## Próxima ação
+
+Nenhuma pendente nos planos. O que resta é decisão da usuária:
+
+1. **Push** — nada foi publicado. `main` local está 5 commits à frente.
+2. **Limpar os worktrees e branches** de `.claude/worktrees/plano-2{4,5,6,7}`,
+   já mergeados.
+3. Escolher se algum item do follow-up acima vira plano novo.
