@@ -5,8 +5,12 @@ namespace App\Services\Compliance;
 use App\Models\Company;
 use App\Models\ComplianceCheck;
 use App\Models\NormativeReference;
+use App\Models\Technician;
+use App\Services\ModuleService;
 use App\Services\PendenciasDeContratoService;
+use App\Services\Ppe\SituacaoDeEpiService;
 use App\Support\BusinessDate;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Throwable;
 
@@ -20,10 +24,21 @@ use Throwable;
  * ----------------------------------
  * Toda resposta carrega `ressalva`, e ela é obrigatória. Dizer "sua empresa
  * está regular" seria assumir responsabilidade que não é da plataforma: parte
- * do que a norma exige (veículo de transporte adequado, EPI, treinamento da
- * equipe, arquivo físico, letreiro na fachada, licença afixada em local
- * visível) o sistema nem enxerga. O que ele pode afirmar é o que está no
- * cadastro dele.
+ * do que a norma exige (veículo de transporte adequado, treinamento da equipe,
+ * arquivo físico, letreiro na fachada, licença afixada em local visível) o
+ * sistema nem enxerga. O que ele pode afirmar é o que está no cadastro dele.
+ *
+ * EPI saiu dessa lista no Plano 29 (Task 29.4)
+ * --------------------------------------------
+ * Até então o EPI era o exemplo declarado do que "o sistema nem enxerga", ao
+ * mesmo tempo em que o contrato emitido prometia ao cliente que a equipe usa
+ * EPI. Com o cadastro do Plano 28 e a situação do técnico da Task 29.2, o
+ * fornecimento passou a ser dado, e `ITEM_EPI_DOS_TECNICOS` o mostra. O que o
+ * item comprova continua sendo **o que está registrado** — quem entregou o quê,
+ * a quem, com CA e confirmação de recebimento —, e nunca que a empresa está
+ * regular em segurança do trabalho: ASO, treinamento, PGR e o uso efetivo em
+ * campo seguem fora do alcance do sistema, e por isso a ressalva geral continua
+ * obrigatória.
  *
  * "Não informado" nunca é "irregular"
  * -----------------------------------
@@ -64,10 +79,29 @@ class ChecklistService
 
     public const ITEM_VISITAS_DE_CONTRATO = 'visitas_de_contrato';
 
+    /**
+     * Fornecimento de EPI aos técnicos (Plano 29, Task 29.4).
+     *
+     * Item condicional: só existe para o tenant com o módulo `epi` ligado, e é
+     * por isso que `verificar()` limpa o que saiu do checklist.
+     */
+    public const ITEM_EPI_DOS_TECNICOS = 'epi_dos_tecnicos';
+
+    /**
+     * Quantos técnicos com pendência de EPI são nomeados no `detalhe`.
+     *
+     * Mesmo limite dos exemplos dos outros itens: o suficiente para a empresa
+     * saber por onde começar, sem transformar uma linha do checklist na lista
+     * inteira da equipe.
+     */
+    private const TECNICOS_NOMEADOS_NO_DETALHE = 10;
+
     public function __construct(
         private readonly ValidadeService $validades,
         private readonly ConformidadeDaExecucaoService $execucao,
         private readonly PendenciasDeContratoService $pendenciasDeContrato,
+        private readonly ModuleService $modulos,
+        private readonly SituacaoDeEpiService $situacaoDeEpi,
     ) {}
 
     /**
@@ -84,15 +118,20 @@ class ChecklistService
      */
     public function montar(Company $empresa): array
     {
-        $itens = array_merge(
+        // `array_filter` porque o item de EPI é o primeiro condicional do
+        // checklist: ele devolve `null` para o tenant sem o módulo `epi`, em
+        // vez de ocupar uma linha falando de uma funcionalidade que a empresa
+        // não contratou.
+        $itens = array_values(array_filter(array_merge(
             $this->itensDeValidade($empresa),
             [
                 $this->itemDosRegistrosDeProduto(),
                 $this->itemDaReferenciaNormativa($empresa),
                 $this->itemDaDocumentacaoDaExecucao(),
                 $this->itemDasVisitasDeContrato(),
+                $this->itemDoEpiDosTecnicos($empresa),
             ]
-        );
+        )));
 
         return [
             'ressalva' => $this->ressalva(),
@@ -127,6 +166,18 @@ class ChecklistService
                 ]
             );
         }
+
+        // Item que saiu do checklist não pode deixar estado velho para trás.
+        // A tabela guarda o **estado atual**, e a partir da Task 29.4 existe
+        // item condicional: desligar o módulo `epi` tira `epi_dos_tecnicos` de
+        // `montar()`, e sem esta limpeza a linha antiga continuaria contando
+        // como irregular no resumo do painel, sem tela nenhuma onde resolvê-la.
+        // O `company_id` explícito não confia só no escopo global: apagar por
+        // engano a linha de outro tenant seria pior que a sobra.
+        ComplianceCheck::query()
+            ->where('company_id', $empresa->getKey())
+            ->whereNotIn('item', array_column($checklist['itens'], 'item'))
+            ->delete();
 
         $checklist['verificado_em'] = $agora->toIso8601String();
 
@@ -172,12 +223,17 @@ class ChecklistService
 
     /**
      * Ressalva obrigatória, presente em toda resposta do checklist.
+     *
+     * EPI saiu da lista na Task 29.4, porque virou dado do sistema. O que
+     * continua verdadeiro, e por isso a ressalva continua obrigatória: o item
+     * de EPI comprova o **fornecimento registrado**, e não que a empresa esteja
+     * regular em segurança do trabalho.
      */
     public function ressalva(): string
     {
         return 'Este checklist lista o que o sistema consegue verificar a partir do seu cadastro. '
             .'Ele não atesta que a empresa está regular perante a RDC 622/2022: parte do que a norma '
-            .'exige (transporte dos produtos, EPI, treinamento da equipe, licença afixada em local '
+            .'exige (transporte dos produtos, treinamento da equipe, licença afixada em local '
             .'visível, letreiro na fachada, arquivo físico) acontece fora do sistema.';
     }
 
@@ -446,9 +502,229 @@ class ChecklistService
         ];
     }
 
+    /**
+     * Fornecimento de EPI aos técnicos ativos (Plano 29, Task 29.4).
+     *
+     * É o item que fecha o buraco que este próprio serviço declarava por
+     * escrito. Ele responde uma pergunta só: **o fornecimento de EPI aos
+     * técnicos que estão em campo está registrado como a NR-6 exige?**
+     *
+     * O item é condicional
+     * --------------------
+     * Devolve `null` — some do checklist — para o tenant sem o módulo `epi`.
+     * No Deploy 1 deste plano o módulo nasce desligado em todo mundo, e uma
+     * linha "não aplicável" falando de uma funcionalidade que a empresa não
+     * contratou é ruído em cima do item que ela precisa ler. Quem limpa o
+     * estado gravado quando o módulo é desligado depois é `verificar()`.
+     *
+     * "Não informado" nunca é "irregular"
+     * -----------------------------------
+     * A regra mais importante desta task, e a mesma do resto do serviço. Dois
+     * estados caem em `SITUACAO_NAO_APLICAVEL`, e `detalhe` é quem os explica
+     * em português:
+     *
+     * - nenhum técnico ativo cadastrado — não há a quem fornecer EPI;
+     * - nenhum EPI marcado como obrigatório no cadastro — o dado ainda não foi
+     *   preenchido, que é exatamente o estado de quem acabou de ligar o módulo.
+     *
+     * Nenhum dos dois é irregularidade. Acusar de irregular quem apenas não
+     * preencheu destruiria a confiança no checklist inteiro, e aqui o estrago
+     * seria maior que nos demais itens: "irregular em EPI" é a acusação que
+     * ninguém quer ver por engano numa tela de conformidade.
+     *
+     * O que **é** irregular
+     * ---------------------
+     * Técnico ativo com troca vencida, com entrega sem assinatura ou que nunca
+     * recebeu um EPI obrigatório. Os três entram juntos de propósito: a entrega
+     * sem assinatura é justamente a prova que falta (NR-6, item 6.5.1), e sem
+     * ela a empresa fornece o equipamento e continua sem como demonstrar isso.
+     *
+     * O cálculo não é feito aqui
+     * --------------------------
+     * Quem decide a situação de cada técnico é `SituacaoDeEpiService`
+     * (Task 29.2), que por sua vez tira a regra de troca vencida de
+     * `AlertaDeEpiService::trocaVencida()` — a origem única do sistema. Este
+     * item só conta e redige: uma segunda comparação de data aqui divergiria do
+     * alerta semanal do Plano 28, e divergência de vencimento é bug que ninguém
+     * encontra depois.
+     *
+     * Técnico inativo sai da conta: a ficha dele continua existindo (e é
+     * justamente a de quem saiu que costuma ser pedida depois), mas ele não
+     * executa mais, e cobrar EPI de quem não vai a campo é ruído garantido —
+     * mesmo critério de `AlertaDeEpiService::trocasVencidas()`.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function itemDoEpiDosTecnicos(Company $empresa): ?array
+    {
+        if (! $this->modulos->ativo('epi', $empresa)) {
+            return null;
+        }
+
+        $exigencia = 'O fornecimento de EPI ao trabalhador precisa ser registrado, com o equipamento, o '
+            .'número do CA, a data e a confirmação de recebimento (NR-6, item 6.5.1), e o registro '
+            .'eletrônico precisa permitir a extração de relatórios (item 6.5.1.1). O uso e a manutenção '
+            .'dos equipamentos também precisam estar descritos no POP da empresa especializada '
+            .'(RDC 622/2022).';
+
+        $cadastrar = $this->acao('Cadastrar em Controle de EPI', 'epi.index');
+        $ficha = $this->acao('Abrir a ficha de EPI do técnico em Técnicos', 'technicians.index');
+
+        $tecnicos = Technician::query()
+            ->where('company_id', $empresa->getKey())
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get();
+
+        if ($tecnicos->isEmpty()) {
+            return $this->itemDeEpi(
+                ComplianceCheck::SITUACAO_NAO_APLICAVEL,
+                'Nenhum técnico ativo cadastrado. Não há a quem fornecer EPI, e portanto não há o que '
+                .'verificar aqui.',
+                $exigencia,
+                $cadastrar
+            );
+        }
+
+        $situacoes = $tecnicos->map(fn (Technician $tecnico): array => $this->situacaoDeEpi->doTecnico($tecnico));
+
+        // Quantos modelos de EPI obrigatório o cadastro tem hoje, lido do
+        // próprio `SituacaoDeEpiService` (é o `total` do resumo dele), em vez
+        // de uma segunda consulta com o critério repetido aqui.
+        $obrigatorios = (int) $situacoes->max(fn (array $situacao): int => (int) $situacao['resumo']['total']);
+
+        if ($obrigatorios === 0) {
+            return $this->itemDeEpi(
+                ComplianceCheck::SITUACAO_NAO_APLICAVEL,
+                'Nenhum equipamento está marcado como obrigatório no cadastro de EPI: o dado ainda não '
+                .'foi preenchido, e isso não é irregularidade. Marque como obrigatórios os equipamentos '
+                .'que a operação exige para o checklist passar a conferir o fornecimento a cada técnico.',
+                $exigencia,
+                $cadastrar
+            );
+        }
+
+        $contagem = $this->contarSituacoesDeEpi($situacoes);
+
+        if ($contagem['pendentes'] === 0) {
+            return $this->itemDeEpi(
+                ComplianceCheck::SITUACAO_REGULAR,
+                sprintf(
+                    'Os %d técnico(s) ativo(s) estão em dia com os %d EPI(s) obrigatório(s) do cadastro: '
+                    .'entrega registrada, dentro da troca programada e com a confirmação de recebimento '
+                    .'assinada.',
+                    $tecnicos->count(),
+                    $obrigatorios
+                ),
+                $exigencia,
+                $ficha
+            );
+        }
+
+        return $this->itemDeEpi(
+            ComplianceCheck::SITUACAO_IRREGULAR,
+            sprintf(
+                '%d de %d técnico(s) ativo(s) em dia com os %d EPI(s) obrigatório(s). '
+                .'%d com troca vencida, %d com entrega sem assinatura e %d que nunca recebeu EPI '
+                .'obrigatório — um mesmo técnico pode aparecer em mais de uma pendência: %s.',
+                $contagem[SituacaoDeEpiService::EM_DIA],
+                $tecnicos->count(),
+                $obrigatorios,
+                $contagem[SituacaoDeEpiService::TROCA_VENCIDA],
+                $contagem[SituacaoDeEpiService::SEM_ASSINATURA],
+                $contagem[SituacaoDeEpiService::NUNCA_RECEBEU],
+                implode('; ', $contagem['exemplos'])
+            ),
+            $exigencia,
+            $ficha
+        );
+    }
+
+    /**
+     * Contagem de técnicos por situação de EPI, mais os nomes que vão no
+     * `detalhe`.
+     *
+     * Conta **técnicos**, e não itens de EPI: a pergunta do checklist é quantas
+     * pessoas estão em campo com pendência, e um técnico com três luvas
+     * vencidas é uma pessoa, não três. Pelo mesmo motivo ele pode aparecer em
+     * mais de uma coluna — quem tem uma troca vencida e outra entrega sem
+     * assinatura conta nas duas —, e o `detalhe` diz isso em português para
+     * ninguém somar as parcelas e estranhar o total.
+     *
+     * @param  Collection<int, array<string, mixed>>  $situacoes
+     * @return array<string, mixed>
+     */
+    private function contarSituacoesDeEpi(Collection $situacoes): array
+    {
+        $contagem = [
+            SituacaoDeEpiService::EM_DIA => 0,
+            SituacaoDeEpiService::TROCA_VENCIDA => 0,
+            SituacaoDeEpiService::SEM_ASSINATURA => 0,
+            SituacaoDeEpiService::NUNCA_RECEBEU => 0,
+            'pendentes' => 0,
+            'exemplos' => [],
+        ];
+
+        foreach ($situacoes as $situacao) {
+            if ($situacao['regular']) {
+                $contagem[SituacaoDeEpiService::EM_DIA]++;
+
+                continue;
+            }
+
+            $contagem['pendentes']++;
+
+            $pendentes = array_column($situacao['pendencias'], 'situacao');
+
+            // Na ordem declarada de `SITUACOES_PENDENTES`, e não na ordem em
+            // que as pendências apareceram: o texto do checklist precisa sair
+            // igual para o mesmo estado, senão a linha "muda" a cada
+            // verificação sem nada ter mudado.
+            $rotulos = [];
+
+            foreach (SituacaoDeEpiService::SITUACOES_PENDENTES as $pendencia) {
+                if (! in_array($pendencia, $pendentes, true)) {
+                    continue;
+                }
+
+                $contagem[$pendencia]++;
+                $rotulos[] = SituacaoDeEpiService::ROTULOS_DE_SITUACAO[$pendencia];
+            }
+
+            if (count($contagem['exemplos']) < self::TECNICOS_NOMEADOS_NO_DETALHE) {
+                $contagem['exemplos'][] = sprintf(
+                    '%s (%s)',
+                    $situacao['tecnico']['nome'] ?? 'técnico '.$situacao['tecnico']['id'],
+                    implode(', ', $rotulos)
+                );
+            }
+        }
+
+        return $contagem;
+    }
+
     // -----------------------------------------------------------------
     // Apoio
     // -----------------------------------------------------------------
+
+    /**
+     * Uma linha do item de EPI, com o rótulo e a chave sempre iguais.
+     *
+     * @param  array{texto: string, rota: ?string}  $acao
+     * @return array<string, mixed>
+     */
+    private function itemDeEpi(string $situacao, string $detalhe, string $exigencia, array $acao): array
+    {
+        return [
+            'item' => self::ITEM_EPI_DOS_TECNICOS,
+            'rotulo' => 'Fornecimento de EPI aos técnicos',
+            'situacao' => $situacao,
+            'detalhe' => $detalhe,
+            'exigencia' => $exigencia,
+            'acao' => $acao,
+        ];
+    }
 
     /**
      * Traduz a situação do `ValidadeService` para a do checklist.

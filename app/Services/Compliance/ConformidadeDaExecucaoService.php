@@ -451,8 +451,14 @@ class ConformidadeDaExecucaoService
      *
      * O sistema informa, não certifica. Dizer "esta OS está em conformidade"
      * seria assumir responsabilidade que não é da plataforma: parte do que a
-     * norma exige (veículo, EPI, treinamento, arquivo físico) o sistema nem
-     * enxerga.
+     * norma exige (veículo, treinamento, arquivo físico) o sistema nem enxerga.
+     *
+     * EPI saiu dessa lista no Plano 29 (Task 29.4): o fornecimento passou a ser
+     * dado do sistema, com item próprio no checklist da RDC 622/2022
+     * (`ChecklistService::ITEM_EPI_DOS_TECNICOS`) e confirmação de uso na
+     * execução. O que o sistema comprova é o que está registrado; a ressalva
+     * continua obrigatória porque conformidade em segurança do trabalho não se
+     * esgota no fornecimento.
      */
     public function ressalva(): string
     {
