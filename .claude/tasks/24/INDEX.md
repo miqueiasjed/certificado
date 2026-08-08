@@ -8,13 +8,13 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 24.1 | Referência normativa configurável e validades | backend-estrutura | ⏳ | média |
-| 24.2 | Revisão dos textos dos documentos emitidos | backend-endpoint | ⏳ | média |
-| 24.3 | Controle de validade e alertas de vencimento | backend-logica | ⏳ | média |
-| 24.4 | Aviso ao aplicar produto irregular e conferência | backend-logica | ⏳ | média |
-| 24.5 | Checklist de conformidade e endpoints | backend-endpoint | ⏳ | média |
-| 24.6 | Telas de conformidade, validades e referência | frontend-pagina | ⏳ | média |
-| 24.7 | Testes de validade, checklist e documentos | teste | ⏳ | média |
+| 24.1 | Referência normativa configurável e validades | backend-estrutura | ✅ | média |
+| 24.2 | Revisão dos textos dos documentos emitidos | backend-endpoint | ✅ | média |
+| 24.3 | Controle de validade e alertas de vencimento | backend-logica | ✅ | média |
+| 24.4 | Aviso ao aplicar produto irregular e conferência | backend-logica | ✅ | média |
+| 24.5 | Checklist de conformidade e endpoints | backend-endpoint | ✅ | média |
+| 24.6 | Telas de conformidade, validades e referência | frontend-pagina | ✅ | média |
+| 24.7 | Testes de validade, checklist e documentos | teste | ✅ | média |
 
 ## Ordem de execução
 
@@ -65,6 +65,21 @@ Lote 6:             24.7
 3. **Deploy 3** (24.3, 24.4, 24.5): validades, avisos e checklist, com a rotina de verificação desligada.
 4. Preencher as validades reais do tenant 1, rodar a verificação uma vez e conferir o checklist antes de ligar os avisos.
 5. **Deploy 4** (24.6): telas. Ligar a rotina.
+
+## Alteração da ordem de aplicação feita na execução
+
+O Deploy 4 passou a incluir **uma migration**, e não só telas: quatro colunas
+`*_arquivo` nullable em `companies`, para o anexo digitalizado de cada
+documento regulatório que a Task 24.6 pede na tela de validades. A estrutura
+foi descoberta junto com a tela, e não na Task 24.1. São colunas nullable, sem
+restrição e sem backfill, então podem ser antecipadas para o Deploy 1 sem
+efeito nenhum: sem a tela, ninguém escreve nelas.
+
+O "ligar a rotina" do Deploy 4 é, na prática, **ligar o módulo `conformidade`
+para o tenant**. O módulo nasce desligado (`CatalogoDeModulos`,
+`sempre_ativo => false`) e é ele o interruptor tanto das rotas quanto da rotina
+`conformidade:verificar-validades`, que pula toda empresa sem o módulo ativo.
+Enquanto ele estiver desligado, o Deploy 3 não dispara aviso nenhum.
 
 ## Observações
 
