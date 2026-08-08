@@ -198,7 +198,7 @@ class RolesAndPermissionsSeeder extends Seeder
     /**
      * Permissões do papel leitura: todas as permissões terminadas em "-ver"
      * do catálogo, exceto financeiro-ver, pagamento-ver, cobranca-ver,
-     * comissoes-ver e usuario-ver. As três primeiras porque leitura não
+     * comissoes-ver, epi-ver e usuario-ver. As três primeiras porque leitura não
      * alcança dinheiro (cobrança recorrente, Plano 19, Task 19.6, entra no
      * mesmo critério de financeiro-ver/pagamento-ver); comissoes-ver (Plano
      * 23, Task 23.6) pelo mesmo motivo - quanto uma pessoa ganha de comissão
@@ -209,6 +209,13 @@ class RolesAndPermissionsSeeder extends Seeder
      * auditoria-ver e acesso-log-ver também ficam de fora: o histórico mostra
      * o valor antes e depois de campo de qualquer módulo, inclusive financeiro,
      * e o registro de acesso expõe quem entrou e de onde. Só administrador lê.
+     *
+     * epi-ver (Plano 28) fica de fora pelo mesmo critério de comissoes-ver: a
+     * ficha de EPI traz nome, matrícula, histórico de entregas e a assinatura
+     * do trabalhador, e a extração por período despeja isso de todos os
+     * técnicos de uma vez. Dado pessoal de funcionário não entra em papel que
+     * se dá por padrão a quem só precisa consultar a operação — quem responde
+     * pela segurança do trabalho recebe a permissão explicitamente.
      *
      * @param  \Illuminate\Support\Collection<int, string>  $todasAsPermissoes
      * @return array<int, string>
@@ -222,6 +229,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'pagamento-ver',
                 'cobranca-ver',
                 'comissoes-ver',
+                'epi-ver',
                 'usuario-ver',
                 'auditoria-ver',
                 'acesso-log-ver',

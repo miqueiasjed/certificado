@@ -397,6 +397,69 @@ final class EventosDeNotificacao
      */
     public const QUILOMETRAGEM_DE_VEICULO_DESATUALIZADA = 'quilometragem_de_veiculo_desatualizada';
 
+    /**
+     * Certificado de Aprovação de um modelo de EPI perto de perder a validade
+     * (Plano 28, Task 28.3), enfileirado pela rotina `epi:verificar` nos marcos
+     * de 60, 30 e 7 dias.
+     *
+     * Aviso interno, mesmo critério de `DOCUMENTO_DE_VEICULO_A_VENCER`: quem
+     * compra EPI e renova certificado é a empresa, nunca o cliente final, e por
+     * isso só aceita e-mail.
+     *
+     * É a validade **do certificado do fabricante**, e não a da troca do item
+     * que o técnico tem na mão — essa é `EPI_COM_TROCA_VENCIDA`. Manter os dois
+     * eventos separados é a mesma decisão que mantém `validade_ca` e
+     * `trocar_ate` em colunas separadas: um texto só para os dois faria a
+     * empresa ler "vence" sem saber se precisa comprar certificado novo ou
+     * entregar equipamento novo.
+     *
+     * EPI sem `numero_ca` ou sem `validade_ca` nunca chega aqui: campo em
+     * branco é estado neutro, e cobrar o preenchimento é papel do checklist do
+     * Plano 29, não deste aviso.
+     */
+    public const EPI_COM_CA_A_VENCER = 'epi_com_ca_a_vencer';
+
+    /**
+     * Certificado de Aprovação **já vencido** no cadastro do EPI (Plano 28,
+     * Task 28.3), reenviado **semanalmente** enquanto continuar vencido.
+     *
+     * Evento separado de `EPI_COM_CA_A_VENCER`, e não mais um marco dele, pelo
+     * mesmo motivo de `DOCUMENTO_REGULATORIO_VENCIDO`: um pede providência com
+     * antecedência, o outro informa um fato com consequência imediata — com o
+     * CA vencido o modelo **deixa de poder ser entregue** (a recusa é da Task
+     * 28.2), e entregar EPI com CA vencido é a própria infração que o registro
+     * deveria evitar. Misturar os dois num template só impediria o tenant de dar
+     * a cada um o tom que ele merece.
+     *
+     * O reenvio semanal é a exceção de "um aviso por marco", pelo mesmo motivo
+     * do lote vencido do Plano 17: o silêncio depois do primeiro aviso não
+     * resolve um problema que continua de pé todo dia. O aviso para quando a
+     * validade é atualizada no cadastro ou quando o modelo é marcado como
+     * inativo.
+     */
+    public const EPI_COM_CA_VENCIDO = 'epi_com_ca_vencido';
+
+    /**
+     * Item entregue a um técnico cuja data de troca (`ppe_deliveries.trocar_ate`)
+     * já passou (Plano 28, Task 28.3), reenviado **semanalmente** enquanto o
+     * técnico continuar em campo com ele.
+     *
+     * Aviso interno, pelo mesmo motivo dos dois eventos acima.
+     *
+     * É a outra validade, e a razão de o plano manter duas colunas: aqui o
+     * certificado do fabricante pode estar perfeitamente em dia — o que venceu
+     * é a vida útil daquele respirador, na mão daquele técnico. Renovar o CA no
+     * cadastro não cala este aviso, e não deve calar.
+     *
+     * Três critérios de parada, e nenhum deles é o tempo passar: devolução,
+     * estorno da entrega ou **entrega mais recente do mesmo EPI ao mesmo
+     * técnico**. O terceiro é o que evita repetir o defeito corrigido no
+     * `d9a3a9c`: a entrega é imutável (documento oponível), ninguém edita a
+     * linha antiga, e sem esse critério ela avisaria toda semana para sempre,
+     * mesmo com o substituto já entregue.
+     */
+    public const EPI_COM_TROCA_VENCIDA = 'epi_com_troca_vencida';
+
     public const NFSE_EMITIDA = 'nfse_emitida';
 
     public const NFSE_CANCELADA = 'nfse_cancelada';
@@ -1510,7 +1573,101 @@ final class EventosDeNotificacao
             ],
         ],
 
+        // -------------------------------------------------------------
+        // Controle de EPI (Plano 28, Task 28.3)
+        // -------------------------------------------------------------
+        //
+        // Os três são internos e só aceitam e-mail, mesmo critério de
+        // `ESTOQUE_ABAIXO_DO_MINIMO`: quem compra EPI, renova certificado e
+        // entrega equipamento é a empresa, e o cliente final não tem nada a
+        // fazer com esta informação.
+        //
+        // Todas as variáveis chegam pelas `variaveis` do disparo:
+        // `NotificationService::variaveisDaReferencia()` não conhece
+        // `PersonalProtectiveEquipment` nem `PpeDelivery`, e declarar variável
+        // que ninguém preenche renderizaria vazio.
 
+        self::EPI_COM_CA_A_VENCER => [
+            'rotulo' => 'CA de EPI próximo do vencimento',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'epi_nome',
+                'epi_tipo',
+                'epi_fabricante',
+                'ca_numero',
+                'data_vencimento',
+                'dias_para_vencer',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'CA do EPI {{epi_nome}} vence em {{data_vencimento}}',
+                    'corpo' => 'O Certificado de Aprovação do EPI "{{epi_nome}}" ({{epi_tipo}}, fabricante '
+                        ."{{epi_fabricante}}) vence em {{data_vencimento}}, daqui a {{dias_para_vencer}} dia(s).\n\n"
+                        ."Número do CA: {{ca_numero}}.\n\n"
+                        .'A partir do vencimento, este modelo deixa de poder ser entregue: entregar EPI com CA '
+                        ."vencido é a própria infração que o registro da NR-6 existe para evitar.\n\n"
+                        .'Providencie o certificado novo e atualize a validade no cadastro de EPI; assim que a '
+                        .'data nova for salva, este aviso para de ser enviado.',
+                ],
+            ],
+        ],
+
+        self::EPI_COM_CA_VENCIDO => [
+            'rotulo' => 'CA de EPI vencido',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'epi_nome',
+                'epi_tipo',
+                'epi_fabricante',
+                'ca_numero',
+                'data_vencimento',
+                'dias_vencido',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'CA vencido: {{epi_nome}}',
+                    'corpo' => 'O Certificado de Aprovação do EPI "{{epi_nome}}" ({{epi_tipo}}, fabricante '
+                        .'{{epi_fabricante}}, CA {{ca_numero}}) venceu em {{data_vencimento}}, há '
+                        ."{{dias_vencido}} dia(s), e continua vencido.\n\n"
+                        .'Enquanto isso, o sistema recusa novas entregas deste modelo. As entregas já feitas '
+                        ."continuam válidas: a ficha registra o CA que valia no dia em que o item foi entregue.\n\n"
+                        .'Atualize a validade no cadastro de EPI, ou marque o modelo como inativo se ele saiu '
+                        .'de uso. Enquanto isso não for feito, este aviso é repetido semanalmente.',
+                ],
+            ],
+        ],
+
+        self::EPI_COM_TROCA_VENCIDA => [
+            'rotulo' => 'EPI entregue com troca vencida',
+            'destinatario' => NotificationQueue::DESTINATARIO_EMPRESA,
+            'canais' => [self::CANAL_EMAIL],
+            'variaveis' => [
+                'empresa_nome',
+                'tecnico_nome',
+                'epi_nome',
+                'epi_tipo',
+                'quantidade',
+                'data_entrega',
+                'data_troca',
+                'dias_vencido',
+            ],
+            'padrao' => [
+                self::CANAL_EMAIL => [
+                    'assunto' => 'Troca vencida: {{epi_nome}} com {{tecnico_nome}}',
+                    'corpo' => 'O EPI "{{epi_nome}}" ({{epi_tipo}}, {{quantidade}} unidade(s)) foi entregue a '
+                        .'{{tecnico_nome}} em {{data_entrega}} e deveria ter sido trocado até {{data_troca}}, '
+                        ."há {{dias_vencido}} dia(s).\n\n"
+                        .'Aqui não se trata do certificado do fabricante, e sim da vida útil do item que este '
+                        ."técnico tem em mãos: equipamento vencido em campo não protege ninguém.\n\n"
+                        .'Registre a entrega do substituto, ou a devolução do item. Feito isso, este aviso '
+                        .'para; enquanto a pendência existir, ele é repetido semanalmente.',
+                ],
+            ],
+        ],
     ];
 
     /**

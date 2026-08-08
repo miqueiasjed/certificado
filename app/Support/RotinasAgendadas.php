@@ -78,6 +78,33 @@ final class RotinasAgendadas
         // inadimplência mais lenta que o normal sem empurrar esta para a
         // janela dos avisos diários (07:00).
         'plataforma:encerrar-avaliacoes' => '05:30',
+        // 05:45, na vizinhança dos demais verificadores (`estoque:verificar`
+        // 06:00 e `conformidade:verificar-validades` 06:45) e no único horário
+        // livre dessa faixa que mantém os quinze minutos de folga que separam
+        // as rotinas vizinhas: 06:15 e 06:30 já são das cobranças, e 06:50
+        // encostaria na passada da conformidade.
+        //
+        // Sem dependência de dado com nenhuma outra rotina da lista: lê
+        // `personal_protective_equipments` e `ppe_deliveries`, que rotina
+        // nenhuma daqui escreve. Fica muito antes das 07:00 pela mesma folga já
+        // documentada para `estoque:verificar`: o aviso precisa estar na fila
+        // quando o despachante de notificações passar, senão só sai na manhã
+        // seguinte.
+        //
+        // Diária, mesmo o reenvio do CA vencido e o da troca vencida sendo
+        // semanais: quem decide a cadência de cada aviso é o marco da chave de
+        // idempotência (`VerificarEpi::marcoSemanal()`), e não a frequência da
+        // rotina. Passando todo dia, o CA que cruza o marco de 60, 30 ou 7 dias
+        // é avisado no próprio dia.
+        //
+        // A rotina pula o tenant sem o módulo `epi` ativo, e o módulo nasce
+        // desligado: é assim que esta entrega sobe com a rotina já agendada sem
+        // disparar aviso nenhum até a empresa cadastrar os EPIs com CA e
+        // validade reais e registrar as entregas em aberto. A primeira passada
+        // depois de ligar o módulo pode gerar uma leva grande de avisos (toda
+        // entrega retroativa nasce com a troca vencida), e por isso o comando
+        // aceita `--dry-run` para conferir o volume antes.
+        'epi:verificar' => '05:45',
         // 06:00, sem disputar janela com nenhuma das rotinas acima: os
         // alertas de estoque (Plano 17, Task 17.6) não dependem de status de
         // certificado, de pagamento nem de fatura, e o dado que leem

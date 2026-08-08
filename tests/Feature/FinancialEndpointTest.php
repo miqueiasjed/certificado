@@ -784,10 +784,24 @@ class FinancialEndpointTest extends TestCase
         $this->assertContains('financeiro-plano-de-contas', $catalogo);
         // Reaproveitada da Task 18.4, nunca duplicada.
         $this->assertContains('financeiro-estornar', $catalogo);
+
+        // O que esta asserção protege é o estorno **do financeiro**: baixar e
+        // estornar são permissões distintas desde a Task 18.4, e uma segunda
+        // permissão de estorno financeiro faria a separação virar decoração.
+        //
+        // O filtro é por prefixo do domínio de propósito. Medir `estornar` no
+        // catálogo inteiro dava o mesmo resultado enquanto o financeiro era o
+        // único domínio com estorno, mas quebra em qualquer módulo que ganhe o
+        // seu — foi o que aconteceu com `epi-estornar` no Plano 28, que é
+        // permissão de outro domínio e não deve ser reaproveitada aqui: quem
+        // corrige ficha de EPI não é quem mexe no caixa.
         $this->assertSame(
             1,
-            collect($catalogo)->filter(fn (string $nome): bool => str_contains($nome, 'estornar'))->count(),
-            'existe mais de uma permissão de estorno no catálogo'
+            collect($catalogo)
+                ->filter(fn (string $nome): bool => str_starts_with($nome, 'financeiro-')
+                    && str_contains($nome, 'estornar'))
+                ->count(),
+            'existe mais de uma permissão de estorno no financeiro'
         );
     }
 

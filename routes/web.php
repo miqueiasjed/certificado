@@ -55,6 +55,7 @@ use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\OrganRegistrationController;
 use App\Http\Controllers\PayableController;
 use App\Http\Controllers\PaymentDetailController;
+use App\Http\Controllers\PersonalProtectiveEquipmentController;
 use App\Http\Controllers\PestSightingController;
 use App\Http\Controllers\Plataforma\AssumirTenantController;
 use App\Http\Controllers\Plataforma\DashboardController as PlataformaDashboardController;
@@ -63,6 +64,7 @@ use App\Http\Controllers\Plataforma\PlanController as PlataformaPlanController;
 use App\Http\Controllers\Plataforma\ReceitaController as PlataformaReceitaController;
 use App\Http\Controllers\Plataforma\TenantController as PlataformaTenantController;
 use App\Http\Controllers\Plataforma\UsageController as PlataformaUsageController;
+use App\Http\Controllers\PpeDeliveryController;
 use App\Http\Controllers\ProductBatchController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ReceivableController;
@@ -1399,6 +1401,110 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
         Route::delete('/veiculos/{vehicle}/documentos/{document}', [VehicleDocumentController::class, 'destroy'])
             ->middleware('permission:frota-gerenciar')
             ->name('frota.documentos.destroy');
+    });
+
+    // Controle de EPI (Plano 28, Task 28.4): cadastro dos modelos de EPI com o
+    // Certificado de Aprovação do fabricante e a ficha de entrega ao técnico,
+    // que é o registro exigido pelo item 6.5.1 da NR-6 e a prova do empregador
+    // em reclamatória trabalhista.
+    //
+    // `module:epi` no grupo inteiro, mesmo critério dos blocos de estoque,
+    // cobrança recorrente, monitoramento, roteirização e frota acima: o bloco
+    // nasce inteiro nesta task, então a garantia estrutural ("rota nova já nasce
+    // bloqueada para tenant sem o módulo") vale mais que replicar o middleware
+    // rota a rota. O módulo nasce desligado para todos os tenants, e a rotina de
+    // verificação (`epi:verificar`, Task 28.3) nasce sem agendamento: ligar os
+    // dois é decisão por tenant, e só depois de os modelos de EPI estarem
+    // cadastrados com CA e validade.
+    //
+    // Quatro permissões, e não duas, pelo alcance de cada ação (o raciocínio
+    // completo está em `SyncPermissions::catalogo()`):
+    //
+    // - `epi-ver`: listagem do cadastro, ficha do técnico e a relação de
+    //   entregas. Leitura pura; termina em "-ver", então entra no papel
+    //   `leitura` pelo filtro genérico de `RolesAndPermissionsSeeder`.
+    // - `epi-gerenciar`: o cadastro do modelo de EPI, número do CA e validade
+    //   incluídos — é daqui que sai a cópia do CA gravada em cada entrega
+    //   futura.
+    // - `epi-entregar`: registrar a entrega, colher a assinatura de recebimento
+    //   e registrar a devolução.
+    // - `epi-estornar`: **altera prova documental**, e por isso é separada.
+    //
+    // Não existe rota de exclusão de entrega, e não pode passar a existir: a
+    // entrega é documento oponível, com arquivamento recomendado de 20 anos, e
+    // também não se edita. Erro vira estorno com motivo, e a linha continua na
+    // ficha e na extração por período, marcada como estornada. A ausência da
+    // rota é parte da regra, não esquecimento — o `PpeDeliveryService` sequer
+    // tem método de exclusão.
+    //
+    // Ordem de registro: as duas rotas com segmento literal (`/epis/entregas` e
+    // `/epis/tecnicos/...`) vêm antes de `/epis/{epi}`, senão o curinga as
+    // engoliria e "entregas" viraria um id de EPI que nunca existe.
+    Route::middleware('module:epi')->group(function () {
+        // Ficha de entrega ao técnico.
+        Route::get('/epis/entregas', [PpeDeliveryController::class, 'index'])
+            ->middleware('permission:epi-ver')
+            ->name('epi.entregas.index');
+        Route::post('/epis/entregas', [PpeDeliveryController::class, 'store'])
+            ->middleware('permission:epi-entregar')
+            ->name('epi.entregas.store');
+        Route::post('/epis/entregas/{delivery}/assinatura', [PpeDeliveryController::class, 'assinar'])
+            ->middleware('permission:epi-entregar')
+            ->name('epi.entregas.assinar');
+        Route::post('/epis/entregas/{delivery}/devolucao', [PpeDeliveryController::class, 'devolver'])
+            ->middleware('permission:epi-entregar')
+            ->name('epi.entregas.devolver');
+        Route::post('/epis/entregas/{delivery}/estorno', [PpeDeliveryController::class, 'estornar'])
+            ->middleware('permission:epi-estornar')
+            ->name('epi.entregas.estornar');
+
+        Route::get('/epis/tecnicos/{technician}', [PpeDeliveryController::class, 'ficha'])
+            ->middleware('permission:epi-ver')
+            ->name('epi.tecnicos.ficha');
+
+        // Documentos da Task 28.5. A extração por período é o que o item
+        // 6.5.1.1 da NR-6 exige para aceitar o registro eletrônico; a ficha em
+        // PDF é o documento que se apresenta em fiscalização. As duas são
+        // leitura e ficam sob `epi-ver`.
+        //
+        // `/epis/extracao` precisa vir antes de `/epis/{epi}`, senão o curinga
+        // do cadastro engole o segmento literal.
+        Route::get('/epis/extracao', [PpeDeliveryController::class, 'extracao'])
+            ->middleware('permission:epi-ver')
+            ->name('epi.extracao');
+        Route::get('/epis/tecnicos/{technician}/ficha-pdf', [PpeDeliveryController::class, 'fichaPdf'])
+            ->middleware('permission:epi-ver')
+            ->name('epi.tecnicos.ficha-pdf');
+
+        // Cadastro do modelo de EPI.
+        Route::get('/epis', [PersonalProtectiveEquipmentController::class, 'index'])
+            ->middleware('permission:epi-ver')
+            ->name('epi.index');
+        Route::post('/epis', [PersonalProtectiveEquipmentController::class, 'store'])
+            ->middleware('permission:epi-gerenciar')
+            ->name('epi.store');
+        Route::get('/epis/{epi}', [PersonalProtectiveEquipmentController::class, 'show'])
+            ->middleware('permission:epi-ver')
+            ->name('epi.show');
+        Route::put('/epis/{epi}', [PersonalProtectiveEquipmentController::class, 'update'])
+            ->middleware('permission:epi-gerenciar')
+            ->name('epi.update');
+        Route::post('/epis/{epi}/inativar', [PersonalProtectiveEquipmentController::class, 'inativar'])
+            ->middleware('permission:epi-gerenciar')
+            ->name('epi.inativar');
+        Route::post('/epis/{epi}/reativar', [PersonalProtectiveEquipmentController::class, 'reativar'])
+            ->middleware('permission:epi-gerenciar')
+            ->name('epi.reativar');
+        // A exclusão vale só para o cadastro que nunca foi entregue. Com
+        // entrega registrada, o `PpeService` recusa e o controller devolve 422
+        // apontando a inativação: a ficha antiga aponta para este cadastro.
+        Route::delete('/epis/{epi}', [PersonalProtectiveEquipmentController::class, 'destroy'])
+            ->middleware('permission:epi-gerenciar')
+            ->name('epi.destroy');
+
+        // A ficha em PDF (`epi.tecnicos.ficha-pdf`) e a extração por período
+        // (`epi.extracao`) entram neste grupo, sob `permission:epi-ver`, na
+        // Task 28.5.
     });
 
     // Módulos ainda sem nenhuma rota no sistema (`portal_cliente`,

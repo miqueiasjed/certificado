@@ -21,7 +21,7 @@
 | 1.11 | Formatação de data: operação de campo e clientes | frontend-pagina | ✅ | baixa |
 | 1.12 | Formatação de data: catálogo e cadastros | frontend-pagina | ✅ | média |
 | 1.13 | Remover as tabelas órfãs | backend-estrutura | ✅ | baixa |
-| 1.14 | Testes de virada de dia e das rotinas | teste | ⏳ | alta |
+| 1.14 | Testes de virada de dia e das rotinas | teste | ✅ | alta |
 | 1.15 | Eliminar toISOString como fonte de "hoje" e "agora" | frontend-pagina | ✅ | média |
 | 1.16 | Vencimento no fuso do negócio nos accessors e scopes | backend-logica | ✅ | baixa |
 | 1.17 | Corrigir a regra que marca toda parcela não paga como vencida | backend-logica | ✅ | baixa |

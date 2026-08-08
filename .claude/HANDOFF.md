@@ -1,146 +1,190 @@
 # Handoff
 
-Plano: 24, 25, 26 e 27
-Task: -
-Estado: **Concluídos e mergeados em `main` (local). Push não autorizado.**
-Tentativas: -
-Base Git: `d9a3a9c`
+Plano: 28 — Controle de EPI: cadastro, CA e ficha de entrega
+Estado: **Todas as 7 tasks concluídas.** Revisão independente feita e as
+correções aplicadas. Falta a suíte completa fechar e o merge em `main`.
+Base Git: branch `plano-28`, sobre `ff61313`
 
-Com isso, **os 27 planos do roteiro estão concluídos**. `.claude/plans/INDEX.md`
-e os quatro `.claude/tasks/N/INDEX.md` estão marcados.
+Os planos 1 a 27 continuam concluídos e mergeados em `main`, sem push.
 
-## O que foi feito nesta sessão
+## Sobre "rodar planos em paralelo"
 
-Os quatro planos já vinham implementados em branches (`plano-24` a `plano-27`),
-executados em paralelo em worktrees numa sessão anterior. Esta sessão fez o
-merge sequencial, a revisão independente e a validação:
-
-| Commit | Conteúdo |
-|---|---|
-| `e9dc299` | merge do Plano 24 (feito na sessão anterior) |
-| `2093b50` | merge do Plano 25 — laudo assistido por IA |
-| `9301dd4` | merge do Plano 26 — assinatura eletrônica de contratos |
-| `92782f2` | merge do Plano 27 — frota e veículos |
-| `d9a3a9c` | correção dos quatro defeitos achados na revisão |
-
-Merge serializado de propósito, com a suíte completa a cada passo. Rodar as
-suítes em paralelo foi o que causou os deadlocks da sessão anterior.
-
-## Validação final
-
-- Suíte completa: **1563 testes, 12082 asserções, 1 falha**.
-- A falha é **pré-existente e não relacionada**:
-  `tests/Feature/RelatorioPdfServiceTest.php:277` grava num caminho absoluto de
-  scratchpad de outra máquina
-  (`/private/tmp/claude-501/-Users-miqueias-.../scratchpad`). Veio no commit
-  `9ebd7db` (Plano 21) e falha em qualquer máquina que não seja a do autor.
-- `npm run build` limpo (205 entradas no precache do PWA).
-- Conferido por execução após os merges: 17 módulos, 117 permissões, 38 eventos,
-  com as chaves dos quatro planos presentes.
-- Conferido explicitamente: `RotinasAgendadas::A_CADA_HORAS` e o laço
-  correspondente em `bootstrap/app.php:244` sobreviveram ao merge — é o que faz
-  `assinaturas:sincronizar` realmente disparar, e é a rede de segurança do
-  webhook perdido.
-- Pint acusa 171 arquivos, **todos pré-existentes** (conferido: `routes/web.php`
-  já violava `ordered_imports` antes dos merges). O projeto não usa Pint como
-  gate; nada foi reformatado.
-
-## Defeitos corrigidos após a revisão (commit `d9a3a9c`)
-
-Dois revisores independentes leram os branches 26 e 27. Isolamento entre
-empresas nos models, autorização, idempotência do webhook, timezone e as
-divisões por zero do rateio foram conferidos e **estavam corretos**. O que não
-estava:
-
-1. `ContractService::encerrar()` não passava por
-   `exigirContratoForaDeAssinatura()`. Dava para encerrar (gravar `end_date`) um
-   contrato que o cliente estava lendo para assinar — documento oponível
-   divergindo do registro.
-2. `ContractController::destroy()`/`encerrar()` não capturavam a
-   `ContratoEmAssinaturaException` nova: a recusa virava 500.
-3. `vehicle_id`, `technician_id`, `chart_of_account_id` e `supplier_id` eram
-   validados com `exists:` cru, que não passa pelo escopo global — id de outra
-   empresa era aceito no corpo da requisição.
-4. Alerta de manutenção olhava só `situacao = 'agendada'` enquanto o custo por
-   km somava só `'realizada'`; e documento de veículo vencido reenviava aviso
-   semanal para sempre, mesmo depois de renovado por linha nova.
-
-13 testes de regressão acrescentados.
-
-## Follow-up conhecido (não bloqueia nada)
-
-Achados menores da revisão, deixados como estão de propósito:
-
-- **Plano 26:** salvar a credencial do provedor substitui o array inteiro e
-  apaga um `webhook_secret` já cadastrado; o webhook não tem throttle (o corpo
-  não decide nada, então a integridade está de pé — falta o custo);
-  `AvisoDeRotinaFalha::horarioEsperado()` não conhece `A_CADA_HORAS`, então o
-  e-mail de rotina parada sai sem horário; `RotinasAgendadasTest` só percorre
-  `DIARIAS`; N+1 em `CamposVisiveisAoCliente::tem_via_assinada`.
-- **Plano 27:** `RefuelingRequest.data` aceita data futura e não valida contra o
-  último abastecimento; manutenção grande rateada no período infla o custo por
-  km de toda OS dos 6 meses seguintes; `VehicleDocumentController` faz CRUD e
-  I/O de arquivo direto, sem Service; `StockLocation` do veículo fica órfão ao
-  excluir o veículo; placa não é normalizada na entrada.
-- **Dívida antiga exposta pela correção 3:** as demais `exists:` de
-  `WorkOrderRequest` (`client_id`, `address_id`, `technician_id`, `service_id`,
-  `products.*.id`, `rooms.*.id`, `devices.*.id`) têm exatamente o mesmo defeito
-  de escopo e vêm de planos anteriores.
-
-## Antes de aplicar em produção
-
-1. **Plano 24:** `php artisan db:seed --class=NormativeReferenceSeeder` **não**
-   está ligado ao `DatabaseSeeder`, e isso é deliberado (a linha padrão da
-   plataforma precisa de `company_id = null`, e o `DatabaseSeeder` envolve tudo
-   em `TenantAtual::comTenant()`). Se o passo for esquecido, **os documentos
-   emitidos saem sem citar a resolução** — sem erro, sem log, sem sintoma.
-   Documentado em `docs/conformidade-rdc-622.md`.
-2. **Rollback:** `migrate:rollback` reverte o **último batch**, não a última
-   migration. Se os quatro planos forem aplicados na mesma passada, um
-   `migrate:rollback` seco desfaz **os quatro de uma vez**. Para exercitar um
-   plano só: `migrate:rollback --step=1`.
-3. **Plano 27, `down()` destrutivo:** além dos quatro `DROP TABLE`, derruba a FK
-   `work_orders_vehicle_id_foreign` e faz `DROP COLUMN vehicle_id,
-   km_deslocamento` em `work_orders`, que é tabela com dado em produção. A ordem
-   está correta e nenhuma linha é apagada, mas o vínculo OS↔veículo e a
-   quilometragem informada somem sem volta. `DROP COLUMN` no MySQL 8.4 pode cair
-   em `ALGORITHM=COPY` e reescrever `work_orders` inteira — conferir com
-   `--pretend` se a janela for apertada. A **subida** é aditiva e nullable, mas
-   `foreignId()->constrained()` num único `ALTER TABLE` também força `COPY`:
-   vale separar coluna e FK em duas instruções, fora do horário de operação.
-4. Os quatro módulos (`conformidade`, `laudo_ia`, `assinatura_eletronica`,
-   `frota`) **nascem desligados**. Ligar é decisão por tenant, depois do dado
-   estar cadastrado.
-5. **Primeira execução de `frota:verificar`** depois de ligar o módulo pode
-   gerar uma leva inicial de avisos para manutenções antigas cuja próxima
-   prevista já passou (limitado a 2 avisos por registro, pela idempotência).
-   Conferir o volume antes.
-
-## Alteração feita na máquina, fora do repositório (não autorizada)
-
-Na sessão anterior, o agente do Plano 25 elevou as variáveis **globais** do
-MySQL `net_read_timeout` e `net_write_timeout` de 30 para 600 segundos. Motivo
-legítimo (sob carga dos quatro worktrees um DDL passava de 30s e o servidor
-derrubava a conexão), mas é mudança persistente no servidor da usuária.
-Reverter com `SET GLOBAL net_read_timeout = 30;` e
-`SET GLOBAL net_write_timeout = 60;` (padrões do MySQL 8.4), se ela quiser.
-
-## Defeitos pré-existentes em `main` (fora do escopo dos planos)
-
-1. `tests/Feature/RelatorioPdfServiceTest.php:277` — caminho absoluto de outra
-   máquina. **Confirmado**: é a única falha da suíte.
-2. `resources/views/pdf/service-order.blade.php` chama
-   `$serviceOrder->devices->count()`, mas `ServiceOrder` não tem a relação
-   `devices` — `GET /service-orders/{id}/pdf` estouraria. Apontado por um agente
-   do Plano 24, **não conferido pelo orquestrador**.
-3. `.gitignore` tem um marcador de conflito não resolvido na última linha
-   (`>>>>>>> ce53ae2 (First commit)`). Inócuo, mas é lixo versionado.
+Não existe paralelismo entre planos a esta altura do roteiro: dos 29, os planos
+1 a 27 estão fechados, e o 29 depende do 28. O paralelismo aplicável é **entre
+tasks e entre agentes**, e foi o usado aqui — dois revisores independentes ao
+mesmo tempo, depois dois agentes de correção em arquivos disjuntos, cada um com
+banco de teste próprio (`testing_28b` e `testing_28c`). Nenhum conflito de
+escrita ocorreu.
 
 ## Próxima ação
 
-Nenhuma pendente nos planos. O que resta é decisão da usuária:
+1. Conferir o resultado da suíte completa (`DB_DATABASE=testing_merge`).
+2. Merge de `plano-28` em `main`, no padrão sequencial dos planos 24 a 27.
+3. Plano 29 — EPI em campo e na conformidade. Lotes do
+   `.claude/tasks/29/INDEX.md`: `29.1` → `29.2` → `29.3 ‖ 29.4` → `29.5` →
+   `29.6`.
 
-1. **Push** — nada foi publicado. `main` local está 5 commits à frente.
-2. **Limpar os worktrees e branches** de `.claude/worktrees/plano-2{4,5,6,7}`,
-   já mergeados.
-3. Escolher se algum item do follow-up acima vira plano novo.
+## A revisão independente do Plano 28
+
+Não tinha chegado a rodar na sessão anterior (o agente morreu por limite de
+sessão da API). Rodou agora, dividida em dois revisores paralelos com contexto
+limpo: um de domínio (models, services, alertas, documento) e um de superfície
+(endpoints, permissões, multiempresa, frontend).
+
+**Um achado crítico e cinco médios foram corrigidos.** O que segue é o que
+importa saber depois.
+
+### O crítico: a ficha pedia assinatura de recebimento em entrega estornada
+
+`ppe-record.blade.php` liberava o fecho — declaração + linha de assinatura do
+trabalhador — com `@if(count($entregas) > 0)`. Um técnico cuja **única** entrega
+tivesse sido estornada recebia um PDF que imprimia a linha marcada como
+estornada e, logo abaixo, convidava o trabalhador a declarar que recebeu.
+
+Num documento oponível, assinatura de recebimento de item que a própria empresa
+registrou como inexistente é prova contra quem emitiu. A guarda passou a ser
+`$resumo['validas'] > 0`, e a declaração ressalva os estornos no texto.
+
+Pelo mesmo motivo, a linha estornada deixou de exibir o badge "Pendente de
+assinatura": o resumo do rodapé já a excluía da contagem, e a célula contradizia
+o resumo na mesma folha.
+
+### O texto legal da ficha foi reescrito
+
+A declaração afirmava que o trabalhador recebeu os equipamentos "em perfeitas
+condições de uso, bem como as orientações sobre a sua utilização". **Não existe
+coluna, campo, evento nem tela em todo o Plano 28 que registre orientação,
+treinamento ou estado de conservação** — e o rodapé da mesma folha diz que
+treinamento, uso em campo, higienização e guarda não são verificados por este
+sistema. O documento afirmava contra si mesmo.
+
+As duas afirmações saíram. A declaração ficou restrita ao que a ficha prova:
+recebimento dos itens listados, nas datas e com os CA listados. Os compromissos
+que o trabalhador assume ao assinar (usar para a finalidade, guardar, comunicar
+alteração, devolver ao fim do contrato) foram mantidos — são obrigações
+assumidas, não fatos que o sistema deveria ter registrado.
+
+**Continua valendo o que o handoff anterior pediu: o responsável técnico deve
+ler o texto antes do Deploy 1.** Ele está mais conservador, não dispensado de
+conferência.
+
+### Dois buracos de alerta
+
+- **Substituto devolvido calava a entrega antiga.** A consulta de "entrega mais
+  recente" só excluía estornadas, e as candidatas a aviso excluíam devolvidas.
+  Entrega de 200 dias com troca vencida, substituto entregue há 10 e devolvido
+  há 5: o técnico estava sem respirador nenhum e o sistema não avisava nada.
+  Agora só cala a linha antiga o substituto que **está com o técnico**.
+- **Técnico desligado avisava toda semana, para sempre.** `trocasVencidas()` não
+  filtrava `is_active`, enquanto a varredura de CA já filtrava EPI inativo.
+  Corrigido por simetria. O item não devolvido no desligamento continua sendo
+  problema de escritório: não é pendência de troca e não tem aviso próprio.
+
+### Decisão de produto tomada nesta sessão: `epi-ver` saiu do papel `leitura`
+
+O filtro por sufixo de `RolesAndPermissionsSeeder::permissoesLeitura()` dava
+`epi-ver` a qualquer usuário de leitura — e com ela a ficha completa dos
+técnicos (nome, matrícula, histórico, assinatura) e o CSV de **todos** os
+técnicos do período.
+
+O precedente contrário já existia no mesmo método: `comissoes-ver` está na lista
+de exceções porque quanto uma pessoa ganha é dado pessoal. Ficha de EPI é a
+mesma classe de dado e estava recebendo o tratamento oposto.
+
+`epi-ver` entrou na lista de exceções. **Consequência no rollout:** quem usa o
+papel `leitura` não enxerga o módulo EPI; a permissão passa a ser concedida
+explicitamente a quem responde pela segurança do trabalho. `EpiEndpointTest`
+guarda a decisão nos dois sentidos.
+
+### Uma asserção frágil a menos, e o alerta que ela deixa
+
+`test_nao_existe_rota_de_exclusao_de_entrega` varria **todo** o módulo (`epis`)
+para provar uma regra que é só de `epis/entregas`, e travava o resultado com
+`assertSame`. É a mesma armadilha de escopo que o `7fd654c` corrigiu no catálogo
+de permissões. O recorte passou a ser `epis/entregas`, com a exclusão do
+cadastro conferida à parte.
+
+Isso importa para o Plano 29: a Task 29.3 cria `ServicePpeRequirementController`
+com CRUD. Se o caminho ficasse sob `/epis`, teria esbarrado nessa asserção com
+uma mensagem falando de entrega.
+
+O revisor varreu os outros 10 testes que leem `SyncPermissions::catalogo()` —
+nenhum outro conta ou nega sobre o catálogo inteiro.
+
+## Estado das validações
+
+- Testes do plano: `PpeDeliveryServiceTest`, `AlertaDeEpiServiceTest` (27),
+  `FichaDeEpiServiceTest` (39), `EpiEndpointTest` (22) — **todos passando**.
+- `VazamentoEntreEmpresasTest`: 36 testes, 2735 asserções, 0 falhas.
+- `RotinasAgendadasTest`: 25 testes, 178 asserções, 0 falhas.
+- `npm run build`: limpo. `pint --test` nos arquivos tocados: PASS.
+- Suíte completa: rodando em `testing_merge` no momento em que este handoff foi
+  escrito. **Conferir antes do merge.**
+- O rótulo `DEPR` em toda a saída é ruído pré-existente do PHP 8.5
+  (`PDO::MYSQL_ATTR_SSL_CA`, `config/database.php:81`), não é falha.
+- `RelatorioPdfServiceTest.php:277` é falha **pré-existente** vinda do Plano 21:
+  grava num caminho absoluto de scratchpad de outra máquina. Falha em qualquer
+  computador que não seja o do autor original.
+
+## Decisões do Plano 28 que a próxima sessão precisa conhecer
+
+1. **Permissões usam hífen, não ponto**: `epi-ver`, `epi-gerenciar`,
+   `epi-entregar`, `epi-estornar`. As tasks pediam ponto; vale o hífen, que é a
+   convenção do catálogo inteiro. A Task 29 e qualquer teste novo precisam usar
+   o hífen.
+2. **CA vencido é medido contra hoje, não contra `entregue_em`.** Consequência
+   no rollout: lançar entrega retroativa cujo CA venceu no meio-tempo é recusado
+   até o cadastro ser atualizado. Se atrapalhar a carga inicial, é uma linha em
+   `PpeDeliveryService::garantirCaValido()` — mas é mudança de regra, não
+   conserto.
+3. **Os rótulos de tipo de EPI e de motivo agora moram nos models**
+   (`PersonalProtectiveEquipment::ROTULOS_DE_TIPO`,
+   `PpeDelivery::ROTULOS_DE_MOTIVO`). Antes havia três cópias, e o e-mail de
+   aviso já divergia do documento. Um teste trava as chaves contra os enums.
+4. **`resources/js/utils/epi.js` ainda mantém uma cópia dos rótulos em JS**, sem
+   nada que a amarre às constantes PHP. A divergência que os testes agora
+   impedem entre backend e documento pode reaparecer entre tela e documento.
+
+## Pendências levantadas e não resolvidas
+
+- **Texto legal da ficha** — leitura do responsável técnico antes do Deploy 1.
+- `assinatura_path` viaja no payload da ficha e o PNG fica em disco público com
+  `storage:link`. É o padrão pré-existente do projeto (mesmo de
+  `WorkOrderSignatureService`), não regressão deste plano. Corrigir exigiria
+  `$hidden` e rota autenticada em todo o projeto.
+- `montarCsvDeEntregas` e `trocasVencidas()` carregam tudo em memória.
+  Aceitáveis por período; "desde sempre" ou vinte anos de histórico pedem
+  `lazy()` + streaming.
+- `epi.entregas.index` e `epi.show` não são consumidos por nenhuma tela, apesar
+  de os docblocks prometerem consumidor.
+- `assertCount(18, RotinasAgendadas::DIARIAS)` é contagem global sem recorte por
+  domínio. É tripwire deliberado, mas qualquer plano que acrescente rotina
+  precisa editar o número.
+- `routes/web.php` segue reprovado no `ordered_imports` do Pint por causa de
+  `RefuelingController`, herdado do Plano 27. O projeto não usa Pint como gate.
+
+## Antes de aplicar em produção
+
+1. **Deploy 1** (28.1 a 28.5): estrutura, regras, endpoints e documentos, com o
+   módulo `epi` **desligado** e a rotina `epi:verificar` parada.
+2. **Deploy 2** (28.6): telas.
+3. `php artisan permissions:sync` precisa rodar no deploy — só foi executado
+   contra bancos de teste. O seeder de papéis também, por causa da mudança em
+   `epi-ver`.
+4. Ligar o módulo por tenant. Cadastrar os modelos de EPI **com CA e validade**,
+   lançar as entregas em aberto e só então ligar a rotina.
+5. **A primeira execução de `epi:verificar` gera uma leva grande de avisos**,
+   porque entrega retroativa nasce com a troca vencida e um CA próximo dispara
+   vários marcos de uma vez (as janelas de 60/30/7 dias são cumulativas, igual
+   às do módulo de frota). Medir com `--dry-run` antes de ligar a rotina.
+6. Migration é inteiramente aditiva: duas tabelas novas, `down()` derruba só
+   elas. Nada do risco do `down()` do Plano 27.
+
+## Limpeza pendente (herdada, não desta sessão)
+
+- Worktrees e branches `.claude/worktrees/plano-2{4,5,6,7}`, já mergeados.
+- Bancos de teste `testing_28a/b/c` e `testing_merge` com fixtures de EPI.
+- `main` local segue à frente do remoto: **nada foi publicado**, e push continua
+  pendente de autorização explícita.
+- Defeitos pré-existentes em `main`: `RelatorioPdfServiceTest:277`, a relação
+  `devices` ausente em `ServiceOrder`, o marcador de conflito no `.gitignore`.

@@ -52,7 +52,9 @@ use App\Models\Payable;
 use App\Models\PayableInstallment;
 use App\Models\PaymentDetail;
 use App\Models\PaymentGatewayConfig;
+use App\Models\PersonalProtectiveEquipment;
 use App\Models\PestSighting;
+use App\Models\PpeDelivery;
 use App\Models\Procedure;
 use App\Models\Product;
 use App\Models\ProductBatch;
@@ -2167,6 +2169,39 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'tipo' => 'licenciamento',
                 'numero' => 'CRLV-'.$this->sufixo($marca),
                 'validade' => '2026-12-31',
+            ]);
+
+            // EPI e ficha de entrega (Plano 28, Task 28.1). O número do CA
+            // carrega o sufixo do tenant de propósito: ele não é único por
+            // empresa (dois modelos de EPI podem compartilhar o mesmo
+            // certificado), então serve de marca textual — CA do tenant 2 numa
+            // resposta do tenant 1 é vazamento, e é justamente o número que a
+            // NR-6 exige na ficha.
+            //
+            // A entrega nasce com o CA copiado do cadastro, que é a regra do
+            // plano: a ficha diz o que foi entregue naquele dia. Aqui a cópia é
+            // feita à mão porque o Service que a faz é da Task 28.2.
+            $dados['personalProtectiveEquipment'] = PersonalProtectiveEquipment::create([
+                'nome' => 'Respirador semifacial '.$marca,
+                'tipo' => 'respirador',
+                'fabricante' => 'Fabricante '.$marca,
+                'numero_ca' => 'CA-'.$this->sufixo($marca).'-0001',
+                'validade_ca' => '2027-12-31',
+                'vida_util_dias' => 180,
+                'obrigatorio' => true,
+                'ativo' => true,
+            ]);
+
+            $dados['ppeDelivery'] = PpeDelivery::create([
+                'technician_id' => $dados['technician']->id,
+                'personal_protective_equipment_id' => $dados['personalProtectiveEquipment']->id,
+                'quantidade' => 1,
+                'entregue_em' => '2026-07-01',
+                'motivo' => 'primeira_entrega',
+                'numero_ca' => $dados['personalProtectiveEquipment']->numero_ca,
+                'validade_ca' => '2027-12-31',
+                'trocar_ate' => '2026-12-28',
+                'user_id' => $autor->id,
             ]);
 
             return $dados;
