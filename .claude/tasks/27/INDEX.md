@@ -10,7 +10,7 @@
 |---|--------|------|--------|--------------|
 | 27.1 | Migrations e models de veículo, abastecimento e manutenção | backend-estrutura | ✅ | média |
 | 27.2 | Custo por quilômetro e rateio no custo da OS | backend-logica | ✅ | média |
-| 27.3 | Alertas de manutenção e de documentação | backend-logica | ⏳ | média |
+| 27.3 | Alertas de manutenção e de documentação | backend-logica | ✅ | média |
 | 27.4 | Endpoints e integração com estoque e financeiro | backend-endpoint | ⏳ | alta |
 | 27.5 | Telas de frota | frontend-pagina | ⏳ | alta |
 | 27.6 | Testes de consumo, rateio e alertas | teste | ⏳ | alta |
