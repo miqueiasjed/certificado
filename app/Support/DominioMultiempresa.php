@@ -86,6 +86,7 @@ final class DominioMultiempresa
         'products',
         'receivable_installments',
         'receivables',
+        'refuelings',
         'rooms',
         'route_stops',
         'routes',
@@ -103,6 +104,9 @@ final class DominioMultiempresa
         'technician_tracking_settings',
         'technicians',
         'users',
+        'vehicle_documents',
+        'vehicle_maintenances',
+        'vehicles',
         'work_order_adequations',
         'work_order_device_events',
         'work_order_photos',
@@ -229,6 +233,7 @@ final class DominioMultiempresa
         \App\Models\ProductBatch::class,
         \App\Models\Receivable::class,
         \App\Models\ReceivableInstallment::class,
+        \App\Models\Refueling::class,
         \App\Models\Room::class,
         \App\Models\Route::class,
         \App\Models\RouteStop::class,
@@ -246,6 +251,9 @@ final class DominioMultiempresa
         \App\Models\Technician::class,
         \App\Models\TechnicianTrackingSetting::class,
         \App\Models\User::class,
+        \App\Models\Vehicle::class,
+        \App\Models\VehicleDocument::class,
+        \App\Models\VehicleMaintenance::class,
         \App\Models\WorkOrder::class,
         \App\Models\WorkOrderAdequation::class,
         \App\Models\WorkOrderDeviceEvent::class,
@@ -305,6 +313,17 @@ final class DominioMultiempresa
             'indice' => 'work_orders_order_number_unique',
             'colunas' => ['order_number'],
             'motivo' => 'Colisão de numeração entre empresas.',
+        ],
+        'vehicles' => [
+            'indice' => 'vehicles_company_id_placa_unique',
+            'colunas' => ['placa'],
+            'motivo' => 'Placa do veículo (Plano 27, Task 27.1) é única por empresa, nunca globalmente: os tenants são '
+                .'concorrentes entre si e cadastram frotas diferentes, então unique global em `placa` impediria o '
+                .'segundo tenant de cadastrar um veículo que ele nem sabe que existe no primeiro. `vehicles` é tabela '
+                .'nova e nasce já com a unique composta `[company_id, placa]`; entra aqui, e não em '
+                .'UNIQUES_GLOBAIS_MANTIDOS, pelo mesmo raciocínio registrado para `routes`: `conferirUniques()` aceita '
+                .'a entrada nos dois estados (ainda global ou já composta), e o formato composto é o que esta lista já '
+                .'sabe validar.',
         ],
         'routes' => [
             'indice' => 'routes_company_id_technician_id_data_unique',

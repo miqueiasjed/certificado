@@ -8,7 +8,7 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 27.1 | Migrations e models de veículo, abastecimento e manutenção | backend-estrutura | ⏳ | média |
+| 27.1 | Migrations e models de veículo, abastecimento e manutenção | backend-estrutura | ✅ | média |
 | 27.2 | Custo por quilômetro e rateio no custo da OS | backend-logica | ⏳ | média |
 | 27.3 | Alertas de manutenção e de documentação | backend-logica | ⏳ | média |
 | 27.4 | Endpoints e integração com estoque e financeiro | backend-endpoint | ⏳ | alta |
