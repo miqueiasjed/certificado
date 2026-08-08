@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Exceptions\ContratoEmAssinaturaException;
 use App\Models\Contract;
 use App\Models\User;
 use App\Models\WorkOrder;
@@ -37,6 +38,8 @@ use Tests\TestCase;
  * 3. A rota `POST /contracts/{contract}/encerrar` exige `contrato-editar`:
  *    não pode ficar mais frouxa do que editar o contrato, porque encerrar
  *    cancela visita em cascata na agenda do cliente.
+ * 4. Contrato em assinatura (Plano 26) não aceita encerramento nem exclusão,
+ *    e a recusa chega ao usuário como mensagem, não como página de erro.
  *
  * Banco: esta suíte roda isolada, em `testing_plano9`
  * (`DB_DATABASE=testing_plano9 php artisan test --filter=ContractEncerramentoTest`).
@@ -245,6 +248,88 @@ class ContractEncerramentoTest extends TestCase
             $this->assertSame('cancelled', $cancelada->status);
             $this->assertStringContainsString('Encerramento solicitado pelo cliente', (string) $cancelada->completion_notes);
         }
+    }
+
+    // -----------------------------------------------------------------
+    // Contrato em assinatura: encerrar e excluir são recusados
+    // -----------------------------------------------------------------
+
+    /**
+     * Regressão do Plano 26: `encerrar()` grava `end_date`, ou seja, muda a
+     * vigência do contrato. Feito com o pedido de assinatura em aberto, o
+     * cliente assinaria em seguida um PDF cuja vigência não é mais a do
+     * registro — documento oponível divergindo do sistema, que é justamente o
+     * que a invariante "contrato em assinatura é imutável" existe para impedir.
+     */
+    public function test_encerrar_contrato_em_assinatura_e_recusado_sem_tocar_na_vigencia_nem_na_agenda(): void
+    {
+        $contrato = $this->criarContrato();
+        $this->geracao->gerarPara($contrato, self::ATE_TRES_MESES);
+        $contrato->forceFill(['situacao_assinatura' => 'em_assinatura'])->save();
+
+        try {
+            $this->contractService->encerrar($contrato, 'Tentativa durante a assinatura');
+            $this->fail('Esperava ContratoEmAssinaturaException ao encerrar contrato em assinatura.');
+        } catch (ContratoEmAssinaturaException $excecao) {
+            $this->assertStringContainsString('está em assinatura', $excecao->getMessage());
+        }
+
+        $this->assertNull(
+            $contrato->fresh()->end_date,
+            'o encerramento recusado ainda assim fechou a vigência do contrato em assinatura'
+        );
+        $this->assertSame(
+            0,
+            WorkOrder::query()->where('status', 'cancelled')->count(),
+            'o encerramento recusado ainda assim cancelou visitas da agenda'
+        );
+    }
+
+    public function test_rota_de_encerrar_contrato_em_assinatura_devolve_erro_na_sessao(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(ModulesSeeder::class);
+
+        $contrato = $this->criarContrato();
+        $contrato->forceFill(['situacao_assinatura' => 'em_assinatura'])->save();
+
+        $usuario = $this->criarUsuarioComPapel('comercial');
+
+        $resposta = $this->actingAs($usuario)->post("/contracts/{$contrato->id}/encerrar", [
+            'motivo' => 'Tentativa durante a assinatura',
+        ]);
+
+        $resposta->assertRedirect();
+        $resposta->assertSessionHas('error');
+        $this->assertNull($contrato->fresh()->end_date);
+    }
+
+    /**
+     * Regressão do Plano 26: `excluir()` passou a recusar contrato em
+     * assinatura por exceção, e `destroy()` chamava o Service sem `try/catch`.
+     * A recusa chegava ao usuário como página de erro genérica em vez da
+     * mensagem que explica o caminho de saída (cancelar o pedido antes).
+     */
+    public function test_rota_de_excluir_contrato_em_assinatura_devolve_erro_na_sessao_e_preserva_o_contrato(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(ModulesSeeder::class);
+
+        $contrato = $this->criarContrato();
+        $contrato->forceFill(['situacao_assinatura' => 'em_assinatura'])->save();
+
+        $usuario = $this->criarUsuarioComPapel('comercial');
+
+        $resposta = $this->actingAs($usuario)->delete("/contracts/{$contrato->id}");
+
+        $resposta->assertRedirect();
+        $resposta->assertSessionHas('error');
+        $this->assertStringContainsString(
+            'está em assinatura',
+            (string) session('error'),
+            'a mensagem da exceção não chegou ao usuário'
+        );
+        $this->assertNotNull(Contract::query()->find($contrato->id), 'o contrato em assinatura foi excluído');
     }
 
     // -----------------------------------------------------------------

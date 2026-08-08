@@ -326,16 +326,26 @@ class CustoPorKmService
     /**
      * Soma das manutenções realizadas no período, em centavos.
      *
-     * Só `realizada` entra: manutenção `agendada` ainda não gerou custo e
-     * `cancelada` nunca vai gerar. Manutenção realizada sem `valor` entra como
-     * zero — o serviço foi feito, mas o quanto custou ninguém registrou, e
-     * inventar o valor sujaria o custo por quilômetro.
+     * Só `realizada` entra, pelo scope `VehicleMaintenance::realizadas()`:
+     * manutenção `agendada` ainda não gerou custo e `cancelada` nunca vai
+     * gerar. Manutenção realizada sem `valor` entra como zero — o serviço foi
+     * feito, mas o quanto custou ninguém registrou, e inventar o valor sujaria
+     * o custo por quilômetro.
+     *
+     * Este conjunto é de propósito diferente do que o alerta observa
+     * (`AlertaDeFrotaService`, `VehicleMaintenance::comProximaPrevista()`), e as
+     * duas coisas não se contradizem: **custo é execução** (o que já foi feito
+     * e pago, com `data` dentro do período) e **alerta é previsão** (a próxima
+     * prevista ainda em aberto). A mesma manutenção `realizada` participa das
+     * duas — entra no custo pelo que custou e gera o aviso pela próxima que ela
+     * deixou marcada —, que é justamente o fluxo natural de quem registra "troca
+     * de óleo feita hoje, próxima em 10.000 km".
      */
     private function custoDeManutencao(Vehicle $veiculo, string $de, string $ate): int
     {
         $manutencoes = VehicleMaintenance::query()
             ->where('vehicle_id', $veiculo->getKey())
-            ->where('situacao', 'realizada')
+            ->realizadas()
             ->whereNotNull('data')
             ->whereBetween('data', [BusinessDate::diaDe($de), BusinessDate::diaDe($ate)])
             ->get();

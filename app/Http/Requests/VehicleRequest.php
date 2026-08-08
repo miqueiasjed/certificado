@@ -7,6 +7,7 @@ use App\Support\DominioMultiempresa;
 use App\Support\TenantAtual;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 /**
  * Cadastro de veículo da frota (Plano 27, Task 27.4).
@@ -21,6 +22,11 @@ use Illuminate\Validation\Rule;
  * de abastecimento e o de manutenção, que recusam leitura retroativa
  * (`QuilometragemRetroativaException`). Aceitá-lo no cadastro reabriria a porta
  * que essa recusa existe para fechar.
+ *
+ * `technician_id` vem do corpo da requisição e por isso é escopado à empresa
+ * corrente pela própria regra: `exists:technicians,id` solto consulta a tabela
+ * inteira, sem passar pelo escopo global do Eloquent, e aceitava técnico de
+ * outra empresa (além de responder se aquele id existe em algum tenant).
  */
 class VehicleRequest extends FormRequest
 {
@@ -54,10 +60,24 @@ class VehicleRequest extends FormRequest
             'marca' => $obrigatorio.'|string|max:255',
             'ano' => 'nullable|integer|min:1900|max:2100',
             'tipo' => ['nullable', Rule::in(Vehicle::TIPOS)],
-            'technician_id' => 'nullable|exists:technicians,id',
+            'technician_id' => ['nullable', 'integer', $this->regraDeTecnicoDaEmpresa()],
             'situacao' => ['nullable', Rule::in(Vehicle::SITUACOES)],
             'custo_km_padrao' => 'nullable|numeric|min:0',
         ];
+    }
+
+    /**
+     * Técnico existente E da empresa corrente.
+     *
+     * `exigirId()` em vez de `id()` pelo mesmo motivo de
+     * `UserRequest::regraDeTecnicoDaEmpresa()`: a rota é autenticada e
+     * `users.company_id` é NOT NULL, então requisição sem empresa resolvida é
+     * bug, e falhar alto é melhor que validar contra o banco inteiro.
+     */
+    private function regraDeTecnicoDaEmpresa(): Exists
+    {
+        return Rule::exists('technicians', 'id')
+            ->where(DominioMultiempresa::COLUNA_TENANT, TenantAtual::exigirId());
     }
 
     /**
@@ -72,6 +92,7 @@ class VehicleRequest extends FormRequest
             'marca.required' => 'Informe a marca do veículo.',
             'tipo.in' => 'Tipo de veículo inválido.',
             'situacao.in' => 'Situação de veículo inválida.',
+            'technician_id.integer' => 'Técnico inválido.',
             'technician_id.exists' => 'O técnico selecionado não existe.',
             'custo_km_padrao.min' => 'O custo por quilômetro não pode ser negativo.',
         ];

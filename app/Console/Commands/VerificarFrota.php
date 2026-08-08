@@ -29,10 +29,12 @@ use Throwable;
  *   quilometragem estão preenchidas, só a que vier primeiro gera aviso, para a
  *   mesma manutenção não mandar dois e-mails dizendo a mesma coisa.
  * - `documento_de_veiculo_a_vencer`: um aviso por documento e por marco (60, 30
- *   e 7 dias). O vencido é a exceção e reenvia **semanalmente** até a validade
- *   ser atualizada, mesmo critério do lote vencido do Plano 17: circular com
+ *   e 7 dias). O vencido é a exceção e reenvia **semanalmente** até ser
+ *   renovado, mesmo critério do lote vencido do Plano 17: circular com
  *   licenciamento vencido é infração, e o silêncio depois do primeiro aviso não
- *   resolve nada.
+ *   resolve nada. Quem decide que o documento foi renovado — e portanto que o
+ *   reenvio para — é o `AlertaDeFrotaService`: renovar editando a validade e
+ *   renovar cadastrando o documento novo calam os dois do mesmo jeito.
  * - `quilometragem_de_veiculo_desatualizada`: um aviso por veículo, sem marco.
  *   Mesmo critério de `estoque_abaixo_do_minimo`: o e-mail é o empurrão
  *   inicial, e a ficha do veículo mostra a pendência depois disso.

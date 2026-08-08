@@ -7,6 +7,7 @@ use App\Models\Vehicle;
 use App\Models\VehicleDocument;
 use App\Models\VehicleMaintenance;
 use App\Support\BusinessDate;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
 /**
@@ -17,6 +18,25 @@ use Illuminate\Support\Collection;
  * marco e a cadência de reenvio é `App\Console\Commands\VerificarFrota`. Este
  * Service só devolve os dados, no mesmo critério de `StockAlertService`
  * (Plano 17, Task 17.6).
+ *
+ * Manutenção: quem alerta é a próxima prevista, não a situação
+ * -------------------------------------------------------------
+ * O conjunto observado é `VehicleMaintenance::comProximaPrevista()`: toda
+ * preventiva com `proxima_em_data` ou `proxima_em_km` preenchida que não tenha
+ * sido cancelada, seja ela `realizada` ou `agendada`.
+ *
+ * Amarrar o alerta a uma única situação fazia o módulo falhar em silêncio, que
+ * é o pior modo de falhar num alerta: quem registrava "troca de óleo feita
+ * hoje, próxima em 10.000 km" — o fluxo natural, e o que o próprio
+ * `VehicleMaintenance` documenta — gravava `realizada` e não recebia aviso
+ * nenhum; quem descobria isso e passava a deixar tudo como `agendada` só para
+ * ser avisado tirava a manutenção do custo por quilômetro, porque lá só entra
+ * o que foi executado.
+ *
+ * As duas perguntas são diferentes e cada uma tem o seu conjunto, sem
+ * contradição: **o alerta olha para a previsão** (existe próxima prevista em
+ * aberto?) e **o custo olha para a execução** (`CustoPorKmService`, só
+ * `realizada` com `data` no período, porque só ela gerou despesa).
  *
  * Manutenção: data OU quilometragem, o que vier primeiro
  * ------------------------------------------------------
@@ -115,11 +135,12 @@ class AlertaDeFrotaService
     public const CRITERIO_KM = 'km';
 
     /**
-     * Manutenções preventivas agendadas que entraram em alguma janela de
-     * alerta, uma linha por manutenção e por marco.
+     * Manutenções preventivas com próxima prevista que entraram em alguma
+     * janela de alerta, uma linha por manutenção e por marco.
      *
-     * Só `preventiva` e só `agendada`: corretiva não tem próxima prevista, e
-     * manutenção já realizada ou cancelada não tem o que avisar.
+     * Só `preventiva`: corretiva não tem próxima prevista. A situação não
+     * seleciona nada além de excluir a `cancelada` — o critério é a próxima
+     * prevista existir, pelo motivo no cabeçalho da classe.
      *
      * @return Collection<int, array{
      *     manutencao: VehicleMaintenance,
@@ -139,10 +160,7 @@ class AlertaDeFrotaService
         $manutencoes = VehicleMaintenance::query()
             ->with('vehicle')
             ->where('tipo', 'preventiva')
-            ->where('situacao', 'agendada')
-            ->where(function ($consulta): void {
-                $consulta->whereNotNull('proxima_em_data')->orWhereNotNull('proxima_em_km');
-            })
+            ->comProximaPrevista()
             ->orderBy('id')
             ->get();
 
@@ -197,6 +215,9 @@ class AlertaDeFrotaService
      * tratar os dois do mesmo jeito. `dias_para_vencer` vem negativo nos
      * vencidos: é há quantos dias o documento perdeu a validade.
      *
+     * `vencidos` traz só o que ainda não foi renovado — ver
+     * `documentosVencidosNaoRenovados()`.
+     *
      * @return array{
      *     vencendo: array<int, array{dias: int, itens: Collection<int, array<string, mixed>>}>,
      *     vencidos: Collection<int, array<string, mixed>>
@@ -220,7 +241,7 @@ class AlertaDeFrotaService
 
         return [
             'vencendo' => $vencendo,
-            'vencidos' => $this->documentosEntre(null, $hoje->subDay()->toDateString()),
+            'vencidos' => $this->documentosVencidosNaoRenovados($hoje),
         ];
     }
 
@@ -340,6 +361,95 @@ class AlertaDeFrotaService
             $janelas,
             static fn (int $janela): bool => $restante <= $janela
         ));
+    }
+
+    /**
+     * Documentos já vencidos que ainda **não foram renovados**.
+     *
+     * O documento vencido reenvia semanalmente (Task 27.3) porque circular com
+     * licenciamento vencido é infração, e o plano diz "até ser atualizado". O
+     * que o critério anterior não previa era a forma como a empresa atualiza de
+     * verdade: quase ninguém edita a validade da linha antiga, cadastra-se um
+     * documento novo, com número e validade novos, e a linha velha continua
+     * vencida para sempre — mandando e-mail toda semana, para cada veículo,
+     * indefinidamente. Em poucos meses o alerta de frota inteiro vira ruído que
+     * ninguém lê, e aí o aviso que importa se perde junto.
+     *
+     * Por isso "atualizado" aqui é: **existe outro documento do mesmo veículo e
+     * do mesmo tipo com validade posterior**. Renovar cadastrando o documento
+     * novo cala o antigo, exatamente como editar a validade calaria — que é o
+     * que a empresa entende por ter renovado.
+     *
+     * A alternativa considerada era limitar o reenvio a uma janela (vencido há
+     * até 90 dias, por exemplo). Foi descartada: ela cala também o documento
+     * que segue vencido de verdade, que é justamente o caso com consequência
+     * legal, e o critério vira uma data arbitrária em vez de um fato do
+     * cadastro.
+     *
+     * Dois documentos do mesmo tipo com a **mesma** validade não se anulam: sem
+     * validade posterior não houve renovação, e os dois seguem avisando.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function documentosVencidosNaoRenovados(CarbonImmutable $hoje): Collection
+    {
+        $vencidos = $this->documentosEntre(null, $hoje->subDay()->toDateString());
+
+        if ($vencidos->isEmpty()) {
+            return $vencidos;
+        }
+
+        $veiculos = $vencidos
+            ->map(static fn (array $item): int => (int) $item['documento']->vehicle_id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $ultimaValidade = $this->ultimaValidadePorVeiculoETipo($veiculos);
+
+        return $vencidos
+            ->reject(static function (array $item) use ($ultimaValidade): bool {
+                $chave = $item['documento']->vehicle_id.'|'.$item['documento']->tipo;
+
+                return isset($ultimaValidade[$chave]) && $ultimaValidade[$chave] > $item['validade'];
+            })
+            ->values();
+    }
+
+    /**
+     * Maior validade cadastrada por veículo e tipo de documento, no formato
+     * `{vehicle_id}|{tipo} => Y-m-d`.
+     *
+     * Uma consulta só, para os veículos que têm algum documento vencido, em vez
+     * de um `exists()` por documento: a rotina roda para todos os veículos de
+     * todas as empresas, e a comparação por dia no fuso do negócio (via
+     * `BusinessDate::diaDe()`) é feita aqui em vez de no banco justamente para
+     * não depender de como cada banco devolve uma coluna `date`.
+     *
+     * @param  array<int, int>  $veiculos
+     * @return array<string, string>
+     */
+    private function ultimaValidadePorVeiculoETipo(array $veiculos): array
+    {
+        $ultima = [];
+
+        VehicleDocument::query()
+            ->whereIn('vehicle_id', $veiculos)
+            ->get(['id', 'vehicle_id', 'tipo', 'validade'])
+            ->each(static function (VehicleDocument $documento) use (&$ultima): void {
+                $chave = $documento->vehicle_id.'|'.$documento->tipo;
+                $dia = BusinessDate::diaDe($documento->validade);
+
+                if ($dia === null) {
+                    return;
+                }
+
+                if (! isset($ultima[$chave]) || $dia > $ultima[$chave]) {
+                    $ultima[$chave] = $dia;
+                }
+            });
+
+        return $ultima;
     }
 
     /**

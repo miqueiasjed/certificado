@@ -193,6 +193,39 @@ class CustoPorKmServiceTest extends TestCase
         $this->assertSame('120.00', $custo['custo_manutencao']);
     }
 
+    /**
+     * Regressão da revisão do Plano 27: a manutenção do fluxo natural — feita e
+     * registrada com a próxima já marcada — é a **mesma** linha que gera o
+     * alerta (`AlertaDeFrotaService`) e que entra no custo por quilômetro.
+     *
+     * Antes, os dois lados discordavam: o alerta só olhava para `agendada` e o
+     * custo só somava `realizada`, então era impossível ter as duas coisas ao
+     * mesmo tempo. Quem queria ser avisado deixava a manutenção como `agendada`
+     * e o custo dela sumia do rateio do deslocamento.
+     */
+    public function test_manutencao_realizada_com_proxima_prevista_entra_no_custo(): void
+    {
+        $veiculo = $this->criarVeiculoComHistorico();
+
+        $this->comTenant(fn () => VehicleMaintenance::create([
+            'vehicle_id' => $veiculo->id,
+            'tipo' => 'preventiva',
+            'descricao' => 'Troca de óleo feita, próxima em 10.000 km',
+            'data' => '2026-04-10',
+            'km' => 2000,
+            'valor' => 120.00,
+            'proxima_em_data' => '2026-10-10',
+            'proxima_em_km' => 12000,
+            'situacao' => 'realizada',
+        ]));
+
+        $custo = $this->comTenant(fn () => $this->servico->custoTotalPorKm($veiculo, '2026-01-01', '2026-07-01'));
+
+        $this->assertSame('0.1000', $custo['manutencao_por_km'], 'R$ 120,00 / 1200 km');
+        $this->assertSame('120.00', $custo['custo_manutencao'], 'ter próxima prevista não tira a manutenção do custo');
+        $this->assertSame('0.6000', $custo['total_por_km']);
+    }
+
     // -----------------------------------------------------------------
     // Rateio na OS
     // -----------------------------------------------------------------

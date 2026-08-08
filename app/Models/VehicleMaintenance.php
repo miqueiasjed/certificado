@@ -96,10 +96,44 @@ class VehicleMaintenance extends Model
     }
 
     /**
-     * Manutenções já executadas, que são as que carregam a próxima prevista.
+     * Manutenções já executadas: são as que geraram custo, e por isso as únicas
+     * que entram no custo por quilômetro (`CustoPorKmService`).
+     *
+     * A próxima prevista **não** é exclusividade delas — ver
+     * `scopeComProximaPrevista()`.
      */
     public function scopeRealizadas($consulta)
     {
         return $consulta->where('situacao', 'realizada');
+    }
+
+    /**
+     * Manutenções cuja próxima prevista ainda está valendo: é o conjunto que o
+     * alerta de frota olha (`AlertaDeFrotaService::manutencoesAVencer()`).
+     *
+     * O critério é a existência de `proxima_em_data` ou `proxima_em_km`, não a
+     * situação, porque a previsão nasce dos dois fluxos naturais de registro:
+     *
+     * - `realizada` — "troquei o óleo hoje, a próxima é em 10.000 km". É o mais
+     *   comum, e é exatamente o que uma manutenção executada deixa como
+     *   herança: a data e a quilometragem da próxima;
+     * - `agendada` — o serviço marcado que ainda vai acontecer, cuja
+     *   `proxima_em_data`/`proxima_em_km` é a própria previsão dele.
+     *
+     * Só `cancelada` fica de fora: previsão de serviço que a empresa desistiu
+     * de fazer não tem o que avisar.
+     *
+     * Ligar o alerta a uma única situação é o que fazia o módulo falhar em
+     * silêncio: quem registrava a manutenção como `realizada` — o fluxo
+     * natural — nunca recebia aviso nenhum, e quem deixava como `agendada` só
+     * para receber o aviso deixava o serviço fora do custo por quilômetro.
+     */
+    public function scopeComProximaPrevista($consulta)
+    {
+        return $consulta
+            ->where('situacao', '!=', 'cancelada')
+            ->where(function ($consulta): void {
+                $consulta->whereNotNull('proxima_em_data')->orWhereNotNull('proxima_em_km');
+            });
     }
 }

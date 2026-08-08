@@ -2,7 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Support\DominioMultiempresa;
+use App\Support\TenantAtual;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class WorkOrderRequest extends FormRequest
 {
@@ -29,7 +33,15 @@ class WorkOrderRequest extends FormRequest
             // veículo do técnico designado, quando ele tem exatamente um;
             // informado, o que veio do formulário vence, porque troca de
             // veículo acontece.
-            'vehicle_id' => 'nullable|exists:vehicles,id',
+            //
+            // Escopado à empresa corrente: `exists:vehicles,id` solto consulta
+            // a tabela inteira (a regra `exists` roda no query builder, sem
+            // passar pelo escopo global do Eloquent), então aceitava veículo de
+            // outra empresa. A OS gravava a FK cruzada — a leitura devolvia
+            // `null` por causa do escopo, mas o rateio do deslocamento na
+            // margem saía errado em silêncio, e o `exists` ainda servia de
+            // oráculo sobre a existência do id em qualquer empresa.
+            'vehicle_id' => ['nullable', 'integer', $this->regraDeVeiculoDaEmpresa()],
             'km_deslocamento' => 'nullable|integer|min:0',
             'technicians' => 'nullable|array',
             'technicians.*' => 'nullable|exists:technicians,id',
@@ -84,6 +96,21 @@ class WorkOrderRequest extends FormRequest
     }
 
     /**
+     * Veículo existente E da empresa corrente.
+     *
+     * `exigirId()` em vez de `id()`: a rota de OS é autenticada e
+     * `users.company_id` é NOT NULL, então não existe requisição legítima sem
+     * empresa resolvida aqui. Se existir, é bug, e falhar alto é melhor que
+     * validar contra o banco inteiro. Mesmo critério de
+     * `UserRequest::regraDeTecnicoDaEmpresa()`.
+     */
+    private function regraDeVeiculoDaEmpresa(): Exists
+    {
+        return Rule::exists('vehicles', 'id')
+            ->where(DominioMultiempresa::COLUNA_TENANT, TenantAtual::exigirId());
+    }
+
+    /**
      * Get custom messages for validator errors.
      */
     public function messages(): array
@@ -94,6 +121,8 @@ class WorkOrderRequest extends FormRequest
             'address_id.exists' => 'O endereço selecionado não existe.',
             'technician_id.required' => 'O técnico é obrigatório.',
             'technician_id.exists' => 'O técnico selecionado não existe.',
+            'vehicle_id.integer' => 'Veículo inválido.',
+            'vehicle_id.exists' => 'O veículo selecionado não existe.',
             'service_id.required' => 'O serviço é obrigatório.',
             'service_id.exists' => 'O serviço selecionado não existe.',
             'order_number.unique' => 'Este número de ordem já está em uso.',

@@ -187,10 +187,18 @@ class ContractService
      * aqui forem vencendo, o painel de conformidade passa a apontá-las como
      * pendência de um contrato que já foi encerrado de propósito.
      *
+     * Contrato em assinatura não pode ser encerrado pela mesma razão que não
+     * pode ser editado: encerrar grava `end_date`, ou seja, muda a vigência do
+     * contrato enquanto o cliente lê e assina um PDF que ainda traz a vigência
+     * antiga. O documento oponível passaria a divergir do registro, que é
+     * exatamente o que a invariante existe para impedir.
+     *
      * @return array{success: bool, message: string, data: array{canceladas: int, executadas_preservadas: int, passadas_preservadas: int}}
      */
     public function encerrar(Contract $contrato, ?string $motivo = null): array
     {
+        $this->exigirContratoForaDeAssinatura($contrato);
+
         return DB::transaction(function () use ($contrato, $motivo): array {
             $resumo = $this->manutencaoDeVisitas->cancelarFuturas(
                 $contrato,
@@ -311,13 +319,13 @@ class ContractService
      * Recusa a operação quando o contrato está em assinatura (Plano 26,
      * Task 26.3).
      *
-     * Contrato em assinatura é imutável: alterar o texto (ou apagar o
-     * contrato) enquanto o cliente lê o PDF já enviado faria a assinatura
-     * valer para uma versão diferente da aceita, e isso não tem conserto
-     * depois de assinado. A checagem fica aqui, no ponto único de gravação,
-     * e não no controller: `ContractRenewalService` e qualquer endpoint futuro
-     * passam por `atualizar()`/`excluir()` e herdam a mesma proteção sem
-     * precisar lembrar dela.
+     * Contrato em assinatura é imutável: alterar o texto, encerrar a vigência
+     * ou apagar o contrato enquanto o cliente lê o PDF já enviado faria a
+     * assinatura valer para uma versão diferente da aceita, e isso não tem
+     * conserto depois de assinado. A checagem fica aqui, no ponto único de
+     * gravação, e não no controller: `ContractRenewalService` e qualquer
+     * endpoint futuro passam por `atualizar()`/`encerrar()`/`excluir()` e
+     * herdam a mesma proteção sem precisar lembrar dela.
      *
      * @throws ContratoEmAssinaturaException
      */

@@ -1,6 +1,7 @@
 # INDEX - Planos do Sistema de Certificados
 
-> Última atualização: 07/08/2026
+> Última atualização: 08/08/2026 — os 27 planos estão concluídos e mergeados
+> em `main`. Nada foi publicado: push permanece pendente de autorização.
 > Fonte de requisitos: `.claude/prd/` (índice em `.claude/prd/README.md`)
 
 ## Legenda
@@ -72,15 +73,15 @@ bloqueio.
 | 21 | Monitoramento CIP: tendência e mapa de pontos | ✅ | 6, 13, 15 | 9 |
 | 22 | Roteirização e rastreamento em campo | ✅ | 10, 13 | 8 |
 | 23 | Comissões, metas e renovação de contratos | ✅ | 14, 18 | 9 |
-| 24 | Conformidade RDC 622/2022 | ⏳ | 14, 17 | 7 |
+| 24 | Conformidade RDC 622/2022 | ✅ | 14, 17 | 7 |
 
 ### Diferenciais
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 25 | Laudo assistido por IA | ⏳ | 6, 21 | 7 |
-| 26 | Assinatura eletrônica de contratos | ⏳ | 14, 15 | 6 |
-| 27 | Frota e veículos | ⏳ | 17, 22 | 6 |
+| 25 | Laudo assistido por IA | ✅ | 6, 21 | 7 |
+| 26 | Assinatura eletrônica de contratos | ✅ | 14, 15 | 6 |
+| 27 | Frota e veículos | ✅ | 17, 22 | 6 |
 
 Total: 262 tasks decompostas nos 27 planos.
 

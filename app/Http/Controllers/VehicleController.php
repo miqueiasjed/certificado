@@ -22,11 +22,13 @@ use Inertia\Response;
  * Isolamento entre empresas: `{vehicle}` chega por route-model binding, e o
  * escopo global de `Vehicle` faz o binding não encontrar veículo de outra
  * empresa — 404, que é a resposta certa quando revelar a existência do registro
- * já vaza informação. `technician_id`, vindo do corpo, é validado por
- * `exists:technicians,id`, e a consulta do Eloquent por trás dessa regra não
- * passa pelo escopo global; quem separa as empresas nesse caso é a própria
- * `technicians.company_id` combinada com o fato de a rota inteira estar sob o
- * módulo e a permissão do tenant corrente.
+ * já vaza informação. `technician_id` vem do corpo da requisição, e ali o
+ * escopo global não ajuda: a regra `exists` do Laravel roda direto no query
+ * builder. Quem separa as empresas nesse caso é o `VehicleRequest`, que compõe
+ * `Rule::exists('technicians', 'id')` com `company_id = TenantAtual::exigirId()`
+ * — técnico de outra empresa para na validação, com mensagem. O módulo e a
+ * permissão da rota dizem o que este usuário pode fazer, nunca a qual empresa o
+ * id enviado pertence.
  */
 class VehicleController extends Controller
 {

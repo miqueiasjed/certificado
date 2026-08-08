@@ -200,7 +200,16 @@ class ContractController extends Controller
      */
     public function encerrar(ContractEncerrarRequest $request, Contract $contract)
     {
-        $resultado = $this->contractService->encerrar($contract, $request->validated('motivo'));
+        // Mesmo tratamento de `update()`: encerrar também é recusado por
+        // exceção quando o contrato está em assinatura, e esconder o botão na
+        // tela não basta — a rota continua alcançável por requisição direta.
+        try {
+            $resultado = $this->contractService->encerrar($contract, $request->validated('motivo'));
+        } catch (\Exception $e) {
+            Log::error('Erro ao encerrar contrato: ' . $e->getMessage(), ['contract_id' => $contract->id]);
+
+            return redirect()->back()->with('error', 'Erro ao encerrar contrato: ' . $e->getMessage());
+        }
 
         if (!$resultado['success']) {
             return redirect()->back()->with('error', $resultado['message']);
@@ -214,7 +223,17 @@ class ContractController extends Controller
      */
     public function destroy(Contract $contract)
     {
-        $resultado = $this->contractService->excluir($contract);
+        // Mesmo tratamento de `update()`: `ContractService::excluir()` recusa
+        // contrato em assinatura lançando exceção, e a mensagem dela é o que
+        // explica ao usuário o caminho de saída (cancelar o pedido antes).
+        // Sem o catch, a recusa vira página de erro genérica em produção.
+        try {
+            $resultado = $this->contractService->excluir($contract);
+        } catch (\Exception $e) {
+            Log::error('Erro ao excluir contrato: ' . $e->getMessage(), ['contract_id' => $contract->id]);
+
+            return redirect()->back()->with('error', 'Erro ao excluir contrato: ' . $e->getMessage());
+        }
 
         if (!$resultado['success']) {
             return redirect()->back()->with('error', $resultado['message']);

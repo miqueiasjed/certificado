@@ -36,11 +36,19 @@ use Tests\TestCase;
  * - com os dois critérios preenchidos, **só o que vier primeiro dispara**, e
  *   nunca os dois na mesma passada;
  * - documento vencendo em 60, 30 e 7 dias gera três avisos, um por marco;
- * - documento vencido reenvia semanalmente;
+ * - documento vencido reenvia semanalmente **até ser renovado**;
  * - veículo sem abastecimento há 35 dias gera o aviso de quilometragem
  *   desatualizada;
  * - rodar a rotina duas vezes no mesmo dia não duplica nada;
  * - falha em um tenant não interrompe os demais.
+ *
+ * Mais as duas regressões apontadas na revisão do plano, cada uma sobre um modo
+ * de o alerta deixar de servir para alguma coisa:
+ *
+ * - manutenção registrada como `realizada` com próxima prevista **avisa** — o
+ *   fluxo natural de registro falhava em silêncio;
+ * - documento vencido renovado por um cadastro novo **para** de reenviar — o
+ *   reenvio eterno transformava o alerta inteiro em ruído.
  */
 class AlertaDeFrotaServiceTest extends TestCase
 {
@@ -132,17 +140,73 @@ class AlertaDeFrotaServiceTest extends TestCase
         $this->assertCount(0, $this->itensDoEvento(EventosDeNotificacao::MANUTENCAO_DE_VEICULO_A_VENCER));
     }
 
-    public function test_manutencao_ja_realizada_ou_cancelada_nao_gera_aviso(): void
+    /**
+     * Regressão: o fluxo natural é registrar o serviço **depois de feito**, com
+     * a próxima já marcada ("troquei o óleo hoje, a próxima é em 10.000 km" ou
+     * "daqui a 6 meses"). Isso grava `situacao = realizada`, e enquanto o alerta
+     * só olhava para `agendada` essa pessoa não recebia aviso nenhum — falha em
+     * silêncio, justamente no caso que é o motivo de o módulo existir.
+     *
+     * O critério é a próxima prevista existir, não a situação: ver
+     * `VehicleMaintenance::comProximaPrevista()`.
+     */
+    public function test_manutencao_realizada_com_proxima_prevista_na_janela_gera_aviso(): void
     {
-        $veiculo = $this->criarVeiculo();
+        $veiculo = $this->criarVeiculo(kmAtual: 9000);
 
         $this->naEmpresa(fn () => VehicleMaintenance::create([
             'vehicle_id' => $veiculo->id,
             'tipo' => 'preventiva',
-            'descricao' => 'Troca de óleo já feita',
-            'proxima_em_data' => $this->emDias(10),
+            'descricao' => 'Troca de óleo feita hoje',
+            'data' => $this->emDias(0),
+            'km' => 9000,
+            'valor' => 120.00,
+            'proxima_em_data' => $this->emDias(5),
             'situacao' => 'realizada',
         ]));
+
+        $this->artisan('frota:verificar')->assertSuccessful();
+
+        $avisos = $this->itensDoEvento(EventosDeNotificacao::MANUTENCAO_DE_VEICULO_A_VENCER);
+
+        $this->assertCount(2, $avisos, 'janelas cumulativas: 30 e 7 dias');
+        $this->assertMarco($avisos, 'data-30');
+        $this->assertMarco($avisos, 'data-7');
+    }
+
+    /**
+     * Mesma regressão pelo outro critério: "próxima em 10.000 km" registrado
+     * junto com o serviço feito.
+     */
+    public function test_manutencao_realizada_com_proxima_em_km_na_janela_gera_aviso(): void
+    {
+        $veiculo = $this->criarVeiculo(kmAtual: 9000);
+
+        $this->naEmpresa(fn () => VehicleMaintenance::create([
+            'vehicle_id' => $veiculo->id,
+            'tipo' => 'preventiva',
+            'descricao' => 'Troca de óleo feita',
+            'data' => $this->emDias(-30),
+            'km' => 5000,
+            'proxima_em_km' => 10000,
+            'situacao' => 'realizada',
+        ]));
+
+        $this->artisan('frota:verificar')->assertSuccessful();
+
+        $avisos = $this->itensDoEvento(EventosDeNotificacao::MANUTENCAO_DE_VEICULO_A_VENCER);
+
+        $this->assertCount(1, $avisos);
+        $this->assertMarco($avisos, 'km-1000');
+    }
+
+    /**
+     * Cancelada é a única situação que não avisa: previsão de serviço que a
+     * empresa desistiu de fazer não tem o que cobrar.
+     */
+    public function test_manutencao_cancelada_nao_gera_aviso(): void
+    {
+        $veiculo = $this->criarVeiculo();
 
         $this->naEmpresa(fn () => VehicleMaintenance::create([
             'vehicle_id' => $veiculo->id,
@@ -150,6 +214,28 @@ class AlertaDeFrotaServiceTest extends TestCase
             'descricao' => 'Revisão cancelada',
             'proxima_em_data' => $this->emDias(10),
             'situacao' => 'cancelada',
+        ]));
+
+        $this->artisan('frota:verificar')->assertSuccessful();
+
+        $this->assertCount(0, $this->itensDoEvento(EventosDeNotificacao::MANUTENCAO_DE_VEICULO_A_VENCER));
+    }
+
+    /**
+     * Corretiva não tem próxima prevista para acompanhar, mesmo registrada como
+     * realizada: o alerta continua sendo só de preventiva.
+     */
+    public function test_manutencao_corretiva_nao_gera_aviso(): void
+    {
+        $veiculo = $this->criarVeiculo();
+
+        $this->naEmpresa(fn () => VehicleMaintenance::create([
+            'vehicle_id' => $veiculo->id,
+            'tipo' => 'corretiva',
+            'descricao' => 'Troca de embreagem',
+            'data' => $this->emDias(-1),
+            'proxima_em_data' => $this->emDias(10),
+            'situacao' => 'realizada',
         ]));
 
         $this->artisan('frota:verificar')->assertSuccessful();
@@ -297,6 +383,68 @@ class AlertaDeFrotaServiceTest extends TestCase
         $this->viajarPara('1970-01-08 12:00:00');
         $this->artisan('frota:verificar')->assertSuccessful();
         $this->assertCount(2, $this->itensDoEvento(EventosDeNotificacao::DOCUMENTO_DE_VEICULO_A_VENCER));
+    }
+
+    /**
+     * Regressão: o reenvio semanal precisa **parar** quando o documento é
+     * renovado, e renovar, na prática, quase nunca é editar a validade da linha
+     * antiga — é cadastrar o documento novo, com número e validade novos. Sem
+     * este critério a linha velha continuava vencida para sempre e mandava
+     * e-mail toda semana, indefinidamente, até o alerta de frota inteiro virar
+     * ruído que ninguém lê.
+     */
+    public function test_documento_vencido_renovado_por_cadastro_novo_para_de_alertar(): void
+    {
+        $this->viajarPara('1970-01-01 12:00:00');
+
+        $veiculo = $this->criarVeiculo();
+        $this->criarDocumento($veiculo, $this->emDias(-10));
+
+        $this->artisan('frota:verificar')->assertSuccessful();
+        $this->assertCount(1, $this->itensDoEvento(EventosDeNotificacao::DOCUMENTO_DE_VEICULO_A_VENCER));
+
+        // A empresa renova cadastrando o licenciamento novo, sem tocar na linha
+        // antiga. Validade bem longe, para não entrar em nenhuma janela de
+        // "vencendo" e o teste medir só o reenvio do vencido.
+        $this->criarDocumento($veiculo, $this->emDias(350));
+
+        // Semana seguinte: marco semanal novo e, mesmo assim, nenhum aviso.
+        $this->viajarPara('1970-01-08 12:00:00');
+        $this->artisan('frota:verificar')->assertSuccessful();
+
+        $this->assertCount(
+            1,
+            $this->itensDoEvento(EventosDeNotificacao::DOCUMENTO_DE_VEICULO_A_VENCER),
+            'o documento renovado não podia continuar reenviando'
+        );
+    }
+
+    /**
+     * A renovação é por veículo **e por tipo**: cadastrar o seguro novo não
+     * cala o licenciamento vencido, que é o que tem consequência legal.
+     */
+    public function test_documento_de_outro_tipo_nao_cala_o_licenciamento_vencido(): void
+    {
+        $this->viajarPara('1970-01-01 12:00:00');
+
+        $veiculo = $this->criarVeiculo();
+        $this->criarDocumento($veiculo, $this->emDias(-10));
+        $this->criarDocumento($veiculo, $this->emDias(350), tipo: 'seguro');
+
+        $this->artisan('frota:verificar')->assertSuccessful();
+
+        $avisos = $this->itensDoEvento(EventosDeNotificacao::DOCUMENTO_DE_VEICULO_A_VENCER);
+
+        $this->assertCount(1, $avisos, 'o licenciamento vencido continua avisando');
+
+        $this->viajarPara('1970-01-08 12:00:00');
+        $this->artisan('frota:verificar')->assertSuccessful();
+
+        $this->assertCount(
+            2,
+            $this->itensDoEvento(EventosDeNotificacao::DOCUMENTO_DE_VEICULO_A_VENCER),
+            'e segue reenviando semanalmente enquanto não for renovado'
+        );
     }
 
     // -----------------------------------------------------------------
@@ -461,12 +609,15 @@ class AlertaDeFrotaServiceTest extends TestCase
         ]));
     }
 
-    private function criarDocumento(Vehicle $veiculo, string $validade): VehicleDocument
-    {
+    private function criarDocumento(
+        Vehicle $veiculo,
+        string $validade,
+        string $tipo = 'licenciamento',
+    ): VehicleDocument {
         return $this->naEmpresa(fn (): VehicleDocument => VehicleDocument::create([
             'vehicle_id' => $veiculo->id,
-            'tipo' => 'licenciamento',
-            'numero' => 'LIC-'.uniqid(),
+            'tipo' => $tipo,
+            'numero' => strtoupper(substr($tipo, 0, 3)).'-'.uniqid(),
             'validade' => $validade,
         ]));
     }

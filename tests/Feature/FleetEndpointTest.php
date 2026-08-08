@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Console\Commands\SyncPermissions;
+use App\Models\ChartOfAccount;
 use App\Models\Company;
 use App\Models\Module;
 use App\Models\StockLocation;
@@ -48,6 +49,8 @@ class FleetEndpointTest extends TestCase
     private Company $empresa;
 
     private User $administrador;
+
+    private ?Company $outraEmpresa = null;
 
     protected function setUp(): void
     {
@@ -559,9 +562,151 @@ class FleetEndpointTest extends TestCase
             ->assertStatus(404);
     }
 
+    /**
+     * Regressão: id vindo do **corpo** da requisição não é alcançado pelo
+     * escopo global — a regra `exists` do Laravel roda direto no query builder.
+     * Enquanto os FormRequests da frota usavam `exists:` cru, o id de outra
+     * empresa passava na validação, gravava FK cruzada e o próprio `exists`
+     * ainda servia de oráculo ("este id existe em alguma empresa?").
+     *
+     * Os quatro testes abaixo exigem a recusa **na validação** (422), e não o
+     * conserto silencioso mais adiante.
+     */
+    public function test_tecnico_de_outra_empresa_e_recusado_no_cadastro_de_veiculo(): void
+    {
+        $tecnicoDaOutra = TenantAtual::comTenant($this->outraEmpresa()->id, fn (): Technician => Technician::create([
+            'name' => 'Técnico da concorrente',
+            'email' => 'tecnico-concorrente@concorrente.test',
+            'phone' => '11988887777',
+            'is_active' => true,
+        ]));
+
+        $this->actingAs($this->administrador)
+            ->postJson('/veiculos', [
+                'placa' => 'VAZ0001',
+                'modelo' => 'Saveiro',
+                'marca' => 'Volkswagen',
+                'technician_id' => $tecnicoDaOutra->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('technician_id');
+
+        $this->assertDatabaseMissing('vehicles', ['placa' => 'VAZ0001']);
+    }
+
+    public function test_fornecedor_e_categoria_de_outra_empresa_sao_recusados_no_abastecimento(): void
+    {
+        $veiculo = $this->criarVeiculo();
+        [$fornecedorDaOutra, $categoriaDaOutra] = $this->fornecedorECategoriaDaOutraEmpresa();
+
+        $this->actingAs($this->administrador)
+            ->postJson("/veiculos/{$veiculo->id}/abastecimentos", [
+                'data' => self::HOJE,
+                'km' => 5000,
+                'litros' => 40,
+                'valor_total' => 320.00,
+                'tipo_combustivel' => 'gasolina',
+                'gerar_titulo' => true,
+                'supplier_id' => $fornecedorDaOutra->id,
+                'chart_of_account_id' => $categoriaDaOutra->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['supplier_id', 'chart_of_account_id']);
+
+        $this->assertSame(0, $this->comTenant(fn (): int => $veiculo->refuelings()->count()));
+    }
+
+    public function test_fornecedor_e_categoria_de_outra_empresa_sao_recusados_na_manutencao(): void
+    {
+        $veiculo = $this->criarVeiculo();
+        [$fornecedorDaOutra, $categoriaDaOutra] = $this->fornecedorECategoriaDaOutraEmpresa();
+
+        $this->actingAs($this->administrador)
+            ->postJson("/veiculos/{$veiculo->id}/manutencoes", [
+                'tipo' => 'corretiva',
+                'descricao' => 'Troca de embreagem',
+                'data' => self::HOJE,
+                'valor' => 1800.00,
+                'gerar_titulo' => true,
+                'supplier_id' => $fornecedorDaOutra->id,
+                'chart_of_account_id' => $categoriaDaOutra->id,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['supplier_id', 'chart_of_account_id']);
+
+        $this->assertSame(0, $this->comTenant(fn (): int => $veiculo->maintenances()->count()));
+    }
+
+    /**
+     * O caso mais caro dos quatro: a OS gravava `vehicle_id` de outra empresa,
+     * a leitura devolvia `null` (escopo global) e o rateio do deslocamento na
+     * margem saía errado sem ninguém ver.
+     *
+     * A asserção é sobre o erro de `vehicle_id`, não sobre o status de criação:
+     * o payload de apoio não traz `service_id`, então a resposta é 422 nos dois
+     * casos — o que muda, e é o que interessa, é `vehicle_id` estar ou não
+     * entre os campos recusados.
+     */
+    public function test_veiculo_de_outra_empresa_e_recusado_na_ordem_de_servico(): void
+    {
+        $tecnico = $this->criarTecnico();
+        $dados = $this->comTenant(fn (): array => $this->dadosDaOs($tecnico));
+
+        $veiculoDaOutra = TenantAtual::comTenant($this->outraEmpresa()->id, fn (): Vehicle => Vehicle::create([
+            'placa' => 'CON9999',
+            'modelo' => 'Strada',
+            'marca' => 'Fiat',
+            'situacao' => 'ativo',
+        ]));
+
+        $this->actingAs($this->administrador)
+            ->postJson('/work-orders', array_merge($dados, ['vehicle_id' => $veiculoDaOutra->id]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('vehicle_id');
+
+        // Contraprova: o veículo da própria empresa não é recusado, ou seja, a
+        // regra separa empresas em vez de simplesmente barrar tudo.
+        $meuVeiculo = $this->criarVeiculo();
+
+        $this->actingAs($this->administrador)
+            ->postJson('/work-orders', array_merge($dados, ['vehicle_id' => $meuVeiculo->id]))
+            ->assertJsonMissingValidationErrors('vehicle_id');
+
+        $this->assertDatabaseMissing('work_orders', ['vehicle_id' => $veiculoDaOutra->id]);
+    }
+
     // -----------------------------------------------------------------
     // Apoio
     // -----------------------------------------------------------------
+
+    /**
+     * Empresa concorrente, criada uma vez por teste. Existe para hospedar os
+     * registros que a empresa do teste nunca pode alcançar.
+     */
+    private function outraEmpresa(): Company
+    {
+        return $this->outraEmpresa ??= Company::create([
+            'name' => 'Concorrente do Vazamento',
+            'cnpj' => '44.444.444/0001-44',
+            'email' => 'contato@concorrente-vazamento.test',
+        ]);
+    }
+
+    /**
+     * @return array{0: Supplier, 1: ChartOfAccount}
+     */
+    private function fornecedorECategoriaDaOutraEmpresa(): array
+    {
+        return TenantAtual::comTenant($this->outraEmpresa()->id, fn (): array => [
+            Supplier::create(['nome' => 'Posto da concorrente', 'ativo' => true]),
+            ChartOfAccount::create([
+                'codigo' => '9.9',
+                'nome' => 'Combustível da concorrente',
+                'tipo' => 'despesa',
+                'ativo' => true,
+            ]),
+        ]);
+    }
 
     private function comTenant(Closure $callback): mixed
     {
