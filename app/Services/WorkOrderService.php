@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Exceptions\OsTravadaException;
+use App\Models\AiDraft;
 use App\Models\WorkOrder;
+use App\Services\Ai\ParecerService;
 use App\Services\Compliance\ConformidadeDaExecucaoService;
 use App\Support\BusinessDate;
 use Closure;
@@ -711,9 +713,22 @@ class WorkOrderService
 
     /**
      * Prepare data for PDF generation, including Base64 images.
+     *
+     * Guarda do Plano 25 (Task 25.3) na primeira linha: OS com parecer gerado
+     * por IA e ainda não revisado não vira documento. A verificação vive aqui,
+     * e não na tela, porque o PDF é o ponto por onde todo caminho de emissão
+     * passa — bloqueio só no frontend é bloqueio que a primeira rota nova
+     * fura. OS sem rascunho nenhum (o caso de quem escreve o parecer à mão)
+     * passa direto.
      */
     public function preparePdfData(WorkOrder $workOrder): array
     {
+        ParecerService::garantirParecerRevisado(
+            $workOrder,
+            AiDraft::TIPO_PARECER_OS,
+            'ordem de serviço'
+        );
+
         // Load relationships
         $workOrder->load([
             'client',

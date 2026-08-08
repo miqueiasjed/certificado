@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\AccessLog;
 use App\Models\ActiveIngredient;
 use App\Models\Address;
+use App\Models\AiDraft;
+use App\Models\AiUsage;
 use App\Models\Antidote;
 use App\Models\AppointmentRequest;
 use App\Models\AuditLog;
@@ -2033,6 +2035,38 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'tipo' => 'valor_vendido',
                 'competencia' => '2026-07',
                 'alvo' => '10000.00',
+            ]);
+
+            // Rascunho de parecer assistido por IA e a medição de uso que ele
+            // gera (Plano 25, Tasks 25.1 e 25.5). Sem rota de CRUD direta que
+            // liste rascunho de terceiro (os endpoints de `/ia/*` recebem o
+            // rascunho por route-model binding, já escopado), então não entram
+            // em basesDeRecurso(): o objetivo aqui é a varredura permanente
+            // cobrir os dois models de domínio novos.
+            //
+            // O conteúdo gerado carrega a marca do tenant de propósito: um
+            // parecer de uma dedetizadora dentro da resposta da concorrente é
+            // exatamente o vazamento que o Plano 25 existe para impedir.
+            $dados['aiDraft'] = AiDraft::create([
+                'tipo' => AiDraft::TIPO_PARECER_OS,
+                'origem_tipo' => WorkOrder::class,
+                'origem_id' => $dados['workOrder']->id,
+                'conteudo_gerado' => 'Parecer tecnico gerado para '.$marca.'.',
+                'situacao' => AiDraft::SITUACAO_GERADO,
+                'modelo' => 'claude-opus-5',
+                'gerado_por' => $autor->id,
+            ]);
+
+            $dados['aiUsage'] = AiUsage::create([
+                'ai_draft_id' => $dados['aiDraft']->id,
+                'tipo' => AiDraft::TIPO_PARECER_OS,
+                'modelo' => 'claude-opus-5',
+                'tokens_entrada' => 1200,
+                'tokens_saida' => 300,
+                'tokens_cache_leitura' => 900,
+                'custo_estimado' => '0.014100',
+                'duracao_ms' => 1500,
+                'sucesso' => true,
             ]);
 
             return $dados;

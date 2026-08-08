@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\AiDraft;
 use App\Models\Certificate;
+use App\Services\Ai\ParecerService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -22,6 +24,7 @@ class CertificateService
         // Adicionar atributos calculados aos itens da paginação
         $certificates->getCollection()->transform(function ($certificate) {
             $certificate->append(['calculated_status', 'status_text', 'status_color']);
+
             return $certificate;
         });
 
@@ -45,7 +48,7 @@ class CertificateService
         $products = $data['products'] ?? [];
 
         // Se há work_order_id, puxar produtos e serviço automaticamente da OS
-        if (!empty($data['work_order_id'])) {
+        if (! empty($data['work_order_id'])) {
             $workOrder = \App\Models\WorkOrder::with(['products', 'service'])->find($data['work_order_id']);
 
             if ($workOrder) {
@@ -80,23 +83,24 @@ class CertificateService
         $certificate = Certificate::create($data);
 
         // Associar produtos (many-to-many)
-        if (!empty($products)) {
+        if (! empty($products)) {
             $productData = [];
             foreach ($products as $product) {
-                if (!empty($product['product_id'])) {
+                if (! empty($product['product_id'])) {
                     $productData[$product['product_id']] = [
                         'quantity' => $product['quantity'] ?? null,
                         'unit' => $product['unit'] ?? null,
                     ];
                 }
             }
-            if (!empty($productData)) {
+            if (! empty($productData)) {
                 $certificate->products()->attach($productData);
             }
         }
 
         $certificate = $certificate->load(['client', 'address', 'products', 'service']);
         $certificate->append(['calculated_status', 'status_text', 'status_color']);
+
         return $certificate;
     }
 
@@ -115,7 +119,7 @@ class CertificateService
         if (isset($products)) {
             $productData = [];
             foreach ($products as $product) {
-                if (!empty($product['product_id'])) {
+                if (! empty($product['product_id'])) {
                     $productData[$product['product_id']] = [
                         'quantity' => $product['quantity'] ?? null,
                         'unit' => $product['unit'] ?? null,
@@ -158,6 +162,7 @@ class CertificateService
         // Adicionar atributos calculados aos itens da paginação
         $certificates->getCollection()->transform(function ($certificate) {
             $certificate->append(['calculated_status', 'status_text', 'status_color']);
+
             return $certificate;
         });
 
@@ -191,14 +196,26 @@ class CertificateService
     {
         $timestamp = time();
         $random = strtoupper(substr(md5(uniqid()), 0, 5));
-        return 'CERT-' . substr($timestamp, -6) . '-' . $random;
+
+        return 'CERT-'.substr($timestamp, -6).'-'.$random;
     }
 
     /**
      * Prepare data for PDF generation, including Base64 images.
+     *
+     * Guarda do Plano 25 (Task 25.3) na primeira linha: certificado com
+     * parecer gerado por IA e ainda não revisado não vira documento.
+     * Certificado tem valor perante fiscalização, e o responsável técnico
+     * assina o que sai. Certificado sem rascunho nenhum passa direto.
      */
     public function preparePdfData(Certificate $certificate): array
     {
+        ParecerService::garantirParecerRevisado(
+            $certificate,
+            AiDraft::TIPO_PARECER_CERTIFICADO,
+            'certificado'
+        );
+
         // Load relationships
         $certificate->load([
             'client',
@@ -210,7 +227,7 @@ class CertificateService
             'products.chemicalGroup',
             'products.antidote',
             'products.organRegistration',
-            'service'
+            'service',
         ]);
 
         $company = \App\Models\Company::current();
@@ -228,13 +245,13 @@ class CertificateService
      */
     private function convertStorageFileToBase64(?string $path): ?string
     {
-        if (!$path) {
+        if (! $path) {
             return null;
         }
 
-        $fullPath = storage_path('app/public/' . $path);
+        $fullPath = storage_path('app/public/'.$path);
 
-        if (!file_exists($fullPath)) {
+        if (! file_exists($fullPath)) {
             return null;
         }
 
@@ -250,6 +267,6 @@ class CertificateService
             default => 'application/octet-stream',
         };
 
-        return 'data:' . $mime . ';base64,' . base64_encode($data);
+        return 'data:'.$mime.';base64,'.base64_encode($data);
     }
 }

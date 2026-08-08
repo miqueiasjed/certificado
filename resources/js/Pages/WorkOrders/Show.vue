@@ -269,6 +269,16 @@
           </div>
         </div>
 
+        <!-- Parecer técnico assistido por IA (Plano 25, Task 25.6). O
+             componente só aparece com o módulo `laudo_ia` ligado, e a emissão
+             do documento continua barrada no backend enquanto o parecer não
+             for revisado. -->
+        <EditorDeParecer
+          tipo="parecer_os"
+          :origem-id="workOrder.id"
+          :rascunho-inicial="rascunhoDeParecer"
+        />
+
         <!-- Histórico de Alterações -->
         <HistoricoRegistro tipo="ordem-servico" :id="workOrder.id" />
       </div>
@@ -482,10 +492,14 @@ import PageHeader from '@/Components/PageHeader.vue';
 import WorkOrderTabContent from '@/Components/WorkOrderTabContent.vue';
 import Alert from '@/Components/Alert.vue';
 import HistoricoRegistro from '@/Components/HistoricoRegistro.vue';
+import EditorDeParecer from '@/Components/EditorDeParecer.vue';
 import { formatarData } from '@/utils/formatDate';
 
   const props = defineProps({
     workOrder: Object,
+    // Rascunho de parecer já gerado para esta OS, quando existe (Plano 25).
+    // Nulo é o caso comum: o recurso é opcional e o módulo nasce desligado.
+    rascunhoDeParecer: { type: Object, default: null },
     roomEventPhotos: { type: Object, default: () => ({}) },
     availableAddresses: Array,
     availableProducts: Array,

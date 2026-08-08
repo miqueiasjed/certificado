@@ -10,6 +10,7 @@ use App\Models\OrganRegistration;
 use App\Models\WorkOrder;
 use App\Observers\ValidadeRegulatoriaObserver;
 use App\Observers\WorkOrderNotificationObserver;
+use App\Services\Ai\ProvedorDeTexto;
 use App\Services\Compliance\ReferenciaNormativaService;
 use App\Services\Geo\ProvedorDeGeocodificacao;
 use App\Support\TenantAtual;
@@ -37,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->registrarGatewayDeAssinatura();
         $this->registrarProvedorDeGeocodificacao();
+        $this->registrarProvedorDeTexto();
     }
 
     /**
@@ -336,6 +338,22 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(ProvedorDeGeocodificacao::class, function ($app) {
             return $app->make(config('services.geocodificacao.provedor'));
+        });
+    }
+
+    /**
+     * Liga `App\Services\Ai\ProvedorDeTexto` à implementação escolhida em
+     * `config('ai.provedor')` (Plano 25, Task 25.2).
+     *
+     * Mesmo raciocínio das duas anteriores, com um motivo a mais: é esta
+     * ligação que permite à suíte trocar o provedor por uma implementação
+     * falsa. Nenhum teste deste projeto chama a API de IA de verdade — o custo
+     * é por chamada, e um teste que gasta dinheiro deixa de ser rodado.
+     */
+    private function registrarProvedorDeTexto(): void
+    {
+        $this->app->bind(ProvedorDeTexto::class, function ($app) {
+            return $app->make(config('ai.provedor'));
         });
     }
 }
