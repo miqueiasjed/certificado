@@ -539,7 +539,7 @@ import StatCard from '@/Components/StatCard.vue';
 import Modal from '@/Components/Modal.vue';
 import EntregaDeEpiModal from '@/Components/EntregaDeEpiModal.vue';
 import QuadroDeAssinatura from '@/app-tecnico/Components/QuadroDeAssinatura.vue';
-import { usePermissoes } from '@/composables/usePermissoes';
+import { usePermissoes } from '@/Composables/usePermissoes';
 import { formatarData, formatarDataHora, hojeISO } from '@/utils/formatDate';
 import {
   TEXTO_PENDENTE_DE_ASSINATURA,

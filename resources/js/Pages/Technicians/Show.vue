@@ -191,8 +191,8 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import { formatarDataHora } from '@/utils/formatDate';
-import { usePermissoes } from '@/composables/usePermissoes';
-import { useModulos } from '@/composables/useModulos';
+import { usePermissoes } from '@/Composables/usePermissoes';
+import { useModulos } from '@/Composables/useModulos';
 
 const props = defineProps({
   technician: Object,

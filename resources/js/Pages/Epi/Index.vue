@@ -283,7 +283,7 @@ import Card from '@/Components/Card.vue';
 import StatCard from '@/Components/StatCard.vue';
 import EpiModal from '@/Components/EpiModal.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
-import { usePermissoes } from '@/composables/usePermissoes';
+import { usePermissoes } from '@/Composables/usePermissoes';
 import { formatarData } from '@/utils/formatDate';
 import {
   DIAS_DE_AVISO_DO_CA,
