@@ -98,6 +98,7 @@ final class DominioMultiempresa
         'satisfaction_surveys',
         'service_invoices',
         'service_orders',
+        'service_ppe_requirements',
         'service_types',
         'services',
         'signature_events',
@@ -119,6 +120,7 @@ final class DominioMultiempresa
         'work_order_adequations',
         'work_order_device_events',
         'work_order_photos',
+        'work_order_ppe_confirmations',
         'work_order_signatures',
         'work_orders',
     ];
@@ -256,6 +258,7 @@ final class DominioMultiempresa
         \App\Models\Service::class,
         \App\Models\ServiceInvoice::class,
         \App\Models\ServiceOrder::class,
+        \App\Models\ServicePpeRequirement::class,
         \App\Models\ServiceType::class,
         \App\Models\SignatureEvent::class,
         \App\Models\SignatureProviderConfig::class,
@@ -277,6 +280,7 @@ final class DominioMultiempresa
         \App\Models\WorkOrderAdequation::class,
         \App\Models\WorkOrderDeviceEvent::class,
         \App\Models\WorkOrderPhoto::class,
+        \App\Models\WorkOrderPpeConfirmation::class,
         \App\Models\WorkOrderSignature::class,
     ];
 
@@ -357,6 +361,28 @@ final class DominioMultiempresa
                 .'pelo primeiro estado, mas o formato composto é o mesmo que esta lista já sabe validar. '
                 .'UNIQUES_GLOBAIS_MANTIDOS é para unique que fica global de propósito (sem company_id), que não é '
                 .'o caso: aqui company_id está presente e é a própria unique que o exige.',
+        ],
+        'service_ppe_requirements' => [
+            'indice' => 'service_ppe_requirements_company_service_ppe_unique',
+            'colunas' => ['service_id', 'personal_protective_equipment_id'],
+            'motivo' => 'O mesmo EPI não se exige duas vezes no mesmo serviço (Plano 29, Task 29.1): a exigência '
+                .'repetida viraria duas linhas na etapa de confirmação do aplicativo, e o técnico marcaria o mesmo '
+                .'respirador duas vezes. Tabela nova, que nasce já com a unique composta '
+                .'`[company_id, service_id, personal_protective_equipment_id]`; entra aqui, e não em '
+                .'UNIQUES_GLOBAIS_MANTIDOS, pelo mesmo raciocínio já registrado para `routes` e `vehicles`: '
+                .'`conferirUniques()` aceita a entrada nos dois estados (ainda global ou já composta), e o formato '
+                .'composto é o que esta lista já sabe validar.',
+        ],
+        'work_order_ppe_confirmations' => [
+            'indice' => 'work_order_ppe_confirmations_company_work_order_ppe_unique',
+            'colunas' => ['work_order_id', 'personal_protective_equipment_id'],
+            'motivo' => 'É a unique que dá idempotência à sincronização offline da confirmação de EPI (Plano 29, '
+                .'Task 29.1): o aplicativo do técnico reenvia a mesma confirmação quando a conexão cai depois do '
+                .'envio e antes da resposta, e sem ela cada reenvio viraria linha nova. Mesmo problema que '
+                .'`sync_operations.operacao_uuid` resolve na fila do Plano 12, aplicado ao registro final. Tabela '
+                .'nova, que nasce já com a unique composta '
+                .'`[company_id, work_order_id, personal_protective_equipment_id]`, pelo mesmo raciocínio já '
+                .'registrado para `routes` e `vehicles`.',
         ],
     ];
 

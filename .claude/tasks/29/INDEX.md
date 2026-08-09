@@ -8,12 +8,12 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 29.1 | EPI exigido por serviço e confirmação na OS | backend-estrutura | ⏳ | média |
-| 29.2 | Situação de EPI do técnico e registro da confirmação | backend-logica | ⏳ | alta |
-| 29.3 | Endpoints do cadastro e carga offline do app do técnico | backend-endpoint | ⏳ | alta |
-| 29.4 | Item de EPI no checklist da RDC 622/2022 | backend-logica | ⏳ | média |
-| 29.5 | Confirmação de EPI na execução, no app do técnico | frontend-componente | ⏳ | alta |
-| 29.6 | Testes de situação, sincronização e checklist | teste | ⏳ | alta |
+| 29.1 | EPI exigido por serviço e confirmação na OS | backend-estrutura | ✅ | média |
+| 29.2 | Situação de EPI do técnico e registro da confirmação | backend-logica | ✅ | alta |
+| 29.3 | Endpoints do cadastro e carga offline do app do técnico | backend-endpoint | ✅ | alta |
+| 29.4 | Item de EPI no checklist da RDC 622/2022 | backend-logica | ✅ | média |
+| 29.5 | Confirmação de EPI na execução, no app do técnico | frontend-componente | ✅ | alta |
+| 29.6 | Testes de situação, sincronização e checklist | teste | ✅ | alta |
 
 ## Ordem de execução
 

@@ -273,6 +273,17 @@ class WorkOrder extends Model
     }
 
     /**
+     * EPIs que o técnico confirmou vestir nesta OS (Plano 29, Task 29.1).
+     *
+     * A ligação é `hasMany` de propósito: `work_orders` é tabela com dado em
+     * produção e não ganha coluna nenhuma por causa de EPI.
+     */
+    public function ppeConfirmations(): HasMany
+    {
+        return $this->hasMany(WorkOrderPpeConfirmation::class);
+    }
+
+    /**
      * Assinatura do cliente coletada em campo para esta OS (Plano 13).
      */
     public function signature(): HasOne

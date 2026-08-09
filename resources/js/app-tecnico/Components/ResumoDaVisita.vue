@@ -27,6 +27,23 @@
     lacuna de vez exigiria um registro persistente em `meta` também para
     dispositivo e adequação (mesmo padrão de `comodoAvistamento.js`), fora do
     escopo desta task.
+
+  Confirmação de EPI (Plano 29, Task 29.5):
+
+  - A linha só aparece quando os serviços desta OS exigem algum EPI. Sem
+    exigência cadastrada, a etapa não existe no aplicativo e nada é mostrado
+    aqui - "não informado" nunca é irregularidade.
+  - O contador vem de `confirmacaoDeEpi.js`, que guarda as respostas em `meta`
+    (e não na fila): diferente das quatro contagens acima, este número NÃO
+    encolhe depois de sincronizar.
+  - A pendência aparece como número e como frase, e a frase diz explicitamente
+    que não impede concluir nem assinar. Nada aqui bloqueia a visita - decisão
+    registrada do Plano 29.
+  - O que esta tela NUNCA mostra: qual EPI faltou e o motivo escrito pelo
+    técnico. O resumo é lido pelo CLIENTE antes de assinar, e o motivo de uma
+    falta é registro para o gestor e para a fiscalização (vai no aviso
+    `EXECUCAO_SEM_EPI_EXIGIDO` e na ficha do escritório), não documento de
+    cliente.
 -->
 <template>
   <div class="rounded-lg border border-gray-200 bg-white p-4">
@@ -50,7 +67,23 @@
         <span>Adequações recomendadas para o local</span>
         <span class="font-semibold text-gray-900">{{ contagens.adequacoes }}</span>
       </li>
+
+      <!-- Só quando os serviços desta OS exigem EPI. Ver o comentário no topo
+           do arquivo para o que esta linha mostra e o que ela nunca mostra. -->
+      <li v-if="epi.exigidos > 0" class="flex items-center justify-between py-2">
+        <span>Equipamentos de proteção confirmados</span>
+        <span class="font-semibold text-gray-900">{{ epi.confirmados }} de {{ epi.exigidos }}</span>
+      </li>
     </ul>
+
+    <p v-if="epi.semResposta > 0" class="mt-3 text-xs font-medium text-yellow-700">
+      {{
+        epi.semResposta === 1
+          ? 'Falta confirmar 1 equipamento de proteção.'
+          : `Faltam confirmar ${epi.semResposta} equipamentos de proteção.`
+      }}
+      Isso não impede concluir nem assinar a visita.
+    </p>
   </div>
 </template>
 
@@ -59,6 +92,7 @@ import { onBeforeUnmount, onMounted, reactive } from 'vue';
 import { listarComodosDaOrdem } from '../db/repositorio';
 import { aoMudar, listarPorOrdemETipo } from '../sync/fila';
 import { obterRegistroDoComodo } from './comodoAvistamento';
+import { resumoDeEpiDaOrdem } from './confirmacaoDeEpi';
 
 const props = defineProps({
   workOrderId: {
@@ -72,6 +106,12 @@ const contagens = reactive({
   comodos: 0,
   produtos: 0,
   adequacoes: 0,
+});
+
+const epi = reactive({
+  exigidos: 0,
+  confirmados: 0,
+  semResposta: 0,
 });
 
 let pararDeEscutarFila = null;
@@ -103,6 +143,12 @@ async function recalcular() {
     (total, registro) => total + (registro?.produtos?.length || 0),
     0,
   );
+
+  const situacaoDeEpi = await resumoDeEpiDaOrdem(workOrderId);
+
+  epi.exigidos = situacaoDeEpi.exigidos;
+  epi.confirmados = situacaoDeEpi.confirmados;
+  epi.semResposta = situacaoDeEpi.semResposta;
 }
 
 onMounted(async () => {

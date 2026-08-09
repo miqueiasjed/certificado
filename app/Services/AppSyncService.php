@@ -10,6 +10,7 @@ use App\Models\WorkOrder;
 use App\Services\Sync\AplicadorDeAdequacao;
 use App\Services\Sync\AplicadorDeAssinatura;
 use App\Services\Sync\AplicadorDeAvistamento;
+use App\Services\Sync\AplicadorDeConfirmacaoDeEpi;
 use App\Services\Sync\AplicadorDeEventoDeDispositivo;
 use App\Services\Sync\AplicadorDeExecucao;
 use App\Services\Sync\AplicadorDeFoto;
@@ -45,8 +46,16 @@ use Throwable;
  * Cada tipo de operação (`sync_operations.tipo`) tem um aplicador próprio, que
  * implementa `AplicadorDeOperacao` e é resolvido pelo mapa `$aplicadores`:
  * `foto` (Task 12.4), `evento_dispositivo`, `avistamento`, `adequacao` e
- * `execucao` (Task 13.2, esta última cobrindo início e conclusão da OS), e
- * `assinatura` (Task 13.3, coleta de assinatura do cliente em campo).
+ * `execucao` (Task 13.2, esta última cobrindo início e conclusão da OS),
+ * `assinatura` (Task 13.3, coleta de assinatura do cliente em campo) e
+ * `confirmacao_epi` (Plano 29, Task 29.3: o EPI que o técnico confirmou vestir).
+ *
+ * A idempotência pelo `operacao_uuid` deste Service cobre o reenvio do mesmo
+ * lote. Ela não cobre o envio de uma operação **nova** sobre um fato que o
+ * servidor já registrou — aparelho que perdeu a fila local, ou técnico que
+ * corrigiu a resposta —, e por isso o aplicador de `confirmacao_epi` delega a
+ * gravação a um Service que também é idempotente pelo par (OS, EPI). As duas
+ * camadas resolvem problemas diferentes, e nenhuma substitui a outra.
  *
  * A ordem de aplicação das operações do mesmo aparelho (pela `registrada_em`)
  * e o isolamento entre falhas de operações diferentes são responsabilidade de
@@ -77,6 +86,7 @@ class AppSyncService
         AplicadorDeExecucao $aplicadorDeExecucao,
         AplicadorDeAssinatura $aplicadorDeAssinatura,
         AplicadorDeRecusaDeAssinatura $aplicadorDeRecusaDeAssinatura,
+        AplicadorDeConfirmacaoDeEpi $aplicadorDeConfirmacaoDeEpi,
     ) {
         $this->aplicadores = [
             $aplicadorDeFoto->tipo() => $aplicadorDeFoto,
@@ -86,6 +96,7 @@ class AppSyncService
             $aplicadorDeExecucao->tipo() => $aplicadorDeExecucao,
             $aplicadorDeAssinatura->tipo() => $aplicadorDeAssinatura,
             $aplicadorDeRecusaDeAssinatura->tipo() => $aplicadorDeRecusaDeAssinatura,
+            $aplicadorDeConfirmacaoDeEpi->tipo() => $aplicadorDeConfirmacaoDeEpi,
         ];
     }
 

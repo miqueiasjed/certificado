@@ -74,6 +74,7 @@ use App\Http\Controllers\SatisfactionSurveyController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\ServiceInvoiceController;
 use App\Http\Controllers\ServiceOrderController;
+use App\Http\Controllers\ServicePpeRequirementController;
 use App\Http\Controllers\SignatureProviderConfigController;
 use App\Http\Controllers\SignatureRequestController;
 use App\Http\Controllers\RefuelingController;
@@ -1475,6 +1476,42 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
         Route::get('/epis/tecnicos/{technician}/ficha-pdf', [PpeDeliveryController::class, 'fichaPdf'])
             ->middleware('permission:epi-ver')
             ->name('epi.tecnicos.ficha-pdf');
+
+        // EPI exigido por serviço (Plano 29, Task 29.3). É a declaração de
+        // escritório do que a execução de cada serviço exige vestir, e a origem
+        // de tudo que o Plano 29 faz depois: a etapa de confirmação que a carga
+        // do dia leva ao aplicativo, o que a `ConfirmacaoDeEpiService` aceita
+        // gravar da fila offline e o que o checklist da RDC 622/2022 cobra.
+        //
+        // As quatro rotas ficam sob `permission:epi-gerenciar`, leitura
+        // incluída, e **nenhuma permissão nova entrou no catálogo nesta task**:
+        // declarar o que a empresa passa a exigir em campo é configuração do
+        // mesmo cadastro que `epi-gerenciar` já governa (modelo de EPI, número
+        // do CA, validade), e não a leitura operacional que `epi-ver` abre.
+        //
+        // `/epis/exigencias` precisa vir antes de `/epis/{epi}`, pelo mesmo
+        // motivo de `/epis/entregas`, `/epis/tecnicos` e `/epis/extracao`: o
+        // curinga do cadastro engoliria o segmento literal, e "exigencias"
+        // viraria um id de EPI que nunca existe.
+        //
+        // Diferente da entrega (documento oponível, que só admite estorno), a
+        // exigência é cadastro de configuração e tem exclusão de verdade. A
+        // remoção não apaga confirmação nenhuma já registrada em OS: o que o
+        // técnico confirmou vestir em campo aconteceu.
+        Route::get('/epis/exigencias', [ServicePpeRequirementController::class, 'index'])
+            ->middleware('permission:epi-gerenciar')
+            ->name('epi.exigencias.index');
+        Route::post('/epis/exigencias', [ServicePpeRequirementController::class, 'store'])
+            ->middleware('permission:epi-gerenciar')
+            ->name('epi.exigencias.store');
+        Route::put('/epis/exigencias/{requirement}', [ServicePpeRequirementController::class, 'update'])
+            ->middleware('permission:epi-gerenciar')
+            ->whereNumber('requirement')
+            ->name('epi.exigencias.update');
+        Route::delete('/epis/exigencias/{requirement}', [ServicePpeRequirementController::class, 'destroy'])
+            ->middleware('permission:epi-gerenciar')
+            ->whereNumber('requirement')
+            ->name('epi.exigencias.destroy');
 
         // Cadastro do modelo de EPI.
         Route::get('/epis', [PersonalProtectiveEquipmentController::class, 'index'])

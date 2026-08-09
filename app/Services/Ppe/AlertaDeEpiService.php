@@ -6,6 +6,7 @@ use App\Models\PersonalProtectiveEquipment;
 use App\Models\PpeDelivery;
 use App\Models\Technician;
 use App\Support\BusinessDate;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
 /**
@@ -72,6 +73,15 @@ use Illuminate\Support\Collection;
  * equipamento —, e por isso ele não cala a entrega anterior (ver
  * `entregaMaisRecentePorTecnicoEEpi()`).
  *
+ * A regra de troca vencida mora aqui, e só aqui
+ * ---------------------------------------------
+ * `trocaVencida()` e `recorteDeTrocaVencida()` são públicos de propósito: a
+ * situação de EPI do técnico (`SituacaoDeEpiService`, Plano 29, Task 29.2)
+ * responde a mesma pergunta e **reusa** estes dois, em vez de recalcular. É
+ * decisão registrada do Plano 29, e o motivo é simples: duas implementações do
+ * mesmo vencimento divergem, e divergência de vencimento é bug que ninguém
+ * encontra depois.
+ *
  * Datas
  * -----
  * Todas as comparações são por dia no fuso do negócio, via
@@ -97,6 +107,65 @@ class AlertaDeEpiService
      * @var array<int, int>
      */
     public const JANELAS_DE_CA = [60, 30, 7];
+
+    // -----------------------------------------------------------------
+    // Troca vencida: a regra, em um lugar só
+    // -----------------------------------------------------------------
+
+    /**
+     * A troca programada desta entrega já venceu?
+     *
+     * **Esta é a origem única da regra de troca vencida do sistema.** O alerta
+     * semanal (`trocasVencidas()`, Task 28.3) e a situação de EPI do técnico
+     * (`SituacaoDeEpiService`, Plano 29, Task 29.2) respondem a mesma pergunta,
+     * e a decisão registrada do Plano 29 é explícita: uma só implementação. Duas
+     * divergem, e divergência de vencimento é o tipo de bug que ninguém encontra
+     * depois — o alerta diria que a troca do respirador venceu e a ficha do
+     * técnico continuaria dizendo "em dia", ou o contrário.
+     *
+     * Dois estados nunca são vencimento:
+     *
+     * - entrega nula (o técnico não tem aquele item) não tem troca vencida, tem
+     *   ausência, que é outra situação;
+     * - `trocar_ate` nulo é "sem troca programada", nunca um prazo padrão
+     *   inventado (ver `PpeDeliveryService::trocarAte()`).
+     *
+     * A comparação é por dia no fuso do negócio, via `BusinessDate`, nunca
+     * contra `now()` em UTC: um item que deve ser trocado hoje ainda está em dia
+     * às 21h de Brasília.
+     */
+    public function trocaVencida(?PpeDelivery $entrega): bool
+    {
+        if ($entrega === null || $entrega->trocar_ate === null) {
+            return false;
+        }
+
+        return BusinessDate::estaVencido($entrega->trocar_ate);
+    }
+
+    /**
+     * O mesmo critério de `trocaVencida()`, aplicado como recorte da consulta.
+     *
+     * Existe porque a rotina diária varre as entregas de todas as empresas e não
+     * pode carregar a tabela inteira para decidir em PHP. É a mesma regra escrita
+     * na linguagem do banco, e não uma segunda regra: o limite é o dia de hoje no
+     * fuso do negócio nos dois lugares, e quem usa este recorte confirma o
+     * resultado com `trocaVencida()` depois de carregar as linhas — se um dia os
+     * dois discordarem, quem manda é o predicado, e o recorte é apenas mais
+     * largo do que precisava ser.
+     *
+     * `trocar_ate` é coluna `date`, então "anterior a hoje" é exatamente o que
+     * `estaVencido()` responde em PHP.
+     *
+     * @param  Builder<PpeDelivery>  $consulta
+     * @return Builder<PpeDelivery>
+     */
+    public function recorteDeTrocaVencida(Builder $consulta): Builder
+    {
+        return $consulta
+            ->whereNotNull('trocar_ate')
+            ->where('trocar_ate', '<', BusinessDate::hoje()->toDateString());
+    }
 
     /**
      * Modelos de EPI com o CA perto de vencer, por janela, e os já vencidos.
@@ -175,8 +244,9 @@ class AlertaDeEpiService
 
         $entregas = PpeDelivery::query()
             ->with(['technician', 'personalProtectiveEquipment'])
-            ->whereNotNull('trocar_ate')
-            ->where('trocar_ate', '<=', $hoje->subDay()->toDateString())
+            // O vencimento da troca vem de `recorteDeTrocaVencida()`, a mesma
+            // regra que a situação de EPI do técnico usa (Plano 29, Task 29.2).
+            ->tap(fn (Builder $consulta): Builder => $this->recorteDeTrocaVencida($consulta))
             // Devolvida: o item voltou, não há o que trocar. Estornada: a
             // entrega foi registrada por engano e nunca existiu de verdade.
             ->whereNull('devolvido_em')
@@ -187,8 +257,11 @@ class AlertaDeEpiService
             ->orderBy('trocar_ate')
             ->orderBy('id')
             ->get()
-            ->filter(static fn (PpeDelivery $entrega): bool => $entrega->technician !== null
-                && $entrega->personalProtectiveEquipment !== null)
+            // O predicado é quem manda sobre o recorte em SQL: ver
+            // `recorteDeTrocaVencida()`.
+            ->filter(fn (PpeDelivery $entrega): bool => $entrega->technician !== null
+                && $entrega->personalProtectiveEquipment !== null
+                && $this->trocaVencida($entrega))
             ->values();
 
         if ($entregas->isEmpty()) {

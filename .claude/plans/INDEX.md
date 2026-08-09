@@ -1,9 +1,10 @@
 # INDEX - Planos do Sistema de Certificados
 
-> Última atualização: 08/08/2026 — os planos 1 a 27 estão concluídos e
-> mergeados em `main`. Nada foi publicado: push permanece pendente de
-> autorização. Os planos 28 e 29 (controle de EPI) nasceram depois, de uma
-> lacuna de conformidade encontrada fora do roteiro original.
+> Última atualização: 08/08/2026 — **os 29 planos estão concluídos**. Do 1 ao
+> 28, mergeados em `main`; o 29 aguarda merge. Nada foi publicado: push
+> permanece pendente de autorização. Os planos 28 e 29 (controle de EPI)
+> nasceram depois, de uma lacuna de conformidade encontrada fora do roteiro
+> original.
 > Fonte de requisitos: `.claude/prd/` (índice em `.claude/prd/README.md`)
 
 ## Legenda
@@ -89,8 +90,8 @@ bloqueio.
 
 | # | Nome | Status | Depende de | Tasks |
 |---|------|--------|------------|-------|
-| 28 | Controle de EPI: cadastro, CA e ficha de entrega | 🔄 | 6, 13, 14 | 7 |
-| 29 | EPI em campo e na conformidade | 🔒 | 28, 13, 24 | 6 |
+| 28 | Controle de EPI: cadastro, CA e ficha de entrega | ✅ | 6, 13, 14 | 7 |
+| 29 | EPI em campo e na conformidade | ✅ | 28, 13, 24 | 6 |
 
 Total: 275 tasks decompostas nos 29 planos.
 

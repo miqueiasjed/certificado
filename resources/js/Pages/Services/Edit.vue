@@ -20,7 +20,7 @@
       </PageHeader>
     </template>
 
-    <div class="max-w-2xl mx-auto">
+    <div class="max-w-2xl mx-auto space-y-6">
       <form @submit.prevent="submitForm" class="space-y-6">
         <!-- Informações Básicas -->
         <Card>
@@ -154,21 +154,45 @@
           </button>
         </div>
       </form>
+
+      <!--
+        EPI exigido por este serviço (Plano 29, Task 29.5).
+
+        Fora do formulário de propósito: cada exigência é gravada na hora, por
+        rota própria (`/epis/exigencias`), e não junto com "Salvar Alterações" —
+        um cadastro de configuração que compartilhasse o submit do serviço faria
+        o usuário perder o que acabou de marcar ao cancelar a edição.
+
+        Só aparece com o módulo `epi` ligado e para quem tem `epi-gerenciar`:
+        declarar o que a empresa passa a exigir em campo é configuração do mesmo
+        cadastro que essa permissão já governa, e é o que as rotas exigem do
+        lado de lá. Esconder aqui é conveniência visual; quem protege é a rota.
+      -->
+      <ExigenciasDeEpiDoServico v-if="podeExigirEpi" :service-id="service.id" />
     </div>
   </AuthenticatedLayout>
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import ExigenciasDeEpiDoServico from '@/Components/ExigenciasDeEpiDoServico.vue';
+import { usePermissoes } from '@/composables/usePermissoes';
+import { useModulos } from '@/composables/useModulos';
 
 const props = defineProps({
   service: Object,
   errors: Object,
 });
+
+const { pode } = usePermissoes();
+const { temModulo } = useModulos();
+
+const podeExigirEpi = computed(() => temModulo('epi') && pode('epi-gerenciar'));
 
 const form = useForm({
   name: props.service.name || '',
