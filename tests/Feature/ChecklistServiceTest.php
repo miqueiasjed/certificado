@@ -542,6 +542,111 @@ class ChecklistServiceTest extends TestCase
         );
     }
 
+    // -----------------------------------------------------------------
+    // Item de EPI: o que a Task 29.6 acrescentou
+    // -----------------------------------------------------------------
+
+    /**
+     * 21:30 de Brasília já é 00:30 do dia seguinte em UTC, e é aí que a régua do
+     * checklist deixaria de bater com a do alerta se ele tivesse a sua própria.
+     * O item que deve ser trocado **hoje** não é irregularidade: o técnico ainda
+     * está em campo com um equipamento dentro do prazo.
+     *
+     * O checklist não compara data nenhuma — ele lê `SituacaoDeEpiService`, que
+     * lê `AlertaDeEpiService::trocaVencida()`. Este teste falha no dia em que
+     * alguém escrever a terceira comparação, aqui dentro.
+     */
+    public function test_as_21h30_de_brasilia_a_troca_que_vence_hoje_nao_deixa_o_item_irregular(): void
+    {
+        $this->fixarRelogioEm(self::HOJE, '21:30');
+        $this->ligarModuloDeEpi($this->empresaA);
+
+        $tecnico = $this->criarTecnico($this->empresaA, 'Ana Souza');
+        $epi = $this->criarEpi($this->empresaA, ['vida_util_dias' => 30]);
+
+        // Entregue há exatamente 30 dias: a troca cai no dia de hoje em
+        // Brasília.
+        $entrega = $this->entregar($this->empresaA, $tecnico, $epi, $this->diaEmBrasilia(-30), assinada: true);
+
+        $this->assertSame(
+            self::HOJE,
+            BusinessDate::diaDe($entrega->trocar_ate),
+            'o cenário só vale se a troca cair exatamente no dia de hoje em Brasília'
+        );
+
+        $item = $this->itemDeEpi($this->empresaA);
+
+        $this->assertSame(
+            ComplianceCheck::SITUACAO_REGULAR,
+            $item['situacao'],
+            'às 21:30 de Brasília ainda é hoje: o item a trocar hoje não pode acusar troca vencida'
+        );
+        $this->assertStringNotContainsString('troca vencida', $item['detalhe']);
+    }
+
+    /**
+     * Inativar é como esta empresa aposenta o modelo de EPI substituído por
+     * outro. O que era irregular por falta de entrega volta a ser cadastro em
+     * branco — nunca uma pendência permanente sobre um equipamento que o próprio
+     * sistema recusa entregar.
+     */
+    public function test_inativar_o_ultimo_epi_obrigatorio_devolve_o_item_para_nao_aplicavel(): void
+    {
+        $this->ligarModuloDeEpi($this->empresaA);
+
+        $epi = $this->criarEpi($this->empresaA);
+        $this->criarTecnico($this->empresaA, 'Carla Dias');
+
+        $this->assertSame(
+            ComplianceCheck::SITUACAO_IRREGULAR,
+            $this->itemDeEpi($this->empresaA)['situacao'],
+            'com EPI obrigatório cadastrado e ninguém tendo recebido, o item é irregular'
+        );
+
+        $this->naEmpresa($this->empresaA, fn () => $epi->update(['ativo' => false]));
+
+        $item = $this->itemDeEpi($this->empresaA);
+
+        $this->assertSame(
+            ComplianceCheck::SITUACAO_NAO_APLICAVEL,
+            $item['situacao'],
+            'EPI aposentado não sustenta pendência: cobrar o que não se usa mais é pendência sem saída'
+        );
+        $this->assertStringContainsString('ainda não foi preenchido', $item['detalhe']);
+    }
+
+    /**
+     * Devolvida é item que voltou ao estoque, e o técnico está sem equipamento
+     * nenhum. O checklist não pode continuar verde por causa de uma entrega que
+     * terminou — é exatamente o silêncio indevido que o Plano 28 já corrigiu no
+     * alerta semanal.
+     */
+    public function test_entrega_devolvida_nao_sustenta_o_item_regular(): void
+    {
+        $this->ligarModuloDeEpi($this->empresaA);
+
+        $tecnico = $this->criarTecnico($this->empresaA, 'Bruno Lima');
+        $epi = $this->criarEpi($this->empresaA);
+
+        $entrega = $this->entregar($this->empresaA, $tecnico, $epi, $this->diaEmBrasilia(-10), assinada: true);
+
+        $this->assertSame(ComplianceCheck::SITUACAO_REGULAR, $this->itemDeEpi($this->empresaA)['situacao']);
+
+        $this->naEmpresa($this->empresaA, fn () => $entrega->update([
+            'devolvido_em' => $this->diaEmBrasilia(-1),
+            'motivo_devolucao' => 'Equipamento danificado, devolvido ao almoxarifado.',
+        ]));
+
+        $item = $this->itemDeEpi($this->empresaA);
+
+        $this->assertSame(
+            ComplianceCheck::SITUACAO_IRREGULAR,
+            $item['situacao'],
+            'com o equipamento devolvido o técnico está sem nada, e o checklist precisa dizer isso'
+        );
+        $this->assertStringContainsString('1 que nunca recebeu EPI obrigatório', $item['detalhe']);
+    }
+
     /**
      * O contrato que o sistema emite promete ao cliente que a equipe usa EPI. A
      * ressalva não pode mais dizer que EPI é parte do que o sistema não

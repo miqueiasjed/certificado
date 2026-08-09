@@ -535,6 +535,14 @@ class VazamentoEntreEmpresasTest extends TestCase
             ['POST', "/contracts/{$dois['contract']->id}/renovar"],
             ['POST', "/contracts/{$dois['contract']->id}/nao-renovar"],
             ['POST', "/contracts/{$dois['contract']->id}/em-negociacao"],
+            // EPI exigido por serviço (Plano 29, Task 29.3). As duas rotas com
+            // binding não têm `{base}.show/edit` no padrão de
+            // `basesDeRecurso()` — o cadastro é uma aba dentro do serviço, sem
+            // resource completo —, então entram aqui, e não lá. É a declaração
+            // que esta guarda exige de toda rota nova que recebe Model por
+            // rota.
+            ['PUT', "/epis/exigencias/{$dois['servicePpeRequirement']->id}"],
+            ['DELETE', "/epis/exigencias/{$dois['servicePpeRequirement']->id}"],
         ];
 
         foreach ($casos as [$metodo, $url]) {
