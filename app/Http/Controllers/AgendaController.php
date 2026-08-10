@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\AtribuicaoTecnicoRequest;
 use App\Http\Requests\ReagendamentoRequest;
 use App\Http\Requests\TecnicosDisponiveisRequest;
+use App\Models\Compromisso;
 use App\Models\Service;
 use App\Models\Technician;
 use App\Models\WorkOrder;
@@ -55,6 +56,47 @@ class AgendaController extends Controller
         }
 
         return $this->workOrderAccessService->aplicarEscopoDoUsuario($query, $usuario);
+    }
+
+    /**
+     * Restringe a consulta de compromissos avulsos aos que o usuário
+     * autenticado pode enxergar (Plano 30, Task 30.4): papel `tecnico` só
+     * enxerga os compromissos do próprio `technician_id`; sem cadastro de
+     * técnico vinculado, enxerga zero. Mesmo critério de
+     * `WorkOrderAccessService::aplicarEscopoDoUsuario()`.
+     *
+     * Duplicado aqui, e não estendido em `WorkOrderAccessService`, porque
+     * aquele serviço também confere a pivot `work_order_technicians`, que
+     * `Compromisso` não tem (não existe equipe em compromisso avulso, só o
+     * técnico responsável). Esta task (30.4) também não modifica
+     * `WorkOrderAccessService`, que é lido, mas não alterado, na
+     * especificação.
+     */
+    private function escoparCompromissosPorUsuario($query)
+    {
+        $usuario = Auth::user();
+
+        if (! $usuario) {
+            return $query;
+        }
+
+        if ($usuario->hasRole('administrador')) {
+            return $query;
+        }
+
+        if (! $usuario->hasRole('tecnico')) {
+            return $query;
+        }
+
+        $tecnico = $usuario->technician;
+
+        // Técnico sem cadastro vinculado (technicians.user_id) enxerga zero
+        // compromissos. Nunca todos.
+        if (! $tecnico) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('technician_id', $tecnico->id);
     }
 
     /**
@@ -109,8 +151,14 @@ class AgendaController extends Controller
     }
 
     /**
-     * Dados em JSON das ordens de serviço agendadas no período informado,
-     * com os filtros de técnico, tipo de serviço, situação e cidade.
+     * Dados em JSON das ordens de serviço e dos compromissos avulsos
+     * agendados no período informado, mesclados numa única lista, com os
+     * filtros de técnico, tipo de serviço, situação e cidade (Plano 10 e
+     * Plano 30, Task 30.4).
+     *
+     * A chave da resposta continua `ordens`, de propósito: é o nome que o
+     * frontend já consome desde o Plano 10, e a mudança desta task é
+     * aditiva, não uma quebra de contrato.
      */
     public function dados(Request $request)
     {
@@ -125,12 +173,13 @@ class AgendaController extends Controller
 
         $filtros = $request->only(['technician_id', 'service_id', 'status', 'cidade']);
 
-        $consulta = $this->escoparPorUsuario(WorkOrder::query());
+        $consultaDeOs = $this->escoparPorUsuario(WorkOrder::query());
+        $consultaDeCompromissos = $this->escoparCompromissosPorUsuario(Compromisso::query());
 
-        $ordens = $this->agendaService->doPeriodo($inicio, $fim, $filtros, $consulta);
+        $itens = $this->agendaService->doPeriodo($inicio, $fim, $filtros, $consultaDeOs, $consultaDeCompromissos);
 
         return response()->json([
-            'ordens' => $ordens,
+            'ordens' => $itens,
             'periodo' => [
                 'inicio' => $inicio,
                 'fim' => $fim,
