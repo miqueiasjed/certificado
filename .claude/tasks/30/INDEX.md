@@ -8,12 +8,12 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 30.1 | Model Compromisso, factory e registro multiempresa | backend-estrutura | ⏳ | baixa |
-| 30.2 | CompromissoService: ciclo de vida e promoção para OS | backend-logica | ⏳ | média |
-| 30.3 | Endpoints, permissões e rotas do compromisso | backend-endpoint | ⏳ | alta |
-| 30.4 | Agenda mescla ordens de serviço e compromissos | backend-logica | ⏳ | média |
-| 30.5 | Frontend: compromisso na Agenda | frontend-pagina | ⏳ | alta |
-| 30.6 | Testes de endpoint e da mescla na Agenda | teste | ⏳ | média |
+| 30.1 | Model Compromisso, factory e registro multiempresa | backend-estrutura | ✅ | baixa |
+| 30.2 | CompromissoService: ciclo de vida e promoção para OS | backend-logica | ✅ | média |
+| 30.3 | Endpoints, permissões e rotas do compromisso | backend-endpoint | ✅ | alta |
+| 30.4 | Agenda mescla ordens de serviço e compromissos | backend-logica | ✅ | média |
+| 30.5 | Frontend: compromisso na Agenda | frontend-pagina | ✅ | alta |
+| 30.6 | Testes de endpoint e da mescla na Agenda | teste | ✅ | média |
 
 ## Ordem de execução
 
@@ -84,3 +84,31 @@ lançar compromisso no dia a dia.
 - Plano 31 (compromissos na roteirização) só começa depois deste plano
   concluído: `RouteService` precisa do model `Compromisso` (30.1) e do
   `CompromissoService` (30.2) prontos para montar e promover paradas.
+
+## Execução (10/08/2026)
+
+Todas as 6 tasks concluídas na worktree `certificado-plano30`, branch
+`plano-30-compromissos-agenda`, exatamente na ordem de lotes prevista acima.
+Suíte completa: 1755 testes, 12922 asserções, 0 falhas. `npm run build` limpo.
+
+Duas correções nasceram da revisão do orquestrador entre tasks, fora do
+escopo literal de qualquer uma:
+
+1. **Task 30.1 tinha um bug de fuso**: `hora_inicio`/`hora_fim` são coluna
+   `TIME` pura, mas o model saiu com cast `'datetime'`, reintroduzindo o
+   exato bug já corrigido no Plano 1 para `ServiceOrder`. Corrigido antes de
+   aceitar a task (removido o cast, mesmo critério de `ServiceOrder`).
+2. **Lacuna entre Task 30.4 e Task 30.5**: `formatarCompromisso()` não
+   expunha `work_order_id` nem `observacoes`, mas o critério de aceitação da
+   própria 30.5 pedia o botão "Promover para OS" desabilitado quando já
+   promovido. Corrigido expondo os dois campos em `AgendaService` e
+   ajustando a lista de chaves travada em `AgendaTest`; o frontend passou a
+   ler `work_order_id` direto da lista em vez do `Set` de sessão que a Task
+   30.5 usou como contorno.
+3. **`VazamentoEntreEmpresasTest` acusou `Compromisso` sem dado no cenário**
+   de vazamento entre dois tenants, só ao rodar a suíte completa (nenhum
+   filtro por task pega isso). Corrigido acrescentando um compromisso por
+   tenant ao cenário, mesmo critério já usado para `appointmentRequest`.
+
+Nenhuma das três exigiu nova decisão de produto: são correções de
+consistência com padrões já estabelecidos no projeto.

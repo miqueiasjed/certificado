@@ -1,11 +1,14 @@
 # INDEX - Planos do Sistema de Certificados
 
-> Última atualização: 10/08/2026. Os planos 1 a 29 estão concluídos (1 a 28
-> mergeados em `main`, o 29 aguarda merge; nada publicado, push pendente de
-> autorização). Os planos 30 e 31 (compromisso avulso, sem OS, na agenda e na
-> rota) são novos, ainda sem tasks: nasceram de uma lacuna levantada em
-> conversa com o usuário em 10/08/2026, fora do roteiro original, mesma
-> origem dos planos 28 e 29.
+> Última atualização: 10/08/2026. Os planos 1 a 30 estão concluídos (1 a 28
+> mergeados em `main`, 29 e 30 aguardam merge; nada publicado, push pendente
+> de autorização). O plano 30 (compromisso avulso, sem OS, na agenda) rodou
+> na worktree `certificado-plano30`, branch `plano-30-compromissos-agenda`.
+> O plano 31 (o mesmo compromisso entrando na rota) já tem as 5 tasks
+> decompostas em `.claude/tasks/31/` e está desbloqueado agora que o 30
+> terminou, mas ainda não foi executado. Os dois nasceram de uma lacuna
+> levantada em conversa com o usuário em 10/08/2026, fora do roteiro
+> original, mesma origem dos planos 28 e 29.
 > Fonte de requisitos: `.claude/prd/` (índice em `.claude/prd/README.md`)
 
 ## Legenda
@@ -52,7 +55,7 @@ bloqueio.
 | 11 | QR code e identificação de dispositivos | ✅ | 4 | 9 |
 | 12 | App do técnico: fundação offline | ✅ | 2, 4, 10 | 12 |
 | 13 | App do técnico: execução e assinatura em campo | ✅ | 3, 11, 12 | 10 |
-| 30 | Compromissos avulsos: cadastro e agenda | ⏳ | 2, 4, 10 | 6 |
+| 30 | Compromissos avulsos: cadastro e agenda | ✅ | 2, 4, 10 | 6 |
 
 ### Relacionamento com o cliente
 
@@ -96,9 +99,8 @@ bloqueio.
 | 28 | Controle de EPI: cadastro, CA e ficha de entrega | ✅ | 6, 13, 14 | 7 |
 | 29 | EPI em campo e na conformidade | ✅ | 28, 13, 24 | 6 |
 
-Total: 275 tasks decompostas nos 29 planos concluídos. O Plano 30 decompôs em
-6 tasks (`.claude/tasks/30/`) e o Plano 31 em 5 (`.claude/tasks/31/`), nenhum
-dos dois ainda executado.
+Total: 281 tasks decompostas nos 30 planos concluídos. O Plano 31 decompôs em
+5 tasks (`.claude/tasks/31/`), ainda não executado.
 
 A decomposição real ficou ~40% acima da estimativa inicial de ~185 tasks. O
 motivo é o limite de dimensionamento: nenhuma task mistura backend com frontend,
