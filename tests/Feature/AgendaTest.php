@@ -6,6 +6,7 @@ use App\Models\Address;
 use App\Models\AuditLog;
 use App\Models\Client;
 use App\Models\Company;
+use App\Models\Compromisso;
 use App\Models\Service;
 use App\Models\Technician;
 use App\Models\User;
@@ -13,6 +14,7 @@ use App\Models\WorkOrder;
 use App\Support\TenantAtual;
 use Database\Factories\AddressFactory;
 use Database\Factories\ClientFactory;
+use Database\Factories\CompromissoFactory;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -164,6 +166,10 @@ class AgendaTest extends TestCase
 
         $this->assertSame([
             'id',
+            // Campo novo, aditivo (Task 30.4): distingue OS de compromisso
+            // avulso na lista mesclada da agenda. O resto do formato do item
+            // de OS não muda, e é isso que o restante desta asserção prova.
+            'tipo_item',
             'numero',
             'data',
             'hora_inicio',
@@ -179,6 +185,7 @@ class AgendaTest extends TestCase
             'origem',
         ], array_keys($item), 'o formato do item da agenda mudou: o calendário depende dessas chaves');
 
+        $this->assertSame('os', $item['tipo_item']);
         $this->assertSame($ordem->id, $item['id']);
         $this->assertSame($ordem->order_number, $item['numero']);
         $this->assertSame(self::DIA, $item['data']);
@@ -198,6 +205,184 @@ class AgendaTest extends TestCase
         $this->getJson('/agenda/dados?inicio=01/08/2026&fim=31/08/2026')->assertStatus(422);
         $this->getJson('/agenda/dados?inicio=2026-02-30&fim=2026-03-01')->assertStatus(422);
         $this->getJson('/agenda/dados')->assertStatus(422);
+    }
+
+    /**
+     * Compatibilidade explícita: sem nenhum `Compromisso` cadastrado no
+     * período, o item de OS que `/agenda/dados` devolve precisa continuar
+     * exatamente como antes da Task 30.4, a não ser pelo campo aditivo
+     * `tipo_item`. O caso 1 acima já teria acusado uma regressão de campo
+     * (é o mesmo `assertSame` de chaves), mas este caso isola a garantia como
+     * entregável da Task 30.6, sem depender de nenhum outro cenário do
+     * arquivo.
+     */
+    public function test_sem_compromisso_no_periodo_a_resposta_nao_regride_no_formato_do_item_de_os(): void
+    {
+        $ordem = $this->criarOrdem([
+            'scheduled_date' => self::DIA,
+            'technician_id' => $this->ana->id,
+            'service_id' => $this->desinsetizacao->id,
+            'status' => 'scheduled',
+        ]);
+
+        $resposta = $this->getJson($this->urlDeDados());
+
+        $resposta->assertOk();
+
+        $itens = $resposta->json('ordens');
+
+        $this->assertCount(1, $itens, 'sem compromisso cadastrado no período, só a ordem deveria aparecer');
+
+        $item = $itens[0];
+
+        $this->assertSame('os', $item['tipo_item']);
+        $this->assertSame($ordem->id, $item['id']);
+        $this->assertSame([
+            'id',
+            'tipo_item',
+            'numero',
+            'data',
+            'hora_inicio',
+            'hora_fim',
+            'cliente',
+            'endereco',
+            'cidade',
+            'servico',
+            'status',
+            'status_texto',
+            'tecnico',
+            'sem_tecnico',
+            'origem',
+        ], array_keys($item), 'o item de OS não pode perder nem ganhar campo além do tipo_item aditivo');
+    }
+
+    // -----------------------------------------------------------------
+    // Compromisso avulso na agenda (Plano 30, Tasks 30.4 e 30.6)
+    // -----------------------------------------------------------------
+
+    /**
+     * A mescla da Task 30.4: OS e compromisso no mesmo período, cada um
+     * marcado com o `tipo_item` certo e no formato próprio (o de compromisso
+     * não tem `numero`, `servico` nem `origem` - conceitos que não existem
+     * para ele).
+     */
+    public function test_dados_devolve_a_os_e_o_compromisso_do_periodo_cada_um_com_o_tipo_item_correto(): void
+    {
+        $ordem = $this->criarOrdem([
+            'scheduled_date' => self::DIA,
+            'technician_id' => $this->ana->id,
+            'service_id' => $this->desinsetizacao->id,
+            'status' => 'scheduled',
+        ]);
+
+        $compromisso = $this->criarCompromisso([
+            'tipo' => 'orcamento',
+            'titulo' => 'Visita de orçamento',
+            'technician_id' => $this->bruno->id,
+            'data' => self::DIA,
+            'hora_inicio' => '08:00:00',
+            'hora_fim' => '09:00:00',
+        ]);
+
+        $resposta = $this->getJson($this->urlDeDados());
+
+        $resposta->assertOk();
+
+        $itens = $resposta->json('ordens');
+
+        $this->assertCount(2, $itens, 'a agenda deveria trazer a ordem e o compromisso juntos');
+
+        $itemDaOrdem = collect($itens)->firstWhere('tipo_item', 'os');
+        $itemDoCompromisso = collect($itens)->firstWhere('tipo_item', 'compromisso');
+
+        $this->assertNotNull($itemDaOrdem, 'a ordem de serviço não veio marcada como tipo_item "os"');
+        $this->assertNotNull($itemDoCompromisso, 'o compromisso não veio marcado como tipo_item "compromisso"');
+
+        $this->assertSame($ordem->id, $itemDaOrdem['id']);
+        $this->assertSame($compromisso->id, $itemDoCompromisso['id']);
+
+        $this->assertSame([
+            'id',
+            'tipo_item',
+            'tipo',
+            'titulo',
+            'data',
+            'hora_inicio',
+            'hora_fim',
+            'cliente',
+            'endereco',
+            'cidade',
+            'situacao',
+            'situacao_texto',
+            'tecnico',
+            'sem_tecnico',
+        ], array_keys($itemDoCompromisso), 'o formato do item de compromisso na agenda mudou');
+
+        $this->assertSame('orcamento', $itemDoCompromisso['tipo']);
+        $this->assertSame('Visita de orçamento', $itemDoCompromisso['titulo']);
+        $this->assertSame(self::DIA, $itemDoCompromisso['data']);
+        $this->assertSame('08:00', $itemDoCompromisso['hora_inicio']);
+        $this->assertSame('09:00', $itemDoCompromisso['hora_fim']);
+        $this->assertSame(['id' => $this->bruno->id, 'nome' => 'Bruno Souza'], $itemDoCompromisso['tecnico']);
+        $this->assertFalse($itemDoCompromisso['sem_tecnico']);
+        $this->assertSame('agendado', $itemDoCompromisso['situacao']);
+        $this->assertSame('Agendado', $itemDoCompromisso['situacao_texto']);
+    }
+
+    /**
+     * Mesmo critério de `WorkOrderAccessService`, mas para `Compromisso`
+     * (`AgendaController::escoparCompromissosPorUsuario()`): o papel
+     * `tecnico` só enxerga os compromissos do próprio `technician_id`. Não
+     * repete o caso 6 acima, que já prova o escopo equivalente para OS - aqui
+     * o alvo é só o compromisso.
+     */
+    public function test_tecnico_autenticado_so_recebe_os_proprios_compromissos(): void
+    {
+        $usuarioDaAna = $this->criarUsuario('tecnico', 'Ana Ferreira');
+        $this->ana->update(['user_id' => $usuarioDaAna->id]);
+
+        $usuarioDoBruno = $this->criarUsuario('tecnico', 'Bruno Souza');
+        $this->bruno->update(['user_id' => $usuarioDoBruno->id]);
+
+        $daAna = $this->criarCompromisso(['technician_id' => $this->ana->id]);
+        $doBruno = $this->criarCompromisso(['technician_id' => $this->bruno->id]);
+        $semTecnico = $this->criarCompromisso();
+
+        $idsDaAna = $this->idsDeCompromissosDaAgenda($usuarioDaAna);
+
+        $this->assertSame([$daAna->id], $idsDaAna, 'o técnico só deveria enxergar o próprio compromisso');
+        $this->assertNotContains($doBruno->id, $idsDaAna);
+        $this->assertNotContains($semTecnico->id, $idsDaAna);
+
+        // O administrador continua vendo todos: sem isto, o escopo poderia
+        // estar simplesmente quebrado para todo mundo.
+        $idsDoAdministrador = $this->idsDeCompromissosDaAgenda($this->administrador);
+
+        $this->assertEqualsCanonicalizing([$daAna->id, $doBruno->id, $semTecnico->id], $idsDoAdministrador);
+    }
+
+    /**
+     * Mesmo critério do caso 2 acima (`aplicarFiltroDeSituacao`, para OS),
+     * agora para `aplicarFiltroDeSituacaoDoCompromisso`: sem filtro de
+     * situação informado, o compromisso cancelado fica de fora; informado
+     * (mesmo que só com "cancelado"), ele reaparece.
+     */
+    public function test_compromisso_cancelado_nao_aparece_sem_o_filtro_de_situacao_pedir(): void
+    {
+        $agendado = $this->criarCompromisso(['situacao' => 'agendado']);
+        $cancelado = $this->criarCompromisso(['situacao' => 'cancelado']);
+
+        $this->assertSame(
+            [$agendado->id],
+            $this->idsDeCompromissosDaAgenda(),
+            'sem filtro de situação o compromisso cancelado deveria ficar de fora'
+        );
+
+        $this->assertSame(
+            [$cancelado->id],
+            $this->idsDeCompromissosDaAgenda(null, ['status' => ['cancelado']]),
+            'com o filtro de situação informado, o cancelado volta a aparecer'
+        );
     }
 
     // -----------------------------------------------------------------
@@ -980,6 +1165,22 @@ class AgendaTest extends TestCase
     }
 
     /**
+     * Compromisso avulso do cenário (Task 30.4/30.6): mesmo dia e mesmo
+     * cliente/endereço padrão das ordens de serviço (`self::DIA`,
+     * `clienteCampinas`/`enderecoCampinas`), salvo o que `$atributos`
+     * sobrescrever.
+     */
+    private function criarCompromisso(array $atributos = []): Compromisso
+    {
+        return CompromissoFactory::new()->create(array_merge([
+            'client_id' => $this->clienteCampinas->id,
+            'address_id' => $this->enderecoCampinas->id,
+            'data' => self::DIA,
+            'situacao' => 'agendado',
+        ], $atributos));
+    }
+
+    /**
      * Consultas executadas em uma requisição da agenda, com as ordens
      * devolvidas.
      *
@@ -1023,5 +1224,28 @@ class AgendaTest extends TestCase
         $resposta->assertOk();
 
         return array_column($resposta->json('ordens'), 'id');
+    }
+
+    /**
+     * Ids dos itens de compromisso avulso (`tipo_item === 'compromisso'`)
+     * devolvidos por `GET /agenda/dados`, na ordem em que a agenda os
+     * entrega. Ignora os itens de OS da mesma resposta.
+     *
+     * @return array<int, int>
+     */
+    private function idsDeCompromissosDaAgenda(?User $usuario = null, array $filtros = []): array
+    {
+        $resposta = $usuario
+            ? $this->actingAs($usuario)->getJson($this->urlDeDados($filtros))
+            : $this->getJson($this->urlDeDados($filtros));
+
+        $resposta->assertOk();
+
+        $itens = array_filter(
+            $resposta->json('ordens'),
+            fn (array $item): bool => $item['tipo_item'] === 'compromisso'
+        );
+
+        return array_column($itens, 'id');
     }
 }
