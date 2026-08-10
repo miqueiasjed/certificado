@@ -465,6 +465,11 @@ final class DominioMultiempresa
                 'colunas' => ['route_id', 'work_order_id'],
                 'motivo' => 'Unique composta sobre as duas chaves estrangeiras (Plano 22, Task 22.1): o roteiro (route_id) já pertence a uma empresa só, então a unique não bloqueia o segundo tenant, mesmo raciocínio já registrado para device_positions.floor_plan_id_device_id_unique.',
             ],
+            [
+                'indice' => 'route_stops_route_id_compromisso_id_unique',
+                'colunas' => ['route_id', 'compromisso_id'],
+                'motivo' => 'Unique composta sobre as duas chaves estrangeiras (Plano 31): o roteiro (route_id) já pertence a uma empresa só, então a unique não bloqueia o segundo tenant, mesmo raciocínio já registrado para route_stops_route_id_work_order_id_unique.',
+            ],
         ],
         'notification_queue' => [
             [
