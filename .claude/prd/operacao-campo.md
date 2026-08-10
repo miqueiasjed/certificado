@@ -32,6 +32,33 @@ tem.
 - Visita sem técnico atribuído aparece destacada, para não ser esquecida.
 - Carga de trabalho por técnico no período, para distribuir serviço.
 
+## Compromisso avulso, sem OS
+
+Agenda e roteirização hoje são 100% projeção de `work_orders`: `AgendaService`
+lê `scheduled_date` da OS, e `route_stops.work_order_id` é `NOT NULL`. Não
+existe caminho para colocar no calendário ou numa rota algo que não seja
+uma OS já cadastrada.
+
+Levantado em conversa com o usuário em 10/08/2026: existem compromissos reais
+que não justificam abrir uma OS. Visita de orçamento para quem ainda não é
+cliente, checagem de garantia fora do ciclo de visitas do contrato, ou
+qualquer outro motivo que o técnico precisa ter no dia sem que uma OS nasça
+para isso. Precisam aparecer na agenda e poder entrar num roteiro do mesmo
+jeito que uma OS entra hoje.
+
+Requisitos:
+
+- Compromisso é entidade própria, desacoplada de `WorkOrder` desde a raiz, com
+  tipo fechado (orçamento, garantia, retorno, outro), cliente e endereço
+  opcionais (cobre quem ainda não é cliente cadastrado) e técnico opcional.
+- Aparece na Agenda junto com as OS do período, visualmente distinto.
+- Pode virar parada de um roteiro, junto com paradas de OS no mesmo dia e
+  técnico.
+- Pode, mais tarde, originar uma OS de verdade (ex.: orçamento aprovado), sem
+  que isso seja obrigatório: compromisso que nunca vira OS continua válido.
+- Não substitui nada do fluxo de OS: não gera cobrança, não entra no
+  checklist de conformidade RDC 622/2022, não emite certificado.
+
 ## Identificação de dispositivos por QR code
 
 `devices` tem `label`, `number` (código de etiqueta), `bait_type_id` e

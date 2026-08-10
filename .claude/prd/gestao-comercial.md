@@ -37,6 +37,8 @@ Depende de geolocalização, que não existe: `addresses` não tem `latitude` ne
 - Registro do local de início e de fim da execução, para comprovar atendimento.
 - Rastreamento contínuo do técnico é monitoramento de pessoa. Fica opcional, com
   ciência do funcionário, e desligado por padrão.
+- Roteiro do dia aceita parada de compromisso avulso, sem OS por trás, junto
+  das paradas de OS (ver "Compromisso avulso, sem OS" em `operacao-campo.md`).
 
 ## Frota
 
