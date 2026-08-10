@@ -7,14 +7,20 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * `PUT /roteiros/{route}/ordem` (Plano 22, Task 22.5): reordenação manual.
  *
- * Contrato escolhido (decisão de design documentada, a task deixava em
- * aberto entre "lista de `work_order_id`" e "`route_stop_id` + `ordem`"):
- * `work_order_ids`, a lista de identificadores de OS na nova ordem desejada,
- * do primeiro ao último. Mais simples para o frontend montar (arrastar e
- * soltar cartões que já mostram a OS, sem precisar saber o id interno de
- * `RouteStop`) e mais fácil de validar de uma vez (a lista precisa bater
- * exatamente com as paradas atuais do roteiro - `RouteService::reordenarManualmente()`
- * confere isso).
+ * Contrato trocado na Task 31.3 (Plano 31): com `Compromisso` como segunda
+ * origem possível de parada (ao lado de `WorkOrder`), `work_order_ids: [int]`
+ * deixou de identificar toda parada do roteiro. O corpo passa a ser
+ * `paradas: [string]`, cada item no formato `"os:{id}"` ou
+ * `"compromisso:{id}"` (ex.: `["os:12", "compromisso:5", "os:7"]`) - mantém
+ * o corpo um array plano de strings, mais simples de montar no frontend
+ * (arrastar e soltar cartões que já sabem o próprio tipo e id) do que uma
+ * lista de objetos, e mais simples de validar com uma regra de formato só.
+ * A lista continua precisando bater exatamente com as paradas atuais do
+ * roteiro - `RouteService::reordenarManualmente()` confere isso.
+ *
+ * Sem período de transição entre os dois contratos: backend e frontend
+ * mudam juntos dentro do Plano 31, então o formato antigo (`work_order_ids`)
+ * não é mais aceito.
  */
 class ReordenarRotaRequest extends FormRequest
 {
@@ -29,8 +35,8 @@ class ReordenarRotaRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'work_order_ids' => ['required', 'array', 'min:1'],
-            'work_order_ids.*' => ['required', 'integer'],
+            'paradas' => ['required', 'array', 'min:1'],
+            'paradas.*' => ['required', 'string', 'regex:/^(os|compromisso):\d+$/'],
         ];
     }
 
@@ -40,11 +46,12 @@ class ReordenarRotaRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'work_order_ids.required' => 'Informe a nova ordem das paradas.',
-            'work_order_ids.array' => 'A nova ordem precisa ser uma lista de ordens de serviço.',
-            'work_order_ids.min' => 'Informe ao menos uma parada.',
-            'work_order_ids.*.required' => 'Cada posição da lista precisa de uma ordem de serviço.',
-            'work_order_ids.*.integer' => 'Cada ordem de serviço informada é inválida.',
+            'paradas.required' => 'Informe a nova ordem das paradas.',
+            'paradas.array' => 'A nova ordem precisa ser uma lista de paradas.',
+            'paradas.min' => 'Informe ao menos uma parada.',
+            'paradas.*.required' => 'Cada posição da lista precisa de uma parada.',
+            'paradas.*.string' => 'Cada parada informada é inválida.',
+            'paradas.*.regex' => 'Cada parada informada é inválida.',
         ];
     }
 }

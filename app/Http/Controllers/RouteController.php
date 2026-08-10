@@ -161,8 +161,9 @@ class RouteController extends Controller
 
     /**
      * `PUT /roteiros/{route}/ordem`: reordenação manual. Corpo esperado:
-     * `{ "work_order_ids": [3, 1, 2] }`, a lista de OS na nova ordem (ver o
-     * docblock de `ReordenarRotaRequest` para a decisão de contrato).
+     * `{ "paradas": ["os:3", "compromisso:5", "os:2"] }`, a lista mista de
+     * paradas na nova ordem (ver o docblock de `ReordenarRotaRequest` para a
+     * decisão de contrato, Task 31.3).
      *
      * `$this->sedeCoordenada()` passado explicitamente (Task 22.6): ver o
      * docblock de `RouteService::reordenarManualmente()` para o motivo -
@@ -177,7 +178,7 @@ class RouteController extends Controller
         try {
             $rota = $this->routeService->reordenarManualmente(
                 $route,
-                $request->validated('work_order_ids'),
+                $request->validated('paradas'),
                 $request->user(),
                 $this->sedeCoordenada(),
             );
@@ -361,11 +362,38 @@ class RouteController extends Controller
      * só mantém o horário estimado de cada parada consistente com a ordem
      * atual, que pode ter mudado por reordenação manual ou por sincronização
      * desde a última vez que foi calculada.
+     *
+     * ## Parada de compromisso avulso, ao lado de OS (Task 31.3)
+     *
+     * Cada item de `paradas` ramifica por `$parada->eDeCompromisso()` e
+     * ganha `tipo_item` (`'os'` ou `'compromisso'`) - mesmo discriminador já
+     * usado em `AgendaService::doPeriodo()` (Task 30.4), para o frontend não
+     * aprender dois vocabulários diferentes para a mesma ideia. Campos que
+     * já pertencem à própria `RouteStop` (`route_stop_id`, `ordem`,
+     * `chegada_estimada`, `distancia_anterior_km`, `duracao_anterior_min`)
+     * continuam iguais nos dois casos: são derivados da parada, não da
+     * origem.
+     *
+     * Para compromisso: `cliente` vem de `$compromisso->client?->name`
+     * (`null` quando não há cliente vinculado - o compromisso mostra
+     * `compromisso_titulo` no lugar), `endereco` vem do endereço cadastrado
+     * quando existe ou, na ausência de `address_id`, do texto livre
+     * lançado junto do compromisso (`endereco_texto`).
+     * `latitude`/`longitude`/`precisao_geocodificacao` só existem quando há
+     * endereço cadastrado: um endereço só em texto livre não tem coordenada
+     * (mesmo critério que `RouteService::paradasDosCompromissos()` já usa
+     * para montar o roteiro).
      */
     private function apresentarRota(RouteModel $rota): array
     {
         $rota = $this->routeService->chegadaEstimada($rota);
-        $rota->loadMissing(['stops.workOrder.address', 'stops.workOrder.client', 'reordenadaPor:id,name']);
+        $rota->loadMissing([
+            'stops.workOrder.address',
+            'stops.workOrder.client',
+            'stops.compromisso.address',
+            'stops.compromisso.client',
+            'reordenadaPor:id,name',
+        ]);
 
         return [
             'id' => $rota->id,
@@ -379,16 +407,52 @@ class RouteController extends Controller
             'reordenada_por' => $rota->reordenadaPor?->name,
             'reordenada_em' => optional($rota->reordenada_em)->toIso8601String(),
             'paradas' => $rota->stops->map(function (RouteStop $parada): array {
-                $ordem = $parada->workOrder;
-                $endereco = $ordem?->address;
-
-                return [
+                $comum = [
                     'route_stop_id' => $parada->id,
-                    'work_order_id' => $parada->work_order_id,
                     'ordem' => $parada->ordem,
                     'chegada_estimada' => $parada->chegada_estimada,
                     'distancia_anterior_km' => $parada->distancia_anterior_km !== null ? (float) $parada->distancia_anterior_km : null,
                     'duracao_anterior_min' => $parada->duracao_anterior_min,
+                ];
+
+                if ($parada->eDeCompromisso()) {
+                    $compromisso = $parada->compromisso;
+                    $endereco = $compromisso?->address;
+
+                    $item = $comum + [
+                        'tipo_item' => 'compromisso',
+                        'work_order_id' => null,
+                        'compromisso_id' => $parada->compromisso_id,
+                        'cliente' => $compromisso?->client?->name,
+                        'endereco' => $endereco?->full_address ?? $compromisso?->endereco_texto,
+                        'compromisso_titulo' => $compromisso?->titulo,
+                        'compromisso_tipo' => $compromisso?->tipo,
+                    ];
+
+                    // `latitude`/`longitude`/`precisao_geocodificacao` só
+                    // existem quando o compromisso tem endereço cadastrado:
+                    // um endereço só em texto livre (`endereco_texto`) não
+                    // tem coordenada nenhuma para oferecer, diferente de uma
+                    // OS (endereço sempre cadastrado, só às vezes sem
+                    // geocodificação boa) - por isso aqui as chaves ficam de
+                    // fora em vez de `null`, em vez de o frontend precisar
+                    // distinguir "sem coordenada" de "sem endereço".
+                    if ($endereco !== null) {
+                        $item['latitude'] = $endereco->latitude !== null ? (float) $endereco->latitude : null;
+                        $item['longitude'] = $endereco->longitude !== null ? (float) $endereco->longitude : null;
+                        $item['precisao_geocodificacao'] = $endereco->precisao_geocodificacao;
+                    }
+
+                    return $item;
+                }
+
+                $ordem = $parada->workOrder;
+                $endereco = $ordem?->address;
+
+                return $comum + [
+                    'tipo_item' => 'os',
+                    'work_order_id' => $parada->work_order_id,
+                    'compromisso_id' => null,
                     'cliente' => $ordem?->client?->name,
                     'endereco' => $endereco?->full_address,
                     'latitude' => $endereco?->latitude !== null ? (float) $endereco->latitude : null,
