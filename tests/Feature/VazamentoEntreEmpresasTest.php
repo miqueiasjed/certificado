@@ -27,6 +27,7 @@ use App\Models\CompanyAvailabilitySetting;
 use App\Models\CompanyBillingSetting;
 use App\Models\CompanyContractAlertSetting;
 use App\Models\ComplianceCheck;
+use App\Models\Compromisso;
 use App\Models\Contract;
 use App\Models\ContractVisitJustification;
 use App\Models\DailyCashBalance;
@@ -1719,6 +1720,22 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'observacao' => 'Pedido de horario '.$marca,
                 'situacao' => AppointmentRequest::SITUACAO_PENDENTE,
                 'origem' => AppointmentRequest::ORIGEM_PAGINA_PUBLICA,
+            ]);
+
+            // Compromisso avulso (Plano 30). O isolamento entre empresas dos
+            // endpoints (id de outra empresa no corpo, compromisso de outra
+            // empresa pela rota) já tem teste dedicado em
+            // CompromissoEndpointTest. Aqui o objetivo continua sendo só o
+            // model de domínio ter dado no cenário, mesmo critério já usado
+            // para appointmentRequest acima.
+            $dados['compromisso'] = Compromisso::create([
+                'tipo' => Compromisso::TIPOS[0],
+                'titulo' => 'Compromisso '.$marca,
+                'client_id' => $dados['client']->id,
+                'address_id' => $dados['address']->id,
+                'technician_id' => $dados['technician']->id,
+                'data' => '2026-08-20',
+                'situacao' => 'agendado',
             ]);
 
             $dados['satisfactionSurvey'] = SatisfactionSurvey::create([
