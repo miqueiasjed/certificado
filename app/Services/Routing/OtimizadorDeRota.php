@@ -25,7 +25,12 @@ use App\Support\Geo\ResultadoGeo;
  * empacotar estas cinco chaves não paga o custo de mais uma classe. Cada
  * item:
  *
- * - `work_order_id` (int): identifica a parada.
+ * - `work_order_id` (`?int`) e `compromisso_id` (`?int`): identificam a
+ *   parada, exatamente um dos dois preenchido, nunca os dois, nunca nenhum
+ *   (Plano 31, Task 31.2 - `RouteService` mescla OS e compromisso avulso
+ *   como origem de parada). Este método é agnóstico ao conteúdo dessas duas
+ *   chaves: só ecoa `$parada + [...]` sem lê-las, então continua
+ *   funcionando sem nenhuma mudança de código aqui.
  * - `coordenada` (`?Coordenada`): `null` quando o endereço não tem
  *   coordenada.
  * - `precisao_geocodificacao` (`?string`): uma das constantes
@@ -91,8 +96,8 @@ class OtimizadorDeRota
      * partida desconhecida não tem coordenada nenhuma, mesmo critério já
      * usado em `Coordenada::apartirDe()` para endereço sem coordenada.
      *
-     * @param  array<int, array{work_order_id: int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string}>  $paradas
-     * @return array<int, array{work_order_id: int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string, sem_coordenada_boa: bool}>
+     * @param  array<int, array{work_order_id: ?int, compromisso_id: ?int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string}>  $paradas
+     * @return array<int, array{work_order_id: ?int, compromisso_id: ?int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string, sem_coordenada_boa: bool}>
      */
     public function ordenar(array $paradas, ?Coordenada $partida): array
     {

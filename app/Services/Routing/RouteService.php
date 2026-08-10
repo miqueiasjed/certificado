@@ -2,6 +2,7 @@
 
 namespace App\Services\Routing;
 
+use App\Models\Compromisso;
 use App\Models\Route;
 use App\Models\RouteStop;
 use App\Models\Technician;
@@ -124,6 +125,45 @@ use InvalidArgumentException;
  *   desta classe, que marca `ordenacao_manual = true`,
  *   `reordenada_por`/`reordenada_em`, e recalcula distância/duração a partir
  *   da nova sequência (sem chamar o otimizador).
+ *
+ * ## Parada de compromisso avulso, ao lado de OS (Plano 31)
+ *
+ * Até a Task 31.2, toda parada só podia representar uma OS. O Plano 30 criou
+ * o `Compromisso` avulso (visita de orçamento, garantia, retorno, sem OS por
+ * trás), e o Plano 31 faz esta classe tratá-lo como uma segunda origem de
+ * parada, ao lado de `WorkOrder`, em todo método que monta, sincroniza ou
+ * recalcula o roteiro.
+ *
+ * O array de "parada" que circula dentro da classe (o que
+ * `paradasDasOrdens()`/`paradasDosCompromissos()` produzem e que
+ * `OtimizadorDeRota::ordenar()` consome e devolve) tem `work_order_id` e
+ * `compromisso_id`, **exatamente um dos dois preenchido por parada, nunca os
+ * dois, nunca nenhum**. Essa exclusividade é regra desta classe, nunca de
+ * `CHECK` de banco (mesmo critério já registrado na migration
+ * `add_compromisso_to_route_stops_table`). `OtimizadorDeRota::ordenar()` não
+ * precisou mudar: ele só ecoa `$parada + [...]`, então a chave nova atravessa
+ * sem que o otimizador precise conhecê-la.
+ *
+ * Só compromisso com `situacao = 'agendado'` entra no roteiro do dia
+ * (`compromissosAgendadosDoDia()`): `concluido` já aconteceu, não precisa de
+ * deslocamento a planejar; `cancelado` não vai acontecer - mesmo raciocínio
+ * de `SITUACOES_AGENDADAS` para OS. Compromisso sem `address_id` (endereço
+ * só em texto livre, `endereco_texto`) é tratado como "sem coordenada boa",
+ * mesmo critério de OS com endereço não geocodificado: `paradasDosCompromissos()`
+ * só lê `$compromisso->address`, nunca `endereco_texto` (esse campo é para
+ * exibição, quando a Task 31.3 apresentar a parada, não para geocodificação).
+ *
+ * ### Contrato de identificação de parada em `reordenarManualmente()`
+ *
+ * Com duas origens possíveis, `work_order_id` sozinho deixou de identificar
+ * toda parada do roteiro. `reordenarManualmente()` aceita uma string por
+ * parada, no formato `"os:{id}"` ou `"compromisso:{id}"` (ex.: `"os:12"`,
+ * `"compromisso:5"`) - o mesmo contrato que `PUT /roteiros/{route}/ordem`
+ * expõe (`paradas: [string]` no `ReordenarRotaRequest`, Task 31.3), sem
+ * duplicar a decisão. Não existe atalho para um item puramente numérico:
+ * backend e frontend trocaram de contrato juntos dentro do Plano 31, sem
+ * período de transição, então um item fora do formato `"tipo:id"` é
+ * rejeitado antes mesmo de chegar aqui, pela regex do `FormRequest`.
  */
 class RouteService
 {
@@ -194,7 +234,8 @@ class RouteService
         }
 
         $ordens = $this->osAgendadasDoDia($tecnico, $dia);
-        $paradas = $this->paradasDasOrdens($ordens);
+        $compromissos = $this->compromissosAgendadosDoDia($tecnico, $dia);
+        $paradas = array_merge($this->paradasDasOrdens($ordens), $this->paradasDosCompromissos($compromissos));
         $ordenadas = $this->otimizador->ordenar($paradas, $partida);
 
         return DB::transaction(function () use ($tecnico, $dia, $ordenadas, $partida): Route {
@@ -271,7 +312,7 @@ class RouteService
      *
      * @return array{
      *     atual: array{distancia_total_km: ?float, duracao_estimada_min: ?int},
-     *     otimizada: array{distancia_total_km: float, duracao_estimada_min: int, work_order_ids: array<int, int>}
+     *     otimizada: array{distancia_total_km: float, duracao_estimada_min: int, work_order_ids: array<int, ?int>}
      * }
      *
      * @throws InvalidArgumentException Data em formato inválido.
@@ -286,7 +327,8 @@ class RouteService
             ->first();
 
         $ordens = $this->osAgendadasDoDia($tecnico, $dia);
-        $paradas = $this->paradasDasOrdens($ordens);
+        $compromissos = $this->compromissosAgendadosDoDia($tecnico, $dia);
+        $paradas = array_merge($this->paradasDasOrdens($ordens), $this->paradasDosCompromissos($compromissos));
         $ordenadas = $this->otimizador->ordenar($paradas, $partida);
 
         [$distanciaOtimizadaKm, $duracaoOtimizadaMin] = $this->calcularTotaisSemGravar($ordenadas, $partida);
@@ -299,8 +341,12 @@ class RouteService
             'otimizada' => [
                 'distancia_total_km' => $distanciaOtimizadaKm,
                 'duracao_estimada_min' => $duracaoOtimizadaMin,
+                // Nulo nesta lista identifica parada de compromisso avulso
+                // (Plano 31): `work_order_id` sozinho não é mais garantia de
+                // preencher todo item, porque `$ordenadas` agora mistura as
+                // duas origens.
                 'work_order_ids' => array_map(
-                    static fn (array $parada): int => $parada['work_order_id'],
+                    static fn (array $parada): ?int => $parada['work_order_id'],
                     $ordenadas,
                 ),
             ],
@@ -316,7 +362,7 @@ class RouteService
      * o motivo de existir separado de `gravarParadas()` em vez de
      * reaproveitá-lo (aquele grava, este só soma).
      *
-     * @param  array<int, array{work_order_id: int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string}>  $ordenadas
+     * @param  array<int, array{work_order_id: ?int, compromisso_id: ?int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string}>  $ordenadas
      * @return array{0: float, 1: int} Distância total (km) e duração total (min).
      */
     private function calcularTotaisSemGravar(array $ordenadas, ?Coordenada $partida): array
@@ -350,10 +396,20 @@ class RouteService
      * sequência - sem chamar o otimizador, porque a ordem já foi decidida por
      * quem está reordenando.
      *
-     * `$workOrderIdsNaNovaOrdem` precisa conter exatamente os mesmos
-     * `work_order_id` das paradas atuais do roteiro, só reordenados: este
-     * método reordena paradas existentes, não adiciona nem remove nenhuma
-     * (adicionar/remover é o papel de `montar()`/`sincronizarPreservandoOrdemManual()`).
+     * `$paradasNaNovaOrdem` precisa conter exatamente as mesmas paradas
+     * atuais do roteiro, só reordenadas: este método reordena paradas
+     * existentes, não adiciona nem remove nenhuma (adicionar/remover é o
+     * papel de `montar()`/`sincronizarPreservandoOrdemManual()`).
+     *
+     * ## Contrato de identificação de parada (Plano 31, ver cabeçalho da classe)
+     *
+     * Com `Compromisso` como segunda origem possível de parada, um
+     * `work_order_id` sozinho não identifica mais toda parada do roteiro.
+     * Cada item de `$paradasNaNovaOrdem` é uma string no formato `"os:{id}"`
+     * ou `"compromisso:{id}"` - o mesmo contrato que `PUT /roteiros/{route}/ordem`
+     * expõe (Task 31.3). Nenhum outro formato é aceito: sem período de
+     * transição entre o contrato antigo (`work_order_ids: [int]`) e o novo,
+     * backend e frontend trocaram juntos dentro deste plano.
      *
      * ## Bug fechado nesta task (22.6): `distancia_total_km` ficava parado
      *
@@ -379,26 +435,26 @@ class RouteService
      * regra de "sem trecho sede -> primeira parada quando não há sede
      * conhecida" usada em todo o resto da classe.
      *
-     * @param  array<int, int>  $workOrderIdsNaNovaOrdem
+     * @param  array<int, string>  $paradasNaNovaOrdem
      *
      * @throws InvalidArgumentException A lista não bate com as paradas atuais do roteiro.
      */
-    public function reordenarManualmente(Route $rota, array $workOrderIdsNaNovaOrdem, User $usuario, ?Coordenada $partida = null): Route
+    public function reordenarManualmente(Route $rota, array $paradasNaNovaOrdem, User $usuario, ?Coordenada $partida = null): Route
     {
-        $paradas = $rota->stops()->get()->keyBy('work_order_id');
+        $paradas = $rota->stops()->get()->keyBy(fn (RouteStop $parada): string => $this->chaveDaParada($parada));
 
-        $idsInformados = collect($workOrderIdsNaNovaOrdem)->map(fn ($id): int => (int) $id);
-        $idsAtuais = $paradas->keys()->map(fn ($id): int => (int) $id);
+        $chavesInformadas = collect($paradasNaNovaOrdem)->map(fn (string $item): string => $this->normalizarChaveDeParada($item));
+        $chavesAtuais = $paradas->keys();
 
-        if ($idsInformados->count() !== $idsAtuais->count() || $idsInformados->diff($idsAtuais)->isNotEmpty() || $idsAtuais->diff($idsInformados)->isNotEmpty()) {
+        if ($chavesInformadas->count() !== $chavesAtuais->count() || $chavesInformadas->diff($chavesAtuais)->isNotEmpty() || $chavesAtuais->diff($chavesInformadas)->isNotEmpty()) {
             throw new InvalidArgumentException(
-                'A lista de paradas informada precisa conter exatamente as mesmas ordens de serviço que já estão neste roteiro.'
+                'A lista de paradas informada precisa conter exatamente as mesmas paradas que já estão neste roteiro.'
             );
         }
 
-        return DB::transaction(function () use ($rota, $idsInformados, $paradas, $usuario, $partida): Route {
-            foreach ($idsInformados->values() as $indice => $workOrderId) {
-                $paradas[$workOrderId]->update(['ordem' => $indice + 1]);
+        return DB::transaction(function () use ($rota, $chavesInformadas, $paradas, $usuario, $partida): Route {
+            foreach ($chavesInformadas->values() as $indice => $chave) {
+                $paradas[$chave]->update(['ordem' => $indice + 1]);
             }
 
             [$distanciaTotalKm, $duracaoTotalMin] = $this->recalcularDistancias($rota, $partida);
@@ -416,11 +472,42 @@ class RouteService
     }
 
     /**
+     * Chave que identifica uma `RouteStop` já gravada, independente da
+     * origem (OS ou compromisso), no mesmo formato que
+     * `normalizarChaveDeParada()` produz a partir do que
+     * `reordenarManualmente()` recebe. Ver o docblock daquele método para o
+     * contrato completo (Plano 31).
+     */
+    private function chaveDaParada(RouteStop $parada): string
+    {
+        return $parada->eDeCompromisso()
+            ? "compromisso:{$parada->compromisso_id}"
+            : "os:{$parada->work_order_id}";
+    }
+
+    /**
+     * Normaliza um item de `reordenarManualmente()` para a chave interna
+     * `"os:{id}"`/`"compromisso:{id}"`. Sem atalho para valor puramente
+     * numérico (removido na Task 31.3, junto da troca do contrato do
+     * endpoint): o `FormRequest` já exige sempre o formato completo
+     * `"tipo:id"` antes de o valor chegar aqui, então este método só existe
+     * para manter num só lugar a conversão "item recebido -> chave interna",
+     * o mesmo formato que `chaveDaParada()` produz a partir de uma
+     * `RouteStop` já gravada.
+     */
+    private function normalizarChaveDeParada(string $item): string
+    {
+        return $item;
+    }
+
+    /**
      * Caminho de `montar()` quando o roteiro já existe e está com
      * `ordenacao_manual = true`: preserva a ordem das paradas já gravadas e
-     * só sincroniza o que mudou no dia - OS que saiu (cancelada, remarcada
-     * para outro técnico/dia) é removida, OS nova entra no FIM da lista, na
-     * ordem em que aparece (por id), sem embaralhar as demais.
+     * só sincroniza o que mudou no dia - OS/compromisso que saiu (cancelado,
+     * remarcado para outro técnico/dia, ou compromisso cancelado) é
+     * removido, OS/compromisso novo entra no FIM da lista, na ordem em que
+     * aparece (por id, OS primeiro e depois compromisso), sem embaralhar as
+     * demais.
      *
      * Não chama `OtimizadorDeRota::ordenar()`: rodar o otimizador, mesmo só
      * sobre as paradas novas, exigiria decidir onde encaixá-las no meio da
@@ -432,29 +519,56 @@ class RouteService
     private function sincronizarPreservandoOrdemManual(Technician $tecnico, string $dia, Route $rota, ?Coordenada $partida): Route
     {
         $ordens = $this->osAgendadasDoDia($tecnico, $dia)->keyBy('id');
+        $compromissos = $this->compromissosAgendadosDoDia($tecnico, $dia)->keyBy('id');
         $paradasExistentes = $rota->stops()->orderBy('ordem')->get();
 
-        return DB::transaction(function () use ($rota, $ordens, $paradasExistentes, $partida): Route {
-            // Remove parada cuja OS saiu do dia.
+        return DB::transaction(function () use ($rota, $ordens, $compromissos, $paradasExistentes, $partida): Route {
+            // Uma parada ainda pertence ao dia quando a origem dela (OS ou
+            // compromisso) ainda está entre as agendadas para o dia -
+            // qualquer que seja a origem da parada.
+            $aindaNoDia = fn (RouteStop $parada): bool => $parada->eDeCompromisso()
+                ? $compromissos->has($parada->compromisso_id)
+                : $ordens->has($parada->work_order_id);
+
+            // Remove parada cuja OS ou compromisso saiu do dia.
             $paradasExistentes
-                ->reject(fn (RouteStop $parada): bool => $ordens->has($parada->work_order_id))
+                ->reject($aindaNoDia)
                 ->each(fn (RouteStop $parada) => $parada->delete());
 
-            $mantidas = $paradasExistentes->filter(fn (RouteStop $parada): bool => $ordens->has($parada->work_order_id));
+            $mantidas = $paradasExistentes->filter($aindaNoDia);
             $proximaOrdem = ((int) $mantidas->max('ordem')) + 1;
 
             // OS nova (sem parada correspondente ainda) entra no fim, na
             // ordem em que `osAgendadasDoDia()` devolveu (por id).
-            $idsJaNaRota = $mantidas->pluck('work_order_id')->all();
+            $workOrderIdsJaNaRota = $mantidas->pluck('work_order_id')->filter()->all();
 
             foreach ($ordens as $ordem) {
-                if (in_array($ordem->id, $idsJaNaRota, true)) {
+                if (in_array($ordem->id, $workOrderIdsJaNaRota, true)) {
                     continue;
                 }
 
                 RouteStop::query()->create([
                     'route_id' => $rota->id,
                     'work_order_id' => $ordem->id,
+                    'compromisso_id' => null,
+                    'ordem' => $proximaOrdem,
+                ]);
+
+                $proximaOrdem++;
+            }
+
+            // Compromisso novo, mesma lógica, depois das OS novas.
+            $compromissoIdsJaNaRota = $mantidas->pluck('compromisso_id')->filter()->all();
+
+            foreach ($compromissos as $compromisso) {
+                if (in_array($compromisso->id, $compromissoIdsJaNaRota, true)) {
+                    continue;
+                }
+
+                RouteStop::query()->create([
+                    'route_id' => $rota->id,
+                    'work_order_id' => null,
+                    'compromisso_id' => $compromisso->id,
                     'ordem' => $proximaOrdem,
                 ]);
 
@@ -484,14 +598,14 @@ class RouteService
      */
     private function recalcularDistancias(Route $rota, ?Coordenada $partida): array
     {
-        $paradas = $rota->stops()->with('workOrder.address')->orderBy('ordem')->get();
+        $paradas = $rota->stops()->with(['workOrder.address', 'compromisso.address'])->orderBy('ordem')->get();
 
         $anterior = $partida;
         $distanciaTotalKm = 0.0;
         $duracaoTotalMin = 0;
 
         foreach ($paradas as $parada) {
-            $endereco = $parada->workOrder?->address;
+            $endereco = $parada->eDeCompromisso() ? $parada->compromisso?->address : $parada->workOrder?->address;
             $coordenada = Coordenada::apartirDe($endereco?->latitude, $endereco?->longitude);
             $coordenadaUtil = $coordenada instanceof Coordenada
                 && $endereco?->precisao_geocodificacao !== ResultadoGeo::PRECISAO_CIDADE;
@@ -551,10 +665,10 @@ class RouteService
             throw new InvalidArgumentException("Horário de início inválido: \"{$horarioInicio}\".");
         }
 
-        $paradas = $rota->stops()->with('workOrder')->get();
+        $paradas = $rota->stops()->with(['workOrder', 'compromisso'])->get();
 
         foreach ($paradas as $parada) {
-            $horarioCombinado = $parada->workOrder?->start_time;
+            $horarioCombinado = $parada->eDeCompromisso() ? $parada->compromisso?->hora_inicio : $parada->workOrder?->start_time;
 
             if (filled($horarioCombinado)) {
                 $instanteAtual = BusinessDate::paraFusoNegocio($horarioCombinado);
@@ -608,12 +722,35 @@ class RouteService
     }
 
     /**
+     * Compromissos avulsos do técnico agendados para o dia informado, com o
+     * endereço já carregado (evita N+1 ao montar as paradas). Só
+     * `situacao = 'agendado'` entra: `concluido` já aconteceu, não precisa
+     * de deslocamento a planejar; `cancelado` não vai acontecer - mesmo
+     * raciocínio de `SITUACOES_AGENDADAS` para OS, adaptado ao catálogo de
+     * `Compromisso::SITUACOES`.
+     *
+     * @return Collection<int, Compromisso>
+     */
+    private function compromissosAgendadosDoDia(Technician $tecnico, string $dia): Collection
+    {
+        return Compromisso::query()
+            ->with('address')
+            ->where('technician_id', $tecnico->id)
+            // `data` é `date`, sem hora: mesma comparação direta de dia de
+            // `osAgendadasDoDia()` (regra de `datas-timezone`).
+            ->whereDate('data', $dia)
+            ->where('situacao', 'agendado')
+            ->orderBy('id')
+            ->get();
+    }
+
+    /**
      * Converte cada OS numa "parada" no formato que `OtimizadorDeRota`
      * espera. Ver o cabeçalho de `OtimizadorDeRota::ordenar()` para o
      * formato exato.
      *
      * @param  Collection<int, WorkOrder>  $ordens
-     * @return array<int, array{work_order_id: int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string}>
+     * @return array<int, array{work_order_id: ?int, compromisso_id: ?int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string}>
      */
     private function paradasDasOrdens(Collection $ordens): array
     {
@@ -623,6 +760,40 @@ class RouteService
 
             return [
                 'work_order_id' => $ordem->id,
+                'compromisso_id' => null,
+                'coordenada' => Coordenada::apartirDe($endereco?->latitude, $endereco?->longitude),
+                'precisao_geocodificacao' => $endereco?->precisao_geocodificacao,
+                'ancorada' => filled($horarioCombinado),
+                'horario_ancora' => filled($horarioCombinado)
+                    ? BusinessDate::paraFusoNegocio($horarioCombinado)?->format('H:i:s')
+                    : null,
+            ];
+        })->all();
+    }
+
+    /**
+     * Converte cada compromisso avulso numa "parada", irmã de
+     * `paradasDasOrdens()` para a origem `Compromisso` (Plano 31). Mesmo
+     * formato de saída, e o mesmo critério de "horário combinado": presença
+     * de `hora_inicio` é o sinal de parada âncora, equivalente a
+     * `$ordem->start_time` para OS (ver o cabeçalho da classe).
+     *
+     * Lê `$compromisso->address`, nunca `endereco_texto`: compromisso sem
+     * `address_id` não tem coordenada, mesmo tratamento que OS sem endereço
+     * geocodificado já recebe em `paradasDasOrdens()`.
+     *
+     * @param  Collection<int, Compromisso>  $compromissos
+     * @return array<int, array{work_order_id: ?int, compromisso_id: ?int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string}>
+     */
+    private function paradasDosCompromissos(Collection $compromissos): array
+    {
+        return $compromissos->map(function (Compromisso $compromisso): array {
+            $endereco = $compromisso->address;
+            $horarioCombinado = $compromisso->hora_inicio;
+
+            return [
+                'work_order_id' => null,
+                'compromisso_id' => $compromisso->id,
                 'coordenada' => Coordenada::apartirDe($endereco?->latitude, $endereco?->longitude),
                 'precisao_geocodificacao' => $endereco?->precisao_geocodificacao,
                 'ancorada' => filled($horarioCombinado),
@@ -637,10 +808,10 @@ class RouteService
      * Grava uma `RouteStop` por parada, na ordem final decidida pelo
      * otimizador, com a distância/duração do trecho vindo da parada anterior
      * (ou da sede, na primeira). Remove paradas que sobraram de uma
-     * montagem anterior e não fazem mais parte do dia (OS cancelada,
-     * remarcada para outro técnico ou outro dia, etc.).
+     * montagem anterior e não fazem mais parte do dia (OS ou compromisso
+     * cancelado, remarcado para outro técnico ou outro dia, etc.).
      *
-     * @param  array<int, array{work_order_id: int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string, sem_coordenada_boa: bool}>  $ordenadas
+     * @param  array<int, array{work_order_id: ?int, compromisso_id: ?int, coordenada: ?Coordenada, precisao_geocodificacao: ?string, ancorada: bool, horario_ancora: ?string, sem_coordenada_boa: bool}>  $ordenadas
      * @return array{0: float, 1: int} Distância total (km) e duração total (min).
      */
     private function gravarParadas(Route $rota, array $ordenadas, ?Coordenada $partida): array
@@ -666,10 +837,15 @@ class RouteService
                 $duracaoTotalMin += $estimativa->duracaoMin;
             }
 
+            // Chave composta pelas duas colunas: como exatamente uma delas é
+            // sempre `null` por parada, o Eloquent traduz `null` em
+            // `whereNull` e a busca encontra a linha certa nos dois casos
+            // (parada de OS ou de compromisso).
             $stop = RouteStop::query()->updateOrCreate(
                 [
                     'route_id' => $rota->id,
                     'work_order_id' => $parada['work_order_id'],
+                    'compromisso_id' => $parada['compromisso_id'],
                 ],
                 [
                     'ordem' => $ordem,
