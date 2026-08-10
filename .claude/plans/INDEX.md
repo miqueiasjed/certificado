@@ -1,13 +1,11 @@
 # INDEX - Planos do Sistema de Certificados
 
-> Última atualização: 10/08/2026. Os planos 1 a 30 estão concluídos (1 a 28
-> mergeados em `main`, 29 e 30 aguardam merge; nada publicado, push pendente
-> de autorização). O plano 30 (compromisso avulso, sem OS, na agenda) rodou
-> na worktree `certificado-plano30`, branch `plano-30-compromissos-agenda`.
-> O plano 31 (o mesmo compromisso entrando na rota) já tem as 5 tasks
-> decompostas em `.claude/tasks/31/` e está desbloqueado agora que o 30
-> terminou, mas ainda não foi executado. Os dois nasceram de uma lacuna
-> levantada em conversa com o usuário em 10/08/2026, fora do roteiro
+> Última atualização: 10/08/2026. Os planos 1 a 31 estão concluídos e
+> publicados em `main`. O plano 30 (compromisso avulso, sem OS, na agenda)
+> rodou na worktree `certificado-plano30`, branch
+> `plano-30-compromissos-agenda`; o plano 31 (o mesmo compromisso entrando na
+> rota) rodou direto em `main`, a pedido do usuário. Os dois nasceram de uma
+> lacuna levantada em conversa com o usuário em 10/08/2026, fora do roteiro
 > original, mesma origem dos planos 28 e 29.
 > Fonte de requisitos: `.claude/prd/` (índice em `.claude/prd/README.md`)
 
@@ -82,7 +80,7 @@ bloqueio.
 | 22 | Roteirização e rastreamento em campo | ✅ | 10, 13 | 8 |
 | 23 | Comissões, metas e renovação de contratos | ✅ | 14, 18 | 9 |
 | 24 | Conformidade RDC 622/2022 | ✅ | 14, 17 | 7 |
-| 31 | Compromissos na roteirização | ⏳ | 30, 22 | 5 |
+| 31 | Compromissos na roteirização | ✅ | 30, 22 | 5 |
 
 ### Diferenciais
 
@@ -99,8 +97,7 @@ bloqueio.
 | 28 | Controle de EPI: cadastro, CA e ficha de entrega | ✅ | 6, 13, 14 | 7 |
 | 29 | EPI em campo e na conformidade | ✅ | 28, 13, 24 | 6 |
 
-Total: 281 tasks decompostas nos 30 planos concluídos. O Plano 31 decompôs em
-5 tasks (`.claude/tasks/31/`), ainda não executado.
+Total: 286 tasks decompostas nos 31 planos concluídos.
 
 A decomposição real ficou ~40% acima da estimativa inicial de ~185 tasks. O
 motivo é o limite de dimensionamento: nenhuma task mistura backend com frontend,
