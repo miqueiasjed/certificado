@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Console\Commands\SyncPermissions;
 use App\Models\Address;
 use App\Models\Company;
+use App\Models\Compromisso;
 use App\Models\Route;
 use App\Models\Technician;
 use App\Models\User;
@@ -17,6 +18,7 @@ use App\Support\TenantAtual;
 use Carbon\Carbon;
 use Database\Factories\AddressFactory;
 use Database\Factories\ClientFactory;
+use Database\Factories\CompromissoFactory;
 use Database\Factories\WorkOrderFactory;
 use Database\Seeders\ModulesSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -159,9 +161,12 @@ class RouteEndpointTest extends TestCase
         $montagem->assertOk();
         $rotaId = $montagem->json('id');
 
-        // Reordena manualmente na ordem inversa da geometria.
+        // Reordena manualmente na ordem inversa da geometria. Contrato da
+        // Task 31.3: lista de strings `"os:{id}"`/`"compromisso:{id}"`, não
+        // mais `work_order_ids: [int]` (sem período de transição entre os
+        // dois formatos, ver `ReordenarRotaRequest`).
         $reordenacao = $this->actingAs($this->administrador)->putJson("/roteiros/{$rotaId}/ordem", [
-            'work_order_ids' => [$longe->id, $meio->id, $perto->id],
+            'paradas' => ["os:{$longe->id}", "os:{$meio->id}", "os:{$perto->id}"],
         ]);
 
         $reordenacao->assertOk();
@@ -396,6 +401,187 @@ class RouteEndpointTest extends TestCase
     }
 
     // -----------------------------------------------------------------
+    // (i) OS e compromisso avulso juntos no roteiro (Plano 31, Task 31.5)
+    // -----------------------------------------------------------------
+
+    public function test_roteiro_do_dia_com_os_e_compromisso_devolve_as_duas_paradas_com_tipo_item_correto(): void
+    {
+        $tecnico = $this->criarTecnico('MistoI1');
+
+        $ordem = $this->criarOrdem($tecnico, 0.01, 0.0);
+        $compromisso = $this->criarCompromisso($tecnico, 0.02, 0.0);
+
+        $resposta = $this->actingAs($this->administrador)->getJson(
+            '/roteiros?data='.self::DATA_DO_ROTEIRO.'&technician_id='.$tecnico->id
+        );
+
+        $resposta->assertOk();
+
+        $paradas = $resposta->json('paradas');
+        $this->assertCount(2, $paradas);
+
+        $paradaOs = collect($paradas)->firstWhere('work_order_id', $ordem->id);
+        $paradaCompromisso = collect($paradas)->firstWhere('compromisso_id', $compromisso->id);
+
+        $this->assertNotNull($paradaOs, 'a parada da OS precisa estar na resposta');
+        $this->assertSame('os', $paradaOs['tipo_item']);
+
+        $this->assertNotNull($paradaCompromisso, 'a parada do compromisso precisa estar na resposta');
+        $this->assertSame('compromisso', $paradaCompromisso['tipo_item']);
+        $this->assertSame($compromisso->titulo, $paradaCompromisso['compromisso_titulo']);
+        $this->assertSame($compromisso->tipo, $paradaCompromisso['compromisso_tipo']);
+    }
+
+    public function test_reordenar_com_lista_mista_de_os_e_compromisso_reordena_as_duas(): void
+    {
+        $tecnico = $this->criarTecnico('MistoI2');
+
+        $ordem = $this->criarOrdem($tecnico, 0.01, 0.0);
+        $compromisso = $this->criarCompromisso($tecnico, 0.02, 0.0);
+
+        $montagem = $this->actingAs($this->administrador)->getJson(
+            '/roteiros?data='.self::DATA_DO_ROTEIRO.'&technician_id='.$tecnico->id
+        );
+        $montagem->assertOk();
+        $rotaId = $montagem->json('id');
+
+        $reordenacao = $this->actingAs($this->administrador)->putJson("/roteiros/{$rotaId}/ordem", [
+            'paradas' => ["compromisso:{$compromisso->id}", "os:{$ordem->id}"],
+        ]);
+
+        $reordenacao->assertOk();
+        $this->assertTrue($reordenacao->json('ordenacao_manual'));
+
+        $paradas = $reordenacao->json('paradas');
+        $this->assertSame('compromisso', $paradas[0]['tipo_item']);
+        $this->assertSame($compromisso->id, $paradas[0]['compromisso_id']);
+        $this->assertSame(1, $paradas[0]['ordem']);
+        $this->assertSame('os', $paradas[1]['tipo_item']);
+        $this->assertSame($ordem->id, $paradas[1]['work_order_id']);
+        $this->assertSame(2, $paradas[1]['ordem']);
+    }
+
+    /**
+     * Lista que não bate exatamente com as paradas atuais continua sendo
+     * recusada (mesma regra de negócio da Task 22.5, agora exercitada com as
+     * duas origens misturadas): faltar o compromisso da lista é tão inválido
+     * quanto faltar uma OS.
+     */
+    public function test_reordenar_com_lista_que_nao_bate_com_as_paradas_atuais_e_recusada(): void
+    {
+        $tecnico = $this->criarTecnico('MistoI3');
+
+        $ordem = $this->criarOrdem($tecnico, 0.01, 0.0);
+        $this->criarCompromisso($tecnico, 0.02, 0.0);
+
+        $montagem = $this->actingAs($this->administrador)->getJson(
+            '/roteiros?data='.self::DATA_DO_ROTEIRO.'&technician_id='.$tecnico->id
+        );
+        $montagem->assertOk();
+        $rotaId = $montagem->json('id');
+
+        $reordenacao = $this->actingAs($this->administrador)->putJson("/roteiros/{$rotaId}/ordem", [
+            'paradas' => ["os:{$ordem->id}"],
+        ]);
+
+        $reordenacao->assertStatus(422);
+    }
+
+    /**
+     * Isolamento multiempresa: um compromisso gravado sob a outra empresa,
+     * mesmo referenciando o `technician_id` desta (cenário de vazamento por
+     * fora do escopo automático), nunca aparece no roteiro de quem não é
+     * dela. Mesmo critério de isolamento por escopo global já aplicado a
+     * todo o resto do domínio (`permissoes-e-multitenancy`), agora provado
+     * para `Compromisso`.
+     */
+    public function test_compromisso_de_outra_empresa_nunca_aparece_no_roteiro(): void
+    {
+        $tecnico = $this->criarTecnico('MistoI4');
+        $ordem = $this->criarOrdem($tecnico, 0.01, 0.0);
+
+        TenantAtual::comTenant($this->outraEmpresa()->id, fn (): Compromisso => CompromissoFactory::new()->create([
+            'technician_id' => $tecnico->id,
+            'data' => self::DATA_DO_ROTEIRO,
+            'situacao' => 'agendado',
+        ]));
+
+        $resposta = $this->actingAs($this->administrador)->getJson(
+            '/roteiros?data='.self::DATA_DO_ROTEIRO.'&technician_id='.$tecnico->id
+        );
+
+        $resposta->assertOk();
+
+        $paradas = $resposta->json('paradas');
+        $this->assertCount(1, $paradas, 'o compromisso da outra empresa não pode entrar no roteiro');
+        $this->assertSame('os', $paradas[0]['tipo_item']);
+        $this->assertSame($ordem->id, $paradas[0]['work_order_id']);
+    }
+
+    /**
+     * Cascata de exclusão: excluir a OS remove a parada correspondente do
+     * roteiro (`route_stops.work_order_id` com `cascadeOnDelete`, ver
+     * `create_routes_table`). Primeiro teste deste padrão no arquivo -
+     * confirmado no schema antes de escrever, para não provar algo que
+     * passaria mesmo sem a restrição de fato existir.
+     */
+    public function test_excluir_a_os_remove_a_parada_correspondente_do_roteiro(): void
+    {
+        $tecnico = $this->criarTecnico('MistoI5');
+
+        $ordem = $this->criarOrdem($tecnico, 0.01, 0.0);
+        $compromisso = $this->criarCompromisso($tecnico, 0.02, 0.0);
+
+        $montagem = $this->actingAs($this->administrador)->getJson(
+            '/roteiros?data='.self::DATA_DO_ROTEIRO.'&technician_id='.$tecnico->id
+        );
+        $montagem->assertOk();
+        $rotaId = $montagem->json('id');
+
+        $this->comTenant(fn (): bool => (bool) WorkOrder::query()->findOrFail($ordem->id)->delete());
+
+        $this->assertDatabaseMissing('route_stops', [
+            'route_id' => $rotaId,
+            'work_order_id' => $ordem->id,
+        ]);
+
+        $paradasRestantes = $this->comTenant(fn () => Route::query()->findOrFail($rotaId)->stops()->get());
+        $this->assertCount(1, $paradasRestantes);
+        $this->assertSame($compromisso->id, $paradasRestantes->first()->compromisso_id);
+    }
+
+    /**
+     * Mesma cascata, para a origem `Compromisso`
+     * (`route_stops.compromisso_id` com `cascadeOnDelete`, ver
+     * `add_compromisso_to_route_stops_table`) - o comportamento que esta
+     * task existe para provar.
+     */
+    public function test_excluir_o_compromisso_remove_a_parada_correspondente_do_roteiro(): void
+    {
+        $tecnico = $this->criarTecnico('MistoI6');
+
+        $ordem = $this->criarOrdem($tecnico, 0.01, 0.0);
+        $compromisso = $this->criarCompromisso($tecnico, 0.02, 0.0);
+
+        $montagem = $this->actingAs($this->administrador)->getJson(
+            '/roteiros?data='.self::DATA_DO_ROTEIRO.'&technician_id='.$tecnico->id
+        );
+        $montagem->assertOk();
+        $rotaId = $montagem->json('id');
+
+        $this->comTenant(fn (): bool => (bool) Compromisso::query()->findOrFail($compromisso->id)->delete());
+
+        $this->assertDatabaseMissing('route_stops', [
+            'route_id' => $rotaId,
+            'compromisso_id' => $compromisso->id,
+        ]);
+
+        $paradasRestantes = $this->comTenant(fn () => Route::query()->findOrFail($rotaId)->stops()->get());
+        $this->assertCount(1, $paradasRestantes);
+        $this->assertSame($ordem->id, $paradasRestantes->first()->work_order_id);
+    }
+
+    // -----------------------------------------------------------------
     // Apoio
     // -----------------------------------------------------------------
 
@@ -440,6 +626,20 @@ class RouteEndpointTest extends TestCase
     }
 
     /**
+     * Empresa concorrente, mesmo padrão de `EpiEndpointTest::outraEmpresa()`:
+     * criada uma vez por teste, sob demanda, para os cenários de isolamento
+     * multiempresa.
+     */
+    private function outraEmpresa(): Company
+    {
+        return Company::create([
+            'name' => 'Concorrente do Roteiro',
+            'cnpj' => '66.666.666/0001-66',
+            'email' => 'contato@concorrente-roteiro.test',
+        ]);
+    }
+
+    /**
      * OS agendada para `self::DATA_DO_ROTEIRO`, com endereço geocodificado a
      * `$latOffset`/`$lngOffset` graus da origem `(0, 0)` (só uma referência
      * para os deltas entre as próprias paradas do teste, sem relação com a
@@ -471,6 +671,42 @@ class RouteEndpointTest extends TestCase
                     ? Carbon::parse(self::DATA_DO_ROTEIRO.' '.$horario, BusinessDate::fuso())
                         ->setTimezone(config('app.timezone'))
                     : null,
+            ]);
+        });
+    }
+
+    /**
+     * Compromisso avulso agendado para `self::DATA_DO_ROTEIRO`, irmão de
+     * `criarOrdem()` para a origem `Compromisso` (Plano 31): mesmo padrão de
+     * endereço geocodificado a `$latOffset`/`$lngOffset` graus da origem
+     * `(0, 0)`.
+     */
+    private function criarCompromisso(
+        Technician $tecnico,
+        float $latOffset,
+        float $lngOffset,
+        ?string $horario = null,
+    ): Compromisso {
+        return $this->comTenant(function () use ($tecnico, $latOffset, $lngOffset, $horario): Compromisso {
+            $cliente = ClientFactory::new()->create();
+            $endereco = AddressFactory::new()->create(['client_id' => $cliente->id]);
+
+            $endereco->forceFill([
+                'latitude' => $latOffset,
+                'longitude' => $lngOffset,
+                'precisao_geocodificacao' => ResultadoGeo::PRECISAO_EXATA,
+                'origem_coordenada' => Address::ORIGEM_COORDENADA_AUTOMATICA,
+                'geocodificado_em' => now(),
+            ])->save();
+
+            return CompromissoFactory::new()->create([
+                'client_id' => $cliente->id,
+                'address_id' => $endereco->id,
+                'technician_id' => $tecnico->id,
+                'data' => self::DATA_DO_ROTEIRO,
+                'situacao' => 'agendado',
+                'hora_inicio' => $horario,
+                'hora_fim' => null,
             ]);
         });
     }

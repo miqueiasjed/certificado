@@ -4,8 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\Address;
 use App\Models\Company;
+use App\Models\Compromisso;
 use App\Models\Route;
+use App\Models\RouteStop;
 use App\Models\Technician;
+use App\Models\User;
 use App\Models\WorkOrder;
 use App\Services\Routing\EstimadorDeDeslocamento;
 use App\Services\Routing\OtimizadorDeRota;
@@ -17,6 +20,7 @@ use App\Support\TenantAtual;
 use Carbon\Carbon;
 use Database\Factories\AddressFactory;
 use Database\Factories\ClientFactory;
+use Database\Factories\CompromissoFactory;
 use Database\Factories\WorkOrderFactory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -422,6 +426,139 @@ class RouteServiceTest extends TestCase
     }
 
     // -----------------------------------------------------------------
+    // (h) OS e compromisso avulso juntos no mesmo roteiro (Plano 31)
+    // -----------------------------------------------------------------
+
+    public function test_montar_com_uma_os_e_um_compromisso_produz_roteiro_com_as_duas_paradas_ordenadas_por_proximidade(): void
+    {
+        $tecnico = $this->criarTecnico('MistoH1');
+
+        // Mesmo padrão do teste (a): a OS fica mais longe da sede, o
+        // compromisso mais perto - se o roteiro ignorasse o compromisso, ou
+        // não respeitasse a mesma ordenação por proximidade das duas
+        // origens, a ordem sairia errada.
+        $osLonge = $this->criarOrdem($tecnico, latOffset: 0.03, lngOffset: 0.0);
+        $compromissoPerto = $this->criarCompromisso($tecnico, latOffset: 0.01, lngOffset: 0.0);
+
+        $rota = $this->montar($tecnico);
+
+        $this->assertCount(2, $rota->stops);
+        $this->assertTrue($rota->stops->first()->eDeCompromisso());
+        $this->assertSame($compromissoPerto->id, $rota->stops->first()->compromisso_id);
+        $this->assertFalse($rota->stops->last()->eDeCompromisso());
+        $this->assertSame($osLonge->id, $rota->stops->last()->work_order_id);
+    }
+
+    public function test_compromisso_cancelado_nao_entra_no_roteiro(): void
+    {
+        $tecnico = $this->criarTecnico('MistoH2');
+
+        $osAtiva = $this->criarOrdem($tecnico, latOffset: 0.01, lngOffset: 0.0);
+        $compromissoCancelado = $this->criarCompromisso($tecnico, latOffset: 0.02, lngOffset: 0.0, situacao: 'cancelado');
+
+        $rota = $this->montar($tecnico);
+
+        $this->assertCount(1, $rota->stops);
+        $this->assertSame($osAtiva->id, $rota->stops->first()->work_order_id);
+        $this->assertFalse(
+            $rota->stops->contains(fn (RouteStop $parada): bool => $parada->compromisso_id === $compromissoCancelado->id),
+            'compromisso cancelado não pode virar parada de roteiro'
+        );
+    }
+
+    public function test_sincronizar_preservando_ordem_manual_acrescenta_compromisso_novo_no_fim(): void
+    {
+        $tecnico = $this->criarTecnico('MistoH3');
+
+        $os1 = $this->criarOrdem($tecnico, latOffset: 0.01, lngOffset: 0.0);
+        $os2 = $this->criarOrdem($tecnico, latOffset: 0.02, lngOffset: 0.0);
+
+        $rota = $this->montar($tecnico);
+
+        // Reordena manualmente na ordem inversa da geometria - a mesma marca
+        // usada no teste (c) da Task 22.5, aqui só para deixar
+        // `ordenacao_manual = true` antes do compromisso novo entrar.
+        $usuario = $this->comTenant(fn (): User => User::factory()->create());
+
+        $rotaReordenada = $this->comTenant(fn (): Route => $this->service->reordenarManualmente(
+            $rota,
+            ["os:{$os2->id}", "os:{$os1->id}"],
+            $usuario,
+            $this->sede,
+        ));
+
+        $this->assertTrue((bool) $rotaReordenada->ordenacao_manual);
+
+        // Compromisso novo no mesmo dia/técnico, propositalmente mais perto
+        // da sede do que as duas OS: se `sincronizarPreservandoOrdemManual()`
+        // reordenasse por proximidade, ele apareceria primeiro, não no fim.
+        $compromissoNovo = $this->criarCompromisso($tecnico, latOffset: 0.005, lngOffset: 0.0);
+
+        $rotaSincronizada = $this->montar($tecnico);
+
+        $chaves = $rotaSincronizada->stops
+            ->map(fn (RouteStop $parada): string => $parada->eDeCompromisso()
+                ? "compromisso:{$parada->compromisso_id}"
+                : "os:{$parada->work_order_id}")
+            ->all();
+
+        $this->assertSame(
+            ["os:{$os2->id}", "os:{$os1->id}", "compromisso:{$compromissoNovo->id}"],
+            $chaves,
+            'a ordem manual das paradas existentes precisa ser preservada, com o compromisso novo só no fim'
+        );
+    }
+
+    public function test_recalcular_distancias_e_chegada_estimada_com_compromisso_sem_endereco_nao_soma_o_trecho(): void
+    {
+        $tecnico = $this->criarTecnico('MistoH4');
+
+        $osComCoordenada = $this->criarOrdem($tecnico, latOffset: 0.0, lngOffset: 0.01);
+        $compromissoSemEndereco = $this->criarCompromisso($tecnico, latOffset: null, lngOffset: null);
+
+        $rota = $this->montar($tecnico);
+
+        // Mesmo tratamento do teste (e) para OS sem coordenada: vai para o
+        // fim, sem trecho calculado até ele.
+        $ultimaParada = $rota->stops->last();
+        $this->assertTrue($ultimaParada->eDeCompromisso());
+        $this->assertSame($compromissoSemEndereco->id, $ultimaParada->compromisso_id);
+        $this->assertNull($ultimaParada->distancia_anterior_km);
+        $this->assertNull($ultimaParada->duracao_anterior_min);
+
+        // Só o trecho sede -> OS entra na soma: o compromisso sem coordenada
+        // não acrescenta nenhum trecho fantasma ao total.
+        $coordOs = new Coordenada($this->sede->latitude, $this->sede->longitude + 0.01);
+        $trechoEsperadoKm = $this->estimador->estimar($this->sede, $coordOs)->distanciaKm;
+        $this->assertEqualsWithDelta($trechoEsperadoKm, (float) $rota->distancia_total_km, 0.001);
+
+        // `recalcularDistancias()` é privado, exercitado pela única via
+        // pública que o chama (`reordenarManualmente()`): mesma checagem
+        // depois do recálculo, para provar que o tratamento vale também
+        // nesse caminho, não só na montagem inicial.
+        $usuario = $this->comTenant(fn (): User => User::factory()->create());
+
+        $rotaRecalculada = $this->comTenant(fn (): Route => $this->service->reordenarManualmente(
+            $rota,
+            ["os:{$osComCoordenada->id}", "compromisso:{$compromissoSemEndereco->id}"],
+            $usuario,
+            $this->sede,
+        ));
+
+        $paradaCompromisso = $rotaRecalculada->stops->firstWhere('compromisso_id', $compromissoSemEndereco->id);
+        $this->assertNull($paradaCompromisso->distancia_anterior_km);
+        $this->assertNull($paradaCompromisso->duracao_anterior_min);
+        $this->assertEqualsWithDelta($trechoEsperadoKm, (float) $rotaRecalculada->distancia_total_km, 0.001);
+
+        // `chegadaEstimada()`: sem `duracao_anterior_min` para somar, o
+        // relógio da simulação não anda por deslocamento nessa parada, mas a
+        // chegada estimada continua sendo calculada (nunca fica nula).
+        $rotaComChegada = $this->service->chegadaEstimada($rotaRecalculada, '08:00:00', 30);
+        $paradaComChegada = $rotaComChegada->stops->firstWhere('compromisso_id', $compromissoSemEndereco->id);
+        $this->assertNotNull($paradaComChegada->chegada_estimada);
+    }
+
+    // -----------------------------------------------------------------
     // Apoio
     // -----------------------------------------------------------------
 
@@ -471,6 +608,48 @@ class RouteServiceTest extends TestCase
                     ? Carbon::parse(self::DATA_DO_ROTEIRO.' '.$horario, BusinessDate::fuso())
                         ->setTimezone(config('app.timezone'))
                     : null,
+            ]);
+        });
+    }
+
+    /**
+     * Compromisso avulso agendado para `self::DATA_DO_ROTEIRO`, irmão de
+     * `criarOrdem()` para a origem `Compromisso` (Plano 31): mesmo padrão de
+     * offset de coordenada a partir da sede, `null`/`null` para "sem
+     * endereço cadastrado" (`address_id` fica nulo, mesmo tratamento de OS
+     * sem coordenada boa - ver `RouteService::paradasDosCompromissos()`).
+     */
+    private function criarCompromisso(
+        Technician $tecnico,
+        ?float $latOffset,
+        ?float $lngOffset,
+        ?string $horario = null,
+        string $situacao = 'agendado',
+    ): Compromisso {
+        return $this->comTenant(function () use ($tecnico, $latOffset, $lngOffset, $horario, $situacao) {
+            $enderecoId = null;
+
+            if ($latOffset !== null && $lngOffset !== null) {
+                $cliente = ClientFactory::new()->create();
+                $endereco = AddressFactory::new()->create(['client_id' => $cliente->id]);
+                $endereco->forceFill([
+                    'latitude' => $this->sede->latitude + $latOffset,
+                    'longitude' => $this->sede->longitude + $lngOffset,
+                    'precisao_geocodificacao' => ResultadoGeo::PRECISAO_EXATA,
+                    'origem_coordenada' => Address::ORIGEM_COORDENADA_AUTOMATICA,
+                    'geocodificado_em' => now(),
+                ])->save();
+
+                $enderecoId = $endereco->id;
+            }
+
+            return CompromissoFactory::new()->create([
+                'technician_id' => $tecnico->id,
+                'address_id' => $enderecoId,
+                'data' => self::DATA_DO_ROTEIRO,
+                'situacao' => $situacao,
+                'hora_inicio' => $horario,
+                'hora_fim' => null,
             ]);
         });
     }
