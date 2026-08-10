@@ -542,7 +542,7 @@ function fecharConflitoArrasto() {
 }
 
 const {
-  podeArrastar,
+  podeArrastar: podeArrastarOrdemDeServico,
   ehAlvoAtivo,
   aoIniciarArrasto,
   aoTerminarArrasto,
@@ -562,6 +562,18 @@ const {
     mensagemErroArrasto.value = mensagem;
   },
 });
+
+// Compromisso avulso (Plano 30, Task 30.5) não tem o próprio reagendamento por
+// arrastar-e-soltar nesta task: `useArrastarVisita` chama `PUT /agenda/{id}/reagendar`,
+// endpoint que só conhece `WorkOrder` (Task 10.6). Sem esta checagem, arrastar um
+// compromisso reagendaria (ou erraria contra) uma ordem de serviço de outro id,
+// porque `podeArrastarOrdemDeServico` só olha `visita.status`, campo que nem existe
+// em compromisso. A ação "Concluir"/"Cancelar"/"Promover" do painel lateral (Task
+// 30.5, Agenda/Index.vue) é o caminho do compromisso; reagendar por arrasto fica
+// para uma task futura, se vier a ser pedido.
+function podeArrastar(visita) {
+  return visita?.tipo_item !== 'compromisso' && podeArrastarOrdemDeServico(visita);
+}
 
 function alvoDia(data) {
   return { tipo: 'dia', data };

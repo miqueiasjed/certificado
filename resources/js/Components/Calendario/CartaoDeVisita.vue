@@ -20,8 +20,11 @@
         <span v-if="visita.hora_inicio" class="font-semibold text-gray-700 flex-shrink-0">
           {{ visita.hora_inicio }}
         </span>
+        <span v-if="ehCompromisso" class="flex-shrink-0 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+          {{ rotuloDeTipoDeCompromisso(visita.tipo) }}
+        </span>
         <span class="truncate" :class="semTecnico ? 'text-red-800 font-semibold' : 'text-gray-800'">
-          {{ nomeDoCliente }}
+          {{ tituloDoCartao }}
         </span>
       </span>
     </template>
@@ -31,7 +34,16 @@
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0">
           <p class="text-sm font-semibold text-gray-900 truncate">
-            {{ visita.numero }} · {{ nomeDoCliente }}
+            <span
+              v-if="ehCompromisso"
+              class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-800 mr-1.5 align-middle"
+            >
+              {{ rotuloDeTipoDeCompromisso(visita.tipo) }}
+            </span>
+            {{ tituloDoCartao }}
+          </p>
+          <p v-if="ehCompromisso && visita.cliente?.nome" class="text-xs text-gray-600 mt-0.5">
+            {{ visita.cliente.nome }}
           </p>
           <p class="text-xs text-gray-600 mt-0.5">{{ horarioLabel }}</p>
           <p v-if="visita.endereco || visita.cidade" class="text-xs text-gray-500 mt-0.5 truncate">
@@ -73,6 +85,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { rotuloDeTipoDeCompromisso } from '@/utils/compromisso';
 
 const props = defineProps({
   visita: {
@@ -87,6 +100,12 @@ const props = defineProps({
 });
 
 defineEmits(['selecionar']);
+
+// Compromisso avulso (Plano 30, Task 30.5) chega na mesma lista de "visitas" que a
+// OS, marcado com `tipo_item`. Todo o resto deste componente segue com a MESMA
+// lógica de antes para OS (nenhuma regressão visual); os ramos por `ehCompromisso`
+// abaixo são aditivos.
+const ehCompromisso = computed(() => props.visita.tipo_item === 'compromisso');
 
 // Cor por situação da OS. As chaves seguem o campo `status` de WorkOrder
 // (pending/scheduled/in_progress/completed/cancelled/on_hold); qualquer valor fora
@@ -105,15 +124,41 @@ const CORES_POR_SITUACAO = {
 
 const CORES_PADRAO = { badge: 'bg-gray-100 text-gray-800 border-gray-300', borda: 'border-gray-400' };
 
+// Cor por situação do compromisso (agendado/concluido/cancelado, `Compromisso::
+// SITUACOES`). Paleta âmbar para "agendado" de propósito: é o estado mais comum de
+// um compromisso na agenda, e o âmbar já é o aviso "isto não é uma OS" pedido pela
+// Task 30.5. Concluído/cancelado usam a mesma cor que já significa a mesma coisa
+// para OS (verde/vermelho), porque a situação em si é o dado mais importante ali.
+const CORES_COMPROMISSO_POR_SITUACAO = {
+  agendado: { label: 'Agendado', badge: 'bg-amber-100 text-amber-800 border-amber-300', borda: 'border-amber-500' },
+  concluido: { label: 'Concluído', badge: 'bg-green-100 text-green-800 border-green-300', borda: 'border-green-500' },
+  cancelado: { label: 'Cancelado', badge: 'bg-red-100 text-red-800 border-red-300', borda: 'border-red-500' },
+};
+
+const CORES_COMPROMISSO_PADRAO = { badge: 'bg-amber-100 text-amber-800 border-amber-300', borda: 'border-amber-500' };
+
 const statusInfo = computed(() => {
+  if (ehCompromisso.value) {
+    const cores = CORES_COMPROMISSO_POR_SITUACAO[props.visita.situacao] ?? CORES_COMPROMISSO_PADRAO;
+    const label = props.visita.situacao_texto || cores.label || props.visita.situacao || 'Situação desconhecida';
+
+    return { label, badge: cores.badge, borda: cores.borda };
+  }
+
   const cores = CORES_POR_SITUACAO[props.visita.status] ?? CORES_PADRAO;
   const label = props.visita.status_texto || cores.label || props.visita.status || 'Situação desconhecida';
 
   return { label, badge: cores.badge, borda: cores.borda };
 });
 
-// `cliente` chega como objeto `{ id, nome }` (ou null quando a OS perdeu o vínculo).
+// `cliente` chega como objeto `{ id, nome }` (ou null quando a OS perdeu o vínculo,
+// ou quando o compromisso nunca teve cliente vinculado).
 const nomeDoCliente = computed(() => props.visita.cliente?.nome || 'Cliente não informado');
+
+// Texto principal do cartão: OS usa o número mais o cliente, como sempre; o
+// compromisso não tem número, então usa o próprio título (campo obrigatório do
+// `CompromissoRequest`, sempre presente).
+const tituloDoCartao = computed(() => (ehCompromisso.value ? props.visita.titulo : nomeDoCliente.value));
 
 // O backend manda o booleano pronto (`sem_tecnico`); a ausência de `tecnico` é o
 // fallback caso esse campo não venha, para o cartão nunca deixar de destacar por
@@ -135,9 +180,18 @@ const horarioLabel = computed(() => {
   return 'Sem horário definido';
 });
 
+// O fundo âmbar do compromisso é fixo (não varia com `semTecnico`, ao contrário da
+// OS): é o sinal "isto não é uma OS" que a Task 30.5 pede, e ele precisa se manter
+// em qualquer situação para o cartão continuar reconhecível à distância. O aviso de
+// "sem técnico" continua aparecendo (ícone e texto em vermelho, ver o template),
+// só não toma conta do fundo inteiro do cartão de compromisso.
 const classesDoCartao = computed(() => {
   if (props.variante === 'compacta') {
     const base = ['rounded', 'border-l-4', 'px-1.5', 'py-1', 'text-xs', 'leading-tight', 'truncate', statusInfo.value.borda];
+
+    if (ehCompromisso.value) {
+      return [...base, 'bg-amber-50', 'hover:bg-amber-100'];
+    }
 
     return semTecnico.value
       ? [...base, 'bg-red-50', 'hover:bg-red-100']
@@ -145,6 +199,10 @@ const classesDoCartao = computed(() => {
   }
 
   const base = ['rounded-lg', 'border', 'p-3', 'hover:shadow-md'];
+
+  if (ehCompromisso.value) {
+    return [...base, 'border-amber-300', 'bg-amber-50'];
+  }
 
   return semTecnico.value
     ? [...base, 'border-red-300', 'bg-red-50', 'ring-1', 'ring-red-300']

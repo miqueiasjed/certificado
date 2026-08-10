@@ -25,18 +25,45 @@
         <p class="text-sm text-red-800">{{ erroCarregamento }}</p>
       </div>
 
+      <!-- Confirmação de criar/concluir/cancelar/promover compromisso (Task 30.5) -->
+      <div
+        v-if="mensagemSucessoCompromisso"
+        class="flex items-start justify-between gap-3 rounded-md border border-green-200 bg-green-50 p-4"
+      >
+        <p class="text-sm text-green-800">{{ mensagemSucessoCompromisso }}</p>
+        <button type="button" class="text-green-600 hover:text-green-800" @click="mensagemSucessoCompromisso = null">
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
       <!-- Seletor de visão e filtros -->
       <Card padding="small">
         <div class="flex flex-col gap-4">
-          <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <button
+                v-for="opcao in VISOES"
+                :key="opcao.valor"
+                type="button"
+                :class="visao === opcao.valor ? 'btn-primary' : 'btn-secondary-sm'"
+                @click="selecionarVisao(opcao.valor)"
+              >
+                {{ opcao.rotulo }}
+              </button>
+            </div>
+
+            <!-- Compromisso avulso (Plano 30, Task 30.5): mesmo padrão de
+                 `usePermissoes` de Epi/Roteiros, escondido para quem não tem a
+                 permissão de escrita (o backend também recusa, isto é só a tela). -->
             <button
-              v-for="opcao in VISOES"
-              :key="opcao.valor"
+              v-if="podeGerenciarCompromisso"
               type="button"
-              :class="visao === opcao.valor ? 'btn-primary' : 'btn-secondary-sm'"
-              @click="selecionarVisao(opcao.valor)"
+              class="btn-primary"
+              @click="mostrarModalNovoCompromisso = true"
             >
-              {{ opcao.rotulo }}
+              Novo compromisso
             </button>
           </div>
 
@@ -186,9 +213,16 @@
         <div class="relative flex h-full w-full max-w-md flex-col overflow-y-auto bg-white shadow-xl">
           <div class="flex items-start justify-between gap-3 border-b border-gray-200 px-5 py-4">
             <div class="min-w-0">
-              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Visita</p>
+              <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                {{ ehCompromissoSelecionado ? 'Compromisso' : 'Visita' }}
+              </p>
               <h3 class="truncate text-lg font-semibold text-gray-900">
-                {{ visitaSelecionada.numero }} · {{ visitaSelecionada.cliente?.nome || 'Cliente não informado' }}
+                <template v-if="ehCompromissoSelecionado">
+                  {{ rotuloDeTipoDeCompromisso(visitaSelecionada.tipo) }} · {{ visitaSelecionada.titulo }}
+                </template>
+                <template v-else>
+                  {{ visitaSelecionada.numero }} · {{ visitaSelecionada.cliente?.nome || 'Cliente não informado' }}
+                </template>
               </h3>
             </div>
             <button type="button" class="text-gray-400 hover:text-gray-600" @click="fecharPainel">
@@ -199,109 +233,203 @@
           </div>
 
           <div class="flex-1 space-y-6 px-5 py-4">
-            <!-- Dados da OS -->
-            <div class="space-y-1.5 text-sm">
-              <p class="flex justify-between gap-2">
-                <span class="text-gray-500">Data</span>
-                <span class="font-medium text-gray-900">{{ formatarData(visitaSelecionada.data) || '—' }}</span>
-              </p>
-              <p class="flex justify-between gap-2">
-                <span class="text-gray-500">Horário</span>
-                <span class="font-medium text-gray-900">{{ horarioDaVisitaSelecionada }}</span>
-              </p>
-              <p class="flex justify-between gap-2">
-                <span class="text-gray-500">Serviço</span>
-                <span class="font-medium text-gray-900">{{ visitaSelecionada.servico?.nome || 'Não informado' }}</span>
-              </p>
-              <p class="flex justify-between gap-2">
-                <span class="text-gray-500">Situação</span>
-                <span class="font-medium text-gray-900">{{ visitaSelecionada.status_texto }}</span>
-              </p>
-              <p v-if="visitaSelecionada.endereco || visitaSelecionada.cidade" class="flex justify-between gap-2">
-                <span class="text-gray-500">Endereço</span>
-                <span class="font-medium text-gray-900 text-right">
-                  {{ [visitaSelecionada.endereco, visitaSelecionada.cidade].filter(Boolean).join(' · ') }}
-                </span>
-              </p>
-            </div>
-
-            <!-- Atribuir técnico -->
-            <div class="space-y-2 border-t border-gray-100 pt-4">
-              <label class="block text-sm font-medium text-gray-700">Atribuir técnico</label>
-              <select
-                :value="visitaSelecionada.tecnico?.id ?? ''"
-                :disabled="atribuindoTecnico"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                @change="atribuirTecnico($event.target.value)"
-              >
-                <option value="">Sem técnico</option>
-                <option v-for="tecnico in opcoesTecnico" :key="tecnico.id" :value="tecnico.id">
-                  {{ tecnico.nome }}{{ tecnico.tem_aviso ? ' (aviso)' : '' }}
-                </option>
-              </select>
-              <p v-if="carregandoTecnicos" class="text-xs text-gray-400">Carregando técnicos disponíveis...</p>
-              <p v-if="atribuirErro" class="text-sm text-red-600">{{ atribuirErro }}</p>
-            </div>
-
-            <!-- Reagendar -->
-            <form class="space-y-3 border-t border-gray-100 pt-4" @submit.prevent="enviarReagendamento">
-              <label class="block text-sm font-medium text-gray-700">Reagendar</label>
-
-              <div>
-                <label class="block text-xs text-gray-500 mb-1">Data agendada *</label>
-                <input
-                  v-model="reagendarForm.scheduled_date"
-                  type="date"
-                  required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  :class="{ 'border-red-500': reagendarErros.scheduled_date }"
-                />
-                <p v-if="reagendarErros.scheduled_date" class="mt-1 text-xs text-red-600">
-                  {{ reagendarErros.scheduled_date[0] }}
+            <template v-if="!ehCompromissoSelecionado">
+              <!-- Dados da OS -->
+              <div class="space-y-1.5 text-sm">
+                <p class="flex justify-between gap-2">
+                  <span class="text-gray-500">Data</span>
+                  <span class="font-medium text-gray-900">{{ formatarData(visitaSelecionada.data) || '—' }}</span>
+                </p>
+                <p class="flex justify-between gap-2">
+                  <span class="text-gray-500">Horário</span>
+                  <span class="font-medium text-gray-900">{{ horarioDaVisitaSelecionada }}</span>
+                </p>
+                <p class="flex justify-between gap-2">
+                  <span class="text-gray-500">Serviço</span>
+                  <span class="font-medium text-gray-900">{{ visitaSelecionada.servico?.nome || 'Não informado' }}</span>
+                </p>
+                <p class="flex justify-between gap-2">
+                  <span class="text-gray-500">Situação</span>
+                  <span class="font-medium text-gray-900">{{ visitaSelecionada.status_texto }}</span>
+                </p>
+                <p v-if="visitaSelecionada.endereco || visitaSelecionada.cidade" class="flex justify-between gap-2">
+                  <span class="text-gray-500">Endereço</span>
+                  <span class="font-medium text-gray-900 text-right">
+                    {{ [visitaSelecionada.endereco, visitaSelecionada.cidade].filter(Boolean).join(' · ') }}
+                  </span>
                 </p>
               </div>
 
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs text-gray-500 mb-1">Início</label>
-                  <input
-                    v-model="reagendarForm.hora_inicio"
-                    type="time"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    :class="{ 'border-red-500': reagendarErros.start_time }"
-                  />
-                  <p v-if="reagendarErros.start_time" class="mt-1 text-xs text-red-600">
-                    {{ reagendarErros.start_time[0] }}
-                  </p>
-                </div>
-                <div>
-                  <label class="block text-xs text-gray-500 mb-1">Término</label>
-                  <input
-                    v-model="reagendarForm.hora_fim"
-                    type="time"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    :class="{ 'border-red-500': reagendarErros.end_time }"
-                  />
-                  <p v-if="reagendarErros.end_time" class="mt-1 text-xs text-red-600">
-                    {{ reagendarErros.end_time[0] }}
-                  </p>
-                </div>
+              <!-- Atribuir técnico -->
+              <div class="space-y-2 border-t border-gray-100 pt-4">
+                <label class="block text-sm font-medium text-gray-700">Atribuir técnico</label>
+                <select
+                  :value="visitaSelecionada.tecnico?.id ?? ''"
+                  :disabled="atribuindoTecnico"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  @change="atribuirTecnico($event.target.value)"
+                >
+                  <option value="">Sem técnico</option>
+                  <option v-for="tecnico in opcoesTecnico" :key="tecnico.id" :value="tecnico.id">
+                    {{ tecnico.nome }}{{ tecnico.tem_aviso ? ' (aviso)' : '' }}
+                  </option>
+                </select>
+                <p v-if="carregandoTecnicos" class="text-xs text-gray-400">Carregando técnicos disponíveis...</p>
+                <p v-if="atribuirErro" class="text-sm text-red-600">{{ atribuirErro }}</p>
               </div>
 
-              <p v-if="reagendarErros.status" class="text-xs text-red-600">{{ reagendarErros.status[0] }}</p>
-              <p v-if="reagendarErroGeral" class="text-sm text-red-600">{{ reagendarErroGeral }}</p>
+              <!-- Reagendar -->
+              <form class="space-y-3 border-t border-gray-100 pt-4" @submit.prevent="enviarReagendamento">
+                <label class="block text-sm font-medium text-gray-700">Reagendar</label>
 
-              <button
-                type="submit"
-                class="btn-primary w-full justify-center"
-                :disabled="reagendando || !reagendarForm.scheduled_date"
-              >
-                {{ reagendando ? 'Reagendando...' : 'Reagendar' }}
-              </button>
-            </form>
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">Data agendada *</label>
+                  <input
+                    v-model="reagendarForm.scheduled_date"
+                    type="date"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    :class="{ 'border-red-500': reagendarErros.scheduled_date }"
+                  />
+                  <p v-if="reagendarErros.scheduled_date" class="mt-1 text-xs text-red-600">
+                    {{ reagendarErros.scheduled_date[0] }}
+                  </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Início</label>
+                    <input
+                      v-model="reagendarForm.hora_inicio"
+                      type="time"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      :class="{ 'border-red-500': reagendarErros.start_time }"
+                    />
+                    <p v-if="reagendarErros.start_time" class="mt-1 text-xs text-red-600">
+                      {{ reagendarErros.start_time[0] }}
+                    </p>
+                  </div>
+                  <div>
+                    <label class="block text-xs text-gray-500 mb-1">Término</label>
+                    <input
+                      v-model="reagendarForm.hora_fim"
+                      type="time"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      :class="{ 'border-red-500': reagendarErros.end_time }"
+                    />
+                    <p v-if="reagendarErros.end_time" class="mt-1 text-xs text-red-600">
+                      {{ reagendarErros.end_time[0] }}
+                    </p>
+                  </div>
+                </div>
+
+                <p v-if="reagendarErros.status" class="text-xs text-red-600">{{ reagendarErros.status[0] }}</p>
+                <p v-if="reagendarErroGeral" class="text-sm text-red-600">{{ reagendarErroGeral }}</p>
+
+                <button
+                  type="submit"
+                  class="btn-primary w-full justify-center"
+                  :disabled="reagendando || !reagendarForm.scheduled_date"
+                >
+                  {{ reagendando ? 'Reagendando...' : 'Reagendar' }}
+                </button>
+              </form>
+            </template>
+
+            <!-- Compromisso avulso (Plano 30, Task 30.5): tipo, título, cliente/
+                 endereço, técnico e observações são só leitura aqui; nada de
+                 reagendar/atribuir técnico para compromisso nesta task. -->
+            <template v-else>
+              <div class="space-y-1.5 text-sm">
+                <p class="flex justify-between gap-2">
+                  <span class="text-gray-500">Tipo</span>
+                  <span class="font-medium text-gray-900">{{ rotuloDeTipoDeCompromisso(visitaSelecionada.tipo) }}</span>
+                </p>
+                <p class="flex justify-between gap-2">
+                  <span class="text-gray-500">Data</span>
+                  <span class="font-medium text-gray-900">{{ formatarData(visitaSelecionada.data) || '—' }}</span>
+                </p>
+                <p class="flex justify-between gap-2">
+                  <span class="text-gray-500">Horário</span>
+                  <span class="font-medium text-gray-900">{{ horarioDaVisitaSelecionada }}</span>
+                </p>
+                <p class="flex justify-between gap-2">
+                  <span class="text-gray-500">Situação</span>
+                  <span class="font-medium text-gray-900">{{ visitaSelecionada.situacao_texto }}</span>
+                </p>
+                <p v-if="visitaSelecionada.cliente?.nome" class="flex justify-between gap-2">
+                  <span class="text-gray-500">Cliente</span>
+                  <span class="font-medium text-gray-900 text-right">{{ visitaSelecionada.cliente.nome }}</span>
+                </p>
+                <p v-if="visitaSelecionada.endereco || visitaSelecionada.cidade" class="flex justify-between gap-2">
+                  <span class="text-gray-500">Endereço</span>
+                  <span class="font-medium text-gray-900 text-right">
+                    {{ [visitaSelecionada.endereco, visitaSelecionada.cidade].filter(Boolean).join(' · ') }}
+                  </span>
+                </p>
+                <p class="flex justify-between gap-2">
+                  <span class="text-gray-500">Técnico</span>
+                  <span class="font-medium text-gray-900">
+                    {{ visitaSelecionada.tecnico?.nome || 'Sem técnico atribuído' }}
+                  </span>
+                </p>
+              </div>
+
+              <!-- `observacoes` só existe no compromisso, nunca em OS. -->
+              <div v-if="visitaSelecionada.observacoes" class="border-t border-gray-100 pt-4 text-sm">
+                <p class="text-gray-500 mb-1">Observações</p>
+                <p class="text-gray-900 whitespace-pre-line">{{ visitaSelecionada.observacoes }}</p>
+              </div>
+
+              <div v-if="podeGerenciarCompromisso" class="space-y-3 border-t border-gray-100 pt-4">
+                <p v-if="acaoCompromissoErro" class="text-sm text-red-600">{{ acaoCompromissoErro }}</p>
+
+                <div>
+                  <label class="block text-xs text-gray-500 mb-1">Promover para (serviço opcional)</label>
+                  <select
+                    v-model="servicoParaPromocao"
+                    :disabled="compromissoJaPromovido || processandoAcaoCompromisso"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  >
+                    <option :value="null">Sem serviço definido</option>
+                    <option v-for="servico in servicos" :key="servico.id" :value="servico.id">
+                      {{ servico.name }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    class="btn-secondary-sm w-full justify-center"
+                    :disabled="processandoAcaoCompromisso"
+                    @click="concluirCompromisso"
+                  >
+                    Concluir
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-secondary-sm w-full justify-center text-red-700"
+                    :disabled="processandoAcaoCompromisso"
+                    @click="pedirCancelamentoDeCompromisso"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-primary w-full justify-center"
+                    :disabled="compromissoJaPromovido || processandoAcaoCompromisso"
+                    :title="compromissoJaPromovido ? 'Este compromisso já foi promovido para uma ordem de serviço.' : ''"
+                    @click="promoverCompromisso"
+                  >
+                    Promover para OS
+                  </button>
+                </div>
+              </div>
+            </template>
           </div>
 
-          <div class="border-t border-gray-200 px-5 py-4">
+          <div v-if="!ehCompromissoSelecionado" class="border-t border-gray-200 px-5 py-4">
             <Link :href="`/work-orders/${visitaSelecionada.id}`" class="btn-secondary w-full justify-center">
               Abrir ordem de serviço completa
             </Link>
@@ -309,6 +437,34 @@
         </div>
       </div>
     </Transition>
+
+    <!-- Criação de compromisso avulso (Task 30.5) -->
+    <ModalNovoCompromisso
+      :show="mostrarModalNovoCompromisso"
+      :tecnicos="tecnicos"
+      :data-inicial="dataReferencia"
+      @close="mostrarModalNovoCompromisso = false"
+      @criado="aoCriarCompromisso"
+    />
+
+    <!-- Confirmação de cancelamento de compromisso (Task 30.5): nunca `confirm()`
+         nativo, mesmo padrão de exclusão do design system, com o tom "warning"
+         (âmbar) porque cancelar não é destrutivo: o compromisso continua no
+         histórico, só muda de situação. -->
+    <ConfirmDeleteModal
+      :show="mostrarConfirmacaoDeCancelamento"
+      variant="warning"
+      title="Cancelar compromisso"
+      subtitle="O compromisso continua no histórico, só muda de situação."
+      message="Tem certeza que deseja cancelar o compromisso"
+      :item-name="visitaSelecionada?.titulo || ''"
+      confirm-text="Sim, cancelar"
+      cancel-text="Voltar"
+      processing-text="Cancelando..."
+      :processing="processandoAcaoCompromisso"
+      @cancel="mostrarConfirmacaoDeCancelamento = false"
+      @confirm="confirmarCancelamentoDeCompromisso"
+    />
   </AuthenticatedLayout>
 </template>
 
@@ -320,9 +476,13 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import CalendarioAgenda from '@/Components/Calendario/CalendarioAgenda.vue';
 import CargaPorTecnico from '@/Components/Calendario/CargaPorTecnico.vue';
+import ModalNovoCompromisso from '@/Components/ModalNovoCompromisso.vue';
+import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
+import { usePermissoes } from '@/Composables/usePermissoes';
 import { partesDeIso, gradeDoMes, diasDaSemana } from '@/utils/calendario';
 import { hojeISO, formatarData, inputDateTimeParaUtc } from '@/utils/formatDate';
 import { reagendarOrdem, tokenCsrf } from '@/utils/agendaApi';
+import { rotuloDeTipoDeCompromisso } from '@/utils/compromisso';
 
 const props = defineProps({
   periodoInicial: {
@@ -338,6 +498,9 @@ const props = defineProps({
     default: () => [],
   },
 });
+
+const { pode } = usePermissoes();
+const podeGerenciarCompromisso = computed(() => pode('compromisso-gerenciar'));
 
 const VISOES = [
   { valor: 'dia', rotulo: 'Dia' },
@@ -605,6 +768,10 @@ const atribuirErro = ref(null);
 // período (ver watch em CargaPorTecnico.vue).
 const versaoCarga = ref(0);
 
+// Compromisso avulso (Plano 30, Task 30.5): decide o que o painel lateral mostra
+// (dados de OS ou dados de compromisso) e quais ações fazem sentido.
+const ehCompromissoSelecionado = computed(() => visitaSelecionada.value?.tipo_item === 'compromisso');
+
 const horarioDaVisitaSelecionada = computed(() => {
   const inicio = visitaSelecionada.value?.hora_inicio;
   const fim = visitaSelecionada.value?.hora_fim;
@@ -636,6 +803,19 @@ function preencherFormularioDeReagendamento(visita) {
 
 function abrirPainel(visita) {
   visitaSelecionada.value = visita;
+  acaoCompromissoErro.value = null;
+  servicoParaPromocao.value = null;
+
+  // Compromisso não tem reagendamento nem atribuição de técnico pelo painel
+  // nesta task (só Concluir/Cancelar/Promover): pular a busca de técnicos
+  // disponíveis e o preenchimento do formulário de OS evita uma chamada de
+  // rede que o compromisso nunca vai usar.
+  if (visita.tipo_item === 'compromisso') {
+    tecnicosDisponiveis.value = [];
+
+    return;
+  }
+
   atribuirErro.value = null;
   reagendarErroGeral.value = null;
   Object.keys(reagendarErros).forEach((chave) => delete reagendarErros[chave]);
@@ -793,6 +973,139 @@ async function enviarReagendamento() {
     reagendarErroGeral.value = 'Não foi possível reagendar. Tente novamente.';
   } finally {
     reagendando.value = false;
+  }
+}
+
+// --- Compromisso avulso (Plano 30, Task 30.5) ---------------------------------------
+//
+// `POST /compromissos`, `.../concluir`, `.../cancelar` e `.../promover-os`
+// devolvem `{ mensagem, compromisso }` em JSON puro (ver o cabeçalho de
+// `CompromissoController`), no formato bruto do model Eloquent, NÃO no formato
+// mesclado que `/agenda/dados` devolve (cliente como objeto, `situacao_texto`,
+// `tipo_item`...). Tentar encaixar essa resposta direto no array `visitas`
+// quebraria o cartão (viraria uma OS "fantasma" sem `tipo_item`, sem
+// `situacao_texto` etc.). Por isso toda ação de compromisso, com sucesso,
+// fecha o painel e recarrega o período inteiro pela mesma `buscarDados()` que
+// a Agenda já usa ao trocar de período, mesmo padrão pedido pela Task 30.5
+// para a criação ("fecha e recarrega o período da Agenda no sucesso").
+const mostrarModalNovoCompromisso = ref(false);
+const mensagemSucessoCompromisso = ref(null);
+const processandoAcaoCompromisso = ref(false);
+const acaoCompromissoErro = ref(null);
+const servicoParaPromocao = ref(null);
+const mostrarConfirmacaoDeCancelamento = ref(false);
+
+// `work_order_id` vem no item de `/agenda/dados` (`AgendaService::formatarCompromisso()`),
+// preenchido só depois de uma promoção bem-sucedida. Como toda ação de
+// compromisso recarrega o período pela mesma `buscarDados()`, o painel
+// sempre reflete o estado real do backend, mesmo depois de reabrir a tela.
+const compromissoJaPromovido = computed(() => Boolean(visitaSelecionada.value?.work_order_id));
+
+function aoCriarCompromisso() {
+  mostrarModalNovoCompromisso.value = false;
+  mensagemSucessoCompromisso.value = 'Compromisso criado.';
+  buscarDados();
+}
+
+async function concluirCompromisso() {
+  if (!visitaSelecionada.value) return;
+
+  processandoAcaoCompromisso.value = true;
+  acaoCompromissoErro.value = null;
+
+  try {
+    const resposta = await fetch(route('compromissos.concluir', visitaSelecionada.value.id), {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': tokenCsrf(), Accept: 'application/json' },
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      acaoCompromissoErro.value = primeiraMensagemDeErro(dados) || 'Não foi possível concluir o compromisso.';
+
+      return;
+    }
+
+    mensagemSucessoCompromisso.value = dados.mensagem;
+    fecharPainel();
+    await buscarDados();
+  } catch (erro) {
+    acaoCompromissoErro.value = 'Não foi possível concluir o compromisso. Tente novamente.';
+  } finally {
+    processandoAcaoCompromisso.value = false;
+  }
+}
+
+function pedirCancelamentoDeCompromisso() {
+  acaoCompromissoErro.value = null;
+  mostrarConfirmacaoDeCancelamento.value = true;
+}
+
+async function confirmarCancelamentoDeCompromisso() {
+  if (!visitaSelecionada.value) return;
+
+  processandoAcaoCompromisso.value = true;
+  acaoCompromissoErro.value = null;
+
+  try {
+    const resposta = await fetch(route('compromissos.cancelar', visitaSelecionada.value.id), {
+      method: 'POST',
+      headers: { 'X-CSRF-TOKEN': tokenCsrf(), Accept: 'application/json' },
+    });
+
+    const dados = await resposta.json();
+    mostrarConfirmacaoDeCancelamento.value = false;
+
+    if (!resposta.ok) {
+      acaoCompromissoErro.value = primeiraMensagemDeErro(dados) || 'Não foi possível cancelar o compromisso.';
+
+      return;
+    }
+
+    mensagemSucessoCompromisso.value = dados.mensagem;
+    fecharPainel();
+    await buscarDados();
+  } catch (erro) {
+    mostrarConfirmacaoDeCancelamento.value = false;
+    acaoCompromissoErro.value = 'Não foi possível cancelar o compromisso. Tente novamente.';
+  } finally {
+    processandoAcaoCompromisso.value = false;
+  }
+}
+
+async function promoverCompromisso() {
+  if (!visitaSelecionada.value || compromissoJaPromovido.value) return;
+
+  processandoAcaoCompromisso.value = true;
+  acaoCompromissoErro.value = null;
+
+  try {
+    const resposta = await fetch(route('compromissos.promover-os', visitaSelecionada.value.id), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': tokenCsrf(),
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ service_id: servicoParaPromocao.value || null }),
+    });
+
+    const dados = await resposta.json();
+
+    if (!resposta.ok) {
+      acaoCompromissoErro.value = primeiraMensagemDeErro(dados) || 'Não foi possível promover o compromisso.';
+
+      return;
+    }
+
+    mensagemSucessoCompromisso.value = dados.mensagem;
+    fecharPainel();
+    await buscarDados();
+  } catch (erro) {
+    acaoCompromissoErro.value = 'Não foi possível promover o compromisso. Tente novamente.';
+  } finally {
+    processandoAcaoCompromisso.value = false;
   }
 }
 </script>
