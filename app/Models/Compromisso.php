@@ -94,10 +94,11 @@ class Compromisso extends Model
     protected $casts = [
         // Dia sem hora relevante: nunca sofre conversão de fuso.
         'data' => 'date',
-        // Mesmo cast de WorkOrder::start_time/end_time, para ficar
-        // consistente com o resto do domínio.
-        'hora_inicio' => 'datetime',
-        'hora_fim' => 'datetime',
+        // hora_inicio e hora_fim são coluna TIME (hora do dia, sem data).
+        // Ficam sem cast de propósito, mesmo critério de
+        // ServiceOrder::start_time/end_time: 'datetime' faria o Eloquent
+        // fabricar uma data e gravar "Y-m-d H:i:s" numa coluna que só
+        // aceita hora.
     ];
 
     /**
