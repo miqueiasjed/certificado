@@ -611,6 +611,20 @@ class SyncPermissions extends Command
                 'epi-entregar',
                 'epi-estornar',
             ],
+
+            // Compromisso avulso da Agenda (Plano 30, Task 30.3). Sem
+            // segregação entre quem cria e quem corrige: diferente da entrega
+            // de EPI, compromisso não é documento oponível, então uma única
+            // permissão de escrita basta. `compromisso-ver` não entra na
+            // lista de exceções de `RolesAndPermissionsSeeder::permissoesLeitura()`
+            // (junto de `epi-ver`/`comissoes-ver`/`usuario-ver`): compromisso
+            // não carrega dado sensível de segurança do trabalho, financeiro
+            // ou conta de usuário, então segue a concessão automática do
+            // sufixo `-ver` para o papel `leitura`.
+            'compromissos' => [
+                'compromisso-ver',
+                'compromisso-gerenciar',
+            ],
         ];
     }
 

@@ -25,6 +25,7 @@ use App\Http\Controllers\CommissionController;
 use App\Http\Controllers\CommissionRuleController;
 use App\Http\Controllers\CompanyAvailabilitySettingController;
 use App\Http\Controllers\ComplianceController;
+use App\Http\Controllers\CompromissoController;
 use App\Http\Controllers\ContaSuspensaController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\ContractRenewalController;
@@ -613,6 +614,19 @@ Route::middleware(['auth', 'tenant.ativo'])->group(function () {
     Route::get('/agenda/tecnicos-disponiveis', [AgendaController::class, 'tecnicosDisponiveis'])->middleware('permission:ordem-servico-editar')->name('agenda.tecnicos-disponiveis');
     Route::put('/agenda/{workOrder}/reagendar', [AgendaController::class, 'reagendar'])->middleware('permission:ordem-servico-editar')->name('agenda.reagendar');
     Route::put('/agenda/{workOrder}/tecnico', [AgendaController::class, 'atribuirTecnico'])->middleware('permission:ordem-servico-editar')->name('agenda.atribuir-tecnico');
+
+    // Compromisso avulso da Agenda (Plano 30, Task 30.3): visita ou tarefa
+    // que entra no calendário sem depender de uma OS já existente. Extensão
+    // da Agenda, então sem middleware de módulo, mesmo critério do bloco
+    // acima: só `permission:compromisso-gerenciar`, única permissão de
+    // escrita porque compromisso não tem a segregação de quem-cria e
+    // quem-corrige que a entrega de EPI tem.
+    Route::post('/compromissos', [CompromissoController::class, 'store'])->middleware('permission:compromisso-gerenciar')->name('compromissos.store');
+    Route::put('/compromissos/{compromisso}', [CompromissoController::class, 'update'])->middleware('permission:compromisso-gerenciar')->name('compromissos.update');
+    Route::delete('/compromissos/{compromisso}', [CompromissoController::class, 'destroy'])->middleware('permission:compromisso-gerenciar')->name('compromissos.destroy');
+    Route::post('/compromissos/{compromisso}/cancelar', [CompromissoController::class, 'cancelar'])->middleware('permission:compromisso-gerenciar')->name('compromissos.cancelar');
+    Route::post('/compromissos/{compromisso}/concluir', [CompromissoController::class, 'concluir'])->middleware('permission:compromisso-gerenciar')->name('compromissos.concluir');
+    Route::post('/compromissos/{compromisso}/promover-os', [CompromissoController::class, 'promoverParaOs'])->middleware('permission:compromisso-gerenciar')->name('compromissos.promover-os');
 
     // Rotas para gerenciar produtos e serviços das work orders
     Route::post('/work-orders/{workOrder}/products/{product}', [WorkOrderController::class, 'addProduct'])->middleware('permission:ordem-servico-executar')->name('work-orders.products.add');
