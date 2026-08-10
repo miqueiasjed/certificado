@@ -366,6 +366,10 @@ class AgendaService
      *
      * Sem `numero`, `servico` e `origem`: não existe conceito equivalente em
      * compromisso avulso (nunca tem número de OS nem serviço vinculado).
+     *
+     * `work_order_id` viaja aqui porque a Task 30.5 (painel lateral da
+     * Agenda) precisa saber se o compromisso já foi promovido para
+     * desabilitar a ação "Promover para OS" sem uma segunda requisição.
      */
     private function formatarCompromisso(Compromisso $compromisso): array
     {
@@ -374,6 +378,7 @@ class AgendaService
             'tipo_item' => 'compromisso',
             'tipo' => $compromisso->tipo,
             'titulo' => $compromisso->titulo,
+            'observacoes' => $compromisso->observacoes,
             // Campo de dia puro: nunca converte fuso, só formata (skill datas-timezone).
             'data' => optional($compromisso->data)->format('Y-m-d'),
             'hora_inicio' => $this->formatarHoraDeCompromisso($compromisso->hora_inicio),
@@ -393,6 +398,7 @@ class AgendaService
                 'nome' => $compromisso->technician->name,
             ] : null,
             'sem_tecnico' => $compromisso->technician_id === null,
+            'work_order_id' => $compromisso->work_order_id,
         ];
     }
 

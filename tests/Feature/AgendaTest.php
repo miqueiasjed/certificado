@@ -306,6 +306,7 @@ class AgendaTest extends TestCase
             'tipo_item',
             'tipo',
             'titulo',
+            'observacoes',
             'data',
             'hora_inicio',
             'hora_fim',
@@ -316,6 +317,7 @@ class AgendaTest extends TestCase
             'situacao_texto',
             'tecnico',
             'sem_tecnico',
+            'work_order_id',
         ], array_keys($itemDoCompromisso), 'o formato do item de compromisso na agenda mudou');
 
         $this->assertSame('orcamento', $itemDoCompromisso['tipo']);
@@ -327,6 +329,7 @@ class AgendaTest extends TestCase
         $this->assertFalse($itemDoCompromisso['sem_tecnico']);
         $this->assertSame('agendado', $itemDoCompromisso['situacao']);
         $this->assertSame('Agendado', $itemDoCompromisso['situacao_texto']);
+        $this->assertNull($itemDoCompromisso['work_order_id'], 'compromisso recém-criado ainda não foi promovido');
     }
 
     /**
