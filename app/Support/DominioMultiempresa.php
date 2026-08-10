@@ -218,6 +218,7 @@ final class DominioMultiempresa
         \App\Models\CompanyBillingSetting::class,
         \App\Models\CompanyContractAlertSetting::class,
         \App\Models\ComplianceCheck::class,
+        \App\Models\Compromisso::class,
         \App\Models\Contract::class,
         \App\Models\ContractVisitJustification::class,
         \App\Models\DailyCashBalance::class,
