@@ -1,10 +1,11 @@
 # INDEX - Planos do Sistema de Certificados
 
-> Última atualização: 08/08/2026 — **os 29 planos estão concluídos**. Do 1 ao
-> 28, mergeados em `main`; o 29 aguarda merge. Nada foi publicado: push
-> permanece pendente de autorização. Os planos 28 e 29 (controle de EPI)
-> nasceram depois, de uma lacuna de conformidade encontrada fora do roteiro
-> original.
+> Última atualização: 10/08/2026. Os planos 1 a 29 estão concluídos (1 a 28
+> mergeados em `main`, o 29 aguarda merge; nada publicado, push pendente de
+> autorização). Os planos 30 e 31 (compromisso avulso, sem OS, na agenda e na
+> rota) são novos, ainda sem tasks: nasceram de uma lacuna levantada em
+> conversa com o usuário em 10/08/2026, fora do roteiro original, mesma
+> origem dos planos 28 e 29.
 > Fonte de requisitos: `.claude/prd/` (índice em `.claude/prd/README.md`)
 
 ## Legenda
@@ -51,6 +52,7 @@ bloqueio.
 | 11 | QR code e identificação de dispositivos | ✅ | 4 | 9 |
 | 12 | App do técnico: fundação offline | ✅ | 2, 4, 10 | 12 |
 | 13 | App do técnico: execução e assinatura em campo | ✅ | 3, 11, 12 | 10 |
+| 30 | Compromissos avulsos: cadastro e agenda | ⏳ | 2, 4, 10 | 6 |
 
 ### Relacionamento com o cliente
 
@@ -77,6 +79,7 @@ bloqueio.
 | 22 | Roteirização e rastreamento em campo | ✅ | 10, 13 | 8 |
 | 23 | Comissões, metas e renovação de contratos | ✅ | 14, 18 | 9 |
 | 24 | Conformidade RDC 622/2022 | ✅ | 14, 17 | 7 |
+| 31 | Compromissos na roteirização | ⏳ | 30, 22 | 5 |
 
 ### Diferenciais
 
@@ -93,7 +96,9 @@ bloqueio.
 | 28 | Controle de EPI: cadastro, CA e ficha de entrega | ✅ | 6, 13, 14 | 7 |
 | 29 | EPI em campo e na conformidade | ✅ | 28, 13, 24 | 6 |
 
-Total: 275 tasks decompostas nos 29 planos.
+Total: 275 tasks decompostas nos 29 planos concluídos. O Plano 30 decompôs em
+6 tasks (`.claude/tasks/30/`) e o Plano 31 em 5 (`.claude/tasks/31/`), nenhum
+dos dois ainda executado.
 
 A decomposição real ficou ~40% acima da estimativa inicial de ~185 tasks. O
 motivo é o limite de dimensionamento: nenhuma task mistura backend com frontend,
@@ -107,12 +112,16 @@ próprio. Os planos que mais cresceram são os que tocam schema com dado existen
 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
      |
      +-> 9 -> 10 -> 11 -> 12 -> 13
+              |    |
+              |    +-> 30 -> 31
               |
               +-> 14 -> 15 -> 16
                        |
                        +-> 17 -> 18 -> 19 -> 20
                                  |
                                  +-> 21, 22, 23, 24
+                                          |     |
+                                          |     +-> 31 (também depende de 30)
                                           |
                                           +-> 25, 26, 27
                                           |

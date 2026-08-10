@@ -58,6 +58,7 @@ final class DominioMultiempresa
         'compliance_checks',
         'company_billing_settings',
         'company_contract_alert_settings',
+        'compromissos',
         'contract_visit_justifications',
         'contracts',
         'daily_cash_balances',
