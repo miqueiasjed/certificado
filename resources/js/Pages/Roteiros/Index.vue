@@ -99,7 +99,7 @@
               :key="parada.route_stop_id"
               :ref="(elemento) => setItemRef(elemento, indice)"
               class="flex items-start gap-3 p-4"
-              :class="indiceArrastando === indice ? 'bg-green-50' : ''"
+              :class="classesDaLinha(parada, indice)"
             >
               <button
                 v-if="podeGerenciar"
@@ -113,12 +113,23 @@
                 </svg>
               </button>
 
-              <span class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-600 text-xs font-bold text-white">
+              <span
+                class="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                :class="ehCompromisso(parada) ? 'bg-amber-500' : 'bg-green-600'"
+              >
                 {{ parada.ordem }}
               </span>
 
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-gray-900">{{ parada.cliente || 'Cliente não informado' }}</p>
+                <p class="text-sm font-medium text-gray-900">
+                  <span
+                    v-if="ehCompromisso(parada)"
+                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-800 mr-1.5 align-middle"
+                  >
+                    {{ rotuloDeTipoDeCompromisso(parada.compromisso_tipo) }}
+                  </span>
+                  {{ tituloDaParada(parada) }}
+                </p>
                 <p class="text-sm text-gray-500">{{ parada.endereco || 'Endereço não informado' }}</p>
                 <div class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
                   <span>Chegada prevista: {{ formatarHora(parada.chegada_estimada) || '-' }}</span>
@@ -143,7 +154,7 @@
           <tbody>
             <tr v-for="parada in rota.paradas" :key="parada.route_stop_id" class="border-b border-gray-200">
               <td class="py-1 pr-2">{{ parada.ordem }}</td>
-              <td class="py-1 pr-2">{{ parada.cliente || '-' }}</td>
+              <td class="py-1 pr-2">{{ tituloDaParada(parada, '-') }}</td>
               <td class="py-1 pr-2">{{ parada.endereco || '-' }}</td>
               <td class="py-1 pr-2">{{ formatarHora(parada.chegada_estimada) || '-' }}</td>
               <td class="py-1">{{ formatarKm(parada.distancia_anterior_km) ?? 'sem referência' }}</td>
@@ -233,6 +244,7 @@ import Modal from '@/Components/Modal.vue';
 import MapaDeVisitas from '@/Components/MapaDeVisitas.vue';
 import { formatarData, formatarDataHora, formatarHora } from '@/utils/formatDate';
 import { usePermissoes } from '@/Composables/usePermissoes';
+import { rotuloDeTipoDeCompromisso } from '@/utils/compromisso';
 
 const props = defineProps({
   tecnicos: { type: Array, default: () => [] },
@@ -323,6 +335,37 @@ const distanciaTotalTexto = computed(() => formatarKm(rota.value?.distancia_tota
 const duracaoTotalTexto = computed(() => formatarMinutos(rota.value?.duracao_estimada_min ?? null));
 const reordenadaEmTexto = computed(() => (rota.value?.reordenada_em ? formatarDataHora(rota.value.reordenada_em) : ''));
 
+// --- Parada de compromisso avulso (Plano 31, Task 31.4) ---
+//
+// Cada parada chega marcada com `tipo_item: 'os'|'compromisso'`
+// (`RouteController::apresentarRota()`), mesma marcação já usada pela Agenda
+// (Plano 30, Task 30.5, ver `CartaoDeVisita.vue`). Reaproveita a mesma
+// paleta âmbar daquela tela para o usuário reconhecer o mesmo padrão visual
+// aqui: fundo/badge âmbar em vez do verde da OS.
+
+function ehCompromisso(parada) {
+  return parada.tipo_item === 'compromisso';
+}
+
+// Compromisso sem cliente vinculado usa o próprio título no lugar do nome do
+// cliente (regra da Task 31.4); com cliente vinculado, mostra o cliente como
+// sempre - o tipo do compromisso já aparece à parte, no badge do template.
+// `fallbackSemCliente` deixa a lista de tela ("Cliente não informado") e a
+// tabela de impressão ("-") cada uma com o próprio texto de sempre para OS,
+// sem regressão no que já existia.
+function tituloDaParada(parada, fallbackSemCliente = 'Cliente não informado') {
+  if (ehCompromisso(parada) && !parada.cliente) {
+    return parada.compromisso_titulo || 'Compromisso sem título';
+  }
+
+  return parada.cliente || fallbackSemCliente;
+}
+
+function classesDaLinha(parada, indice) {
+  if (indiceArrastando.value === indice) return 'bg-green-50';
+  return ehCompromisso(parada) ? 'bg-amber-50' : '';
+}
+
 // --- Lista reordenável (arrastar e soltar por Pointer Events) ---
 
 const paradas = ref([]);
@@ -392,6 +435,13 @@ function limparOuvintesDeArrasto() {
   window.removeEventListener('pointercancel', aoPointerCancelar);
 }
 
+// Contrato da Task 31.3: cada item da lista é `"os:{id}"` ou
+// `"compromisso:{id}"`, com o id certo conforme `tipo_item` - o backend não
+// aceita mais o formato antigo `work_order_ids`.
+function chaveDaParada(parada) {
+  return ehCompromisso(parada) ? `compromisso:${parada.compromisso_id}` : `os:${parada.work_order_id}`;
+}
+
 async function persistirOrdem() {
   if (!rota.value) return;
 
@@ -402,7 +452,7 @@ async function persistirOrdem() {
     const resposta = await fetch(route('roteiros.ordem', rota.value.id), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ work_order_ids: paradas.value.map((parada) => parada.work_order_id) }),
+      body: JSON.stringify({ paradas: paradas.value.map(chaveDaParada) }),
     });
 
     if (!resposta.ok) {

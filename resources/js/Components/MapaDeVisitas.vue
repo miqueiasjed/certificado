@@ -29,7 +29,7 @@
           :key="parada.route_stop_id"
           class="text-sm text-amber-900"
         >
-          {{ parada.ordem }}. {{ parada.cliente || 'Cliente não informado' }} - {{ parada.endereco || 'Endereço não informado' }}
+          {{ parada.ordem }}. {{ ehCompromisso(parada) ? `${rotuloDeTipoDeCompromisso(parada.compromisso_tipo)} - ` : '' }}{{ tituloDaParada(parada) }} - {{ parada.endereco || 'Endereço não informado' }}
         </li>
       </ul>
       <Link
@@ -72,6 +72,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { formatarHora } from '@/utils/formatDate';
 import { usePermissoes } from '@/Composables/usePermissoes';
+import { rotuloDeTipoDeCompromisso } from '@/utils/compromisso';
 
 const props = defineProps({
   // Paradas no formato de `RouteController::apresentarRota()`: cada item
@@ -111,6 +112,24 @@ function temCoordenadaBoa(parada) {
 const paradasComCoordenada = computed(() => props.paradas.filter(temCoordenadaBoa));
 const paradasSemCoordenada = computed(() => props.paradas.filter((parada) => !temCoordenadaBoa(parada)));
 
+// Parada de compromisso avulso (Plano 31, Task 31.4): mesma marcação
+// `tipo_item` e mesma paleta âmbar já adotadas na Agenda (Plano 30, Task
+// 30.5, ver `CartaoDeVisita.vue`), para o usuário reconhecer o mesmo padrão
+// visual no mapa do roteiro.
+function ehCompromisso(parada) {
+  return parada.tipo_item === 'compromisso';
+}
+
+// Compromisso sem cliente vinculado usa o próprio título no lugar do nome do
+// cliente; com cliente vinculado, mostra o cliente como sempre.
+function tituloDaParada(parada) {
+  if (ehCompromisso(parada) && !parada.cliente) {
+    return parada.compromisso_titulo || 'Compromisso sem título';
+  }
+
+  return parada.cliente || 'Cliente não informado';
+}
+
 const sedeComCoordenada = computed(() => {
   if (!props.sede || props.sede.latitude === null || props.sede.longitude === null) {
     return null;
@@ -130,10 +149,12 @@ function escaparHtml(valor) {
     .replaceAll("'", '&#39;');
 }
 
-function iconeNumerado(numero) {
+function iconeNumerado(numero, ehCompromissoDaParada) {
+  const corFundo = ehCompromissoDaParada ? 'bg-amber-500' : 'bg-green-600';
+
   return L.divIcon({
     className: '',
-    html: `<div class="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-green-600 text-xs font-bold text-white shadow-md">${numero}</div>`,
+    html: `<div class="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white ${corFundo} text-xs font-bold text-white shadow-md">${numero}</div>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
     popupAnchor: [0, -16],
@@ -152,10 +173,13 @@ function iconeSede() {
 
 function popupDaParada(parada) {
   const horario = formatarHora(parada.chegada_estimada);
+  const badgeTipo = ehCompromisso(parada)
+    ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-800 mr-1.5 align-middle">${escaparHtml(rotuloDeTipoDeCompromisso(parada.compromisso_tipo))}</span>`
+    : '';
 
   return `
     <div class="text-sm">
-      <p class="font-semibold text-gray-900">${parada.ordem}. ${escaparHtml(parada.cliente || 'Cliente não informado')}</p>
+      <p class="font-semibold text-gray-900">${badgeTipo}${parada.ordem}. ${escaparHtml(tituloDaParada(parada))}</p>
       <p class="text-gray-600">${escaparHtml(parada.endereco || 'Endereço não informado')}</p>
       ${horario ? `<p class="mt-1 text-gray-500">Chegada prevista: ${horario}</p>` : ''}
     </div>
@@ -199,7 +223,7 @@ function desenhar() {
     const ponto = [parada.latitude, parada.longitude];
     pontos.push(ponto);
 
-    L.marker(ponto, { icon: iconeNumerado(parada.ordem) })
+    L.marker(ponto, { icon: iconeNumerado(parada.ordem, ehCompromisso(parada)) })
       .bindPopup(popupDaParada(parada))
       .addTo(camadaDeParadas);
   });
