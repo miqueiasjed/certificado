@@ -1,7 +1,7 @@
 # Handoff
 
-Estado: **os 31 planos do roteiro estão concluídos e mergeados em `main`.**
-Nada foi publicado — push segue pendente de autorização explícita.
+Estado: **os 31 planos do roteiro estão concluídos, mergeados em `main` e
+publicados em `origin/main` até `6cacca2`.**
 
 Não há plano pendente. O que resta são decisões de rollout e a dívida técnica
 registrada abaixo.
@@ -68,8 +68,11 @@ Os arquivos do Plano 31 conferem com o que as tasks previam: `RouteStop`,
 1. **Texto legal da ficha de EPI.** Ficou mais conservador no Plano 28, mas
    continua sendo texto de documento com valor perante fiscalização do trabalho.
    Merece leitura do responsável técnico antes do Deploy 1.
-2. **Push.** `main` local está à frente do remoto desde o Plano 24. Nada foi
-   publicado.
+2. **Push.** Conferido em 16/08/2026 com `git fetch`: `origin/main` está em
+   `6cacca2`, ou seja, **todo o código dos 31 planos já foi publicado**. O
+   handoff anterior afirmava que nada tinha sido publicado desde o Plano 24 —
+   estava errado. O único commit local à frente é o de documentação desta
+   sessão.
 
 ## Dívida técnica acumulada
 
