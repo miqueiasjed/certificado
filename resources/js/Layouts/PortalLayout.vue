@@ -118,12 +118,15 @@
       </Link>
     </nav>
   </div>
+
+  <BotaoDeAjuda escopo="portal" />
 </template>
 
 <script setup>
 import { computed } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { resolverCoresDoPortal } from '@/utils/corDoPortal';
+import BotaoDeAjuda from '@/Components/BotaoDeAjuda.vue';
 
 const $page = usePage();
 

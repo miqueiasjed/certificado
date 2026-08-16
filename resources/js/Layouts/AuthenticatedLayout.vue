@@ -78,6 +78,8 @@
       </footer>
     </div>
   </div>
+
+  <BotaoDeAjuda />
 </template>
 
 <script setup>
@@ -86,6 +88,7 @@ import { usePage } from '@inertiajs/vue3';
 import Sidebar from '@/Components/Sidebar.vue';
 import FaixaDeSuporte from '@/Components/FaixaDeSuporte.vue';
 import AvisoDeLimite from '@/Components/AvisoDeLimite.vue';
+import BotaoDeAjuda from '@/Components/BotaoDeAjuda.vue';
 
 const $page = usePage();
 const suporteAtivo = computed(() => $page.props.suporte?.ativo === true);

@@ -131,12 +131,15 @@
       </main>
     </div>
   </div>
+
+  <BotaoDeAjuda escopo="plataforma" />
 </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
 import FaixaDeSuporte from '@/Components/FaixaDeSuporte.vue';
+import BotaoDeAjuda from '@/Components/BotaoDeAjuda.vue';
 
 const $page = usePage();
 const navAberta = ref(false);
