@@ -268,7 +268,14 @@ class RelatorioPdfServiceTest extends TestCase
     {
         [$relatorio] = $this->cenarioComCroqui(comOcorrenciaPorEspecie: true);
 
-        $diretorio = '/private/tmp/claude-501/-Users-miqueias-Sites-certificado/861e73d1-0ac2-413f-a7d3-18f6454fb364/scratchpad';
+        // Caminho dentro do projeto e ignorado pelo Git (storage/app/.gitignore),
+        // para o PDF continuar disponível para conferência visual depois da
+        // suíte rodar, em qualquer máquina.
+        $diretorio = storage_path('app/testing/pdf-inspecao');
+
+        if (! is_dir($diretorio)) {
+            mkdir($diretorio, 0755, true);
+        }
 
         $caminhoTecnico = $diretorio.'/relatorio-monitoramento-tecnico.pdf';
         $caminhoCliente = $diretorio.'/relatorio-monitoramento-cliente.pdf';
