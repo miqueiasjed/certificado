@@ -18,8 +18,26 @@ o acerto de estado que faltava:
 - **Validação do Plano 31 refeita nesta sessão**, já que a anterior não deixou
   evidência: `php artisan test --filter=Route` → 32 testes, 136 asserções,
   exit 0 (71s). `npm run build` limpo.
+- **A suíte completa está verde pela primeira vez desde o Plano 21:**
+  1765 testes, 12972 asserções, **nenhuma falha**, exit 0 (952s), rodada depois
+  da correção do teste de PDF descrita abaixo.
 - O rótulo `DEPR` em toda a saída continua sendo ruído pré-existente do PHP 8.5
   (`PDO::MYSQL_ATTR_SSL_CA`, `config/database.php:81`), não é falha.
+
+Depois, a pedido do usuário, fechou a limpeza barata:
+
+- **A suíte foi destravada.** `RelatorioPdfServiceTest::test_gera_pdf_real_para_inspecao_visual`
+  gravava num caminho absoluto do scratchpad de outra máquina e falhava em
+  qualquer computador que não o do autor original — era a única falha da suíte
+  desde o Plano 21. Passou a gravar em `storage/app/testing/pdf-inspecao`,
+  criado sob demanda; o PDF continua sendo gerado de verdade para conferência
+  visual, e `storage/app/.gitignore` já o mantém fora do versionamento.
+- **Marcador de conflito órfão removido do `.gitignore`** (linha `>>>>>>> ce53ae2`,
+  herdada do primeiro commit).
+- **Worktrees e branches limpos.** Os quatro worktrees `plano-24` a `plano-27` e
+  as seis branches `plano-24` a `plano-29` foram removidos depois de confirmar
+  `git log main..<branch>` vazio para todas e nenhuma alteração pendente nos
+  worktrees. As branches saíram com `git branch -d`, não `-D`.
 
 Os arquivos do Plano 31 conferem com o que as tasks previam: `RouteStop`,
 `RouteService`, `OtimizadorDeRota`, `RouteController`, `ReordenarRotaRequest`,
@@ -76,10 +94,6 @@ Os arquivos do Plano 31 conferem com o que as tasks previam: `RouteStop`,
 
 ## Dívida técnica acumulada
 
-- **`RelatorioPdfServiceTest.php:277` falha em qualquer máquina** que não seja a
-  do autor original: grava num caminho absoluto de scratchpad
-  (`/private/tmp/claude-501/-Users-miqueias-...`). Vem do Plano 21. **É uma linha
-  para consertar** e destravaria a suíte completa para sempre.
 - **Conflito `registro_alterado` ao sincronizar tudo de uma vez** depois do modo
   avião: o `execucao/iniciar` do mesmo lote muda `work_orders.updated_at`, e o
   `execucao/concluir` leva o `updated_at_conhecido` velho da carga do dia.
@@ -103,8 +117,7 @@ Os arquivos do Plano 31 conferem com o que as tasks previam: `RouteStop`,
   domínio.
 - `routes/web.php` reprovado no `ordered_imports` do Pint por imports herdados
   dos Planos 27 e anteriores. O projeto não usa Pint como gate.
-- Relação `devices` ausente em `ServiceOrder`; marcador de conflito no
-  `.gitignore`.
+- Relação `devices` ausente em `ServiceOrder`.
 
 ## Ordem de aplicação em produção (28 e 29)
 
@@ -132,8 +145,9 @@ Os arquivos do Plano 31 conferem com o que as tasks previam: `RouteStop`,
 
 ## Limpeza pendente
 
-- Worktrees e branches `.claude/worktrees/plano-2{4,5,6,7}`, já mergeados.
-- Branches `plano-28` e `plano-29`, já mergeadas.
-- Bancos de teste `testing_2{4,5,6,7}`, `testing_28a/b/c`, `testing_29a/b/c`,
-  `testing_base`, `testing_fix_a/b/c`, `testing_merge`,
-  `testing_nfse_29450_ca61782f`.
+Worktrees e branches já foram removidos (ver acima). Resta:
+
+- Bancos de teste no MySQL local: `testing_2{4,5,6,7}`, `testing_28a/b/c`,
+  `testing_29a/b/c`, `testing_base`, `testing_fix_a/b/c`, `testing_merge`,
+  `testing_nfse_29450_ca61782f`. Só ocupam espaço na máquina de quem
+  desenvolve; `testing` é o único que a suíte usa.
