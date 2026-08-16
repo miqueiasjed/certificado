@@ -8,11 +8,11 @@
 
 | # | Título | Tipo | Status | Complexidade |
 |---|--------|------|--------|--------------|
-| 31.1 | RouteStop aceita compromisso | backend-estrutura | ⏳ | baixa |
-| 31.2 | RouteService monta, sincroniza e recalcula com compromisso | backend-logica | ⏳ | alta |
-| 31.3 | Roteiro apresenta e reordena parada de compromisso | backend-endpoint | ⏳ | média |
-| 31.4 | Frontend: parada de compromisso no roteiro e no mapa | frontend-pagina | ⏳ | média |
-| 31.5 | Testes de roteiro misto: OS e compromisso | teste | ⏳ | média |
+| 31.1 | RouteStop aceita compromisso | backend-estrutura | ✅ | baixa |
+| 31.2 | RouteService monta, sincroniza e recalcula com compromisso | backend-logica | ✅ | alta |
+| 31.3 | Roteiro apresenta e reordena parada de compromisso | backend-endpoint | ✅ | média |
+| 31.4 | Frontend: parada de compromisso no roteiro e no mapa | frontend-pagina | ✅ | média |
+| 31.5 | Testes de roteiro misto: OS e compromisso | teste | ✅ | média |
 
 ## Ordem de execução
 
