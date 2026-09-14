@@ -42,9 +42,16 @@ class ContractService
     /**
      * Cria o contrato do endereço informado.
      *
-     * Endereço tem no máximo um contrato: `updateOrCreate` por `address_id`
-     * mantém esse invariante e evita duplicidade se o formulário for
-     * reenviado.
+     * `updateOrCreate` na relação `contract()` evita duplicidade se o
+     * formulário for reenviado: atualiza o contrato mais recente do endereço
+     * ou cria o primeiro.
+     *
+     * Os atributos de busca vão vazios de propósito. A relação já filtra por
+     * `address_id` e, no create, preenche a chave estrangeira sozinha. Passar
+     * `['address_id' => ...]` gera um `where address_id` sem prefixo de
+     * tabela, que o MySQL recusa como ambíguo desde que `contract()` virou
+     * `latestOfMany()` (Plano 23): o join com a subconsulta `latestOfMany`
+     * também expõe uma coluna `address_id`.
      *
      * @param  array<string, mixed>  $dados  Já validados pelo controller.
      */
@@ -53,10 +60,7 @@ class ContractService
         $dados = $this->comPeriodicidadeResolvida($dados);
         $dados = $this->comNumeroDeContrato($address->id, $dados);
 
-        return $address->contract()->updateOrCreate(
-            ['address_id' => $address->id],
-            $dados
-        );
+        return $address->contract()->updateOrCreate([], $dados);
     }
 
     /**
