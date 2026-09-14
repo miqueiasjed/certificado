@@ -165,14 +165,15 @@
                     $frequencyLabels = [
                         'weekly' => 'semanais',
                         'biweekly' => 'quinzenais',
-                        'monthly' => 'mensais'
+                        'monthly' => 'mensais',
+                        'quarterly' => 'trimestrais'
                     ];
                     $frequencyLabel = $frequencyLabels[$contract->visit_frequency] ?? 'mensais';
                     $visitCount = $contract->visit_count ?? 1;
                     echo $visitCount . ' visita' . ($visitCount > 1 ? 's' : '') . ' ' . $frequencyLabel;
                 @endphp
             @else
-                [X visitas semanais/quinzenais/mensais]
+                [X visitas semanais/quinzenais/mensais/trimestrais]
             @endif
             durante o período de
             @if($contract->start_date && $contract->end_date)

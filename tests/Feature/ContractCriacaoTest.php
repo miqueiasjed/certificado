@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\Contract;
 use App\Models\User;
 use App\Services\ContractService;
+use App\Support\TenantAtual;
 use Database\Factories\AddressFactory;
 use Database\Seeders\ModulesSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 /**
@@ -105,6 +107,84 @@ class ContractCriacaoTest extends TestCase
         $resposta->assertRedirect(route('contracts.index'));
         $resposta->assertSessionHas('success');
         $this->assertSame(1, Contract::query()->where('address_id', $endereco->id)->count());
+    }
+
+    // -----------------------------------------------------------------
+    // Frequência trimestral
+    // -----------------------------------------------------------------
+
+    /**
+     * `quarterly` precisa virar 3 meses nas colunas que o calendário de
+     * visitas lê. Sem o mapeamento, o contrato seria salvo mas cairia no
+     * painel de pendências como periodicidade não reconhecida.
+     */
+    public function test_rota_de_criar_contrato_aceita_frequencia_trimestral_e_grava_tres_meses(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(ModulesSeeder::class);
+
+        $endereco = AddressFactory::new()->create();
+        $usuario = $this->criarUsuarioComPapel('comercial');
+
+        $resposta = $this->actingAs($usuario)->post("/addresses/{$endereco->id}/contracts", $this->dadosDoFormulario([
+            'visit_frequency' => 'quarterly',
+            'visit_count' => 4,
+        ]));
+
+        $resposta->assertRedirect(route('contracts.index'));
+        $resposta->assertSessionHasNoErrors();
+
+        $contrato = Contract::query()->where('address_id', $endereco->id)->firstOrFail();
+        $this->assertSame('quarterly', $contrato->visit_frequency);
+        $this->assertSame(3, (int) $contrato->visit_frequency_valor);
+        $this->assertSame('meses', $contrato->visit_frequency_unidade);
+    }
+
+    public function test_editar_contrato_mensal_para_trimestral_atualiza_a_periodicidade(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(ModulesSeeder::class);
+
+        $endereco = AddressFactory::new()->create();
+        $contrato = $this->contractService->criar($endereco, $this->dadosDoFormulario());
+        $usuario = $this->criarUsuarioComPapel('comercial');
+
+        $resposta = $this->actingAs($usuario)->put("/contracts/{$contrato->id}", $this->dadosDoFormulario([
+            'visit_frequency' => 'quarterly',
+            'visit_count' => 4,
+        ]));
+
+        $resposta->assertRedirect();
+        $resposta->assertSessionHasNoErrors();
+
+        $atualizado = $contrato->fresh();
+        $this->assertSame('quarterly', $atualizado->visit_frequency);
+        $this->assertSame(3, (int) $atualizado->visit_frequency_valor);
+        $this->assertSame('meses', $atualizado->visit_frequency_unidade);
+    }
+
+    /**
+     * O mapa de rótulos do PDF cai em "mensais" quando não reconhece a
+     * frequência. Contrato trimestral impresso como mensal é documento
+     * divergente do sistema perante a fiscalização.
+     */
+    public function test_pdf_do_contrato_trimestral_descreve_visitas_trimestrais(): void
+    {
+        $html = TenantAtual::comTenant(1, function (): string {
+            $endereco = AddressFactory::new()->create();
+            $contrato = $this->contractService->criar($endereco, $this->dadosDoFormulario([
+                'visit_frequency' => 'quarterly',
+                'visit_count' => 4,
+            ]));
+
+            $dados = $this->contractService->preparePdfData($contrato);
+            $dados['address'] = $endereco;
+            $dados['client'] = $endereco->client;
+
+            return View::make('pdf.contract', $dados)->render();
+        });
+
+        $this->assertStringContainsString('4 visitas trimestrais', $html);
     }
 
     // -----------------------------------------------------------------

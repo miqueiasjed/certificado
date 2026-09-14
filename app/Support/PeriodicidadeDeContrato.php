@@ -29,9 +29,10 @@ final class PeriodicidadeDeContrato
      * Mapa de valores literais conhecidos (normalizados: minúsculo, sem
      * acento, sem espaço nas pontas) para [valor, unidade]. Cobre o domínio
      * provável levantado na Task 9.1 (weekly/biweekly/monthly, o que o
-     * formulário emite hoje) e o mapeamento mínimo exigido pela Task 9.2
+     * formulário emitia na época), o mapeamento mínimo exigido pela Task 9.2
      * (termos em português, possivelmente de importação antiga ou de uma
-     * versão anterior da tela).
+     * versão anterior da tela) e `quarterly`, a opção trimestral acrescentada
+     * depois ao formulário.
      *
      * @var array<string, array{0: int, 1: string}>
      */
@@ -44,6 +45,7 @@ final class PeriodicidadeDeContrato
         'monthly' => [1, 'meses'],
         'bimestral' => [2, 'meses'],
         'trimestral' => [3, 'meses'],
+        'quarterly' => [3, 'meses'],
         'semestral' => [6, 'meses'],
         'anual' => [12, 'meses'],
     ];

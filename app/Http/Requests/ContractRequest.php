@@ -35,7 +35,7 @@ class ContractRequest extends FormRequest
             'end_date' => 'required|date|after:start_date',
             'service_value' => 'nullable|numeric|min:0',
             'service_type' => 'required|in:pontual,periodico',
-            'visit_frequency' => 'required|in:weekly,biweekly,monthly',
+            'visit_frequency' => 'required|in:weekly,biweekly,monthly,quarterly',
             'visit_count' => 'required|integer|min:1',
             'pest_target' => 'nullable|string',
             'payment_method' => 'nullable|string',

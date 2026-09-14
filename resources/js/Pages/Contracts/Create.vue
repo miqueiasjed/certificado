@@ -131,6 +131,7 @@
                 <option value="weekly">Semanal</option>
                 <option value="biweekly">Quinzenal</option>
                 <option value="monthly">Mensal</option>
+                <option value="quarterly">Trimestral</option>
               </select>
               <p v-if="form.errors.visit_frequency" class="mt-1 text-sm text-red-600">
                 {{ form.errors.visit_frequency }}
@@ -381,7 +382,8 @@ const getFrequencyLabel = (lowercase = false) => {
   const labels = {
     'weekly': lowercase ? 'por semana' : 'Por Semana',
     'biweekly': lowercase ? 'quinzenalmente' : 'Quinzenalmente',
-    'monthly': lowercase ? 'por mês' : 'Por Mês'
+    'monthly': lowercase ? 'por mês' : 'Por Mês',
+    'quarterly': lowercase ? 'por trimestre' : 'Por Trimestre'
   };
   return labels[form.visit_frequency] || '';
 };
