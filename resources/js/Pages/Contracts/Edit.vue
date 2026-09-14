@@ -112,10 +112,10 @@
               </p>
             </div>
 
-            <!-- Quantidade de Visitas (baseada na frequência) -->
+            <!-- Total de visitas do contrato: numera as OS ("Visita 1 de N") e sai no PDF -->
             <div v-if="form.visit_frequency">
               <label for="visit_count" class="block text-sm font-medium text-gray-700 mb-2">
-                Quantidade de Visitas {{ getFrequencyLabel() }} *
+                Total de Visitas Previstas *
               </label>
               <input
                 id="visit_count"
@@ -125,8 +125,11 @@
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 :class="{ 'border-red-500': form.errors.visit_count }"
-                :placeholder="`Ex: 2 visitas ${getFrequencyLabel(true)}`"
+                placeholder="Ex: 12"
               />
+              <p class="mt-1 text-sm text-gray-500">
+                Todas as visitas do período do contrato somadas. A OS mostra esse total, como em "Visita 1 de 12".
+              </p>
               <p v-if="form.errors.visit_count" class="mt-1 text-sm text-red-600">
                 {{ form.errors.visit_count }}
               </p>
@@ -357,17 +360,6 @@ const formatServiceValue = (event) => {
   // Atualiza o display e o valor numérico
   serviceValueDisplay.value = formatted;
   form.service_value = amount;
-};
-
-// Função para obter o label da frequência
-const getFrequencyLabel = (lowercase = false) => {
-  const labels = {
-    'weekly': lowercase ? 'por semana' : 'Por Semana',
-    'biweekly': lowercase ? 'quinzenalmente' : 'Quinzenalmente',
-    'monthly': lowercase ? 'por mês' : 'Por Mês',
-    'quarterly': lowercase ? 'por trimestre' : 'Por Trimestre'
-  };
-  return labels[form.visit_frequency] || '';
 };
 
 // Função quando mudar a frequência

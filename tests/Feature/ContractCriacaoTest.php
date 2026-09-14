@@ -170,12 +170,37 @@ class ContractCriacaoTest extends TestCase
      */
     public function test_pdf_do_contrato_trimestral_descreve_visitas_trimestrais(): void
     {
-        $html = TenantAtual::comTenant(1, function (): string {
+        $html = $this->pdfRenderizado(['visit_frequency' => 'quarterly', 'visit_count' => 4]);
+
+        $this->assertMatchesRegularExpression('/4 visitas trimestrais\s+durante/', $html);
+    }
+
+    /**
+     * `visit_count` é o total do contrato. Com uma visita só, o adjetivo da
+     * frequência vai para o singular: antes o PDF imprimia "1 visita mensais".
+     */
+    public function test_pdf_do_contrato_com_uma_visita_concorda_no_singular(): void
+    {
+        $html = $this->pdfRenderizado(['visit_frequency' => 'quarterly', 'visit_count' => 1]);
+
+        $this->assertMatchesRegularExpression('/1 visita trimestral\s+durante/', $html);
+    }
+
+    // -----------------------------------------------------------------
+    // Apoio
+    // -----------------------------------------------------------------
+
+    /**
+     * HTML do PDF do contrato, montado com os mesmos dados que
+     * `ContractController::generatePDF()` passa ao dompdf.
+     *
+     * @param  array<string, mixed>  $atributos
+     */
+    private function pdfRenderizado(array $atributos): string
+    {
+        return TenantAtual::comTenant(1, function () use ($atributos): string {
             $endereco = AddressFactory::new()->create();
-            $contrato = $this->contractService->criar($endereco, $this->dadosDoFormulario([
-                'visit_frequency' => 'quarterly',
-                'visit_count' => 4,
-            ]));
+            $contrato = $this->contractService->criar($endereco, $this->dadosDoFormulario($atributos));
 
             $dados = $this->contractService->preparePdfData($contrato);
             $dados['address'] = $endereco;
@@ -183,13 +208,7 @@ class ContractCriacaoTest extends TestCase
 
             return View::make('pdf.contract', $dados)->render();
         });
-
-        $this->assertStringContainsString('4 visitas trimestrais', $html);
     }
-
-    // -----------------------------------------------------------------
-    // Apoio
-    // -----------------------------------------------------------------
 
     /**
      * Campos como chegam do formulário de contrato (`ContractRequest`).

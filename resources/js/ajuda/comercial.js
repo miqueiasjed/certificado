@@ -240,7 +240,7 @@ export default {
           'Em "Tipo de Serviço", escolha "Pontual (Visita Única)" ou "Periódico (Manutenção Programada)".',
           'Informe a "Data de Início".',
           'Clique em um dos botões de "Duração do Contrato" (6 Meses, 1 Ano, 2 Anos, 3 Anos) para preencher a "Data de Término", ou digite a data à mão.',
-          'Escolha a "Frequência de Visitas" (Semanal, Quinzenal ou Mensal) e informe a "Quantidade de Visitas".',
+          'Escolha a "Frequência de Visitas" (Semanal, Quinzenal, Mensal ou Trimestral) e informe o "Total de Visitas Previstas".',
         ],
       },
       {
@@ -255,12 +255,12 @@ export default {
       },
     ],
     campos: [
-      { nome: 'Quantidade de Visitas', descricao: 'Quantas visitas acontecem dentro da frequência escolhida (por semana, quinzenalmente ou por mês). É esse número, junto com a frequência, que gera as datas previstas.' },
+      { nome: 'Total de Visitas Previstas', descricao: 'Soma de todas as visitas do período do contrato, e não por semana ou por mês. As datas previstas saem da frequência e da vigência; este total aparece na numeração das OS, como em "Visita 1 de 12", e no PDF do contrato.' },
       { nome: 'Cláusula Adicional', descricao: 'Texto livre que entra no PDF do contrato junto com as cláusulas padrão.' },
     ],
     atencao: [
       'O contrato é um documento com valor perante o cliente e a fiscalização: confira o PDF gerado depois de salvar, principalmente quando usar cláusula adicional.',
-      'Sem frequência e quantidade de visitas corretas, o contrato periódico aparece em "Pendências de contratos" como periodicidade não preenchida.',
+      'Sem uma frequência de visitas reconhecida, o contrato periódico aparece em "Pendências de contratos" como periodicidade não preenchida.',
     ],
     relacionados: [
       { titulo: 'Contratos', href: '/contracts' },
@@ -277,7 +277,7 @@ export default {
         passos: [
           'Revise "Tipo de Serviço", "Data de Início" e "Data de Término".',
           'Use os botões de duração para recalcular a data de término a partir do início.',
-          'Corrija a "Frequência de Visitas" e a "Quantidade de Visitas" quando o combinado com o cliente mudar.',
+          'Corrija a "Frequência de Visitas" e o "Total de Visitas Previstas" quando o combinado com o cliente mudar.',
           'Clique em "Atualizar Contrato".',
         ],
       },

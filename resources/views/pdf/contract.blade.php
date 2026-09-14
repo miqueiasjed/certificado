@@ -163,14 +163,16 @@
             @if($contract->service_type === 'periodico' && $contract->visit_frequency)
                 @php
                     $frequencyLabels = [
-                        'weekly' => 'semanais',
-                        'biweekly' => 'quinzenais',
-                        'monthly' => 'mensais',
-                        'quarterly' => 'trimestrais'
+                        'weekly' => ['semanal', 'semanais'],
+                        'biweekly' => ['quinzenal', 'quinzenais'],
+                        'monthly' => ['mensal', 'mensais'],
+                        'quarterly' => ['trimestral', 'trimestrais']
                     ];
-                    $frequencyLabel = $frequencyLabels[$contract->visit_frequency] ?? 'mensais';
-                    $visitCount = $contract->visit_count ?? 1;
-                    echo $visitCount . ' visita' . ($visitCount > 1 ? 's' : '') . ' ' . $frequencyLabel;
+                    [$frequencySingular, $frequencyPlural] = $frequencyLabels[$contract->visit_frequency] ?? ['mensal', 'mensais'];
+                    $visitCount = (int) ($contract->visit_count ?? 1);
+                    echo $visitCount > 1
+                        ? $visitCount . ' visitas ' . $frequencyPlural
+                        : $visitCount . ' visita ' . $frequencySingular;
                 @endphp
             @else
                 [X visitas semanais/quinzenais/mensais/trimestrais]
