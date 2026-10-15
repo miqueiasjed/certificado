@@ -153,6 +153,43 @@ class AcessoTecnicoTest extends TestCase
     }
 
     // -----------------------------------------------------------------
+    // Criação e edição: o técnico abre OS e cadastra endereço
+    // -----------------------------------------------------------------
+
+    public function test_tecnico_abre_as_telas_de_criar_ordem_de_servico_e_endereco(): void
+    {
+        $usuario = $this->criarUsuarioTecnico($this->criarTecnico());
+
+        $this->actingAs($usuario)->get('/work-orders/create')->assertOk();
+        $this->actingAs($usuario)->get('/addresses/create')->assertOk();
+    }
+
+    public function test_tecnico_edita_a_propria_ordem_de_servico_e_nao_a_de_outro_tecnico(): void
+    {
+        $tecnicoA = $this->criarTecnico();
+        $usuarioA = $this->criarUsuarioTecnico($tecnicoA);
+        $ordemA = $this->criarOrdemDeServico(['technician_id' => $tecnicoA->id]);
+
+        $tecnicoB = $this->criarTecnico();
+        $ordemB = $this->criarOrdemDeServico(['technician_id' => $tecnicoB->id]);
+
+        $this->actingAs($usuarioA)->get("/work-orders/{$ordemA->id}/edit")->assertOk();
+        $this->actingAs($usuarioA)->get("/work-orders/{$ordemB->id}/edit")->assertForbidden();
+    }
+
+    public function test_papel_tecnico_continua_sem_permissao_de_exclusao(): void
+    {
+        $usuario = $this->criarUsuarioTecnico($this->criarTecnico());
+
+        $this->assertTrue($usuario->can('ordem-servico-criar'));
+        $this->assertTrue($usuario->can('ordem-servico-editar'));
+        $this->assertTrue($usuario->can('endereco-criar'));
+        $this->assertTrue($usuario->can('endereco-editar'));
+        $this->assertFalse($usuario->can('ordem-servico-excluir'));
+        $this->assertFalse($usuario->can('endereco-excluir'));
+    }
+
+    // -----------------------------------------------------------------
     // Apoio
     // -----------------------------------------------------------------
 

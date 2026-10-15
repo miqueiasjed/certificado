@@ -137,13 +137,23 @@ class RolesAndPermissionsSeeder extends Seeder
      * cômodo e visualização do necessário em campo. Sem financeiro e sem
      * nenhuma permissão de exclusão.
      *
+     * `ordem-servico-criar`/`ordem-servico-editar` e `endereco-criar`/
+     * `endereco-editar` entram a pedido do cliente: o técnico abre a OS e
+     * cadastra o endereço em campo. A edição de OS continua presa às ordens
+     * em que ele está atribuído (`WorkOrderAccessService::garantirAcesso`), e
+     * as exclusões seguem fora do papel.
+     *
      * @return array<int, string>
      */
     private function permissoesTecnico(): array
     {
         return [
             'ordem-servico-ver',
+            'ordem-servico-criar',
+            'ordem-servico-editar',
             'ordem-servico-executar',
+            'endereco-criar',
+            'endereco-editar',
             'comodo-gerenciar',
             'dispositivo-ver',
             'dispositivo-editar',
