@@ -122,13 +122,13 @@
           <div class="space-y-4 p-4 sm:p-6">
             <div v-if="tipos_de_servico.length > 0">
               <label class="mb-1 block text-sm font-medium text-gray-700">Tipo de serviço</label>
-              <select
+              <SelectComBusca
                 v-model="form.service_type_id"
-                class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-                :class="{ 'border-red-500': form.errors.service_type_id }">
-                <option value="">Sem preferência</option>
-                <option v-for="tipo in tipos_de_servico" :key="tipo.id" :value="tipo.id">{{ tipo.nome }}</option>
-              </select>
+                :opcoes="tipos_de_servico"
+                chave-rotulo="nome"
+                placeholder="Sem preferência"
+                classe-campo="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                :erro="!!form.errors.service_type_id" />
               <p v-if="form.errors.service_type_id" class="mt-1 text-sm text-red-600">{{ form.errors.service_type_id }}</p>
             </div>
 
@@ -230,6 +230,7 @@ import { computed, ref } from 'vue';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import PublicoLayout from '@/Layouts/PublicoLayout.vue';
 import Card from '@/Components/Card.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { NOMES_DIAS_SEMANA_ABREVIADO, gradeDoMes, nomeDoMes, somarMeses } from '@/utils/calendario';
 import { hojeISO } from '@/utils/formatDate';
 

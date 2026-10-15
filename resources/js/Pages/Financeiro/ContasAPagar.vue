@@ -63,25 +63,23 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Fornecedor</label>
-            <select
+            <SelectComBusca
               v-model="filtros.supplier_id"
+              :opcoes="fornecedores"
+              chave-rotulo="nome"
+              placeholder="Todos"
               @change="aplicarFiltros"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos</option>
-              <option v-for="fornecedor in fornecedores" :key="fornecedor.id" :value="fornecedor.id">{{ fornecedor.nome }}</option>
-            </select>
+            />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-            <select
+            <SelectComBusca
               v-model="filtros.chart_of_account_id"
+              :opcoes="categorias"
+              :chave-rotulo="(categoria) => `${categoria.codigo} - ${categoria.nome}`"
+              placeholder="Todas"
               @change="aplicarFiltros"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todas</option>
-              <option v-for="categoria in categorias" :key="categoria.id" :value="categoria.id">{{ categoria.codigo }} - {{ categoria.nome }}</option>
-            </select>
+            />
           </div>
         </div>
         <div class="mt-3 flex justify-end">
@@ -206,14 +204,13 @@
         <div class="space-y-4 text-left">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Fornecedor *</label>
-            <select
+            <SelectComBusca
               v-model="form.supplier_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.supplier_id }"
-            >
-              <option value="">Selecione um fornecedor</option>
-              <option v-for="fornecedor in fornecedores" :key="fornecedor.id" :value="fornecedor.id">{{ fornecedor.nome }}</option>
-            </select>
+              :opcoes="fornecedores"
+              chave-rotulo="nome"
+              placeholder="Selecione um fornecedor"
+              :erro="!!form.errors.supplier_id"
+            />
             <p v-if="form.errors.supplier_id" class="mt-1 text-sm text-red-600">{{ form.errors.supplier_id }}</p>
           </div>
 
@@ -231,13 +228,12 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-            <select
+            <SelectComBusca
               v-model="form.chart_of_account_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Sem categoria</option>
-              <option v-for="categoria in categorias" :key="categoria.id" :value="categoria.id">{{ categoria.codigo }} - {{ categoria.nome }}</option>
-            </select>
+              :opcoes="categorias"
+              :chave-rotulo="(categoria) => `${categoria.codigo} - ${categoria.nome}`"
+              placeholder="Sem categoria"
+            />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -500,6 +496,7 @@ import Card from '@/Components/Card.vue';
 import StatCard from '@/Components/StatCard.vue';
 import Modal from '@/Components/Modal.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { usePermissoes } from '@/Composables/usePermissoes';
 import { formatarData, hojeISO } from '@/utils/formatDate';
 

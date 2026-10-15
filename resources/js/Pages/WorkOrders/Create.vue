@@ -64,19 +64,17 @@
               <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
                 Endereço *
               </label>
-              <select
+              <SelectComBusca
+                required
                 id="address_id"
                 v-model="form.address_id"
-                required
+                :opcoes="filteredAddresses"
+                :chave-rotulo="rotuloEndereco"
+                placeholder="Selecione um endereço"
                 :disabled="!form.client_id"
-                class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                :class="{ 'border-red-500': form.errors.address_id }"
-              >
-                <option value="">Selecione um endereço</option>
-                <option v-for="address in filteredAddresses" :key="address.id" :value="address.id">
-                  {{ address.nickname }} - {{ address.street }}, {{ address.number }} - {{ address.city }}/{{ address.state }}
-                </option>
-              </select>
+                :erro="!!form.errors.address_id"
+                class="min-w-0"
+              />
               <p v-if="form.errors.address_id" class="mt-1 text-sm text-red-600">
                 {{ form.errors.address_id }}
               </p>
@@ -89,17 +87,16 @@
               </label>
               <div class="space-y-2">
                 <div v-for="(technicianId, index) in form.technicians" :key="index" class="flex gap-2 items-center">
-                  <select
-                    v-model="form.technicians[index]"
-                    class="flex-1 min-w-0 h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    :class="{ 'border-red-500': form.errors.technicians }"
+                  <SelectComBusca
                     required
-                  >
-                    <option value="">Selecione um técnico</option>
-                    <option v-for="technician in getAvailableTechnicians(index)" :key="technician.id" :value="technician.id">
-                      {{ technician.name }} - {{ technician.specialty }}
-                    </option>
-                  </select>
+                    v-model="form.technicians[index]"
+                    :opcoes="getAvailableTechnicians(index)"
+                    :chave-rotulo="rotuloTecnico"
+                    placeholder="Selecione um técnico"
+                    :erro="!!form.errors.technicians"
+                    class="flex-1 min-w-0"
+                    classe-campo="w-full h-10 px-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
                   <button
                     type="button"
                     @click="removeTechnician(index)"
@@ -212,18 +209,14 @@
               <label for="service_id" class="block text-sm font-medium text-gray-700 mb-2">
                 Serviço *
               </label>
-              <select
+              <SelectComBusca
+                required
                 id="service_id"
                 v-model="form.service_id"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                :class="{ 'border-red-500': form.errors.service_id }"
-              >
-                <option value="">Selecione um serviço</option>
-                <option v-for="service in services" :key="service.id" :value="service.id">
-                  {{ service.name }}
-                </option>
-              </select>
+                :opcoes="services"
+                placeholder="Selecione um serviço"
+                :erro="!!form.errors.service_id"
+              />
               <p v-if="form.errors.service_id" class="mt-1 text-sm text-red-600">
                 {{ form.errors.service_id }}
               </p>
@@ -301,15 +294,11 @@
             <div class="space-y-4">
               <div v-for="(product, index) in form.products" :key="index" class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                 <div class="md:col-span-3">
-                  <select
+                  <SelectComBusca
                     v-model="product.id"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    <option value="">Selecione um produto</option>
-                    <option v-for="prod in availableProducts(index)" :key="prod.id" :value="prod.id">
-                      {{ prod.name }}
-                    </option>
-                  </select>
+                    :opcoes="availableProducts(index)"
+                    placeholder="Selecione um produto"
+                  />
                 </div>
                 <div class="md:col-span-2">
                   <input
@@ -423,17 +412,15 @@
                   <label class="block text-sm font-medium text-gray-700 mb-1">
                     Cômodo *
                   </label>
-                  <select
-                    v-model="room.id"
+                  <SelectComBusca
                     required
-                    class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    :class="{ 'border-red-500': form.errors[`rooms.${index}.id`] }"
-                  >
-                    <option value="">Selecione um cômodo</option>
-                    <option v-for="rm in availableRooms(index)" :key="rm.id" :value="rm.id">
-                      {{ rm.full_name }}
-                    </option>
-                  </select>
+                    v-model="room.id"
+                    :opcoes="availableRooms(index)"
+                    chave-rotulo="full_name"
+                    placeholder="Selecione um cômodo"
+                    :erro="!!form.errors[`rooms.${index}.id`]"
+                    class="min-w-0"
+                  />
                   <p v-if="form.errors[`rooms.${index}.id`]" class="mt-1 text-sm text-red-600">
                     {{ form.errors[`rooms.${index}.id`] }}
                   </p>
@@ -539,16 +526,14 @@
                     <label class="block text-sm font-medium text-gray-700 mb-1">
                       Dispositivo
                     </label>
-                    <select
+                    <SelectComBusca
                       v-model="device.id"
-                      class="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                      :class="{ 'border-red-500': form.errors[`devices.${index}.id`] }"
-                    >
-                      <option value="">Selecione um dispositivo</option>
-                      <option v-for="dev in availableDevices(index)" :key="dev.id" :value="dev.id">
-                        {{ dev.display_name }}
-                      </option>
-                    </select>
+                      :opcoes="availableDevices(index)"
+                      chave-rotulo="display_name"
+                      placeholder="Selecione um dispositivo"
+                      :erro="!!form.errors[`devices.${index}.id`]"
+                      class="min-w-0"
+                    />
                     <p v-if="form.errors[`devices.${index}.id`]" class="mt-1 text-sm text-red-600">
                       {{ form.errors[`devices.${index}.id`] }}
                     </p>
@@ -655,20 +640,12 @@
                   <label class="block text-sm font-medium text-gray-700 mb-1">
                     Tipo de Evento *
                   </label>
-                  <select
-                    v-model="eventForm.event_type"
+                  <SelectComBusca
                     required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    <option value="">Selecione o tipo</option>
-                    <option
-                      v-for="eventType in eventTypes"
-                      :key="eventType.id"
-                      :value="eventType.id"
-                    >
-                      {{ eventType.name }}
-                    </option>
-                  </select>
+                    v-model="eventForm.event_type"
+                    :opcoes="eventTypes"
+                    placeholder="Selecione o tipo"
+                  />
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -837,20 +814,12 @@
                   <label class="block text-sm font-medium text-gray-700 mb-1">
                     Tipo de Evento *
                   </label>
-                  <select
-                    v-model="deviceEventForm.event_type"
+                  <SelectComBusca
                     required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    <option value="">Selecione o tipo</option>
-                    <option
-                      v-for="eventType in eventTypes"
-                      :key="eventType.id"
-                      :value="eventType.id"
-                    >
-                      {{ eventType.name }}
-                    </option>
-                  </select>
+                    v-model="deviceEventForm.event_type"
+                    :opcoes="eventTypes"
+                    placeholder="Selecione o tipo"
+                  />
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -919,6 +888,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import ClientSearch from '@/Components/ClientSearch.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { hojeISO, inputDateTimeParaUtc } from '@/utils/formatDate';
 
 const { proxy } = getCurrentInstance();
@@ -994,6 +964,11 @@ const form = useForm({
   observations: '',
   active: true,
 });
+
+// Rótulos dos selects com busca, no mesmo formato das antigas <option>.
+const rotuloEndereco = (address) =>
+  `${address.nickname ?? ''} - ${address.street ?? ''}, ${address.number ?? ''} - ${address.city ?? ''}/${address.state ?? ''}`;
+const rotuloTecnico = (technician) => `${technician.name} - ${technician.specialty ?? ''}`;
 
 // Filtrar endereços baseado no cliente selecionado
 const filteredAddresses = computed(() => {

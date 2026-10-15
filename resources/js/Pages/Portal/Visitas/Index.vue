@@ -27,12 +27,12 @@
           <div class="grid gap-4 sm:grid-cols-3">
             <div v-if="enderecos.length > 1">
               <label class="mb-1 block text-sm font-medium text-gray-700">Endereço</label>
-              <select
+              <SelectComBusca
                 v-model="filtroEndereco"
-                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500">
-                <option value="">Todos os endereços</option>
-                <option v-for="endereco in enderecos" :key="endereco" :value="endereco">{{ endereco }}</option>
-              </select>
+                :opcoes="enderecos"
+                placeholder="Todos os endereços"
+                classe-campo="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
             </div>
             <div>
               <label class="mb-1 block text-sm font-medium text-gray-700">De</label>
@@ -100,6 +100,7 @@ import PortalLayout from '@/Layouts/PortalLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { formatarData } from '@/utils/formatDate.js';
 
 /**

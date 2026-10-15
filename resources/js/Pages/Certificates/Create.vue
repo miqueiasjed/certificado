@@ -36,19 +36,17 @@
                 <label for="address_id" class="block text-sm font-medium text-gray-700 mb-1">
                   Endereço do Cliente *
                 </label>
-                <select
+                <SelectComBusca
+                  required
                   id="address_id"
                   v-model="form.address_id"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-500': errors.address_id }"
+                  :opcoes="clientAddresses"
+                  :chave-rotulo="(address) => `${address.nickname ?? ''} - ${address.street ?? ''}, ${address.number ?? ''}`"
+                  placeholder="Selecione um endereço"
                   :disabled="!form.client_id"
-                  required
-                >
-                  <option value="">Selecione um endereço</option>
-                  <option v-for="address in clientAddresses" :key="address.id" :value="address.id">
-                    {{ address.nickname }} - {{ address.street }}, {{ address.number }}
-                  </option>
-                </select>
+                  :erro="!!errors.address_id"
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
                 <p v-if="errors.address_id" class="mt-1 text-sm text-red-600">{{ errors.address_id }}</p>
               </div>
 
@@ -131,19 +129,16 @@
                     <label :for="`product_${index}`" class="block text-sm font-medium text-gray-700 mb-1">
                       Produto {{ index + 1 }} *
                     </label>
-                    <select
+                    <SelectComBusca
+                      required
                       :id="`product_${index}`"
                       v-model="product.product_id"
+                      :opcoes="products"
+                      placeholder="Selecione um produto"
+                      :erro="!!(errors[`products.${index}.product_id`] || product.isDuplicate)"
+                      classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       @change="checkDuplicateProducts(index)"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      :class="{ 'border-red-500': errors[`products.${index}.product_id`] || product.isDuplicate }"
-                      required
-                    >
-                      <option value="">Selecione um produto</option>
-                      <option v-for="prod in products" :key="prod.id" :value="prod.id">
-                        {{ prod.name }}
-                      </option>
-                    </select>
+                    />
                     <p v-if="product.isDuplicate" class="mt-1 text-sm text-red-600">
                       Este produto já foi adicionado
                     </p>
@@ -219,18 +214,16 @@
               <label for="service_id" class="block text-sm font-medium text-gray-700 mb-1">
                 Selecione o Serviço *
               </label>
-              <select
+              <SelectComBusca
+                required
                 id="service_id"
                 v-model="form.service_id"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                :class="{ 'border-red-500': errors.service_id }"
-                required
-              >
-                <option value="">Selecione um serviço</option>
-                <option v-for="serv in services" :key="serv.id" :value="serv.id">
-                  {{ serv.name }} - {{ serv.category }}
-                </option>
-              </select>
+                :opcoes="services"
+                :chave-rotulo="(serv) => `${serv.name} - ${serv.category ?? ''}`"
+                placeholder="Selecione um serviço"
+                :erro="!!errors.service_id"
+                classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
               <p v-if="errors.service_id" class="mt-1 text-sm text-red-600">
                 {{ errors.service_id }}
               </p>
@@ -316,6 +309,7 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import ClientSearch from '@/Components/ClientSearch.vue';
 
 const props = defineProps({

@@ -3,26 +3,25 @@
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div>
         <label class="mb-1 block text-sm font-medium text-gray-700">Cliente</label>
-        <select
+        <SelectComBusca
           v-model="form.client_id"
+          :opcoes="clientes"
+          placeholder="Selecione o cliente"
+          classe-campo="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
           @change="aoTrocarCliente"
-          class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500">
-          <option value="">Selecione o cliente</option>
-          <option v-for="cliente in clientes" :key="cliente.id" :value="cliente.id">{{ cliente.name }}</option>
-        </select>
+        />
       </div>
 
       <div>
         <label class="mb-1 block text-sm font-medium text-gray-700">Endereço</label>
-        <select
+        <SelectComBusca
           v-model="form.address_id"
+          :opcoes="enderecos"
+          :chave-rotulo="endereco => endereco.nickname || `${endereco.street}, ${endereco.number}`"
+          placeholder="Todos os endereços do cliente"
           :disabled="!form.client_id || carregandoEnderecos"
-          class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:text-gray-400">
-          <option value="">Todos os endereços do cliente</option>
-          <option v-for="endereco in enderecos" :key="endereco.id" :value="endereco.id">
-            {{ endereco.nickname || `${endereco.street}, ${endereco.number}` }}
-          </option>
-        </select>
+          classe-campo="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:text-gray-400"
+        />
         <p v-if="carregandoEnderecos" class="mt-1 text-xs text-gray-500">Carregando endereços...</p>
       </div>
 
@@ -76,6 +75,7 @@
  */
 import { reactive, ref, onMounted } from 'vue';
 import { router } from '@inertiajs/vue3';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 
 const props = defineProps({
   clientes: { type: Array, required: true },

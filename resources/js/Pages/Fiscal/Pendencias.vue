@@ -95,12 +95,16 @@
           <div class="border-t border-gray-200 pt-4">
             <div class="mb-4">
               <label for="endereco-fiscal" class="mb-1 block text-sm font-medium text-gray-700">Endereço usado na nota</label>
-              <select id="endereco-fiscal" v-model="enderecoSelecionado" class="campo" @change="trocarEndereco">
-                <option v-for="endereco in enderecosDisponiveis" :key="endereco.id" :value="String(endereco.id)">
-                  {{ endereco.nickname }}: {{ endereco.street }}, {{ endereco.number }}
-                </option>
-                <option value="novo">Cadastrar novo endereço</option>
-              </select>
+              <SelectComBusca
+                id="endereco-fiscal"
+                v-model="enderecoSelecionado"
+                :opcoes="opcoesEnderecoFiscal"
+                chave-valor="valor"
+                chave-rotulo="rotulo"
+                :permitir-vazio="false"
+                classe-campo="w-full rounded-md border-gray-300 px-2 py-1 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                @change="trocarEndereco"
+              />
             </div>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -128,13 +132,14 @@
 </template>
 
 <script setup>
-import { defineComponent, h, reactive, ref } from 'vue';
+import { computed, defineComponent, h, reactive, ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import Alert from '@/Components/Alert.vue';
 import Card from '@/Components/Card.vue';
 import Modal from '@/Components/Modal.vue';
 import PageHeader from '@/Components/PageHeader.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { usePermissoes } from '@/Composables/usePermissoes';
 
 defineProps({
@@ -223,6 +228,14 @@ const carregandoCliente = ref(false);
 const salvandoCliente = ref(false);
 const clienteSelecionado = ref(null);
 const enderecosDisponiveis = ref([]);
+// Valor em texto (como o select nativo gravava) e a opção "novo" sempre por último.
+const opcoesEnderecoFiscal = computed(() => [
+  ...enderecosDisponiveis.value.map((endereco) => ({
+    valor: String(endereco.id),
+    rotulo: `${endereco.nickname}: ${endereco.street}, ${endereco.number}`,
+  })),
+  { valor: 'novo', rotulo: 'Cadastrar novo endereço' },
+]);
 const enderecoSelecionado = ref('novo');
 const errosCliente = ref({});
 const erroGeralCliente = ref('');

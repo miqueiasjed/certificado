@@ -88,13 +88,14 @@
 
     <div>
       <label class="mb-1 block text-sm font-medium text-gray-700">Local</label>
-      <select
+      <SelectComBusca
         v-model="comodoSelecionadoId"
-        class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-      >
-        <option value="">Digitar local (texto livre)</option>
-        <option v-for="comodo in comodos" :key="comodo.id" :value="String(comodo.id)">{{ comodo.nome }}</option>
-      </select>
+        :opcoes="comodos"
+        :chave-valor="comodo => String(comodo.id)"
+        chave-rotulo="nome"
+        placeholder="Digitar local (texto livre)"
+        classe-campo="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+      />
       <input
         v-if="!comodoSelecionadoId"
         v-model="localLivre"
@@ -163,6 +164,7 @@ import { obterOrdem, listarComodosDaOrdem } from '../db/repositorio';
 import { enfileirar } from '../sync/fila';
 import { listarFotosDoContexto, removerFotoLocal } from '../sync/foto';
 import { formatarData, hojeISO } from '@/utils/formatDate';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import CapturaDeFoto from './CapturaDeFoto.vue';
 
 const props = defineProps({

@@ -135,16 +135,13 @@
           <label for="lote-bait-type" class="block text-sm font-medium text-gray-700 mb-2">
             Tipo de Isca
           </label>
-          <select
+          <SelectComBusca
             id="lote-bait-type"
             v-model="form.bait_type_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            <option value="">Nenhum</option>
-            <option v-for="baitType in baitTypes" :key="baitType.id" :value="baitType.id">
-              {{ baitType.name }} {{ baitType.brand ? `- ${baitType.brand}` : '' }}
-            </option>
-          </select>
+            :opcoes="baitTypes"
+            :chave-rotulo="baitType => baitType.brand ? `${baitType.name} - ${baitType.brand}` : baitType.name"
+            placeholder="Nenhum"
+          />
         </div>
 
         <div>
@@ -193,6 +190,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import Modal from '@/Components/Modal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 
 const props = defineProps({
   show: {

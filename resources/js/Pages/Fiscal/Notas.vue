@@ -33,10 +33,14 @@
           </div>
           <div>
             <label for="cliente" class="mb-1 block text-sm font-medium text-gray-700">Cliente</label>
-            <select id="cliente" v-model="filtro.client_id" class="campo">
-              <option value="">Todos</option>
-              <option v-for="cliente in clientes" :key="cliente.id" :value="cliente.id">{{ cliente.nome }}</option>
-            </select>
+            <SelectComBusca
+              id="cliente"
+              v-model="filtro.client_id"
+              :opcoes="clientes"
+              chave-rotulo="nome"
+              placeholder="Todos"
+              classe-campo="w-full rounded-md border-gray-300 px-2 py-1 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+            />
           </div>
           <div>
             <label for="de" class="mb-1 block text-sm font-medium text-gray-700">Competência de</label>
@@ -193,6 +197,7 @@ import Card from '@/Components/Card.vue';
 import Modal from '@/Components/Modal.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Pagination from '@/Components/Pagination.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { usePermissoes } from '@/Composables/usePermissoes';
 import { formatarData } from '@/utils/formatDate';
 

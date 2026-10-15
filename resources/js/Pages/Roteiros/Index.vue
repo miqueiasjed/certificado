@@ -41,15 +41,12 @@
 
           <div v-if="!restritoAoProprioTecnico">
             <label class="block text-sm font-medium text-gray-700 mb-1">Técnico</label>
-            <select
+            <SelectComBusca
               v-model="technicianId"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Selecione um técnico</option>
-              <option v-for="tecnico in tecnicos" :key="tecnico.id" :value="String(tecnico.id)">
-                {{ tecnico.name }}
-              </option>
-            </select>
+              :opcoes="tecnicos"
+              :chave-valor="(tecnico) => String(tecnico.id)"
+              placeholder="Selecione um técnico"
+            />
           </div>
         </div>
       </Card>
@@ -241,6 +238,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Modal from '@/Components/Modal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import MapaDeVisitas from '@/Components/MapaDeVisitas.vue';
 import { formatarData, formatarDataHora, formatarHora } from '@/utils/formatDate';
 import { usePermissoes } from '@/Composables/usePermissoes';

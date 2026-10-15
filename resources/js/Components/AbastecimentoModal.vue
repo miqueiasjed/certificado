@@ -129,16 +129,14 @@
 
           <div v-if="form.gerar_titulo">
             <label class="block text-sm font-medium text-gray-700 mb-1">Fornecedor *</label>
-            <select
+            <SelectComBusca
               v-model="form.supplier_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.supplier_id }"
-            >
-              <option :value="null">Selecione</option>
-              <option v-for="fornecedor in fornecedores" :key="fornecedor.id" :value="fornecedor.id">
-                {{ fornecedor.nome }}
-              </option>
-            </select>
+              :opcoes="fornecedores"
+              chave-rotulo="nome"
+              placeholder="Selecione"
+              :valor-vazio="null"
+              :erro="!!form.errors.supplier_id"
+            />
             <p v-if="form.errors.supplier_id" class="mt-1 text-sm text-red-600">{{ form.errors.supplier_id }}</p>
           </div>
         </div>
@@ -163,6 +161,7 @@
 import { computed, watch } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import Modal from '@/Components/Modal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { hojeISO } from '@/utils/formatDate';
 
 const props = defineProps({

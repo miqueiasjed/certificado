@@ -201,16 +201,13 @@
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Produto *</label>
-                  <select
-                    v-model="productForm.product_id"
+                  <SelectComBusca
                     required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Selecione um produto...</option>
-                    <option v-for="product in availableProductsForOS" :key="product.id" :value="product.id">
-                      {{ product.name }}
-                    </option>
-                  </select>
+                    v-model="productForm.product_id"
+                    :opcoes="availableProductsForOS"
+                    placeholder="Selecione um produto..."
+                    classe-campo="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
                 </div>
 
                 <div>
@@ -297,16 +294,14 @@
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Serviço *</label>
-                  <select
-                    v-model="serviceForm.service_id"
+                  <SelectComBusca
                     required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    <option value="">Selecione um serviço...</option>
-                    <option v-for="service in availableServicesForOS" :key="service.id" :value="service.id">
-                      {{ service.name }} - {{ service.description || 'Sem descrição' }}
-                    </option>
-                  </select>
+                    v-model="serviceForm.service_id"
+                    :opcoes="availableServicesForOS"
+                    :chave-rotulo="(service) => `${service.name} - ${service.description || 'Sem descrição'}`"
+                    placeholder="Selecione um serviço..."
+                    classe-campo="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
                 </div>
 
                 <div>
@@ -579,12 +574,14 @@
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Técnico *</label>
-                  <select v-model="technicianForm.technician_id" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">Selecione um técnico...</option>
-                    <option v-for="technician in availableTechniciansForOS" :key="technician.id" :value="technician.id">
-                      {{ technician.name }} - {{ technician.specialty || 'Sem especialidade' }}
-                    </option>
-                  </select>
+                  <SelectComBusca
+                    required
+                    v-model="technicianForm.technician_id"
+                    :opcoes="availableTechniciansForOS"
+                    :chave-rotulo="(technician) => `${technician.name} - ${technician.specialty || 'Sem especialidade'}`"
+                    placeholder="Selecione um técnico..."
+                    classe-campo="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
                 </div>
                 <div>
                   <label class="flex items-center">
@@ -995,20 +992,13 @@
               <div class="space-y-4">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Evento *</label>
-                  <select
-                    v-model="deviceEventForm.event_type"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  <SelectComBusca
                     required
-                  >
-                    <option value="">Selecione o tipo de evento...</option>
-                    <option
-                      v-for="eventType in props.eventTypes"
-                      :key="eventType.id"
-                      :value="eventType.id"
-                    >
-                      {{ eventType.name }}
-                    </option>
-                  </select>
+                    v-model="deviceEventForm.event_type"
+                    :opcoes="props.eventTypes"
+                    placeholder="Selecione o tipo de evento..."
+                    classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
                 </div>
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Data do Evento *</label>
@@ -1070,21 +1060,15 @@
             <!-- Seção de Seleção do Dispositivo -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Dispositivo *</label>
-              <select
+              <SelectComBusca
                 v-model="newDeviceForm.device_id"
-                class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500"
-                :class="deviceFormErrors.device_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-green-500'"
+                :opcoes="availableDevicesForWorkOrder"
+                :chave-rotulo="(device) => `${device.label ?? ''} (${device.number ?? ''}) - ${(device.baitType || device.bait_type)?.name || 'Sem tipo de isca'}`"
+                placeholder="Selecione um dispositivo..."
                 :disabled="isLoadingAvailableDevices"
-              >
-                <option value="">Selecione um dispositivo...</option>
-                <option
-                  v-for="device in availableDevicesForWorkOrder"
-                  :key="device.id"
-                  :value="device.id"
-                >
-                  {{ device.label }} ({{ device.number }}) - {{ (device.baitType || device.bait_type)?.name || 'Sem tipo de isca' }}
-                </option>
-              </select>
+                :erro="!!deviceFormErrors.device_id"
+                classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              />
               <p v-if="isLoadingAvailableDevices" class="text-sm text-gray-500 mt-1">Carregando dispositivos disponíveis...</p>
               <p v-if="deviceFormErrors.device_id" class="text-sm text-red-600 mt-1">{{ deviceFormErrors.device_id }}</p>
               <p v-if="availableDevicesForWorkOrder.length === 0 && !isLoadingAvailableDevices" class="text-sm text-gray-500 mt-1">
@@ -1101,21 +1085,14 @@
               <div class="space-y-3">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Evento *</label>
-                  <select
-                    v-model="newDeviceForm.event_type"
+                  <SelectComBusca
                     required
-                    class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 text-sm"
-                    :class="deviceFormErrors.event_type ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'"
-                  >
-                    <option value="">Selecione o tipo...</option>
-                    <option
-                      v-for="eventType in props.eventTypes"
-                      :key="eventType.id"
-                      :value="eventType.id"
-                    >
-                      {{ eventType.name }}
-                    </option>
-                  </select>
+                    v-model="newDeviceForm.event_type"
+                    :opcoes="props.eventTypes"
+                    placeholder="Selecione o tipo..."
+                    :erro="!!deviceFormErrors.event_type"
+                    classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                  />
                   <p v-if="deviceFormErrors.event_type" class="text-sm text-red-600 mt-1">{{ deviceFormErrors.event_type }}</p>
                 </div>
 
@@ -1199,21 +1176,15 @@
               <!-- Seção de Seleção do Cômodo -->
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Selecionar Cômodo *</label>
-                <select
+                <SelectComBusca
                   v-model="newRoomForm.room_id"
-                  class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  :class="roomFormErrors.room_id ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500'"
+                  :opcoes="availableRooms"
+                  chave-rotulo="full_name"
+                  placeholder="Selecione um cômodo..."
                   :disabled="isLoadingAvailableRooms"
-                >
-                  <option value="">Selecione um cômodo...</option>
-                  <option
-                    v-for="room in availableRooms"
-                    :key="room.id"
-                    :value="room.id"
-                  >
-                    {{ room.full_name }}
-                  </option>
-                </select>
+                  :erro="!!roomFormErrors.room_id"
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
                 <p v-if="isLoadingAvailableRooms" class="text-sm text-gray-500 mt-1">Carregando cômodos disponíveis...</p>
                 <p v-if="roomFormErrors.room_id" class="text-sm text-red-600 mt-1">{{ roomFormErrors.room_id }}</p>
               </div>
@@ -1226,21 +1197,14 @@
                   <div class="space-y-3">
                     <div>
                       <label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Evento *</label>
-                      <select
-                        v-model="newRoomForm.event_type"
+                      <SelectComBusca
                         required
-                        class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 text-sm"
-                        :class="roomFormErrors.event_type ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'"
-                      >
-                        <option value="">Selecione o tipo...</option>
-                        <option
-                          v-for="eventType in props.eventTypes"
-                          :key="eventType.id"
-                          :value="eventType.id"
-                        >
-                          {{ eventType.name }}
-                        </option>
-                      </select>
+                        v-model="newRoomForm.event_type"
+                        :opcoes="props.eventTypes"
+                        placeholder="Selecione o tipo..."
+                        :erro="!!roomFormErrors.event_type"
+                        classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      />
                       <p v-if="roomFormErrors.event_type" class="text-sm text-red-600 mt-1">{{ roomFormErrors.event_type }}</p>
                     </div>
 
@@ -1399,20 +1363,13 @@
             <div class="space-y-4">
               <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Evento *</label>
-                <select
-                  v-model="roomEventForm.event_type"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                <SelectComBusca
                   required
-                >
-                  <option value="">Selecione o tipo de evento...</option>
-                  <option
-                    v-for="eventType in props.eventTypes"
-                    :key="eventType.id"
-                    :value="eventType.id"
-                  >
-                    {{ eventType.name }}
-                  </option>
-                </select>
+                  v-model="roomEventForm.event_type"
+                  :opcoes="props.eventTypes"
+                  placeholder="Selecione o tipo de evento..."
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
 
               <div>
@@ -1565,20 +1522,13 @@
           <div class="space-y-4">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de Evento *</label>
-              <select
-                v-model="deviceEventFormWO.event_type"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              <SelectComBusca
                 required
-              >
-                <option value="">Selecione o tipo de evento...</option>
-                <option
-                  v-for="eventType in props.eventTypes"
-                  :key="eventType.id"
-                  :value="eventType.id"
-                >
-                  {{ eventType.name }}
-                </option>
-              </select>
+                v-model="deviceEventFormWO.event_type"
+                :opcoes="props.eventTypes"
+                placeholder="Selecione o tipo de evento..."
+                classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              />
             </div>
 
             <div>
@@ -2785,6 +2735,7 @@
 import { ref, computed, nextTick, watch } from 'vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import {
   formatarData,
   formatarDataHora,

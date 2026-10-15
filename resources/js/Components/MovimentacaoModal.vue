@@ -41,52 +41,48 @@
         <!-- Produto -->
         <div>
           <label for="mov_produto" class="block text-sm font-medium text-gray-700 mb-1">Produto *</label>
-          <select
+          <SelectComBusca
             id="mov_produto"
             v-model="form.product_id"
+            :opcoes="produtos"
+            chave-rotulo="nome"
+            placeholder="Selecione um produto"
             :disabled="!!produtoFixo"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100 disabled:text-gray-500"
-          >
-            <option value="">Selecione um produto</option>
-            <option v-for="produto in produtos" :key="produto.id" :value="produto.id">{{ produto.nome }}</option>
-          </select>
+          />
         </div>
 
         <!-- Campos por tipo -->
         <div v-if="tipo === 'entrada'">
           <label for="mov_local_entrada" class="block text-sm font-medium text-gray-700 mb-1">Local que recebe *</label>
-          <select
+          <SelectComBusca
             id="mov_local_entrada"
             v-model="form.stock_location_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            <option value="">Selecione um local</option>
-            <option v-for="local in locais" :key="local.id" :value="local.id">{{ local.nome }}</option>
-          </select>
+            :opcoes="locais"
+            chave-rotulo="nome"
+            placeholder="Selecione um local"
+          />
         </div>
 
         <div v-else-if="tipo === 'transferencia'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label for="mov_origem" class="block text-sm font-medium text-gray-700 mb-1">Origem *</label>
-            <select
+            <SelectComBusca
               id="mov_origem"
               v-model="form.origem_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Selecione a origem</option>
-              <option v-for="local in locais" :key="local.id" :value="local.id">{{ local.nome }}</option>
-            </select>
+              :opcoes="locais"
+              chave-rotulo="nome"
+              placeholder="Selecione a origem"
+            />
           </div>
           <div>
             <label for="mov_destino" class="block text-sm font-medium text-gray-700 mb-1">Destino *</label>
-            <select
+            <SelectComBusca
               id="mov_destino"
               v-model="form.destino_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Selecione o destino</option>
-              <option v-for="local in locais" :key="local.id" :value="local.id">{{ local.nome }}</option>
-            </select>
+              :opcoes="locais"
+              chave-rotulo="nome"
+              placeholder="Selecione o destino"
+            />
           </div>
           <p v-if="form.origem_id && form.destino_id && String(form.origem_id) === String(form.destino_id)" class="sm:col-span-2 text-sm text-red-600">
             Origem e destino precisam ser locais diferentes.
@@ -95,14 +91,13 @@
 
         <div v-else>
           <label for="mov_local_descarte" class="block text-sm font-medium text-gray-700 mb-1">Local de onde sai *</label>
-          <select
+          <SelectComBusca
             id="mov_local_descarte"
             v-model="form.stock_location_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            <option value="">Selecione um local</option>
-            <option v-for="local in locais" :key="local.id" :value="local.id">{{ local.nome }}</option>
-          </select>
+            :opcoes="locais"
+            chave-rotulo="nome"
+            placeholder="Selecione um local"
+          />
         </div>
 
         <!-- Saldo do local relevante, sempre o valor vindo do servidor -->
@@ -134,16 +129,14 @@
         <!-- Lote -->
         <div>
           <label for="mov_lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label>
-          <select
+          <SelectComBusca
             id="mov_lote"
             v-model="form.product_batch_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            <option value="">{{ tipo === 'entrada' ? 'Sem lote específico' : 'Automático (por validade)' }}</option>
-            <option v-for="lote in lotesDoProduto" :key="lote.product_batch_id" :value="lote.product_batch_id">
-              {{ lote.lote }} - vence {{ formatarData(lote.validade) }} ({{ ROTULO_SITUACAO[lote.situacao] || lote.situacao }})
-            </option>
-          </select>
+            :opcoes="lotesDoProduto"
+            chave-valor="product_batch_id"
+            :chave-rotulo="(lote) => `${lote.lote} - vence ${formatarData(lote.validade)} (${ROTULO_SITUACAO[lote.situacao] || lote.situacao})`"
+            :placeholder="tipo === 'entrada' ? 'Sem lote específico' : 'Automático (por validade)'"
+          />
         </div>
 
         <!-- Motivo -->
@@ -187,6 +180,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import Modal from '@/Components/Modal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { formatarData, agoraInputDateTime, inputDateTimeParaUtc } from '@/utils/formatDate';
 
 const props = defineProps({

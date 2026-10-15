@@ -42,17 +42,15 @@
               <label for="service_id" class="block text-sm font-medium text-gray-700 mb-1">
                 Serviço *
               </label>
-              <select
+              <SelectComBusca
                 id="service_id"
                 v-model="form.service_id"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                :class="{ 'border-red-500': errors.service_id }"
-              >
-                <option value="">Selecione um serviço</option>
-                <option v-for="service in services" :key="service.id" :value="service.id">
-                  {{ service.name }} - {{ formatPrice(service.price) }}
-                </option>
-              </select>
+                :opcoes="services"
+                :chave-rotulo="(service) => `${service.name} - ${formatPrice(service.price)}`"
+                placeholder="Selecione um serviço"
+                :erro="!!errors.service_id"
+                classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
               <p v-if="errors.service_id" class="mt-1 text-sm text-red-600">{{ errors.service_id }}</p>
             </div>
           </div>
@@ -216,6 +214,7 @@ import { ref, watch, computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import ClientSearch from '@/Components/ClientSearch.vue';
 
 const props = defineProps({

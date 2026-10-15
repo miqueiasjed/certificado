@@ -32,18 +32,15 @@
             <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
               Endereço *
             </label>
-            <select
+            <SelectComBusca
+              required
               id="address_id"
               v-model="form.address_id"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.address_id }"
-            >
-              <option value="">Selecione um endereço</option>
-              <option v-for="address in addresses" :key="address.id" :value="address.id">
-                {{ address.nickname }} - {{ address.street }}, {{ address.number }} - {{ address.city }}/{{ address.state }}
-              </option>
-            </select>
+              :opcoes="addresses"
+              :chave-rotulo="address => `${address.nickname} - ${address.street}, ${address.number} - ${address.city}/${address.state}`"
+              placeholder="Selecione um endereço"
+              :erro="!!form.errors.address_id"
+            />
             <p v-if="form.errors.address_id" class="mt-1 text-sm text-red-600">
               {{ form.errors.address_id }}
             </p>
@@ -132,6 +129,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Alert from '@/Components/Alert.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 
 const props = defineProps({
   addresses: Array,

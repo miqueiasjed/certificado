@@ -156,17 +156,14 @@
         <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div>
             <label for="plan_id" class="block text-sm font-medium text-gray-700 mb-1">Plano</label>
-            <select
+            <SelectComBusca
               id="plan_id"
               v-model="form.plan_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.plan_id }"
-            >
-              <option value="">Sem plano</option>
-              <option v-for="plano in planos" :key="plano.id" :value="plano.id">
-                {{ plano.nome }}
-              </option>
-            </select>
+              :opcoes="planos"
+              chave-rotulo="nome"
+              placeholder="Sem plano"
+              :erro="!!form.errors.plan_id"
+            />
             <p v-if="form.errors.plan_id" class="mt-1 text-sm text-red-600">{{ form.errors.plan_id }}</p>
           </div>
 
@@ -248,6 +245,7 @@
 <script setup>
 import { Link, useForm } from '@inertiajs/vue3';
 import Card from '@/Components/Card.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 
 const props = defineProps({
   planos: {

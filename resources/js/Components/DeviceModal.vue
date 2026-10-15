@@ -74,17 +74,14 @@
               + Novo Tipo
             </button>
           </div>
-          <select
+          <SelectComBusca
             id="bait_type_id"
             v-model="form.bait_type_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            :class="{ 'border-red-500': form.errors.bait_type_id }"
-          >
-            <option value="">Selecione um tipo de isca (opcional)</option>
-            <option v-for="baitType in baitTypes" :key="baitType.id" :value="baitType.id">
-              {{ baitType.name }} {{ baitType.brand ? `- ${baitType.brand}` : '' }}
-            </option>
-          </select>
+            :opcoes="baitTypes"
+            :chave-rotulo="baitType => baitType.brand ? `${baitType.name} - ${baitType.brand}` : baitType.name"
+            placeholder="Selecione um tipo de isca (opcional)"
+            :erro="!!form.errors.bait_type_id"
+          />
           <p v-if="form.errors.bait_type_id" class="mt-1 text-sm text-red-600">
             {{ form.errors.bait_type_id }}
           </p>
@@ -160,6 +157,7 @@ import { useForm } from '@inertiajs/vue3';
 import { watch, ref } from 'vue';
 import Modal from '@/Components/Modal.vue';
 import BaitTypeModal from '@/Components/BaitTypeModal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 
 const props = defineProps({
   show: Boolean,

@@ -23,17 +23,13 @@
             <label for="client_id" class="block text-sm font-medium text-gray-700 mb-2">
               Cliente
             </label>
-            <select
+            <SelectComBusca
               id="client_id"
               v-model="filters.client_id"
+              :opcoes="clients"
+              placeholder="Todos os clientes"
               @change="onClientChange"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos os clientes</option>
-              <option v-for="client in clients" :key="client.id" :value="client.id">
-                {{ client.name }}
-              </option>
-            </select>
+            />
           </div>
 
           <!-- Endereço -->
@@ -41,17 +37,14 @@
             <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
               Endereço
             </label>
-            <select
+            <SelectComBusca
               id="address_id"
               v-model="filters.address_id"
+              :opcoes="filteredAddresses"
+              :chave-rotulo="address => `${address.nickname} - ${address.street}, ${address.number}`"
+              placeholder="Todos os endereços"
               :disabled="!filters.client_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              <option value="">Todos os endereços</option>
-              <option v-for="address in filteredAddresses" :key="address.id" :value="address.id">
-                {{ address.nickname }} - {{ address.street }}, {{ address.number }}
-              </option>
-            </select>
+            />
           </div>
 
           <!-- Tipo de Isca -->
@@ -59,16 +52,13 @@
             <label for="bait_type_id" class="block text-sm font-medium text-gray-700 mb-2">
               Tipo de Isca
             </label>
-            <select
+            <SelectComBusca
               id="bait_type_id"
               v-model="filters.bait_type_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos os tipos</option>
-              <option v-for="baitType in baitTypes" :key="baitType.id" :value="baitType.id">
-                {{ baitType.name }} - {{ baitType.brand }}
-              </option>
-            </select>
+              :opcoes="baitTypes"
+              :chave-rotulo="baitType => `${baitType.name} - ${baitType.brand ?? ''}`"
+              placeholder="Todos os tipos"
+            />
           </div>
 
           <!-- Situação: filtro aplicado no frontend, ver nota abaixo do campo -->
@@ -278,6 +268,7 @@ import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import DeviceBatchModal from '@/Components/DeviceBatchModal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { usePermissoes } from '@/Composables/usePermissoes';
 
 const props = defineProps({

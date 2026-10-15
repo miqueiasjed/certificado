@@ -62,25 +62,23 @@
         <div class="flex flex-col sm:flex-row sm:items-end gap-3">
           <div class="flex-1">
             <label class="block text-sm font-medium text-gray-700 mb-1">Produto</label>
-            <select
+            <SelectComBusca
               v-model="filtroProduto"
+              :opcoes="produtosDoFiltro"
+              chave-rotulo="nome"
+              placeholder="Todos os produtos"
               @change="aplicarFiltros"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos os produtos</option>
-              <option v-for="produto in produtosDoFiltro" :key="produto.id" :value="produto.id">{{ produto.nome }}</option>
-            </select>
+            />
           </div>
           <div class="flex-1">
             <label class="block text-sm font-medium text-gray-700 mb-1">Local</label>
-            <select
+            <SelectComBusca
               v-model="filtroLocal"
+              :opcoes="locais"
+              chave-rotulo="nome"
+              placeholder="Todos os locais"
               @change="aplicarFiltros"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos os locais</option>
-              <option v-for="local in locais" :key="local.id" :value="local.id">{{ local.nome }}</option>
-            </select>
+            />
           </div>
           <button v-if="temFiltroAtivo" type="button" class="btn-secondary-sm shrink-0" @click="limparFiltros">
             Limpar filtros
@@ -216,6 +214,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import StatCard from '@/Components/StatCard.vue';
 import MovimentacaoModal from '@/Components/MovimentacaoModal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({

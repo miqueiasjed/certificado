@@ -28,16 +28,17 @@
            (ex.: "Térreo" e "Depósito"), como pede a Task 21.7. -->
       <div v-if="plantasDoEndereco.length > 1" class="flex items-center gap-2">
         <label for="seletor-planta" class="text-sm font-medium text-gray-700">Planta:</label>
-        <select
+        <SelectComBusca
           id="seletor-planta"
-          class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-          :value="planta?.id ?? ''"
-          @change="trocarPlanta($event.target.value)"
-        >
-          <option v-for="item in plantasDoEndereco" :key="item.floorPlanId" :value="item.floorPlanId">
-            {{ item.nome }}
-          </option>
-        </select>
+          class="w-64"
+          classe-campo="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+          :model-value="planta?.id ?? ''"
+          :opcoes="plantasDoEndereco"
+          chave-valor="floorPlanId"
+          chave-rotulo="nome"
+          :permitir-vazio="false"
+          @update:model-value="trocarPlanta"
+        />
       </div>
 
       <div v-if="!planta" class="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center text-sm text-gray-500">
@@ -255,6 +256,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Modal from '@/Components/Modal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import PlantaCanvas from '@/Components/PlantaCanvas.vue';
 import ListaDeNaoPosicionados from '@/Components/ListaDeNaoPosicionados.vue';
 import { formatarDataHora } from '@/utils/formatDate';

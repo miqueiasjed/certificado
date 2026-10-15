@@ -53,16 +53,15 @@
                 Princípio Ativo *
               </label>
               <div class="flex gap-2">
-                <select
+                <SelectComBusca
                   id="active_ingredient_id"
                   v-model="form.active_ingredient_id"
-                  class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-500': errors.active_ingredient_id }">
-                  <option value="">Selecione um princípio ativo</option>
-                  <option v-for="ingredient in activeIngredients" :key="ingredient.id" :value="ingredient.id">
-                    {{ ingredient.name }}
-                  </option>
-                </select>
+                  :opcoes="activeIngredients"
+                  placeholder="Selecione um princípio ativo"
+                  :erro="!!errors.active_ingredient_id"
+                  class="flex-1 min-w-0"
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
                 <button
                   type="button"
                   @click="showActiveIngredientModal = true"
@@ -80,16 +79,15 @@
                 Grupo Químico *
               </label>
               <div class="flex gap-2">
-                <select
+                <SelectComBusca
                   id="chemical_group_id"
                   v-model="form.chemical_group_id"
-                  class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-500': errors.chemical_group_id }">
-                  <option value="">Selecione um grupo químico</option>
-                  <option v-for="group in chemicalGroups" :key="group.id" :value="group.id">
-                    {{ group.name }}
-                  </option>
-                </select>
+                  :opcoes="chemicalGroups"
+                  placeholder="Selecione um grupo químico"
+                  :erro="!!errors.chemical_group_id"
+                  class="flex-1 min-w-0"
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
                 <button
                   type="button"
                   @click="showChemicalGroupModal = true"
@@ -107,16 +105,15 @@
                 Antídoto *
               </label>
               <div class="flex gap-2">
-                <select
+                <SelectComBusca
                   id="antidote_id"
                   v-model="form.antidote_id"
-                  class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-500': errors.antidote_id }">
-                  <option value="">Selecione um antídoto</option>
-                  <option v-for="antidote in antidotes" :key="antidote.id" :value="antidote.id">
-                    {{ antidote.name }}
-                  </option>
-                </select>
+                  :opcoes="antidotes"
+                  placeholder="Selecione um antídoto"
+                  :erro="!!errors.antidote_id"
+                  class="flex-1 min-w-0"
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
                 <button
                   type="button"
                   @click="showAntidoteModal = true"
@@ -134,16 +131,16 @@
                 Reg. Min da Saude
               </label>
               <div class="flex gap-2">
-                <select
+                <SelectComBusca
                   id="organ_registration_id"
                   v-model="form.organ_registration_id"
-                  class="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-500': errors.organ_registration_id }">
-                  <option value="">Selecione um registro (opcional)</option>
-                  <option v-for="registration in organRegistrations" :key="registration.id" :value="registration.id">
-                    {{ registration.record }}
-                  </option>
-                </select>
+                  :opcoes="organRegistrations"
+                  chave-rotulo="record"
+                  placeholder="Selecione um registro (opcional)"
+                  :erro="!!errors.organ_registration_id"
+                  class="flex-1 min-w-0"
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
                 <button
                   type="button"
                   @click="showOrganRegistrationModal = true"
@@ -374,6 +371,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Modal from '@/Components/Modal.vue';
 import Alert from '@/Components/Alert.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 
 const $page = usePage();
 

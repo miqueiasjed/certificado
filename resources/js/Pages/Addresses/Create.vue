@@ -22,20 +22,16 @@
               <label for="client_id" class="block text-sm font-medium text-gray-700 mb-2">
                 Cliente <span class="text-red-500">*</span>
               </label>
-              <select
+              <SelectComBusca
+                required
                 id="client_id"
                 v-model="form.client_id"
-                :class="[
-                  'w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent',
-                  form.errors.client_id ? 'border-red-500' : 'border-gray-300'
-                ]"
-                required
-              >
-                <option value="">Selecione um cliente</option>
-                <option v-for="client in clients" :key="client.id" :value="client.id">
-                  {{ client.name }} - {{ client.cnpj || client.cpf }}
-                </option>
-              </select>
+                :opcoes="clients"
+                :chave-rotulo="(client) => `${client.name} - ${client.cnpj || client.cpf || ''}`"
+                placeholder="Selecione um cliente"
+                :erro="!!form.errors.client_id"
+                classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
               <p v-if="form.errors.client_id" class="mt-1 text-sm text-red-600">
                 {{ form.errors.client_id }}
               </p>
@@ -293,6 +289,7 @@ import { useForm, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 
 const props = defineProps({
   clients: Array,

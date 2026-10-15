@@ -70,31 +70,26 @@
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Técnico</label>
-              <select
+              <SelectComBusca
                 v-model="filtros.technician_id"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                :opcoes="opcoesFiltroTecnico"
+                :chave-valor="(tecnico) => String(tecnico.id)"
+                placeholder="Todos os técnicos"
+                classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 @change="aoMudarFiltroSelect"
-              >
-                <option value="">Todos os técnicos</option>
-                <option value="sem_tecnico">Sem técnico</option>
-                <option v-for="tecnico in tecnicos" :key="tecnico.id" :value="String(tecnico.id)">
-                  {{ tecnico.name }}
-                </option>
-              </select>
+              />
             </div>
 
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Tipo de serviço</label>
-              <select
+              <SelectComBusca
                 v-model="filtros.service_id"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                :opcoes="servicos"
+                :chave-valor="(servico) => String(servico.id)"
+                placeholder="Todos os serviços"
+                classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 @change="aoMudarFiltroSelect"
-              >
-                <option value="">Todos os serviços</option>
-                <option v-for="servico in servicos" :key="servico.id" :value="String(servico.id)">
-                  {{ servico.name }}
-                </option>
-              </select>
+              />
             </div>
 
             <div ref="situacaoFiltroEl" class="relative">
@@ -263,17 +258,15 @@
               <!-- Atribuir técnico -->
               <div class="space-y-2 border-t border-gray-100 pt-4">
                 <label class="block text-sm font-medium text-gray-700">Atribuir técnico</label>
-                <select
-                  :value="visitaSelecionada.tecnico?.id ?? ''"
+                <SelectComBusca
+                  :model-value="visitaSelecionada.tecnico?.id ?? ''"
+                  :opcoes="opcoesTecnico"
+                  :chave-rotulo="(tecnico) => `${tecnico.nome}${tecnico.tem_aviso ? ' (aviso)' : ''}`"
+                  placeholder="Sem técnico"
                   :disabled="atribuindoTecnico"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  @change="atribuirTecnico($event.target.value)"
-                >
-                  <option value="">Sem técnico</option>
-                  <option v-for="tecnico in opcoesTecnico" :key="tecnico.id" :value="tecnico.id">
-                    {{ tecnico.nome }}{{ tecnico.tem_aviso ? ' (aviso)' : '' }}
-                  </option>
-                </select>
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  @update:model-value="atribuirTecnico"
+                />
                 <p v-if="carregandoTecnicos" class="text-xs text-gray-400">Carregando técnicos disponíveis...</p>
                 <p v-if="atribuirErro" class="text-sm text-red-600">{{ atribuirErro }}</p>
               </div>
@@ -386,16 +379,14 @@
 
                 <div>
                   <label class="block text-xs text-gray-500 mb-1">Promover para (serviço opcional)</label>
-                  <select
+                  <SelectComBusca
                     v-model="servicoParaPromocao"
+                    :opcoes="servicos"
+                    placeholder="Sem serviço definido"
+                    :valor-vazio="null"
                     :disabled="compromissoJaPromovido || processandoAcaoCompromisso"
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  >
-                    <option :value="null">Sem serviço definido</option>
-                    <option v-for="servico in servicos" :key="servico.id" :value="servico.id">
-                      {{ servico.name }}
-                    </option>
-                  </select>
+                    classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -474,6 +465,7 @@ import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import CalendarioAgenda from '@/Components/Calendario/CalendarioAgenda.vue';
 import CargaPorTecnico from '@/Components/Calendario/CargaPorTecnico.vue';
 import ModalNovoCompromisso from '@/Components/ModalNovoCompromisso.vue';
@@ -721,6 +713,13 @@ function aoClicarFora(evento) {
     situacaoAberta.value = false;
   }
 }
+
+// Filtro de técnico: além do vazio ("Todos"), aceita "sem_tecnico" como
+// valor, por isso entra como uma opção extra antes dos técnicos.
+const opcoesFiltroTecnico = computed(() => [
+  { id: 'sem_tecnico', name: 'Sem técnico' },
+  ...props.tecnicos,
+]);
 
 function aoMudarFiltroSelect() {
   disparar(buscarDados);

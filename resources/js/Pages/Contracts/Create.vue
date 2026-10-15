@@ -14,19 +14,16 @@
               <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
                 Endereço * <span class="text-gray-500 font-normal">(Cliente - Endereço)</span>
               </label>
-              <select
+              <SelectComBusca
+                required
                 id="address_id"
                 v-model="form.address_id"
-                required
+                :opcoes="addresses"
+                :chave-rotulo="rotuloEndereco"
+                placeholder="Selecione um endereço"
+                :erro="!!form.errors.address_id"
                 @change="onAddressChange"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                :class="{ 'border-red-500': form.errors.address_id }"
-              >
-                <option value="">Selecione um endereço</option>
-                <option v-for="addr in addresses" :key="addr.id" :value="addr.id">
-                  {{ addr.client.name }} - {{ addr.nickname || `${addr.street}, ${addr.number}` }}
-                </option>
-              </select>
+              />
               <p v-if="form.errors.address_id" class="mt-1 text-sm text-red-600">
                 {{ form.errors.address_id }}
               </p>
@@ -276,6 +273,7 @@ import { Link, useForm, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { hojeISO } from '@/utils/formatDate';
 
 const props = defineProps({
@@ -286,6 +284,8 @@ const props = defineProps({
 const selectedPeriod = ref(null);
 const selectedAddress = ref(null);
 const selectedAddressClient = ref('');
+
+const rotuloEndereco = (addr) => `${addr.client.name} - ${addr.nickname || `${addr.street}, ${addr.number}`}`;
 
 const onAddressChange = () => {
   if (form.address_id) {

@@ -53,10 +53,14 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-            <select v-model="filtros.client_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm" @change="aplicarFiltros">
-              <option value="">Todos</option>
-              <option v-for="cliente in clientes" :key="cliente.id" :value="cliente.id">{{ cliente.nome }}</option>
-            </select>
+            <SelectComBusca
+              v-model="filtros.client_id"
+              :opcoes="clientes"
+              chave-rotulo="nome"
+              placeholder="Todos"
+              classe-campo="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+              @change="aplicarFiltros"
+            />
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Origem</label>
@@ -67,10 +71,14 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-            <select v-model="filtros.chart_of_account_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm" @change="aplicarFiltros">
-              <option value="">Todas</option>
-              <option v-for="categoria in categorias" :key="categoria.id" :value="categoria.id">{{ categoria.codigo }} - {{ categoria.nome }}</option>
-            </select>
+            <SelectComBusca
+              v-model="filtros.chart_of_account_id"
+              :opcoes="categorias"
+              :chave-rotulo="(categoria) => `${categoria.codigo} - ${categoria.nome}`"
+              placeholder="Todas"
+              classe-campo="w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+              @change="aplicarFiltros"
+            />
           </div>
         </div>
       </Card>
@@ -353,6 +361,7 @@ import StatCard from '@/Components/StatCard.vue';
 import Alert from '@/Components/Alert.vue';
 import Modal from '@/Components/Modal.vue';
 import BaixaDeParcelaModal from '@/Components/BaixaDeParcelaModal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { usePermissoes } from '@/Composables/usePermissoes';
 import { useModulos } from '@/Composables/useModulos';
 import { formatarData, diasAte } from '@/utils/formatDate';

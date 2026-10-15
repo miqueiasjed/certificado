@@ -13,18 +13,15 @@
             <label for="device_id" class="block text-sm font-medium text-gray-700 mb-2">
               Dispositivo *
             </label>
-            <select
+            <SelectComBusca
+              required
               id="device_id"
               v-model="form.device_id"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.device_id }"
-            >
-              <option value="">Selecione um dispositivo</option>
-              <option v-for="device in devices" :key="device.id" :value="device.id">
-                {{ device.label }} ({{ device.number }}) - {{ device.address?.client?.name }} - {{ device.address?.street }}, {{ device.address?.number }}
-              </option>
-            </select>
+              :opcoes="devices"
+              :chave-rotulo="device => `${device.label} (${device.number}) - ${device.address?.client?.name ?? ''} - ${device.address?.street ?? ''}, ${device.address?.number ?? ''}`"
+              placeholder="Selecione um dispositivo"
+              :erro="!!form.errors.device_id"
+            />
             <p v-if="form.errors.device_id" class="mt-1 text-sm text-red-600">
               {{ form.errors.device_id }}
             </p>
@@ -35,18 +32,15 @@
             <label for="work_order_id" class="block text-sm font-medium text-gray-700 mb-2">
               Ordem de Serviço *
             </label>
-            <select
+            <SelectComBusca
+              required
               id="work_order_id"
               v-model="form.work_order_id"
-              required
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.work_order_id }"
-            >
-              <option value="">Selecione uma ordem de serviço</option>
-              <option v-for="workOrder in workOrders" :key="workOrder.id" :value="workOrder.id">
-                {{ workOrder.order_number }} - {{ workOrder.client?.name }} - {{ workOrder.address?.street }}, {{ workOrder.address?.number }}
-              </option>
-            </select>
+              :opcoes="workOrders"
+              :chave-rotulo="workOrder => `${workOrder.order_number} - ${workOrder.client?.name ?? ''} - ${workOrder.address?.street ?? ''}, ${workOrder.address?.number ?? ''}`"
+              placeholder="Selecione uma ordem de serviço"
+              :erro="!!form.errors.work_order_id"
+            />
             <p v-if="form.errors.work_order_id" class="mt-1 text-sm text-red-600">
               {{ form.errors.work_order_id }}
             </p>
@@ -306,6 +300,7 @@ import { Link, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { agoraInputDateTime, inputDateTimeParaUtc } from '@/utils/formatDate';
 
 const props = defineProps({

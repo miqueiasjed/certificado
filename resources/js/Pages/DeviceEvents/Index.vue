@@ -23,16 +23,13 @@
             <label for="device_id" class="block text-sm font-medium text-gray-700 mb-2">
               Dispositivo
             </label>
-            <select
+            <SelectComBusca
               id="device_id"
               v-model="filters.device_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos os dispositivos</option>
-              <option v-for="device in devices" :key="device.id" :value="device.id">
-                {{ device.label }} ({{ device.number }})
-              </option>
-            </select>
+              :opcoes="devices"
+              :chave-rotulo="device => `${device.label} (${device.number})`"
+              placeholder="Todos os dispositivos"
+            />
           </div>
 
           <!-- Ordem de Serviço -->
@@ -40,16 +37,13 @@
             <label for="work_order_id" class="block text-sm font-medium text-gray-700 mb-2">
               Ordem de Serviço
             </label>
-            <select
+            <SelectComBusca
               id="work_order_id"
               v-model="filters.work_order_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todas as ordens</option>
-              <option v-for="workOrder in workOrders" :key="workOrder.id" :value="workOrder.id">
-                {{ workOrder.order_number }}
-              </option>
-            </select>
+              :opcoes="workOrders"
+              chave-rotulo="order_number"
+              placeholder="Todas as ordens"
+            />
           </div>
 
           <!-- Tipo de Evento -->
@@ -220,6 +214,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({

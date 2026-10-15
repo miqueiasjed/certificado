@@ -145,17 +145,15 @@
             </button>
           </div>
 
-          <select
+          <SelectComBusca
             v-if="mostrarSelectDeEndereco"
             v-model="form.address_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            :class="{ 'border-red-500': erros.address_id }"
-          >
-            <option :value="null">Selecione o endereço...</option>
-            <option v-for="endereco in enderecosDoCliente" :key="endereco.id" :value="endereco.id">
-              {{ rotuloDoEndereco(endereco) }}
-            </option>
-          </select>
+            :opcoes="enderecosDoCliente"
+            :chave-rotulo="rotuloDoEndereco"
+            placeholder="Selecione o endereço..."
+            :valor-vazio="null"
+            :erro="!!erros.address_id"
+          />
 
           <input
             v-else
@@ -180,14 +178,13 @@
 
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Técnico</label>
-          <select
+          <SelectComBusca
             v-model="form.technician_id"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            :class="{ 'border-red-500': erros.technician_id }"
-          >
-            <option :value="null">Sem técnico</option>
-            <option v-for="tecnico in tecnicos" :key="tecnico.id" :value="tecnico.id">{{ tecnico.name }}</option>
-          </select>
+            :opcoes="tecnicos"
+            placeholder="Sem técnico"
+            :valor-vazio="null"
+            :erro="!!erros.technician_id"
+          />
           <p v-if="erros.technician_id" class="mt-1 text-sm text-red-600">{{ erros.technician_id[0] }}</p>
         </div>
 
@@ -256,6 +253,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
 import Modal from '@/Components/Modal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { usePermissoes } from '@/Composables/usePermissoes';
 import { tokenCsrf } from '@/utils/agendaApi';
 import { hojeISO } from '@/utils/formatDate';

@@ -140,15 +140,15 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Categoria-mãe</label>
-            <select
+            <SelectComBusca
               v-model="form.parent_id"
+              :opcoes="opcoesDeMae"
+              :chave-valor="(opcao) => String(opcao.id)"
+              :chave-rotulo="(opcao) => `${opcao.codigo} - ${opcao.nome}`"
+              placeholder="Nenhuma (categoria raiz)"
+              :erro="!!form.errors.parent_id"
               @change="aoSelecionarMae"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.parent_id }"
-            >
-              <option value="">Nenhuma (categoria raiz)</option>
-              <option v-for="opcao in opcoesDeMae" :key="opcao.id" :value="String(opcao.id)">{{ opcao.codigo }} - {{ opcao.nome }}</option>
-            </select>
+            />
             <p class="mt-1 text-xs text-gray-500">Subcategoria herda sempre o tipo da categoria-mãe.</p>
             <p v-if="form.errors.parent_id" class="mt-1 text-sm text-red-600">{{ form.errors.parent_id }}</p>
           </div>
@@ -222,6 +222,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Modal from '@/Components/Modal.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 
 const props = defineProps({
   contas: Array,

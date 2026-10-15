@@ -60,14 +60,14 @@
 
         <div>
           <label class="mb-1 block text-sm font-medium text-gray-700">Tipo de evento</label>
-          <select
+          <SelectComBusca
             v-model="form.eventTypeId"
+            :opcoes="tiposDeEvento"
+            chave-rotulo="nome"
+            placeholder="Selecione"
             :disabled="somenteLeitura"
-            class="w-full rounded-md border border-gray-300 px-3 py-3 text-base shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">Selecione</option>
-            <option v-for="tipo in tiposDeEvento" :key="tipo.id" :value="tipo.id">{{ tipo.nome }}</option>
-          </select>
+            classe-campo="w-full rounded-md border border-gray-300 px-3 py-3 text-base shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
         </div>
 
         <div>
@@ -86,14 +86,14 @@
 
         <div>
           <label class="mb-1 block text-sm font-medium text-gray-700">Praga encontrada</label>
-          <select
+          <SelectComBusca
             v-model="form.pestFound"
+            :opcoes="pragas"
+            chave-rotulo="nome"
+            placeholder="Nenhuma"
             :disabled="somenteLeitura"
-            class="w-full rounded-md border border-gray-300 px-3 py-3 text-base shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
-          >
-            <option value="">Nenhuma</option>
-            <option v-for="praga in pragas" :key="praga.id" :value="praga.id">{{ praga.nome }}</option>
-          </select>
+            classe-campo="w-full rounded-md border border-gray-300 px-3 py-3 text-base shadow-sm focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
         </div>
 
         <div v-if="form.pestFound">
@@ -134,6 +134,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue';
 import Modal from '@/Components/Modal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { listarTiposDeEvento, listarPragas } from '../db/repositorio';
 import { enfileirar, listarPorOrdemETipo, atualizarPendente } from '../sync/fila';
 

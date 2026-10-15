@@ -30,14 +30,14 @@
       <Card padding="small">
         <div class="flex flex-col sm:flex-row sm:items-center gap-3">
           <label class="text-sm font-medium text-gray-700 shrink-0">Produto</label>
-          <select
+          <SelectComBusca
             v-model="filtroProduto"
+            :opcoes="produtos"
+            chave-rotulo="nome"
+            placeholder="Todos os produtos"
+            class="w-full sm:w-72"
             @change="aplicarFiltro"
-            class="w-full sm:w-72 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            <option value="">Todos os produtos</option>
-            <option v-for="produto in produtos" :key="produto.id" :value="produto.id">{{ produto.nome }}</option>
-          </select>
+          />
         </div>
       </Card>
 
@@ -117,15 +117,14 @@
           </div>
           <div v-else>
             <label for="lote_produto" class="block text-sm font-medium text-gray-700 mb-1">Produto *</label>
-            <select
+            <SelectComBusca
               id="lote_produto"
               v-model="form.product_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.product_id }"
-            >
-              <option value="">Selecione um produto</option>
-              <option v-for="produto in produtos" :key="produto.id" :value="produto.id">{{ produto.nome }}</option>
-            </select>
+              :opcoes="produtos"
+              chave-rotulo="nome"
+              placeholder="Selecione um produto"
+              :erro="!!form.errors.product_id"
+            />
             <p v-if="form.errors.product_id" class="mt-1 text-sm text-red-600">{{ form.errors.product_id }}</p>
           </div>
 
@@ -227,15 +226,14 @@
               </div>
               <div>
                 <label for="lote_local" class="block text-sm font-medium text-gray-700 mb-1">Local</label>
-                <select
+                <SelectComBusca
                   id="lote_local"
                   v-model="form.stock_location_id"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                  :class="{ 'border-red-500': form.errors.stock_location_id }"
-                >
-                  <option value="">Selecione um local</option>
-                  <option v-for="local in locais" :key="local.id" :value="local.id">{{ local.nome }}</option>
-                </select>
+                  :opcoes="locais"
+                  chave-rotulo="nome"
+                  placeholder="Selecione um local"
+                  :erro="!!form.errors.stock_location_id"
+                />
                 <p v-if="form.errors.stock_location_id" class="mt-1 text-sm text-red-600">{{ form.errors.stock_location_id }}</p>
               </div>
             </div>
@@ -274,6 +272,7 @@ import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Modal from '@/Components/Modal.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { formatarData, paraInputDate, hojeISO } from '@/utils/formatDate';
 
 const props = defineProps({

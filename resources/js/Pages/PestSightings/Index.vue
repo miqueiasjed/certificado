@@ -23,16 +23,13 @@
             <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
               Endereço
             </label>
-            <select
+            <SelectComBusca
               id="address_id"
               v-model="filters.address_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos os endereços</option>
-              <option v-for="address in addresses" :key="address.id" :value="address.id">
-                {{ address.nickname }} - {{ address.street }}, {{ address.number }}
-              </option>
-            </select>
+              :opcoes="addresses"
+              :chave-rotulo="address => `${address.nickname} - ${address.street}, ${address.number}`"
+              placeholder="Todos os endereços"
+            />
           </div>
 
           <!-- Ordem de Serviço -->
@@ -40,16 +37,13 @@
             <label for="work_order_id" class="block text-sm font-medium text-gray-700 mb-2">
               Ordem de Serviço
             </label>
-            <select
+            <SelectComBusca
               id="work_order_id"
               v-model="filters.work_order_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todas as ordens</option>
-              <option v-for="workOrder in workOrders" :key="workOrder.id" :value="workOrder.id">
-                {{ workOrder.order_number }}
-              </option>
-            </select>
+              :opcoes="workOrders"
+              chave-rotulo="order_number"
+              placeholder="Todas as ordens"
+            />
           </div>
 
           <!-- Tipo de Praga -->
@@ -255,6 +249,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Pagination from '@/Components/Pagination.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({

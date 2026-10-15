@@ -33,18 +33,16 @@
                 <label for="client_id" class="block text-sm font-medium text-gray-700 mb-1">
                   Cliente *
                 </label>
-                <select
+                <SelectComBusca
                   id="client_id"
                   v-model="form.client_id"
+                  :opcoes="clients"
+                  :chave-rotulo="(client) => `${client.name} - ${client.cnpj ?? ''}`"
+                  placeholder="Selecione um cliente"
+                  :erro="!!errors.client_id"
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   @change="loadClientAddresses"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-500': errors.client_id }"
-                >
-                  <option value="">Selecione um cliente</option>
-                  <option v-for="client in clients" :key="client.id" :value="client.id" :selected="client.id === form.client_id">
-                    {{ client.name }} - {{ client.cnpj }}
-                  </option>
-                </select>
+                />
                 <p v-if="errors.client_id" class="mt-1 text-sm text-red-600">{{ errors.client_id }}</p>
               </div>
 
@@ -53,17 +51,15 @@
                 <label for="address_id" class="block text-sm font-medium text-gray-700 mb-1">
                   Endereço *
                 </label>
-                <select
+                <SelectComBusca
                   id="address_id"
                   v-model="form.address_id"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-500': errors.address_id }"
-                >
-                  <option value="">Selecione um endereço</option>
-                  <option v-for="address in clientAddresses" :key="address.id" :value="address.id">
-                    {{ address.nickname }} - {{ address.street }}, {{ address.number }}, {{ address.district }}, {{ address.city }}/{{ address.state }}
-                  </option>
-                </select>
+                  :opcoes="clientAddresses"
+                  :chave-rotulo="(address) => `${address.nickname ?? ''} - ${address.street ?? ''}, ${address.number ?? ''}, ${address.district ?? ''}, ${address.city ?? ''}/${address.state ?? ''}`"
+                  placeholder="Selecione um endereço"
+                  :erro="!!errors.address_id"
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
                 <p v-if="errors.address_id" class="mt-1 text-sm text-red-600">{{ errors.address_id }}</p>
               </div>
 
@@ -100,17 +96,15 @@
                 <label for="work_order_id" class="block text-sm font-medium text-gray-700 mb-1">
                   Ordem de Serviço
                 </label>
-                <select
+                <SelectComBusca
                   id="work_order_id"
                   v-model="form.work_order_id"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  :class="{ 'border-red-500': errors.work_order_id }"
-                >
-                  <option value="">Selecione uma OS (opcional)</option>
-                  <option v-for="wo in workOrders" :key="wo.id" :value="wo.id">
-                    {{ wo.order_number }} - {{ wo.client.name }} - {{ formatarData(wo.scheduled_date) }}
-                  </option>
-                </select>
+                  :opcoes="workOrders"
+                  :chave-rotulo="(wo) => `${wo.order_number} - ${wo.client.name} - ${formatarData(wo.scheduled_date)}`"
+                  placeholder="Selecione uma OS (opcional)"
+                  :erro="!!errors.work_order_id"
+                  classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
                 <p v-if="errors.work_order_id" class="mt-1 text-sm text-red-600">{{ errors.work_order_id }}</p>
               </div>
             </div>
@@ -155,19 +149,16 @@
                     <label :for="`product_${index}`" class="block text-sm font-medium text-gray-700 mb-1">
                       Produto {{ index + 1 }} *
                     </label>
-                    <select
+                    <SelectComBusca
+                      required
                       :id="`product_${index}`"
                       v-model="product.product_id"
+                      :opcoes="products"
+                      placeholder="Selecione um produto"
+                      :erro="!!(errors[`products.${index}.product_id`] || product.isDuplicate)"
+                      classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       @change="checkDuplicateProducts(index)"
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      :class="{ 'border-red-500': errors[`products.${index}.product_id`] || product.isDuplicate }"
-                      required
-                    >
-                      <option value="">Selecione um produto</option>
-                      <option v-for="prod in products" :key="prod.id" :value="prod.id" :selected="prod.id === product.product_id">
-                        {{ prod.name }}
-                      </option>
-                    </select>
+                    />
                     <p v-if="product.isDuplicate" class="mt-1 text-sm text-red-600">
                       Este produto já foi adicionado
                     </p>
@@ -243,18 +234,16 @@
               <label for="service_id" class="block text-sm font-medium text-gray-700 mb-1">
                 Selecione o Serviço *
               </label>
-              <select
+              <SelectComBusca
+                required
                 id="service_id"
                 v-model="form.service_id"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                :class="{ 'border-red-500': errors.service_id }"
-                required
-              >
-                <option value="">Selecione um serviço</option>
-                <option v-for="serv in services" :key="serv.id" :value="serv.id">
-                  {{ serv.name }} - {{ serv.category }}
-                </option>
-              </select>
+                :opcoes="services"
+                :chave-rotulo="(serv) => `${serv.name} - ${serv.category ?? ''}`"
+                placeholder="Selecione um serviço"
+                :erro="!!errors.service_id"
+                classe-campo="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
               <p v-if="errors.service_id" class="mt-1 text-sm text-red-600">
                 {{ errors.service_id }}
               </p>
@@ -335,6 +324,7 @@ import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { formatarData } from '@/utils/formatDate';
 
 const props = defineProps({

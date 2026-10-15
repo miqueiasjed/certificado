@@ -23,16 +23,12 @@
             <label for="client_id" class="block text-sm font-medium text-gray-700 mb-2">
               Cliente
             </label>
-            <select
+            <SelectComBusca
               id="client_id"
               v-model="filters.client_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos os clientes</option>
-              <option v-for="client in clients" :key="client.id" :value="client.id">
-                {{ client.name }}
-              </option>
-            </select>
+              :opcoes="clients"
+              placeholder="Todos os clientes"
+            />
           </div>
 
           <!-- Endereço -->
@@ -40,16 +36,13 @@
             <label for="address_id" class="block text-sm font-medium text-gray-700 mb-2">
               Endereço
             </label>
-            <select
+            <SelectComBusca
               id="address_id"
               v-model="filters.address_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos os endereços</option>
-              <option v-for="address in addresses" :key="address.id" :value="address.id">
-                {{ address.nickname }} - {{ address.street }}, {{ address.number }}
-              </option>
-            </select>
+              :opcoes="addresses"
+              :chave-rotulo="rotuloEndereco"
+              placeholder="Todos os endereços"
+            />
           </div>
 
           <!-- Técnico -->
@@ -57,16 +50,12 @@
             <label for="technician_id" class="block text-sm font-medium text-gray-700 mb-2">
               Técnico
             </label>
-            <select
+            <SelectComBusca
               id="technician_id"
               v-model="filters.technician_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos os técnicos</option>
-              <option v-for="technician in technicians" :key="technician.id" :value="technician.id">
-                {{ technician.name }}
-              </option>
-            </select>
+              :opcoes="technicians"
+              placeholder="Todos os técnicos"
+            />
           </div>
 
           <!-- Status -->
@@ -113,16 +102,12 @@
             <label for="service_id" class="block text-sm font-medium text-gray-700 mb-2">
               Serviço
             </label>
-            <select
+            <SelectComBusca
               id="service_id"
               v-model="filters.service_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Todos os serviços</option>
-              <option v-for="service in services" :key="service.id" :value="service.id">
-                {{ service.name }}
-              </option>
-            </select>
+              :opcoes="services"
+              placeholder="Todos os serviços"
+            />
           </div>
 
           <!-- Data (De) -->
@@ -359,6 +344,7 @@ import { Link, router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import Pagination from '@/Components/Pagination.vue';
 import ConfirmDeleteModal from '@/Components/ConfirmDeleteModal.vue';
 import Modal from '@/Components/Modal.vue';
@@ -374,6 +360,8 @@ const props = defineProps({
   technicians: Array,
   services: Array,
 });
+
+const rotuloEndereco = (address) => `${address.nickname ?? ''} - ${address.street ?? ''}, ${address.number ?? ''}`;
 
 const { pode } = usePermissoes();
 const { temModulo } = useModulos();

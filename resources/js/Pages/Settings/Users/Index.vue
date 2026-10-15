@@ -203,16 +203,13 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Técnico vinculado</label>
-            <select
+            <SelectComBusca
               v-model="form.technician_id"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              :class="{ 'border-red-500': form.errors.technician_id }"
-            >
-              <option :value="null">Nenhum</option>
-              <option v-for="tecnico in opcoesTecnico" :key="tecnico.id" :value="tecnico.id">
-                {{ tecnico.name }}
-              </option>
-            </select>
+              :opcoes="opcoesTecnico"
+              placeholder="Nenhum"
+              :valor-vazio="null"
+              :erro="!!form.errors.technician_id"
+            />
             <p v-if="form.errors.technician_id" class="mt-1 text-sm text-red-600">{{ form.errors.technician_id }}</p>
           </div>
 
@@ -300,6 +297,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import PageHeader from '@/Components/PageHeader.vue';
 import Card from '@/Components/Card.vue';
 import Modal from '@/Components/Modal.vue';
+import SelectComBusca from '@/Components/SelectComBusca.vue';
 import { usePermissoes } from '@/Composables/usePermissoes';
 import { formatarData } from '@/utils/formatDate';
 
