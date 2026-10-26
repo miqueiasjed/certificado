@@ -161,4 +161,21 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Sistema central de suporte técnico (relatos de problema)
+    |--------------------------------------------------------------------------
+    |
+    | Para onde `EnviarRelatoParaSistemaJob` repassa cada relato do botão
+    | "Relatar problema". O token é emitido no projeto deste sistema, no
+    | bloco "Entrada de relatos" do sistema central, e só abre a rota de
+    | intake. Sem token o job não faz nada e o relato fica só aqui.
+    |
+    */
+
+    'sistema_intake' => [
+        'url' => env('SISTEMA_INTAKE_URL', 'https://app.miqueias.ia.br/api/v1/intake/reports'),
+        'token' => env('SISTEMA_INTAKE_TOKEN'),
+    ],
+
 ];

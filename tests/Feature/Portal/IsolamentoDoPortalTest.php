@@ -103,6 +103,11 @@ class IsolamentoDoPortalTest extends TestCase
         // empresa, coberto por ChargeEndpointTest); a leitura da fatura em si
         // já está em portal.faturas, que entra na varredura.
         'portal.faturas.cobranca' => 'Ação de escrita (gera a cobrança da própria fatura); o dono é conferido antes de emitir, e a leitura da fatura está em portal.faturas, já na varredura.',
+        // Botão "Relatar problema": só cria o relato do próprio usuário do
+        // portal, com autor e empresa vindos do guard `cliente`, e responde
+        // uma mensagem fixa, sem dado de domínio. Coberto por
+        // RelatoDeProblemaTest.
+        'portal.relatos.store' => 'Ação de criação do próprio relato de problema; autor e empresa vêm do cliente autenticado e a resposta não traz dado de domínio.',
     ];
 
     /**

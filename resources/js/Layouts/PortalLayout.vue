@@ -40,6 +40,15 @@
       <div class="border-t border-white/20 p-3">
         <button
           type="button"
+          @click="relatoDeProblemaAberto = true"
+          class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white">
+          <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="ICONE_RELATAR_PROBLEMA"></path>
+          </svg>
+          <span>Relatar problema</span>
+        </button>
+        <button
+          type="button"
           @click="sair"
           class="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white">
           <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -65,6 +74,16 @@
         </svg>
       </div>
       <p class="min-w-0 flex-1 truncate text-sm font-semibold">{{ nomeDaEmpresa }}</p>
+      <button
+        type="button"
+        @click="relatoDeProblemaAberto = true"
+        class="shrink-0 rounded-md p-1 text-white/80 hover:text-white"
+        title="Relatar problema"
+        aria-label="Relatar problema">
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="ICONE_RELATAR_PROBLEMA"></path>
+        </svg>
+      </button>
       <button type="button" @click="sair" class="shrink-0 text-xs font-medium text-white/80 hover:text-white">
         Sair
       </button>
@@ -120,13 +139,20 @@
   </div>
 
   <BotaoDeAjuda escopo="portal" />
+
+  <RelatarProblemaModal
+    :show="relatoDeProblemaAberto"
+    :rota="route('portal.relatos.store')"
+    :cor-primaria="variaveisDeCor['--portal-cor-primaria']"
+    @close="relatoDeProblemaAberto = false" />
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { resolverCoresDoPortal } from '@/utils/corDoPortal';
 import BotaoDeAjuda from '@/Components/BotaoDeAjuda.vue';
+import RelatarProblemaModal from '@/Components/RelatarProblemaModal.vue';
 
 const $page = usePage();
 
@@ -221,4 +247,12 @@ const estaAtivo = (item) => {
 const sair = () => {
   router.post(route('portal.logout'));
 };
+
+/**
+ * Botão "Relatar problema": o relato vai para o suporte técnico do sistema,
+ * com a URL da tela aberta. Ver `Components/RelatarProblemaModal.vue`.
+ */
+const ICONE_RELATAR_PROBLEMA = 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z';
+
+const relatoDeProblemaAberto = ref(false);
 </script>

@@ -503,6 +503,15 @@
                 </svg>
                 Convites
               </Link>
+              <button
+                type="button"
+                class="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                @click="abrirRelatoDeProblema">
+                <svg class="mr-3 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                Relatar problema
+              </button>
               <form @submit.prevent="logout">
                 <button
                   type="submit"
@@ -518,6 +527,11 @@
         </transition>
       </div>
     </div>
+
+    <RelatarProblemaModal
+      :show="relatoDeProblemaAberto"
+      :rota="route('relatos.store')"
+      @close="relatoDeProblemaAberto = false" />
 
     <!-- Collapse Toggle -->
     <div class="border-t border-green-700 p-4">
@@ -537,6 +551,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { usePermissoes } from '@/Composables/usePermissoes';
 import { useModulos } from '@/Composables/useModulos';
+import RelatarProblemaModal from '@/Components/RelatarProblemaModal.vue';
 
 const emit = defineEmits(['toggle-collapse']);
 
@@ -614,6 +629,15 @@ const toggleUserMenu = () => {
   if (!props.collapsed) {
     userMenuOpen.value = !userMenuOpen.value;
   }
+};
+
+// Relatar problema: disponível para todo usuário logado, sem permissão
+// própria, igual a sair do sistema.
+const relatoDeProblemaAberto = ref(false);
+
+const abrirRelatoDeProblema = () => {
+  userMenuOpen.value = false;
+  relatoDeProblemaAberto.value = true;
 };
 
 const logout = () => {

@@ -56,6 +56,7 @@ use App\Models\PaymentGatewayConfig;
 use App\Models\PersonalProtectiveEquipment;
 use App\Models\PestSighting;
 use App\Models\PpeDelivery;
+use App\Models\ProblemReport;
 use App\Models\Procedure;
 use App\Models\Product;
 use App\Models\ProductBatch;
@@ -1736,6 +1737,16 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'technician_id' => $dados['technician']->id,
                 'data' => '2026-08-20',
                 'situacao' => 'agendado',
+            ]);
+
+            // Relato do botão "Relatar problema". Criado direto pelo model,
+            // sem o Service, para não agendar o envio ao sistema central; o
+            // fluxo inteiro tem teste próprio em RelatoDeProblemaTest.
+            $dados['problemReport'] = ProblemReport::create([
+                'user_id' => $autor->id,
+                'titulo' => 'Relato '.$marca,
+                'descricao' => 'Descricao do relato '.$marca,
+                'situacao' => ProblemReport::SITUACAO_NOVO,
             ]);
 
             $dados['satisfactionSurvey'] = SatisfactionSurvey::create([

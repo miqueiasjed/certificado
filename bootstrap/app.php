@@ -52,6 +52,13 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::middleware('publico')
                 ->name('publico.')
                 ->group(base_path('routes/publico.php'));
+
+            // Relatos de problema (botão "Relatar problema" do painel e fila
+            // de relatos da plataforma). Sem prefixo nem nome de grupo: cada
+            // grupo dentro do arquivo declara o próprio envelope, igual ao de
+            // routes/web.php para o mesmo mundo (empresas ou plataforma).
+            Route::middleware('web')
+                ->group(base_path('routes/relatos.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware) {

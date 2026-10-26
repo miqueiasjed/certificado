@@ -6,6 +6,7 @@ use App\Http\Controllers\Portal\PortalController;
 use App\Http\Controllers\Portal\PortalDocumentController;
 use App\Http\Controllers\Portal\PortalNotaController;
 use App\Http\Controllers\Portal\PortalPagamentoController;
+use App\Http\Controllers\Portal\PortalProblemReportController;
 use App\Http\Controllers\Portal\PortalRelatorioController;
 use App\Http\Middleware\AutenticarCliente;
 use App\Http\Middleware\EnsurePortalModuleIsActive;
@@ -160,6 +161,14 @@ Route::middleware(AutenticarCliente::class)->group(function () {
         Route::get('/solicitacoes/{id}', [ClientRequestController::class, 'show'])
             ->whereNumber('id')
             ->name('solicitacoes.show');
+
+        // Botão "Relatar problema" do `PortalLayout`, mesmo fluxo de
+        // `relatos.store` do painel (routes/relatos.php). Só cria registro
+        // novo, com o autor e a empresa vindos do cliente autenticado; não lê
+        // nada de domínio. `throttle:relato-de-problema` limita por conta.
+        Route::post('/relatos', [PortalProblemReportController::class, 'store'])
+            ->middleware('throttle:relato-de-problema')
+            ->name('relatos.store');
 
         // `{tipo}` é string livre (visita/certificado/contrato/fatura), nunca
         // enum de rota: tipo desconhecido cai no mesmo 404 do `id` que não é

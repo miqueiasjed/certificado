@@ -23,6 +23,7 @@ use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskStarting;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
@@ -54,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
         $this->registrarLimiteDeLoginDoPortal();
         $this->registrarLimitesDoAgendamentoPublico();
         $this->registrarLimitesDaPesquisaPublica();
+        $this->registrarLimiteDeRelatoDeProblema();
         $this->registrarReferenciaNormativaNosDocumentos();
     }
 
@@ -223,6 +225,36 @@ class AppServiceProvider extends ServiceProvider
             return [
                 Limit::perMinute(5)->by('portal-login-email:'.$email),
                 Limit::perMinute(5)->by('portal-login-ip:'.$request->ip()),
+            ];
+        });
+    }
+
+    /**
+     * Limite do botão "Relatar problema", no painel e no portal do cliente:
+     * 5 relatos por minuto e 30 por hora, por conta.
+     *
+     * A chave é a conta, e não o IP, pelo mesmo motivo do aplicativo do
+     * técnico: o escritório inteiro sai pelo mesmo IP. O prefixo separa as
+     * duas tabelas de conta, que têm sequências de id independentes
+     * (`users` no painel, `client_users` no portal). O IP só entra se nenhum
+     * dos dois guards tiver usuário, o que as rotas, todas autenticadas, não
+     * deixam acontecer.
+     *
+     * O teto é folgado para quem relata de verdade e curto para laço de
+     * reenvio: cada relato vira uma tarefa no sistema central de suporte.
+     */
+    private function registrarLimiteDeRelatoDeProblema(): void
+    {
+        RateLimiter::for('relato-de-problema', function (Request $request) {
+            $chave = match (true) {
+                $request->user() !== null => 'user:'.$request->user()->getAuthIdentifier(),
+                Auth::guard('cliente')->check() => 'cliente:'.Auth::guard('cliente')->id(),
+                default => 'ip:'.$request->ip(),
+            };
+
+            return [
+                Limit::perMinute(5)->by('relato-minuto:'.$chave),
+                Limit::perHour(30)->by('relato-hora:'.$chave),
             ];
         });
     }
