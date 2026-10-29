@@ -18,11 +18,11 @@
         :class="[
           'fixed inset-y-0 left-0 z-50 flex transform transition-transform duration-300 ease-in-out lg:static lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full',
-          sidebarCollapsed ? 'w-16' : 'w-64'
+          barraRecolhida ? 'w-16' : 'w-64'
         ]">
         <div class="flex w-full flex-col bg-green-600">
           <Sidebar
-            :collapsed="sidebarCollapsed"
+            :collapsed="barraRecolhida"
             @toggle-collapse="toggleSidebarCollapse" />
         </div>
       </div>
@@ -93,8 +93,22 @@ import BotaoDeAjuda from '@/Components/BotaoDeAjuda.vue';
 const $page = usePage();
 const suporteAtivo = computed(() => $page.props.suporte?.ativo === true);
 
+const CHAVE_RECOLHIDA = 'sidebar:recolhida';
+
+const lerRecolhida = () => {
+  try {
+    return localStorage.getItem(CHAVE_RECOLHIDA) === '1';
+  } catch {
+    return false;
+  }
+};
+
 const sidebarOpen = ref(false);
-const sidebarCollapsed = ref(false);
+// Guardado no localStorage porque o layout é remontado a cada página do Inertia.
+const sidebarCollapsed = ref(lerRecolhida());
+const ehDesktop = ref(window.innerWidth >= 1024);
+// No celular a barra é uma gaveta: recolher só faz sentido no desktop.
+const barraRecolhida = computed(() => sidebarCollapsed.value && ehDesktop.value);
 
 const openSidebar = () => {
   sidebarOpen.value = true;
@@ -106,11 +120,17 @@ const closeSidebar = () => {
 
 const toggleSidebarCollapse = () => {
   sidebarCollapsed.value = !sidebarCollapsed.value;
+  try {
+    localStorage.setItem(CHAVE_RECOLHIDA, sidebarCollapsed.value ? '1' : '0');
+  } catch {
+    // localStorage indisponível: a preferência vale só nesta página.
+  }
 };
 
 // Handle window resize
 const handleResize = () => {
-  if (window.innerWidth >= 1024) {
+  ehDesktop.value = window.innerWidth >= 1024;
+  if (ehDesktop.value) {
     sidebarOpen.value = false;
   }
 };

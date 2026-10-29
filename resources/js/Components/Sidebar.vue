@@ -15,419 +15,125 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="flex flex-1 flex-col overflow-y-auto min-h-0 px-4 py-4">
-      <ul role="list" class="flex flex-1 flex-col gap-y-1">
-        <!-- Dashboard -->
+    <nav ref="navegacao" class="flex flex-1 flex-col overflow-y-auto min-h-0 px-3 py-4">
+      <ul role="list" class="flex flex-col gap-y-1">
         <li>
           <Link
-            :href="'/dashboard'"
+            href="/dashboard"
+            :title="collapsed ? 'Dashboard' : null"
             :class="[
               isCurrentRoute('/dashboard')
                 ? 'bg-green-700 text-white'
                 : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+              collapsed ? 'justify-center' : '',
+              'group flex items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
             ]">
             <svg :class="[
               isCurrentRoute('/dashboard') ? 'text-white' : 'text-green-300 group-hover:text-white',
               'h-5 w-5 shrink-0 transition-colors'
             ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"></path>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z"></path>
+              <path v-for="d in icones.dashboard" :key="d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="d"></path>
             </svg>
             <span v-if="!collapsed">Dashboard</span>
           </Link>
         </li>
+      </ul>
 
-        <!-- Gestão de Clientes -->
-        <li v-if="!collapsed && mostrarBlocoClientes" class="mt-4">
-          <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Gestão de Clientes</div>
-        </li>
-        <li v-if="podeVerClientes">
-          <Link
-            :href="'/clients'"
-            :class="[
-              isCurrentRoute('/clients')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/clients') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM7 10a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-            </svg>
-            <span v-if="!collapsed">Clientes</span>
-          </Link>
-        </li>
-        <li v-if="podeVerEnderecos">
-          <Link
-            :href="'/addresses'"
-            :class="[
-              isCurrentRoute('/addresses')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/addresses') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-            </svg>
-            <span v-if="!collapsed">Endereços</span>
-          </Link>
-        </li>
-        <li v-if="podeVerOrcamentos">
-          <Link
-            :href="'/budgets'"
-            :class="[
-              isCurrentRoute('/budgets')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/budgets') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span v-if="!collapsed">Orçamentos</span>
-          </Link>
-        </li>
+      <!-- Barra recolhida: só os ícones, com um divisor entre os módulos -->
+      <ul v-if="collapsed" role="list" class="flex flex-col gap-y-1">
+        <template v-for="grupo in grupos" :key="grupo.chave">
+          <li class="my-2 border-t border-green-500/60" aria-hidden="true"></li>
+          <li v-for="item in grupo.itens" :key="item.href">
+            <Link
+              :href="item.href"
+              :title="item.rotulo"
+              :class="[
+                itemAtivo(item)
+                  ? 'bg-green-700 text-white'
+                  : 'text-green-300 hover:bg-green-700 hover:text-white',
+                'relative flex items-center justify-center rounded-md p-2 transition-colors'
+              ]">
+              <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path v-for="d in item.icone" :key="d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="d"></path>
+              </svg>
+              <span
+                v-if="item.contador > 0"
+                class="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-green-600"></span>
+              <span class="sr-only">{{ item.rotulo }}</span>
+            </Link>
+          </li>
+        </template>
+      </ul>
 
-        <!-- Atendimento e Agendamento Online -->
-        <li v-if="!collapsed && mostrarBlocoAtendimento" class="mt-4">
-          <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Atendimento</div>
-        </li>
-        <li v-if="podeVerSolicitacoes">
-          <Link
-            :href="'/solicitacoes'"
+      <!-- Barra aberta: módulos que abrem e fecham -->
+      <ul v-else role="list" class="mt-3 flex flex-col gap-y-1">
+        <li v-for="grupo in grupos" :key="grupo.chave">
+          <button
+            type="button"
+            :aria-expanded="estaAberto(grupo)"
+            :aria-controls="`grupo-${grupo.chave}`"
             :class="[
-              isCurrentRoute('/solicitacoes')
-                ? 'bg-green-700 text-white'
+              grupoAtivo(grupo) && !estaAberto(grupo)
+                ? 'bg-green-700/60 text-white'
                 : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
+              'group flex w-full items-center gap-x-3 rounded-md p-2 text-left text-sm font-semibold leading-6 transition-colors'
+            ]"
+            @click="alternarGrupo(grupo)">
             <svg :class="[
-              isCurrentRoute('/solicitacoes') ? 'text-white' : 'text-green-300 group-hover:text-white',
+              grupoAtivo(grupo) ? 'text-white' : 'text-green-300 group-hover:text-white',
               'h-5 w-5 shrink-0 transition-colors'
             ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+              <path v-for="d in grupo.icone" :key="d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="d"></path>
             </svg>
-            <span v-if="!collapsed" class="flex-1">Solicitações</span>
+            <span class="flex-1 truncate">{{ grupo.titulo }}</span>
             <span
-              v-if="!collapsed && solicitacoesAbertas > 0"
-              class="inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-xs font-semibold">
-              {{ solicitacoesAbertas }}
+              v-if="!estaAberto(grupo) && grupo.contador > 0"
+              class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white">
+              {{ grupo.contador }}
             </span>
-          </Link>
-        </li>
-        <li v-if="podeVerAgendamentos">
-          <Link
-            :href="'/solicitacoes-de-horario'"
-            :class="[
-              isCurrentRoute('/solicitacoes-de-horario')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex items-center gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/solicitacoes-de-horario') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            <svg
+              :class="[estaAberto(grupo) ? 'rotate-90' : '', 'h-4 w-4 shrink-0 text-green-300 transition-transform duration-200 group-hover:text-white']"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
             </svg>
-            <span v-if="!collapsed" class="flex-1">Agendamentos</span>
-            <span
-              v-if="!collapsed && pedidosDeHorarioPendentes > 0"
-              class="inline-flex items-center justify-center h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-xs font-semibold">
-              {{ pedidosDeHorarioPendentes }}
-            </span>
-          </Link>
-        </li>
-        <li v-if="podeVerAgendamentos">
-          <Link
-            :href="'/satisfacao'"
-            :class="[
-              isCurrentRoute('/satisfacao')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/satisfacao') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3"></path>
-            </svg>
-            <span v-if="!collapsed">Satisfação</span>
-          </Link>
-        </li>
+          </button>
 
-        <!-- Gestão Operacional -->
-        <li v-if="!collapsed && mostrarBlocoOperacional" class="mt-4">
-          <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Gestão Operacional</div>
-        </li>
-        <li v-if="podeVerCadastros">
-          <Link
-            :href="'/cadastros'"
+          <div
+            :id="`grupo-${grupo.chave}`"
             :class="[
-              isCurrentRoute('/cadastros')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
+              estaAberto(grupo) ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+              'grid transition-[grid-template-rows,opacity] duration-200 ease-out'
             ]">
-            <svg :class="[
-              isCurrentRoute('/cadastros') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-            </svg>
-            <span v-if="!collapsed">Cadastros</span>
-          </Link>
+            <div class="overflow-hidden">
+              <ul role="list" class="ml-4 mt-1 flex flex-col gap-y-0.5 border-l border-green-500/60 pl-2">
+                <li v-for="item in grupo.itens" :key="item.href">
+                  <Link
+                    :href="item.href"
+                    :tabindex="estaAberto(grupo) ? null : -1"
+                    :class="[
+                      itemAtivo(item)
+                        ? 'bg-green-700 text-white'
+                        : 'text-green-100 hover:bg-green-700 hover:text-white',
+                      'group flex items-center gap-x-2.5 rounded-md px-2 py-1.5 text-sm font-medium leading-6 transition-colors'
+                    ]">
+                    <svg :class="[
+                      itemAtivo(item) ? 'text-white' : 'text-green-300 group-hover:text-white',
+                      'h-4 w-4 shrink-0 transition-colors'
+                    ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path v-for="d in item.icone" :key="d" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="d"></path>
+                    </svg>
+                    <span class="flex-1 truncate">{{ item.rotulo }}</span>
+                    <span
+                      v-if="item.contador > 0"
+                      class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white">
+                      {{ item.contador }}
+                    </span>
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
         </li>
-        <li v-if="podeVerOrdensServico">
-          <Link
-            :href="'/work-orders'"
-            :class="[
-              isCurrentRoute('/work-orders')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/work-orders') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            <span v-if="!collapsed">Ordens de Serviço</span>
-          </Link>
-        </li>
-        <li v-if="podeVerOrdensServico">
-          <Link
-            :href="'/agenda'"
-            :class="[
-              isCurrentRoute('/agenda')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/agenda') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-            </svg>
-            <span v-if="!collapsed">Agenda</span>
-          </Link>
-        </li>
-        <li v-if="podeVerRoteiro">
-          <Link
-            :href="route('roteiros.painel')"
-            :class="[
-              isCurrentRoute('/roteiros')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/roteiros') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
-            </svg>
-            <span v-if="!collapsed">Roteiro do dia</span>
-          </Link>
-        </li>
-        <li v-if="podeVerFrota">
-          <Link
-            :href="route('frota.index')"
-            :class="[
-              isCurrentRoute('/veiculos')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/veiculos') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 17a2 2 0 100-4 2 2 0 000 4zm8 0a2 2 0 100-4 2 2 0 000 4zM3 13h18l-1.5-5H4.5L3 13z"></path>
-            </svg>
-            <span v-if="!collapsed">Frota</span>
-          </Link>
-        </li>
-        <li v-if="podeVerEpi">
-          <Link
-            :href="route('epi.index')"
-            :class="[
-              isCurrentRoute('/epis')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/epis') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-            </svg>
-            <span v-if="!collapsed">Controle de EPI</span>
-          </Link>
-        </li>
-        <li v-if="podeVerCertificados">
-          <Link
-            :href="'/certificates'"
-            :class="[
-              isCurrentRoute('/certificates')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/certificates') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span v-if="!collapsed">Certificados</span>
-          </Link>
-        </li>
-        <li v-if="podeVerContratos">
-          <Link
-            :href="'/contracts'"
-            :class="[
-              isCurrentRoute('/contracts')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/contracts') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-            </svg>
-            <span v-if="!collapsed">Contratos</span>
-          </Link>
-        </li>
-
-        <!-- Gestão Financeira -->
-        <li v-if="!collapsed && mostrarBlocoFinanceiro" class="mt-4">
-          <div class="text-xs font-semibold text-green-300 uppercase tracking-wider">Financeiro e Fiscal</div>
-        </li>
-        <li v-if="podeVerFinanceiro">
-          <Link
-            :href="'/financial-dashboard'"
-            :class="[
-              isCurrentRoute('/financial-dashboard')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/financial-dashboard') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-            </svg>
-            <span v-if="!collapsed">Dashboard Financeiro</span>
-          </Link>
-        </li>
-        <li v-if="podeVerFinanceiro">
-          <Link
-            :href="'/financial-entries'"
-            :class="[
-              isCurrentRoute('/financial-entries')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/financial-entries') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
-            </svg>
-            <span v-if="!collapsed">Entradas Financeiras</span>
-          </Link>
-        </li>
-        <li v-if="podeVerFinanceiro">
-          <Link
-            :href="'/financial-withdrawals'"
-            :class="[
-              isCurrentRoute('/financial-withdrawals')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/financial-withdrawals') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4m16 0l-4-4m4 4l-4 4M4 12l4-4m-4 4l4 4"></path>
-            </svg>
-            <span v-if="!collapsed">Saídas Financeiras</span>
-          </Link>
-        </li>
-        <li v-if="podeVerFinanceiro">
-          <Link
-            :href="'/cash-flow'"
-            :class="[
-              isCurrentRoute('/cash-flow')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/cash-flow') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-            </svg>
-            <span v-if="!collapsed">Fluxo de Caixa</span>
-          </Link>
-        </li>
-        <li v-if="podeVerFiscal">
-          <Link
-            href="/notas"
-            :class="[
-              isCurrentRoute('/notas')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/notas') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M9 8h6m2 13H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
-            </svg>
-            <span v-if="!collapsed">Notas fiscais</span>
-          </Link>
-        </li>
-        <li v-if="podeConfigurarFiscal">
-          <Link
-            href="/fiscal/configuracao"
-            :class="[
-              isCurrentRoute('/fiscal/configuracao')
-                ? 'bg-green-700 text-white'
-                : 'text-green-100 hover:bg-green-700 hover:text-white',
-              'group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 transition-colors'
-            ]">
-            <svg :class="[
-              isCurrentRoute('/fiscal/configuracao') ? 'text-white' : 'text-green-300 group-hover:text-white',
-              'h-5 w-5 shrink-0 transition-colors'
-            ]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4v2m0-6V4m12 14a2 2 0 100-4m0 4v2m0-6V4" />
-            </svg>
-            <span v-if="!collapsed">Configuração fiscal</span>
-          </Link>
-        </li>
-
       </ul>
     </nav>
 
@@ -534,9 +240,10 @@
       @close="relatoDeProblemaAberto = false" />
 
     <!-- Collapse Toggle -->
-    <div class="border-t border-green-700 p-4">
+    <div class="hidden border-t border-green-700 p-4 lg:block">
       <button
         @click="toggleCollapse"
+        :title="collapsed ? 'Expandir menu' : 'Recolher menu'"
         class="flex w-full items-center justify-center rounded-md p-2 text-green-100 hover:bg-green-700 hover:text-white transition-colors">
         <svg class="h-4 w-4 transition-transform" :class="{ 'rotate-180': collapsed }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
@@ -547,7 +254,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, onBeforeUnmount, nextTick } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { usePermissoes } from '@/Composables/usePermissoes';
 import { useModulos } from '@/Composables/useModulos';
@@ -572,14 +279,10 @@ const { temModulo } = useModulos();
 const podeVerClientes = computed(() => pode('cliente-ver'));
 const podeVerEnderecos = computed(() => pode('endereco-ver'));
 const podeVerOrcamentos = computed(() => pode('orcamento-ver'));
-const mostrarBlocoClientes = computed(() =>
-  podeVerClientes.value || podeVerEnderecos.value || podeVerOrcamentos.value
-);
 
 // Atendimento e Agendamento Online
 const podeVerSolicitacoes = computed(() => pode('solicitacao-ver'));
 const podeVerAgendamentos = computed(() => pode('agendamento-ver'));
-const mostrarBlocoAtendimento = computed(() => podeVerSolicitacoes.value || podeVerAgendamentos.value);
 const solicitacoesAbertas = computed(() => $page.props.solicitacoesAbertas || 0);
 const pedidosDeHorarioPendentes = computed(() => $page.props.pedidosDeHorarioPendentes || 0);
 
@@ -593,19 +296,13 @@ const podeVerRoteiro = computed(() => pode('roteiro-ver') && temModulo('roteiriz
 // O módulo nasce desligado para todos os tenants, então a barra lateral
 // continua exatamente como está hoje até alguém pedir a frota.
 const podeVerFrota = computed(() => pode('frota-ver') && temModulo('frota'));
-// Controle de EPI (Plano 28): mesma regra da frota — permissão E módulo ligado.
-// O módulo nasce desligado para todos os tenants, então a barra lateral continua
-// como está hoje até alguém pedir o controle de EPI.
+// Controle de EPI (Plano 28): mesma regra da frota, permissão E módulo ligado.
 const podeVerEpi = computed(() => pode('epi-ver') && temModulo('epi'));
-const mostrarBlocoOperacional = computed(() =>
-  podeVerCadastros.value || podeVerOrdensServico.value || podeVerCertificados.value || podeVerContratos.value || podeVerRoteiro.value || podeVerFrota.value || podeVerEpi.value
-);
 
 // Gestão Financeira
 const podeVerFinanceiro = computed(() => pode('financeiro-ver') && temModulo('financeiro'));
 const podeVerFiscal = computed(() => pode('fiscal-ver') && temModulo('nfse'));
 const podeConfigurarFiscal = computed(() => pode('fiscal-configurar') && temModulo('nfse'));
-const mostrarBlocoFinanceiro = computed(() => podeVerFinanceiro.value || podeVerFiscal.value || podeConfigurarFiscal.value);
 
 // Configurações da empresa
 const podeConfigurarEmpresa = computed(() => pode('empresa-configurar'));
@@ -613,9 +310,161 @@ const podeConfigurarDisponibilidade = computed(() => pode('empresa-configurar'))
 const podeVerUsuarios = computed(() => pode('usuario-ver'));
 const podeConvidarUsuarios = computed(() => pode('usuario-criar'));
 
+// Traços dos ícones (heroicons outline), um array por ícone porque alguns têm mais de um path.
+const icones = {
+  dashboard: [
+    'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z',
+    'M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z',
+  ],
+  clientes: ['M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zM7 10a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z'],
+  enderecos: ['M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6'],
+  orcamentos: ['M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z'],
+  atendimento: ['M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z'],
+  calendario: ['M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z'],
+  satisfacao: ['M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3'],
+  operacional: ['M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'],
+  cadastros: ['M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10'],
+  documento: ['M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'],
+  roteiro: ['M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7'],
+  frota: ['M8 17a2 2 0 100-4 2 2 0 000 4zm8 0a2 2 0 100-4 2 2 0 000 4zM3 13h18l-1.5-5H4.5L3 13z'],
+  epi: ['M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'],
+  certificados: ['M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+  grafico: ['M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'],
+  financeiro: ['M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z'],
+  entradas: ['M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1'],
+  saidas: ['M20 12H4m16 0l-4-4m4 4l-4 4M4 12l4-4m-4 4l4 4'],
+  notas: ['M9 12h6m-6 4h6M9 8h6m2 13H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z'],
+  ajustes: ['M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4v2m0-6V4m12 14a2 2 0 100-4m0 4v2m0-6V4'],
+};
+
+// Cada módulo da barra. `ativoEm` é o prefixo de URL que acende o item quando
+// difere do href (rotas nomeadas cujo caminho não começa igual).
+const grupos = computed(() => [
+  {
+    chave: 'clientes',
+    titulo: 'Gestão de Clientes',
+    icone: icones.clientes,
+    itens: [
+      { rotulo: 'Clientes', href: '/clients', icone: icones.clientes, visivel: podeVerClientes.value },
+      { rotulo: 'Endereços', href: '/addresses', icone: icones.enderecos, visivel: podeVerEnderecos.value },
+      { rotulo: 'Orçamentos', href: '/budgets', icone: icones.orcamentos, visivel: podeVerOrcamentos.value },
+    ],
+  },
+  {
+    chave: 'atendimento',
+    titulo: 'Atendimento',
+    icone: icones.atendimento,
+    itens: [
+      { rotulo: 'Solicitações', href: '/solicitacoes', icone: icones.atendimento, visivel: podeVerSolicitacoes.value, contador: solicitacoesAbertas.value },
+      { rotulo: 'Agendamentos', href: '/solicitacoes-de-horario', icone: icones.calendario, visivel: podeVerAgendamentos.value, contador: pedidosDeHorarioPendentes.value },
+      { rotulo: 'Satisfação', href: '/satisfacao', icone: icones.satisfacao, visivel: podeVerAgendamentos.value },
+    ],
+  },
+  {
+    chave: 'operacional',
+    titulo: 'Gestão Operacional',
+    icone: icones.operacional,
+    itens: [
+      { rotulo: 'Cadastros', href: '/cadastros', icone: icones.cadastros, visivel: podeVerCadastros.value },
+      { rotulo: 'Ordens de Serviço', href: '/work-orders', icone: icones.documento, visivel: podeVerOrdensServico.value },
+      { rotulo: 'Agenda', href: '/agenda', icone: icones.calendario, visivel: podeVerOrdensServico.value },
+      { rotulo: 'Roteiro do dia', href: route('roteiros.painel'), ativoEm: '/roteiros', icone: icones.roteiro, visivel: podeVerRoteiro.value },
+      { rotulo: 'Frota', href: route('frota.index'), ativoEm: '/veiculos', icone: icones.frota, visivel: podeVerFrota.value },
+      { rotulo: 'Controle de EPI', href: route('epi.index'), ativoEm: '/epis', icone: icones.epi, visivel: podeVerEpi.value },
+      { rotulo: 'Certificados', href: '/certificates', icone: icones.certificados, visivel: podeVerCertificados.value },
+      { rotulo: 'Contratos', href: '/contracts', icone: icones.documento, visivel: podeVerContratos.value },
+    ],
+  },
+  {
+    chave: 'financeiro',
+    titulo: 'Financeiro e Fiscal',
+    icone: icones.financeiro,
+    itens: [
+      { rotulo: 'Dashboard Financeiro', href: '/financial-dashboard', icone: icones.grafico, visivel: podeVerFinanceiro.value },
+      { rotulo: 'Entradas Financeiras', href: '/financial-entries', icone: icones.entradas, visivel: podeVerFinanceiro.value },
+      { rotulo: 'Saídas Financeiras', href: '/financial-withdrawals', icone: icones.saidas, visivel: podeVerFinanceiro.value },
+      { rotulo: 'Fluxo de Caixa', href: '/cash-flow', icone: icones.grafico, visivel: podeVerFinanceiro.value },
+      { rotulo: 'Notas fiscais', href: '/notas', icone: icones.notas, visivel: podeVerFiscal.value },
+      { rotulo: 'Configuração fiscal', href: '/fiscal/configuracao', icone: icones.ajustes, visivel: podeConfigurarFiscal.value },
+    ],
+  },
+]
+  .map((grupo) => {
+    const itens = grupo.itens.filter((item) => item.visivel);
+    const contador = itens.reduce((total, item) => total + (item.contador || 0), 0);
+    return { ...grupo, itens, contador };
+  })
+  .filter((grupo) => grupo.itens.length > 0));
+
 // Função para verificar se a rota atual corresponde ao link
 const isCurrentRoute = (href) => {
-  return $page.url === href || $page.url.startsWith(href + '/');
+  return $page.url === href || $page.url.startsWith(href + '/') || $page.url.startsWith(href + '?');
+};
+
+const itemAtivo = (item) => isCurrentRoute(item.ativoEm || new URL(item.href, window.location.origin).pathname);
+const grupoAtivo = (grupo) => grupo.itens.some(itemAtivo);
+
+// Módulos abertos ficam no localStorage para sobreviver à troca de página (o
+// layout é remontado a cada visita do Inertia). Sem preferência salva, só o
+// módulo da página atual começa aberto.
+const CHAVE_GRUPOS = 'sidebar:grupos-abertos';
+const CHAVE_ROLAGEM = 'sidebar:rolagem';
+
+const lerGruposAbertos = () => {
+  try {
+    return JSON.parse(localStorage.getItem(CHAVE_GRUPOS)) || {};
+  } catch {
+    return {};
+  }
+};
+
+const gruposAbertos = ref(lerGruposAbertos());
+
+const salvarGruposAbertos = () => {
+  try {
+    localStorage.setItem(CHAVE_GRUPOS, JSON.stringify(gruposAbertos.value));
+  } catch {
+    // localStorage indisponível (modo privado): a barra só não lembra o estado.
+  }
+};
+
+const estaAberto = (grupo) => gruposAbertos.value[grupo.chave] ?? grupoAtivo(grupo);
+
+const alternarGrupo = (grupo) => {
+  gruposAbertos.value = { ...gruposAbertos.value, [grupo.chave]: !estaAberto(grupo) };
+  salvarGruposAbertos();
+};
+
+// Ao entrar numa página, o módulo dela abre mesmo que tenha sido fechado antes.
+const abrirGrupoDaPaginaAtual = () => {
+  const ativo = grupos.value.find(grupoAtivo);
+  if (ativo && gruposAbertos.value[ativo.chave] === false) {
+    gruposAbertos.value = { ...gruposAbertos.value, [ativo.chave]: true };
+    salvarGruposAbertos();
+  }
+};
+
+// Mantém a rolagem da barra entre páginas, para a lista não voltar ao topo a cada clique.
+const navegacao = ref(null);
+
+const restaurarRolagem = async () => {
+  await nextTick();
+  if (!navegacao.value) return;
+  try {
+    navegacao.value.scrollTop = Number(sessionStorage.getItem(CHAVE_ROLAGEM)) || 0;
+  } catch {
+    // sessionStorage indisponível: a barra abre no topo.
+  }
+  navegacao.value.querySelector('a.bg-green-700')?.scrollIntoView({ block: 'nearest' });
+};
+
+const salvarRolagem = () => {
+  if (!navegacao.value) return;
+  try {
+    sessionStorage.setItem(CHAVE_ROLAGEM, String(navegacao.value.scrollTop));
+  } catch {
+    // sessionStorage indisponível: nada a guardar.
+  }
 };
 
 const userName = computed(() => $page.props.auth?.user?.name || 'Usuário');
@@ -654,7 +503,11 @@ const handleClickOutside = (event) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
+  abrirGrupoDaPaginaAtual();
+  restaurarRolagem();
 });
+
+onBeforeUnmount(salvarRolagem);
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
