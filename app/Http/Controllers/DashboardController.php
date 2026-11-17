@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Technician;
 use App\Models\Service;
 use App\Models\Certificate;
+use App\Services\CertificateService;
 use App\Services\Compliance\ChecklistService;
 use App\Services\ModuleService;
 use Illuminate\Http\Request;
@@ -98,6 +99,10 @@ class DashboardController extends Controller
             'recentServiceOrders' => $recentWorkOrders,
             'recentCertificates' => collect(), // Empty collection for now
             'conformidade' => $this->resumoDeConformidade($request),
+            // Aviso de vencimento: só para quem pode ver certificado.
+            'certificadosParaRenovar' => $request->user()->can('certificado-ver')
+                ? app(CertificateService::class)->certificadosParaRenovar()
+                : null,
         ]);
     }
 

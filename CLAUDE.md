@@ -72,6 +72,36 @@ resources/js/
 - Nunca usar `confirm()` nativo para ações destrutivas — usar modal de confirmação
 - Nunca `toLocaleDateString` no frontend — usar os utilitários de data do projeto
 
+## Aviso de atualização
+
+Toda mudança que o usuário vê ou faz leva, no mesmo commit, um arquivo novo em
+`resources/avisos-atualizacao/AAAA-MM-DD-assunto.json`. Ele aparece no pop-up
+"O sistema foi atualizado" do painel (`AvisoAtualizacaoPopup.vue`, montado no
+`AuthenticatedLayout`). Mudança interna sem efeito visível não leva aviso. Modelo:
+
+```json
+{
+    "id": "AAAA-MM-DD-assunto",
+    "publicado_em": "AAAA-MM-DD",
+    "publicos": ["gestao"],
+    "permissao": "certificado-ver",
+    "titulo": "Frase curta",
+    "itens": ["O que mudou, na linguagem de quem usa o sistema."]
+}
+```
+
+- Públicos: `gestao` (administrador, financeiro, comercial, leitura), `tecnico`
+  (técnico no painel web) ou `todos`. O aplicativo offline do técnico ainda não
+  mostra o pop-up. Super admin da plataforma nunca recebe.
+- `permissao` é opcional: use a mesma permissão que trava a tela ou o menu da
+  novidade, para não avisar quem não enxerga a tela.
+- `tenants` é opcional: lista de `slug_publico` das empresas que recebem.
+- `id` igual ao nome do arquivo, `publicado_em` igual à data do nome e no máximo
+  amanhã (dia de Brasília), de 1 a 8 itens, sem termo técnico, sem travessão.
+  Quem se cadastrou depois do dia da publicação não recebe.
+- Conferir com `php artisan test --filter=CatalogoAvisosAtualizacaoTest`.
+- Exemplo real: `resources/avisos-atualizacao/2026-11-16-certificados-observacao-e-vencimento.json`.
+
 ## Cuidados neste projeto
 
 - **O sistema roda em produção para um cliente real.** Migration que toca tabela

@@ -33,6 +33,47 @@
         </Link>
       </div>
 
+      <!-- Aviso de vencimento de certificados -->
+      <Card v-if="certificadosParaRenovar && certificadosParaRenovar.total > 0" padding="none">
+        <div class="px-4 py-3 sm:px-6 border-b border-gray-200 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 class="text-base font-semibold text-gray-900">Certificados a vencer</h3>
+            <p class="text-sm text-gray-600">
+              {{ certificadosParaRenovar.total }} certificado(s) vencendo nos próximos 30 dias ou vencido(s) há até 30 dias, sem renovação emitida.
+            </p>
+          </div>
+          <Link :href="route('certificates.index')" class="btn-secondary-sm whitespace-nowrap self-start sm:self-auto">
+            Ver certificados
+          </Link>
+        </div>
+        <ul class="divide-y divide-gray-200">
+          <li v-for="item in certificadosParaRenovar.itens" :key="item.id">
+            <Link
+              :href="route('certificates.show', item.id)"
+              class="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 hover:bg-gray-50"
+            >
+              <div class="min-w-0">
+                <p class="text-sm font-medium text-gray-900 truncate">
+                  #{{ item.id }} · {{ item.cliente || 'Cliente não informado' }}
+                </p>
+                <p class="text-xs text-gray-500 truncate">
+                  Validade {{ formatarData(item.garantia) }}<span v-if="item.endereco"> · {{ item.endereco }}</span>
+                </p>
+              </div>
+              <span :class="classeDoPrazo(item.dias)" class="shrink-0 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium">
+                {{ textoDoPrazo(item.dias) }}
+              </span>
+            </Link>
+          </li>
+        </ul>
+        <p
+          v-if="certificadosParaRenovar.total > certificadosParaRenovar.itens.length"
+          class="px-4 py-2 sm:px-6 text-xs text-gray-500 border-t border-gray-200"
+        >
+          Mostrando os {{ certificadosParaRenovar.itens.length }} mais urgentes.
+        </p>
+      </Card>
+
       <!-- Estatísticas Gerais -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard
@@ -220,7 +261,7 @@ import Card from '@/Components/Card.vue';
 import StatCard from '@/Components/StatCard.vue';
 import QuickAction from '@/Components/QuickAction.vue';
 import TrilhaDePrimeirosPassos from '@/Components/TrilhaDePrimeirosPassos.vue';
-import { formatarDataHora } from '@/utils/formatDate';
+import { formatarData, formatarDataHora } from '@/utils/formatDate';
 
 const props = defineProps({
   stats: {
@@ -257,7 +298,26 @@ const props = defineProps({
     type: [Object, null],
     default: null,
   },
+  // Certificados vencendo em até 30 dias ou vencidos há até 30 dias, sem
+  // renovação. Vem null para quem não tem `certificado-ver`.
+  certificadosParaRenovar: {
+    type: [Object, null],
+    default: null,
+  },
 });
+
+const textoDoPrazo = (dias) => {
+  if (dias < 0) return `Venceu há ${Math.abs(dias)} dia(s)`;
+  if (dias === 0) return 'Vence hoje';
+  if (dias === 1) return 'Vence amanhã';
+  return `Vence em ${dias} dias`;
+};
+
+const classeDoPrazo = (dias) => {
+  if (dias < 0) return 'bg-red-100 text-red-800';
+  if (dias <= 7) return 'bg-orange-100 text-orange-800';
+  return 'bg-yellow-100 text-yellow-800';
+};
 
 const getStatusBadgeClass = (status) => {
   const baseClasses = 'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium';

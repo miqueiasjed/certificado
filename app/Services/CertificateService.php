@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AiDraft;
 use App\Models\Certificate;
 use App\Services\Ai\ParecerService;
+use App\Support\BusinessDate;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 
@@ -268,5 +269,63 @@ class CertificateService
         };
 
         return 'data:'.$mime.';base64,'.base64_encode($data);
+    }
+
+    /**
+     * Certificados que pedem renovação: vencem nos próximos `$diasAntes` dias
+     * ou venceram nos últimos `$diasDepois` dias. Alimenta o aviso de
+     * vencimento do painel.
+     *
+     * Fica de fora o certificado que já foi substituído por outro do mesmo
+     * cliente e endereço com garantia posterior: quem renovou não precisa
+     * de aviso. Certificado sem endereço vale para qualquer endereço do
+     * cliente, nos dois sentidos. A subconsulta repete o `company_id` porque escopo global não
+     * alcança subconsulta escrita na mão.
+     *
+     * @return array{total: int, itens: \Illuminate\Support\Collection}
+     */
+    public function certificadosParaRenovar(int $diasAntes = 30, int $diasDepois = 30, int $limite = 10): array
+    {
+        $hoje = BusinessDate::hoje();
+
+        $consulta = Certificate::query()
+            ->where('certificates.status', '!=', 'cancelled')
+            ->whereNotNull('certificates.warranty')
+            ->whereDate('certificates.warranty', '>=', $hoje->subDays($diasDepois)->toDateString())
+            ->whereDate('certificates.warranty', '<=', $hoje->addDays($diasAntes)->toDateString())
+            ->whereNotExists(function ($sub) {
+                $sub->selectRaw('1')
+                    ->from('certificates as renovado')
+                    ->whereColumn('renovado.company_id', 'certificates.company_id')
+                    ->whereColumn('renovado.client_id', 'certificates.client_id')
+                    // Mesmo endereço, ou um dos dois sem endereço: certificado
+                    // emitido sem endereço cobre o cliente inteiro.
+                    ->where(function ($q) {
+                        $q->whereColumn('renovado.address_id', 'certificates.address_id')
+                            ->orWhereNull('renovado.address_id')
+                            ->orWhereNull('certificates.address_id');
+                    })
+                    ->where('renovado.status', '!=', 'cancelled')
+                    ->whereColumn('renovado.warranty', '>', 'certificates.warranty');
+            });
+
+        $total = (clone $consulta)->count();
+
+        $itens = $consulta
+            ->with(['client:id,name', 'address:id,street,number,district,city'])
+            ->orderBy('certificates.warranty')
+            ->limit($limite)
+            ->get()
+            ->map(fn (Certificate $certificado) => [
+                'id' => $certificado->id,
+                'cliente' => $certificado->client?->name,
+                'endereco' => $certificado->address
+                    ? trim("{$certificado->address->street}, {$certificado->address->number} - {$certificado->address->city}", ' ,-')
+                    : null,
+                'garantia' => $certificado->warranty?->toDateString(),
+                'dias' => $certificado->days_until_expiry,
+            ]);
+
+        return ['total' => $total, 'itens' => $itens];
     }
 }

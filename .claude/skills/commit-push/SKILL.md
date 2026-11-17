@@ -28,6 +28,7 @@ Tudo neste fluxo se restringe **apenas ao que VOCÊ alterou nesta tarefa**:
 2. **Type-check (se mexeu em frontend):** rode o comando do projeto e corrija apenas os erros nos arquivos que você alterou.
 3. **Build (se mexeu em frontend):** rode o build do projeto e confirme que termina sem erros. O build é o gate de deploy: erro de build bloqueia o commit.
 4. **Testes (se mexeu em backend):** rode somente os testes estritamente relacionados à sua alteração e garanta que passem.
+   - **Aviso de atualização:** mudança visível leva o arquivo em `resources/avisos-atualizacao/` no mesmo commit (ver a seção "Aviso de atualização" do `CLAUDE.md`). Confira com `php artisan test --filter=CatalogoAvisosAtualizacaoTest`.
 
 ## Commit e push
 

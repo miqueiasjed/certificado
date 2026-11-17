@@ -80,6 +80,9 @@
   </div>
 
   <BotaoDeAjuda />
+
+  <!-- Aviso de atualização ao entrar -->
+  <AvisoAtualizacaoPopup />
 </template>
 
 <script setup>
@@ -89,6 +92,7 @@ import Sidebar from '@/Components/Sidebar.vue';
 import FaixaDeSuporte from '@/Components/FaixaDeSuporte.vue';
 import AvisoDeLimite from '@/Components/AvisoDeLimite.vue';
 import BotaoDeAjuda from '@/Components/BotaoDeAjuda.vue';
+import AvisoAtualizacaoPopup from '@/Components/AvisoAtualizacaoPopup.vue';
 
 const $page = usePage();
 const suporteAtivo = computed(() => $page.props.suporte?.ativo === true);

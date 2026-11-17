@@ -83,7 +83,7 @@ class CertificateController extends Controller
         $data = $request->validate([
             'execution_date' => 'required|date',
             'warranty' => 'nullable|date',
-            'notes' => 'nullable|string|max:2000',
+            'notes' => 'nullable|string|max:1000',
             'procedure_used' => 'required|string|max:2000',
         ]);
 

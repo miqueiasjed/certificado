@@ -59,6 +59,10 @@ return Application::configure(basePath: dirname(__DIR__))
             // routes/web.php para o mesmo mundo (empresas ou plataforma).
             Route::middleware('web')
                 ->group(base_path('routes/relatos.php'));
+
+            // Aviso de atualização ao entrar (pop-up do painel).
+            Route::middleware('web')
+                ->group(base_path('routes/avisos-atualizacao.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware) {

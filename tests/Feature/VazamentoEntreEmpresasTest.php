@@ -7,6 +7,7 @@ use App\Models\ActiveIngredient;
 use App\Models\Address;
 use App\Models\AiDraft;
 use App\Models\AiUsage;
+use App\Models\AvisoAtualizacaoLido;
 use App\Models\Antidote;
 use App\Models\AppointmentRequest;
 use App\Models\AuditLog;
@@ -1747,6 +1748,14 @@ class VazamentoEntreEmpresasTest extends TestCase
                 'titulo' => 'Relato '.$marca,
                 'descricao' => 'Descricao do relato '.$marca,
                 'situacao' => ProblemReport::SITUACAO_NOVO,
+            ]);
+
+            // Aviso de atualização lido. Direto pelo model; a regra de quem
+            // recebe tem teste próprio em AvisosAtualizacaoTest.
+            $dados['avisoAtualizacaoLido'] = AvisoAtualizacaoLido::create([
+                'user_id' => $autor->id,
+                'aviso_id' => '2026-11-16-aviso-'.strtolower($this->sufixo($marca)),
+                'lido_em' => '2026-11-16 12:00:00',
             ]);
 
             $dados['satisfactionSurvey'] = SatisfactionSurvey::create([

@@ -178,7 +178,8 @@
         <tr>
             <td class="col-33"><strong>N° do Certificado: </strong>{{ $certificate->id ?? 'Não informado' }}</td>
             <td class="col-33"><strong>Data de Emissão: </strong>
-                {{ $certificate->created_at ? $certificate->created_at->format('d/m/Y') : 'Não informada' }}
+                {{-- Dia de Brasília: created_at é UTC e depois das 21h já seria o dia seguinte. --}}
+                {{ \App\Support\BusinessDate::paraFusoNegocio($certificate->created_at)?->format('d/m/Y') ?? 'Não informada' }}
             </td>
             <td class="col-33"><strong>Data de Validade:
                 </strong>{{ $certificate->warranty ? $certificate->warranty->format('d/m/Y') : 'Não informada' }}</td>
@@ -290,6 +291,19 @@
             </tr>
             <tr>
                 <td>Nenhum produto informado</td>
+            </tr>
+        </table>
+    @endif
+
+    {{-- Observações do certificado (ex.: "Cliente com monitoramento semanal").
+         Só aparece quando preenchida, para não imprimir bloco vazio. --}}
+    @if(filled($certificate->notes))
+        <table>
+            <tr>
+                <td class="section-title">OBSERVAÇÕES</td>
+            </tr>
+            <tr>
+                <td style="white-space: pre-line;">{{ $certificate->notes }}</td>
             </tr>
         </table>
     @endif

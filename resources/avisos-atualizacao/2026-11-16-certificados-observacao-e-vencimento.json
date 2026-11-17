@@ -1,0 +1,14 @@
+{
+    "id": "2026-11-16-certificados-observacao-e-vencimento",
+    "publicado_em": "2026-11-16",
+    "publicos": [
+        "gestao"
+    ],
+    "permissao": "certificado-ver",
+    "titulo": "Certificados: observações no documento e aviso de vencimento",
+    "itens": [
+        "O que você escreve em Observações, na tela do certificado, agora sai impresso no certificado. Exemplo: \"Cliente com monitoramento semanal\".",
+        "No painel inicial apareceu o quadro Certificados a vencer, com os que vencem nos próximos 30 dias e os que venceram há pouco e ainda não foram renovados. Toque em um deles para abrir o certificado.",
+        "A data de emissão do certificado segue o horário de Brasília. Antes, o certificado emitido depois das 21h saía com a data do dia seguinte."
+    ]
+}

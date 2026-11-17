@@ -274,6 +274,7 @@
                 placeholder="Observações adicionais sobre o certificado..."
               ></textarea>
               <p v-if="errors.notes" class="mt-1 text-sm text-red-600">{{ errors.notes }}</p>
+              <p v-else class="mt-1 text-xs text-gray-500">Este texto sai impresso no certificado.</p>
             </div>
           </div>
         </Card>
